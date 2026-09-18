@@ -38,6 +38,9 @@ func _ready() -> void:
             world_clip = "Idle_Talking_Loop"
         "motoqueiro":
             world_clip = "Driving_Loop"
+            # cinto de seguranca: se a biblioteca nao carregar, o piloto fica
+            # sentado por pose ossea em vez de em pe na moto
+            avatar.call_deferred("apply_world_seated_pose")
         _:
             world_clip = "Idle_Loop"
     call_deferred("_attach_role_details")

@@ -879,6 +879,20 @@ func _set_bone_extra(bone_name: String, extra: Quaternion) -> void:
     var base: Quaternion = rest_rotations.get(bone_name, Quaternion.IDENTITY)
     skeleton.set_bone_pose_rotation(index, base * extra)
 
+## Pose sentada para NPCs de veiculo (motoqueiro): usada quando a biblioteca
+## de animacao nao esta disponivel, para o piloto nunca aparecer em pe.
+func apply_world_seated_pose() -> void:
+    if skeleton == null or using_external_animation:
+        return
+    _apply_neutral_pose()
+    _set_bone_extra("thigh_l", Quaternion(Vector3(1.0, 0.0, 0.0), -1.25))
+    _set_bone_extra("thigh_r", Quaternion(Vector3(1.0, 0.0, 0.0), -1.25))
+    _set_bone_extra("calf_l", Quaternion(Vector3(1.0, 0.0, 0.0), 1.30))
+    _set_bone_extra("calf_r", Quaternion(Vector3(1.0, 0.0, 0.0), 1.30))
+    _set_bone_extra("upperarm_l", Quaternion(Vector3(1.0, 0.0, 0.0), -0.85))
+    _set_bone_extra("upperarm_r", Quaternion(Vector3(1.0, 0.0, 0.0), -0.85))
+
+
 func _apply_procedural_fallback_pose(stride: float, crouching: bool, jumping: bool) -> void:
     if skeleton == null:
         return

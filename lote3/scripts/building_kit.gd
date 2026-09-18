@@ -387,27 +387,38 @@ static func _build_lajes(spec: Dictionary, raiz: Node3D, rng: RandomNumberGenera
 	var borda_esq := float(faixas.get("piso_borda_esq_m", 1.35))
 	var inicio := -borda_esq
 	var fim := borda_esq + piso
+	var paver_l := float(lajes.get("paver_largura_m", 0.0))
+	var junta := float(lajes.get("junta_m", 0.014))
 	var xforms: Array = []
-	var x := inicio
 	var coluna := 0
+	var x := inicio
 	while x < fim - 0.05:
-		var largura := rng.randf_range(float(faixa[0]), float(faixa[1]))
-		largura = minf(largura, fim - x)
+		var largura := 0.0
 		var z := 0.0
-		var deslocamento := float(lajes.get("junta_m", 0.014))
-		if coluna % 2 == 1:
-			z = -rng.randf_range(0.15, 0.45)
+		if paver_l > 0.01:
+			# bloqueta regular de calcada (juntas corridas, como na referencia)
+			largura = minf(paver_l, fim - x)
+			if coluna % 2 == 1:
+				z = -float(lajes.get("paver_comprimento_m", 0.44)) * 0.5
+		else:
+			largura = rng.randf_range(float(faixa[0]), float(faixa[1]))
+			largura = minf(largura, fim - x)
+			if coluna % 2 == 1:
+				z = -rng.randf_range(0.15, 0.45)
 		while z < comprimento - 0.05:
-			var prof := rng.randf_range(float(faixa[0]), float(faixa[1]))
-			prof = minf(prof, comprimento - z)
+			var prof := 0.0
+			if paver_l > 0.01:
+				prof = minf(float(lajes.get("paver_comprimento_m", 0.44)), comprimento - z)
+			else:
+				prof = rng.randf_range(float(faixa[0]), float(faixa[1]))
+				prof = minf(prof, comprimento - z)
 			xforms.append(_xform(
 				Vector3(x + largura * 0.5, 0.10 + altura * 0.5, -(z + prof * 0.5)),
-				Vector3(largura - deslocamento, altura, prof - deslocamento)))
-			z += prof + deslocamento
-		x += largura + deslocamento
+				Vector3(largura - junta, altura, prof - junta)))
+			z += prof + junta
+		x += largura + junta
 		coluna += 1
 	_multimesh(_box(Vector3.ONE), material(spec, "piso_central"), xforms, raiz, "Lajes", false, 0.0)
-
 static func _build_mosaicos(spec: Dictionary, raiz: Node3D, rng: RandomNumberGenerator,
 		comprimento: float, faixas: Dictionary) -> void:
 	var lajes: Dictionary = spec.get("lajes", {})
@@ -559,14 +570,40 @@ static func _build_arvores(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
 	while z < comprimento:
 		var x := x_dir if lado > 0.0 else x_esq
 		var base := Vector3(x, 0.15, -z)
-		var tronco := _malha(_cyl(tronco_r, tronco_h, 8), material(spec, "madeira"),
+		# tronco conico (largo no pe, fino no topo) com casca
+		var conico := CylinderMesh.new()
+		conico.top_radius = tronco_r * 0.62
+		conico.bottom_radius = tronco_r * 1.45
+		conico.height = tronco_h
+		conico.radial_segments = 9
+		var tronco := _malha(conico, material(spec, "madeira"),
 				base + Vector3(0.0, tronco_h * 0.5, 0.0), raiz, "Tronco", true)
 		_marca(tronco, "arvore")
-		var copa := _malha(_sphere(copa_r), material(spec, "folhagem"),
-				base + Vector3(0.0, tronco_h + copa_r * 0.6, 0.0), raiz, "Copa", true)
-		_marca(copa, "folhagem")
-		var canteiro := _malha(_box(Vector3(1.1, 0.06, 1.1)), material(spec, "canteiro"),
-				Vector3(x, 0.13, -z), raiz, "Canteiro", false)
+		# galhos baixos (duas pernas de apoio inclinadas)
+		for sinal in [-1.0, 1.0]:
+			var galho := _malha(_cyl(tronco_r * 0.35, tronco_h * 0.55, 6),
+					material(spec, "madeira"),
+					base + Vector3(sinal * tronco_h * 0.10, tronco_h * 0.72, 0.0), raiz, "Galho", true)
+			galho.rotation.z = sinal * 0.85
+		# copa em cachos irregulares (nunca uma bola unica)
+		var cachos := rng.randi_range(4, 5)
+		for i in range(cachos):
+			var angulo := TAU * float(i) / float(cachos) + rng.randf_range(-0.4, 0.4)
+			var raio_cacho := copa_r * rng.randf_range(0.52, 0.78)
+			var afast := copa_r * rng.randf_range(0.34, 0.62)
+			var altura_cacho := tronco_h + copa_r * (0.55 + 0.16 * float(i % 2))
+			var folha := _malha(_sphere(raio_cacho), material(spec, "folhagem"),
+					base + Vector3(cos(angulo) * afast, altura_cacho, sin(angulo) * afast),
+					raiz, "Copa", true)
+			# copa achatada de verdade: mais larga que alta, sem forma de bola
+			folha.scale = Vector3(1.0 + rng.randf_range(-0.1, 0.15), 0.62 + rng.randf_range(0.0, 0.14), 1.0 + rng.randf_range(-0.1, 0.12))
+			_marca(folha, "folhagem")
+		var coroa := _malha(_sphere(copa_r * 0.66), material(spec, "folhagem"),
+				base + Vector3(0.0, tronco_h + copa_r * 0.95, 0.0), raiz, "CoroaCopa", true)
+		coroa.scale = Vector3(1.15, 0.58, 1.15)
+		_marca(coroa, "folhagem")
+		var canteiro := _malha(_cyl(0.62, 0.10, 9), material(spec, "canteiro"),
+				Vector3(x, 0.15, -z), raiz, "Canteiro", false)
 		_marca(canteiro, "canteiro")
 		z += passo * rng.randf_range(0.85, 1.15)
 		lado = -lado
@@ -574,35 +611,17 @@ static func _build_arvores(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
 static func _build_mobiliario(spec: Dictionary, raiz: Node3D, rng: RandomNumberGenerator,
 		comprimento: float, faixas: Dictionary, visibilidade: float) -> void:
 	var props: Dictionary = spec.get("props", {})
-	var guia_l := float(faixas.get("guia_largura_m", 0.35))
 	var borda_esq := float(faixas.get("piso_borda_esq_m", 1.35))
 	var piso := float(faixas.get("piso_central_m", 6.0))
 	var calcada := float(faixas.get("calcada_lateral_m", 2.5))
-	var x_poste := -(borda_esq + guia_l * 0.5)   # postes na guia, junto da pista
-	# postes: muitos, entao MultiMesh
-	var cfg_poste: Dictionary = props.get("poste", {})
-	var passo_poste := float(cfg_poste.get("espacamento_m", 2.2))
-	var altura_poste := float(cfg_poste.get("altura_m", 0.95))
-	var raio_poste := float(cfg_poste.get("raio_m", 0.06))
-	var xforms: Array = []
-	var z := 0.4
-	while z < comprimento:
-		xforms.append(_xform(Vector3(x_poste, 0.15 + altura_poste * 0.5, -z)))
-		z += passo_poste
-	_multimesh(_cyl(raio_poste, altura_poste, 8), material(spec, "estrutura_metalica"),
-			xforms, raiz, "Postes", true, visibilidade)
-	# esferas verdes da faixa de props (o objeto brilhante da referencia)
-	var cfg_esfera: Dictionary = props.get("esfera_verde", {})
-	var quantas := int(cfg_esfera.get("por_quarteirao", 0))
-	var x_esfera := borda_esq + piso + calcada * 0.5
-	for i in range(quantas):
-		var zz := rng.randf_range(2.0, comprimento - 2.0)
-		var esfera := _malha(_sphere(float(cfg_esfera.get("raio_m", 0.35))),
-				material(spec, "esfera_verde"),
-				Vector3(x_esfera, 0.15 + float(cfg_esfera.get("raio_m", 0.35)), -zz), raiz,
-				"EsferaVerde%d" % i, true, visibilidade)
-		_marca(esfera, "prop")
-	_build_prop_linear(spec, raiz, rng, comprimento, props, "banco", "madeira", 0.45, visibilidade)
+	var x_faixa := borda_esq + piso + calcada * 0.5
+	# bancos de praca: assento de frente para a rua
+	var cfg_banco: Dictionary = props.get("banco", {})
+	var passo_banco := float(cfg_banco.get("espacamento_m", 14.0))
+	var zb := rng.randf_range(3.0, passo_banco)
+	while zb < comprimento - 3.0:
+		_build_banco(spec, raiz, Vector3(x_faixa, 0.155, -zb), visibilidade)
+		zb += passo_banco * rng.randf_range(0.9, 1.2)
 	_build_prop_linear(spec, raiz, rng, comprimento, props, "lixeira", "zincado", 0.50, visibilidade)
 	if rng.randf() < float(props.get("hidrante", {}).get("probabilidade", 0.0)):
 		var zz := rng.randf_range(3.0, comprimento - 3.0)
@@ -610,6 +629,42 @@ static func _build_mobiliario(spec: Dictionary, raiz: Node3D, rng: RandomNumberG
 				Vector3(_x_rua_esq(faixas) - 1.0, 0.15 + 0.375, -zz), raiz,
 				"Hidrante", true, visibilidade)
 		_marca(hidrante, "prop")
+
+## Banco de praca: assento saliente de frente para a rua (encosto na faixa
+## de props), com pe laterais, ripas do assento e do encosto.
+static func _build_banco(spec: Dictionary, raiz: Node3D, pos: Vector3, visibilidade: float) -> void:
+	var madeira := material(spec, "madeira")
+	var metal := material(spec, "estrutura_metalica")
+	var corpo := Node3D.new()
+	corpo.name = "BancoPraca"
+	corpo.position = pos
+	# comprimento ao longo da rua (Z); assento abre para -X (a rua fica a oeste)
+	corpo.rotation.y = 0.0
+	raiz.add_child(corpo)
+	# pe laterais em aco
+	for lado_z in [-0.72, 0.72]:
+		var pe := _malha(_box(Vector3(0.44, 0.06, 0.08)), metal,
+				Vector3(0.0, 0.03, lado_z), corpo, "BancoPe", true, visibilidade)
+		_marca(pe, "prop")
+		var haste := _malha(_box(Vector3(0.08, 0.44, 0.06)), metal,
+				Vector3(0.0, 0.24, lado_z), corpo, "BancoHaste", true, visibilidade)
+		_marca(haste, "prop")
+		var encosto_pe := _malha(_box(Vector3(0.06, 0.52, 0.06)), metal,
+				Vector3(0.26, 0.68, lado_z), corpo, "BancoEncostoPe", true, visibilidade)
+		encosto_pe.rotation.x = -0.16
+		_marca(encosto_pe, "prop")
+	# ripas do assento (3) e do encosto (2), levemente inclinadas
+	for i in range(3):
+		var ripa := _malha(_box(Vector3(0.155, 0.035, 1.78)), madeira,
+				Vector3(-0.19 + 0.165 * float(i), 0.455, 0.0), corpo, "BancoRipa", true, visibilidade)
+		_marca(ripa, "prop")
+	for i in range(2):
+		var ripa_encosto := _malha(_box(Vector3(0.055, 0.135, 1.78)), madeira,
+				Vector3(0.28 + 0.005 * float(i), 0.78 + 0.21 * float(i), 0.0), corpo,
+				"BancoEncosto", true, visibilidade)
+		ripa_encosto.rotation.x = -0.16
+		_marca(ripa_encosto, "prop")
+
 
 static func _build_prop_linear(spec: Dictionary, raiz: Node3D, rng: RandomNumberGenerator,
 		comprimento: float, props: Dictionary, nome: String, material_chave: String,

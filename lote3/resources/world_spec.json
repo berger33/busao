@@ -33,7 +33,9 @@
     "junta_m": 0.014,
     "altura_m": 0.05,
     "mosaico_lado_m": 0.42,
-    "mosaico_variacao_m": 0.06
+    "mosaico_variacao_m": 0.06,
+    "paver_largura_m": 0.22,
+    "paver_comprimento_m": 0.44
   },
   "predios": {
     "pisos": [
@@ -128,22 +130,42 @@
     "piso_central": {
       "pbr": "calcada_laje",
       "uv_escala": 0.62,
-      "triplanar": false
+      "triplanar": false,
+      "cor": [
+        0.71,
+        0.7,
+        0.66
+      ]
     },
     "calcada_lateral": {
       "pbr": "calcada_mosaico",
       "uv_escala": 0.9,
-      "triplanar": false
+      "triplanar": false,
+      "cor": [
+        0.63,
+        0.62,
+        0.58
+      ]
     },
     "guia": {
       "pbr": "calcada_laje",
       "uv_escala": 1.6,
-      "triplanar": false
+      "triplanar": false,
+      "cor": [
+        0.6,
+        0.59,
+        0.56
+      ]
     },
     "pista": {
       "pbr": "asfalto",
       "uv_escala": 0.22,
-      "triplanar": true
+      "triplanar": true,
+      "cor": [
+        0.13,
+        0.13,
+        0.145
+      ]
     },
     "linha_amarela": {
       "pbr": "metal_pintado",
@@ -159,41 +181,76 @@
     "fachada_tijolo": {
       "pbr": "tijolo",
       "uv_escala": 0.45,
-      "triplanar": false
+      "triplanar": false,
+      "cor": [
+        0.56,
+        0.33,
+        0.26
+      ]
     },
     "fachada_reboco": {
       "pbr": "reboco",
       "uv_escala": 0.55,
-      "triplanar": false
+      "triplanar": false,
+      "cor": [
+        0.84,
+        0.8,
+        0.72
+      ]
     },
     "telhado": {
       "pbr": "laje_cobertura",
       "uv_escala": 0.5,
-      "triplanar": false
+      "triplanar": false,
+      "cor": [
+        0.42,
+        0.41,
+        0.39
+      ]
     },
     "estrutura_metalica": {
       "pbr": "metal_pintado",
       "uv_escala": 0.7,
       "triplanar": false,
       "metalico": 0.6,
-      "rugosidade": 0.45
+      "rugosidade": 0.45,
+      "cor": [
+        0.45,
+        0.47,
+        0.5
+      ]
     },
     "zincado": {
       "pbr": "metal_zincado",
       "uv_escala": 0.8,
       "triplanar": false,
       "metalico": 0.75,
-      "rugosidade": 0.35
+      "rugosidade": 0.35,
+      "cor": [
+        0.62,
+        0.64,
+        0.66
+      ]
     },
     "madeira": {
       "pbr": "madeira",
       "uv_escala": 0.9,
-      "triplanar": false
+      "triplanar": false,
+      "cor": [
+        0.45,
+        0.32,
+        0.21
+      ]
     },
     "canteiro": {
       "pbr": "terra_vermelha",
       "uv_escala": 1.2,
-      "triplanar": false
+      "triplanar": false,
+      "cor": [
+        0.24,
+        0.2,
+        0.16
+      ]
     },
     "folhagem": {
       "pbr": null,

@@ -699,11 +699,10 @@ func _spawn_entity(kind: String, lane: int, entity_distance: float, collectible:
     var mobility := 0.0
     if not collectible and lane != ROAD_LANE:
         if kind == "old_lady":
-            mobility = 0.55
-            node.rotation.y = PI
+            mobility = 0.55   # caminha de frente para o corredor (o modelo ja olha +Z)
         elif kind == "dog":
             mobility = 1.8
-            node.rotation.y = PI
+            node.rotation.y = -PI / 2.0   # o caramelo modelado olha +X; vira para +Z
             var cachorro := node.get_node_or_null("Animal3D_caramelo")
             if cachorro != null and cachorro.has_method("set_running"):
                 cachorro.call("set_running", true)
@@ -823,6 +822,8 @@ func _update_run(dt: float) -> void:
             # mais rápido, os veículos se aproximam naturalmente pela rua.
             node.position.z -= traffic_speed * dt
             _animate_traffic(node, traffic_speed, dt)
+        if bool(entity["collectible"]):
+            node.rotation.y += dt * 2.6
         var mobility: float = float(entity.get("mobility", 0.0))
         if mobility > 0.0:
             # pedestres/animais andam na direção do corredor (+Z local); a
@@ -1324,7 +1325,7 @@ func _rebuild_ground_fauna() -> void:
     var kinds: Array = scenario.get("aerial", ["pombo"])
     var bird_kinds: Array[String] = []
     for kind in kinds:
-        if str(kind) in ["pombo", "passaro", "gaivota", "urubu"]:
+        if str(kind) == "pombo":   # a fauna de chao de Sao Paulo e de pombo
             bird_kinds.append(str(kind))
     if bird_kinds.is_empty():
         bird_kinds.append("pombo")
@@ -1926,6 +1927,7 @@ const GLB_FIT := {
     "carro": Vector2(4.4, 1.55),
 }
 var _glb_cache: Dictionary = {}
+var _animal_glb_cache: Dictionary = {}
 
 func _optional_model(file: String) -> Node3D:
     # Drop-in opcional: se existir um modelo GLB em assets/vehicles/<file>,
@@ -1987,7 +1989,7 @@ func _build_road_obstacle(parent: Node3D, kind: String) -> void:
             parent.add_child(replacement)
             _fit_model(replacement, GLB_FIT[kind].x, GLB_FIT[kind].y)
             if kind == "motorcycle":
-                _build_motoqueiro(parent, Vector3(0.0, 0.58, 0.05))
+                _build_motoqueiro(parent, Vector3(0.0, 0.42, 0.05))
             return
     var body := _material(Color("#d9584e"), 0.05, 0.48, "paint")
     var dark := _material(Color("#202c3c"), 0.15, 0.38, "rubber")
@@ -2026,7 +2028,7 @@ func _build_road_obstacle(parent: Node3D, kind: String) -> void:
             _box(parent, Vector3(0.26, 0.12, 0.52), Vector3(-0.48, 0.72, 0.43), _material(Color("#141b25"), 0.0, 0.6, "rubber"), "MotoSeat")
             _box(parent, Vector3(0.72, 0.06, 0.06), Vector3(-0.48, 1.24, -0.62), frame, "MotoHandlebar")
             _sphere(parent, 0.12, Vector3(-0.48, 1.14, -0.69), white_light, "MotoHeadlight")
-            _build_motoqueiro(parent, Vector3(-0.48, 0.72, 0.10))
+            _build_motoqueiro(parent, Vector3(-0.48, 0.34, 0.08))
             _cylinder(parent, 0.055, 0.055, 0.92, Vector3(-0.48, 0.48, 0.30), chrome, "MotoExhaust")
         "truck":
             var truck_body := _material(Color("#d65f42"), 0.08, 0.48, "vehicle_paint")
@@ -2055,8 +2057,9 @@ func _build_motoqueiro(parent: Node3D, assento: Vector3) -> void:
     rider.name = "Motoqueiro3D"
     rider.set("profile_id", "carlos")
     rider.set("role", "motoqueiro")
-    rider.set("avatar_scale", 0.72)
+    rider.set("avatar_scale", 0.80)
     rider.position = assento
+    rider.rotation.y = PI   # de frente para o sentido da moto (-Z)
     parent.add_child(rider)
 
 
@@ -2070,11 +2073,66 @@ func _build_pedestrian_obstacle(parent: Node3D, profile_id: String, role: String
     return pedestrian
 
 func _build_animal_obstacle(parent: Node3D, species: String) -> Node3D:
+    # Drop-in opcional: assets/characters/animais/<especie>.glb (CC0 — veja o
+    # LEIA-ME da pasta). Se existir, substitui o modelo procedural e toca a
+    # primeira animacao de caminhada encontrada, em loop.
+    var modelo := _modelo_animal_opcional(species)
+    if modelo != null:
+        parent.add_child(modelo)
+        _fit_model(modelo, 0.95, 0.72)
+        _tocar_animal(modelo)
+        return modelo
     var animal := WORLD_ANIMAL_SCRIPT.new() as Node3D
     animal.name = "Animal3D_%s" % species
     animal.set("species", species)
     parent.add_child(animal)
     return animal
+
+
+func _modelo_animal_opcional(species: String) -> Node3D:
+    var file := species + ".glb"
+    if not _animal_glb_cache.has(file):
+        var packed: PackedScene = null
+        var path := "res://assets/characters/animais/" + file
+        if ResourceLoader.exists(path):
+            packed = load(path) as PackedScene
+        _animal_glb_cache[file] = packed
+    var cached: PackedScene = _animal_glb_cache[file]
+    if cached == null:
+        return null
+    var node := cached.instantiate() as Node3D
+    if node == null:
+        push_warning("Falha ao instanciar modelo de animal: " + file)
+        return null
+    return node
+
+
+func _tocar_animal(raiz: Node3D) -> void:
+    var player := _find_animation_player_node(raiz)
+    if player == null or player.get_animation_list().is_empty():
+        return
+    var escolhido := ""
+    for nome in player.get_animation_list():
+        if nome.to_lower().contains("walk") or nome.to_lower().contains("trot"):
+            escolhido = nome
+            break
+    if escolhido == "":
+        escolhido = player.get_animation_list()[0]
+    var anim := player.get_animation(escolhido)
+    if anim != null:
+        anim.loop_mode = Animation.LOOP_LINEAR
+    player.play(escolhido)
+
+
+func _find_animation_player_node(node: Node) -> AnimationPlayer:
+    var pending: Array[Node] = [node]
+    while not pending.is_empty():
+        var current: Node = pending.pop_back()
+        if current is AnimationPlayer:
+            return current as AnimationPlayer
+        for child in current.get_children():
+            pending.append(child)
+    return null
 
 func _build_sidewalk_obstacle(parent: Node3D, kind: String) -> void:
     var dark := _material(Color("#29354d"), 0.0, 0.72, "fabric")
@@ -2107,18 +2165,51 @@ func _build_sidewalk_obstacle(parent: Node3D, kind: String) -> void:
         "dog":
             _build_animal_obstacle(parent, "caramelo")
         "bicycle":
-            var bike_tire := _material(Color("#29354d"), 0.15, 0.72, "rubber")
-            var bike_front := _cylinder(parent, 0.38, 0.38, 0.09, Vector3(-0.48, 0.45, 0.0), bike_tire, "BikeWheelFront")
-            var bike_rear := _cylinder(parent, 0.38, 0.38, 0.09, Vector3(0.48, 0.45, 0.0), bike_tire, "BikeWheelRear")
-            bike_front.rotation.x = PI / 2.0
-            bike_rear.rotation.x = PI / 2.0
-            var bike_frame := _material(Color("#e94f5a"), 0.0, 0.66, "metal")
-            _box(parent, Vector3(0.10, 0.62, 0.10), Vector3(0.0, 0.72, 0.0), bike_frame, "BikeFrame")
-            _box(parent, Vector3(0.76, 0.07, 0.07), Vector3(0.0, 0.82, 0.0), bike_frame, "BikeBar")
-            _box(parent, Vector3(0.38, 0.08, 0.07), Vector3(0.02, 1.08, 0.0), dark, "BikeSeat")
-            _box(parent, Vector3(0.10, 0.48, 0.10), Vector3(-0.43, 0.80, 0.0), bike_frame, "BikeFork")
-            _box(parent, Vector3(0.55, 0.05, 0.05), Vector3(-0.48, 1.08, 0.0), chrome, "BikeHandlebar")
-            _cylinder(parent, 0.10, 0.10, 0.05, Vector3(0.0, 0.60, 0.0), chrome, "BikePedal")
+            # bicicleta de aco: rodas com pneu e aro, quadro em tubos,
+            # guidao, selim, pedivela e pedais — alinhada com a rua (frente -Z)
+            var bike_tire := _material(Color("#1d232e"), 0.15, 0.78, "rubber")
+            var bike_rim := _material(Color("#b9c3c9"), 0.8, 0.30, "chrome")
+            var bike_frame := _material(Color("#2f6fa8"), 0.35, 0.42, "metal")
+            for roda in [-0.52, 0.52]:
+                var pneu := _torus(parent, 0.285, 0.395, Vector3(0.0, 0.34, roda), bike_tire, "BikePneu")
+                pneu.rotation.z = PI / 2.0
+                var aro := _torus(parent, 0.258, 0.302, Vector3(0.0, 0.34, roda), bike_rim, "BikeAro")
+                aro.rotation.z = PI / 2.0
+                for raio_i in range(4):
+                    var ang := TAU * float(raio_i) / 4.0
+                    var raio := _box(parent, Vector3(0.018, 0.54, 0.018), Vector3(0.0, 0.34, roda), bike_rim, "BikeRaio")
+                    raio.rotation.x = ang
+                    raio.rotation.y = 0.0
+                    raio.position = Vector3(0.0, 0.34, roda)
+                    raio.rotation.z = 0.0
+                var cubo := _cylinder(parent, 0.045, 0.045, 0.09, Vector3(0.0, 0.34, roda), bike_rim, "BikeCubo")
+                cubo.rotation.z = PI / 2.0
+            var movimento := Node3D.new()
+            movimento.name = "BikeQuadro"
+            parent.add_child(movimento)
+            var tubos := [
+                [Vector3(0.0, 0.62, -0.44), Vector3(0.0, 0.98, -0.40)],   # head tube
+                [Vector3(0.0, 0.36, 0.06), Vector3(0.0, 0.98, -0.40)],    # downtube
+                [Vector3(0.0, 0.36, 0.06), Vector3(0.0, 1.00, 0.20)],     # seat tube
+                [Vector3(0.0, 1.00, 0.20), Vector3(0.0, 0.98, -0.40)],    # toptube
+                [Vector3(0.0, 0.36, 0.06), Vector3(0.0, 0.34, 0.52)],     # chainstay
+                [Vector3(0.0, 0.98, 0.20), Vector3(0.0, 0.34, 0.52)],     # seat stay
+                [Vector3(0.0, 0.98, -0.40), Vector3(0.0, 0.34, -0.52)],   # fork
+            ]
+            for tubo in tubos:
+                var a: Vector3 = tubo[0]
+                var b: Vector3 = tubo[1]
+                var meio := (a + b) * 0.5
+                var comprimento := a.distance_to(b)
+                var tubo_no := _box(movimento, Vector3(0.05, comprimento, 0.05), meio, bike_frame, "BikeTubo")
+                tubo_no.look_at_from_position(meio, b, Vector3(0, 0, 1))
+            _box(movimento, Vector3(0.52, 0.05, 0.05), Vector3(0.0, 1.06, -0.44), chrome, "BikeGuidao")
+            _box(movimento, Vector3(0.05, 0.12, 0.05), Vector3(0.0, 0.99, -0.42), chrome, "BikeMesa")
+            _box(movimento, Vector3(0.10, 0.06, 0.34), Vector3(0.0, 1.06, 0.22), dark, "BikeSelim")
+            var pedivela := _box(movimento, Vector3(0.04, 0.34, 0.04), Vector3(0.0, 0.36, 0.06), bike_rim, "BikePedivela")
+            pedivela.rotation.x = PI / 4.0
+            _box(movimento, Vector3(0.09, 0.02, 0.20), Vector3(0.09, 0.28, 0.10), chrome, "BikePedal")
+            _box(movimento, Vector3(0.09, 0.02, 0.20), Vector3(-0.09, 0.44, 0.02), chrome, "BikePedal2")
         "cone":
             var cone_orange := _material(Color("#f0783f"), 0.0, 0.68, "rubber")
             var cone_white := _material(Color("#f4e6c5"), 0.0, 0.72, "rubber")
@@ -2167,9 +2258,15 @@ func _build_collectible(parent: Node3D, kind: String) -> void:
     mat.emission_energy_multiplier = 1.8
     match kind:
         "coin", "golden":
-            var coin := _cylinder(parent, 0.18 if kind == "coin" else 0.24, 0.18 if kind == "coin" else 0.24, 0.07, Vector3.ZERO, mat, "Coin")
-            coin.rotation.x = PI / 2.0
-            _cylinder(parent, 0.11 if kind == "coin" else 0.16, 0.11 if kind == "coin" else 0.16, 0.012, Vector3(0.0, 0.0, -0.04), _material(Color("#fff5ba"), 0.15, 0.22, "metal"), "CoinInset")
+            # moeda em pe: disco cunhado com aro em relevo, girando no eixo
+            var raio := 0.30 if kind == "coin" else 0.38
+            var disco := _cylinder(parent, raio, raio, 0.055, Vector3.ZERO, mat, "Coin")
+            disco.rotation.x = PI / 2.0
+            var aro := _torus(parent, raio - 0.028, raio + 0.028, Vector3.ZERO, _material(Color("#c9932f"), 0.4, 0.24, "metal"), "CoinAro")
+            aro.rotation.x = PI / 2.0
+            var relevo := _torus(parent, raio * 0.62 - 0.02, raio * 0.62 + 0.02, Vector3(0.0, 0.0, 0.0), _material(Color("#ffe08a"), 0.35, 0.22, "metal"), "CoinRelevo")
+            relevo.rotation.x = PI / 2.0
+            _cylinder(parent, raio * 0.34, raio * 0.34, 0.075, Vector3.ZERO, _material(Color("#fff0b8"), 0.3, 0.20, "metal"), "CoinNucleo")
         "coffee":
             _cylinder(parent, 0.18, 0.15, 0.30, Vector3(0.0, 0.0, 0.0), mat, "CoffeeCup")
             _cylinder(parent, 0.14, 0.14, 0.018, Vector3(0.0, 0.16, 0.0), _material(Color("#33231f"), 0.0, 0.72, "paint"), "CoffeeSurface")

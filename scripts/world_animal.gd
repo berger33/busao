@@ -249,19 +249,21 @@ func _animate_bird() -> void:
             if tail:
                 tail.rotation.x = 0.0
         "idle":
-            # pousado: asas coladas ao corpo, cabeça balançando, cauda viva
-            left.rotation.z = 0.10
-            right.rotation.z = -0.10
-            left.rotation.y = -0.55
-            right.rotation.y = 0.55
-            body_root.position.y = 0.0
-            body_root.rotation.x = 0.06
+            # pombo ANDANDO: passos alternados das pernas + o balanco de
+            # cabeca para frente tipico da especie; asas sempre coladas
+            left.rotation.z = 0.12
+            right.rotation.z = -0.12
+            left.rotation.y = 0.0
+            right.rotation.y = 0.0
+            body_root.position.y = absf(sin(motion_time * 9.0)) * 0.012
+            body_root.rotation.x = 0.34
             if head:
-                head.rotation.x = -0.06 + sin(motion_time * 2.4) * 0.16
-            for leg in legs:
-                leg.rotation.x = 0.0
+                head.rotation.x = 0.10
+                head.position.z = 0.155 + maxf(0.0, sin(motion_time * 9.0)) * 0.055
+            for index in legs.size():
+                legs[index].rotation.x = sin(motion_time * 9.0 + float(index) * PI) * 0.62
             if tail:
-                tail.rotation.x = -0.06 + sin(motion_time * 3.1) * 0.05
+                tail.rotation.x = 0.30 + sin(motion_time * 4.5) * 0.05
         "jump":
             # decolagem: asas erguidas, corpo empinado, patas esticadas
             left.rotation.z = -0.95
@@ -457,33 +459,32 @@ func _build_caramelo() -> void:
     var collar := _material(Color("#2e75a6"), TEXTURE_FUR, 0.46)
     var metal := _material(Color("#f0bd4a"), TEXTURE_METAL, 0.20, 0.82)
 
-    _ellipsoid(body_root, Vector3(0.0, 0.56, 0.0), Vector3(0.72, 0.43, 0.50), fur, "DogBody")
-    _ellipsoid(body_root, Vector3(0.40, 0.72, 0.0), Vector3(0.28, 0.30, 0.30), fur, "DogNeck")
-    _ellipsoid(body_root, Vector3(0.53, 0.91, -0.04), Vector3(0.34, 0.31, 0.31), face, "DogHead")
-    _ellipsoid(body_root, Vector3(0.77, 0.83, -0.20), Vector3(0.17, 0.14, 0.14), face, "DogMuzzle")
-    _ellipsoid(body_root, Vector3(0.88, 0.84, -0.28), Vector3(0.07, 0.06, 0.05), dark, "DogNose")
+    _ellipsoid(body_root, Vector3(0.0, 0.56, 0.0), Vector3(0.74, 0.35, 0.44), fur, "DogBody")
+    _ellipsoid(body_root, Vector3(-0.05, 0.74, 0.0), Vector3(0.46, 0.14, 0.30), _material(Color("#8a5a30"), TEXTURE_FUR, 0.86), "DogSela")
+    _ellipsoid(body_root, Vector3(0.40, 0.70, 0.0), Vector3(0.22, 0.26, 0.22), fur, "DogNeck")
+    _ellipsoid(body_root, Vector3(0.53, 0.90, 0.0), Vector3(0.28, 0.26, 0.24), face, "DogHead")
+    _ellipsoid(body_root, Vector3(0.80, 0.80, 0.0), Vector3(0.21, 0.105, 0.10), face, "DogMuzzle")
+    _ellipsoid(body_root, Vector3(0.98, 0.82, 0.0), Vector3(0.05, 0.045, 0.045), dark, "DogNose")
     for side in [-1.0, 1.0]:
-        _ellipsoid(body_root, Vector3(0.61, 0.99, side * 0.20), Vector3(0.055, 0.06, 0.055), eye, "DogEye")
-        var ear := _ellipsoid(body_root, Vector3(0.43, 1.10, side * 0.19), Vector3(0.13, 0.22, 0.10), fur, "DogEar")
-        ear.rotation.z = side * 0.18
-        _ellipsoid(body_root, Vector3(0.43, 1.10, side * 0.205), Vector3(0.075, 0.14, 0.035), inner_ear, "DogEarInner")
+        _ellipsoid(body_root, Vector3(0.58, 0.98, side * 0.14), Vector3(0.04, 0.05, 0.04), eye, "DogEye")
+        var ear := _ellipsoid(body_root, Vector3(0.40, 1.12, side * 0.15), Vector3(0.06, 0.24, 0.09), fur, "DogEar")
+        ear.rotation.z = side * 0.30
+        _ellipsoid(body_root, Vector3(0.40, 1.10, side * 0.155), Vector3(0.03, 0.16, 0.035), inner_ear, "DogEarInner")
     _torus(body_root, 0.20, 0.025, Vector3(0.40, 0.78, 0.0), collar, "DogCollar")
     _sphere(body_root, 0.065, Vector3(0.40, 0.62, -0.22), metal, "DogTag")
     for side in [-1.0, 1.0]:
         for front in [-1.0, 1.0]:
-            var leg := _capsule(body_root, 0.075, 0.42, Vector3(front * 0.40, 0.27, side * 0.19), fur, "DogLeg")
+            var leg := _capsule(body_root, 0.052, 0.50, Vector3(front * 0.40, 0.30, side * 0.15), fur, "DogLeg")
             legs.append(leg)
             leg_is_front.append(front > 0.0)
-            _ellipsoid(body_root, Vector3(front * 0.40, 0.06, side * 0.20), Vector3(0.10, 0.055, 0.12), dark, "DogPaw")
-    tail = _capsule(body_root, 0.065, 0.46, Vector3(-0.67, 0.83, 0.13), fur, "DogTailBase")
-    tail.rotation.z = -0.72
-    var tail_tip := _ellipsoid(body_root, Vector3(-0.86, 1.00, 0.13), Vector3(0.10, 0.12, 0.10), fur, "DogTailTip")
-    tail_tip.rotation.z = -0.36
+            _ellipsoid(body_root, Vector3(front * 0.40, 0.045, side * 0.15), Vector3(0.075, 0.045, 0.09), dark, "DogPaw")
+    tail = _capsule(body_root, 0.05, 0.44, Vector3(-0.68, 0.86, 0.0), fur, "DogTailBase")
+    tail.rotation.z = -1.05
+    var tail_tip := _ellipsoid(body_root, Vector3(-0.80, 1.16, 0.0), Vector3(0.075, 0.10, 0.075), fur, "DogTailTip")
+    tail_tip.rotation.z = -0.5
 
 func _build_bird() -> void:
     var profile: Dictionary = BIRD_PROFILES.get(species, BIRD_PROFILES["pombo"])
-    var size: float = float(profile.get("size", 0.9))
-    var span: float = float(profile.get("span", 0.42))
     body_root = Node3D.new()
     body_root.name = "Bird3D"
     add_child(body_root)
@@ -494,37 +495,42 @@ func _build_bird() -> void:
     var eye := _material(Color("#10131c"), TEXTURE_RUBBER, 0.2)
     var leg_mat := _material(profile.get("legs", Color.BROWN), TEXTURE_RUBBER, 0.55)
 
-    # Corpo orientado para +Z, a mesma direção das rotas aéreas do cenário.
-    _ellipsoid(body_root, Vector3(0.0, 0.0, 0.02), Vector3(0.17, 0.15, 0.30), feather, "BirdBody")
-    _ellipsoid(body_root, Vector3(0.0, 0.10, 0.05), Vector3(0.12, 0.11, 0.13), feather, "BirdBreast")
+    # Pombo em postura de andar: corpo inclinado para frente, asas FOLDADAS
+    # contra o corpo (nunca abertas no chao), pernas visiveis dando os passos.
+    body_root.rotation.x = 0.34
+    _ellipsoid(body_root, Vector3(0.0, 0.0, 0.02), Vector3(0.135, 0.135, 0.26), feather, "BirdBody")
+    _ellipsoid(body_root, Vector3(0.0, 0.05, 0.12), Vector3(0.095, 0.10, 0.10), feather, "BirdBreast")
 
     head = Node3D.new()
     head.name = "BirdHeadPivot"
-    head.position = Vector3(0.0, 0.15, 0.22)
+    head.position = Vector3(0.0, 0.155, 0.155)
     body_root.add_child(head)
-    _ellipsoid(head, Vector3.ZERO, Vector3(0.10, 0.10, 0.10), feather, "BirdHead")
-    _box(head, Vector3(0.045, 0.035, 0.11), Vector3(0.0, -0.01, 0.10), beak_mat, "BirdBeak")
+    _ellipsoid(head, Vector3.ZERO, Vector3(0.075, 0.085, 0.085), feather, "BirdHead")
+    _ellipsoid(head, Vector3(0.0, -0.045, 0.035), Vector3(0.05, 0.06, 0.06), feather, "BirdPescoco")
+    _box(head, Vector3(0.035, 0.028, 0.09), Vector3(0.0, -0.012, 0.095), beak_mat, "BirdBico")
+    _ellipsoid(head, Vector3(0.0, 0.02, 0.028), Vector3(0.012, 0.014, 0.012), Color("#c9d4e0"), feather, "BirdCeroma")
     for side in [-1.0, 1.0]:
-        _ellipsoid(head, Vector3(side * 0.055, 0.025, 0.04), Vector3(0.02, 0.02, 0.02), eye, "BirdEye")
+        _ellipsoid(head, Vector3(side * 0.045, 0.02, 0.03), Vector3(0.014, 0.014, 0.014), eye, "BirdEye")
 
+    # asas dobradas contra o corpo (forma de gota apontando para tras)
     for side in [-1.0, 1.0]:
-        var shoulder := Node3D.new()
-        shoulder.name = "BirdShoulderL" if side < 0.0 else "BirdShoulderR"
-        shoulder.position = Vector3(side * 0.11, 0.04, 0.0)
-        body_root.add_child(shoulder)
-        _box(shoulder, Vector3(span, 0.03, span * 0.46), Vector3(side * span * 0.5, 0.0, 0.0), wing_mat, "BirdWingL" if side < 0.0 else "BirdWingR")
-        wings.append(shoulder)
+        var asa := _ellipsoid(body_root, Vector3(side * 0.105, 0.035, -0.06),
+                Vector3(0.045, 0.075, span * 0.42), wing_mat, "BirdAsa")
+        asa.rotation.z = side * 0.22
+        wings.append(asa)
 
     tail = Node3D.new()
     tail.name = "BirdTailPivot"
-    tail.position = Vector3(0.0, 0.03, -0.24)
+    tail.position = Vector3(0.0, 0.035, -0.20)
+    tail.rotation.x = 0.30
     body_root.add_child(tail)
-    _box(tail, Vector3(0.15, 0.02, 0.24), Vector3(0.0, 0.0, -0.12), wing_mat, "BirdTail")
+    _box(tail, Vector3(0.09, 0.016, 0.17), Vector3(0.0, 0.0, -0.075), wing_mat, "BirdCauda")
 
     for side in [-1.0, 1.0]:
-        var leg := _capsule(body_root, 0.016, 0.14, Vector3(side * 0.05, -0.09, 0.0), leg_mat, "BirdLeg")
+        var leg := _capsule(body_root, 0.012, 0.17, Vector3(side * 0.045, -0.02, 0.01), leg_mat, "BirdPerna")
         legs.append(leg)
         leg_is_front.append(false)
+        _box(body_root, Vector3(0.045, 0.014, 0.075), Vector3(side * 0.045, -0.105, 0.045), leg_mat, "BirdPe")
 
 func _build_capivara() -> void:
     body_root = Node3D.new()
