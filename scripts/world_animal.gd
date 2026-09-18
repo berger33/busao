@@ -710,7 +710,6 @@ func _mesh(parent: Node3D, node_name: String, mesh: Mesh, material: Material) ->
     node.mesh = mesh
     node.material_override = material
     node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-    node.receive_shadow = true
     parent.add_child(node)
     return node
 

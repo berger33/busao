@@ -112,7 +112,7 @@ func _draw_map() -> void:
     for local_index in cards.size():
         var card: Dictionary = cards[local_index]
         var col: int = local_index % 2
-        var row: int = int(local_index / 2)
+        var row: int = int(float(local_index) / 2.0)
         var rect := Rect2(25.0 + col * 340.0, 160.0 + row * 170.0, 330.0, 140.0)
         var unlocked: bool = bool(card.get("unlocked", false))
         var accent: Color = card.get("accent", BLUE)
@@ -250,7 +250,7 @@ func _draw_shop() -> void:
     if int(state.get("shop_tab", 0)) == 0:
         for i in characters.size():
             var col: int = i % 2
-            var row: int = int(i / 2)
+            var row: int = int(float(i) / 2.0)
             var card_y: float = 250.0 + row * 145.0 - scroll
             if card_y + 126.0 < 250.0 or card_y > 1125.0:
                 continue
@@ -262,7 +262,7 @@ func _draw_shop() -> void:
         var items: Array = state.get("items", [])
         for i in items.size():
             var col: int = i % 2
-            var row: int = int(i / 2)
+            var row: int = int(float(i) / 2.0)
             var rect := Rect2(30.0 + col * 345.0, 250.0 + row * 175.0, 315.0, 150.0)
             _item_card(rect, items[i])
     _header("LOJA DO PONTO", "R$ %03d" % int(state.get("coins", 0)))
@@ -361,18 +361,18 @@ func _draw_daily() -> void:
     var meter_target := int(targets.get("meters", 250))
     var coin_target := int(targets.get("coins", 10))
     var lines: Array[String] = ["corra %d metros" % meter_target, "pegue %d moedas" % coin_target, "termine sem dano"]
-    var ready: Array[bool] = [int(progress.get("meters", 0)) >= meter_target, int(progress.get("coins", 0)) >= coin_target, bool(progress.get("clean", false))]
+    var ready_flags: Array[bool] = [int(progress.get("meters", 0)) >= meter_target, int(progress.get("coins", 0)) >= coin_target, bool(progress.get("clean", false))]
     var status: Array[String] = ["%dm / %dm" % [mini(int(progress.get("meters", 0)), meter_target), meter_target], "%d / %d moedas" % [mini(int(progress.get("coins", 0)), coin_target), coin_target], "pronto" if bool(progress.get("clean", false)) else "termine sem dano"]
     var titles: Array[String] = ["Pé na tábua", "Troco certo", "Desvia que eu vou"]
     for i in 3:
         var y: float = 200.0 + i * 190.0
         var claimed := i in completed
-        var button_label := "RESGATADO" if claimed else ("RESGATAR" if ready[i] else "EM ANDAMENTO")
-        var button_color: Color = GREEN if claimed else (YELLOW if ready[i] else Color("#314563"))
+        var button_label := "RESGATADO" if claimed else ("RESGATAR" if ready_flags[i] else "EM ANDAMENTO")
+        var button_color: Color = GREEN if claimed else (YELLOW if ready_flags[i] else Color("#314563"))
         _panel(Rect2(35, y, 650, 145), Color("#214b50") if claimed else Color("#1a2f4e"), 17)
         _text(Vector2(65, y + 43), titles[i], 25, WHITE)
         _text(Vector2(65, y + 78), lines[i], 17, MUTED)
-        _text(Vector2(65, y + 116), status[i], 15, GREEN if ready[i] else YELLOW)
+        _text(Vector2(65, y + 116), status[i], 15, GREEN if ready_flags[i] else YELLOW)
         _button(Rect2(505, y + 43, 145, 58), button_label, button_color, 13)
     var weekly: Dictionary = state.get("weekly_progress", {})
     var weekly_target := int(state.get("weekly_target", 2500))
@@ -448,11 +448,11 @@ func _panel(rect: Rect2, color: Color, radius: float = 12.0) -> void:
     if rect.size.x > radius * 2.0:
         draw_line(rect.position + Vector2(radius, 1), Vector2(rect.end.x - radius, rect.position.y + 1), Color(1, 1, 1, 0.12), 1.0)
 
-func _button(rect: Rect2, label: String, color: Color, size: int = 20) -> void:
+func _button(rect: Rect2, label: String, color: Color, font_size: int = 20) -> void:
     _panel(rect, color, 15)
     draw_rect(Rect2(rect.position + Vector2(3, 3), Vector2(rect.size.x - 6, 4)), Color(1, 1, 1, 0.12))
     draw_line(rect.position + Vector2(14, rect.size.y - 6), rect.end - Vector2(14, 6), Color(0.02, 0.05, 0.1, 0.22), 2)
-    _text_center(rect.position + rect.size / 2.0 + Vector2(0, 3), label, size, INK if color != Color("#293955") and color != Color("#263958") else WHITE)
+    _text_center(rect.position + rect.size / 2.0 + Vector2(0, 3), label, font_size, INK if color != Color("#293955") and color != Color("#263958") else WHITE)
 
 func _make_box(color: Color, radius: float) -> StyleBoxFlat:
     var box := StyleBoxFlat.new()
@@ -471,9 +471,9 @@ func _make_box(color: Color, radius: float) -> StyleBoxFlat:
     box.border_color = Color(1, 1, 1, border_alpha)
     return box
 
-func _text(pos: Vector2, value: String, size: int, color: Color) -> void:
-    draw_string(ThemeDB.fallback_font, pos, value, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)
+func _text(pos: Vector2, value: String, font_size: int, color: Color) -> void:
+    draw_string(ThemeDB.fallback_font, pos, value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
 
-func _text_center(pos: Vector2, value: String, size: int, color: Color) -> void:
-    var width: float = maxf(100.0, float(value.length() * size) * 0.72)
-    draw_string(ThemeDB.fallback_font, Vector2(pos.x - width / 2.0, pos.y), value, HORIZONTAL_ALIGNMENT_CENTER, width, size, color)
+func _text_center(pos: Vector2, value: String, font_size: int, color: Color) -> void:
+    var width: float = maxf(100.0, float(value.length() * font_size) * 0.72)
+    draw_string(ThemeDB.fallback_font, Vector2(pos.x - width / 2.0, pos.y), value, HORIZONTAL_ALIGNMENT_CENTER, width, font_size, color)

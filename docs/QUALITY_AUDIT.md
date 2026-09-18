@@ -40,9 +40,177 @@ Data da varredura: 18/09/2026.
    PRE-FLIGHT OK: paths, scripts, 50-phase catalog, 13-obstacle 3D contract, SVG/PNG textures, WAV and feedback audio assets
    ```
 
+## Correção dos erros de abertura no Godot (18/09/2026)
+
+Os erros reportados ao abrir o projeto no editor foram reproduzidos, corrigidos e
+verificados com `tools/check_gdscript.py` (análise estática que replica as regras
+de `gdscript_parser.cpp`/`gdscript_analyzer.cpp` do Godot 4.7.2, lidas do código
+fonte da mesma versão):
+
+- `scripts/game_3d.gd` — `_build_sidewalk_obstacle()` usava o material `chrome`
+  (bicicleta e carrinho de camelô) sem declarar a variável: o script não
+  compilava. Declaração adicionada.
+- `scripts/game_3d.gd` — `var chapter` era redeclarado dentro de `if sun:` em
+  `_apply_scenario_atmosphere()`; a variável externa já estava no escopo. A
+  redeclaração foi removida.
+- `scripts/save_data.gd` — `Time.get_unix_time_from_datetime_dict()` recebia dois
+  argumentos (a API aceita apenas o dicionário). O número do dia local agora usa
+  somente a data local com a hora zerada, para que a virada semanal coincida com
+  a virada diária de `Time.get_date_string_from_system()`.
+- Divisões inteiras (`INTEGER_DIVISION`) eliminadas em `game.gd`, `game_3d.gd`,
+  `hud_3d.gd`, `phase_data.gd`, `runner_character.gd`, `save_data.gd` e
+  `scenario_data.gd`, mantendo o truncamento exato do operador `/` do engine
+  (`OperatorEvaluatorDivNZ<int64_t>`).
+- Parâmetros não usados (`UNUSED_PARAMETER`) renomeados com o prefixo `_`, a
+  convenção do Godot.
+
+Resultado atual: `python3 tools/check_gdscript.py` → 0 problema(s),
+`python3 tools/validate_project.py` → PRE-FLIGHT OK e
+`python3 tools/audit_balance.py` → curva consistente.
+
+## Correção do erro de sombra (`receive_shadow`) no Godot 4 (18/09/2026)
+
+O erro reportado ao rodar o jogo — `Invalid assignment of property or key
+'receive_shadow' with value of type 'bool' on a base object of type
+'MeshInstance3D'` — era um resquício da API do Godot 3. A propriedade não existe
+em nenhuma classe do Godot 4.7.2 (conferido nos XMLs oficiais de `doc/classes`):
+por instância só existe `GeometryInstance3D.cast_shadow`, e quem controla o
+recebimento de sombra é o material (`BaseMaterial3D.disable_receive_shadows`,
+`false` por padrão).
+
+- `scripts/runner_character.gd` — removidas as atribuições inválidas em
+  `_split_regions()` (linha 204), no rebind de roupas de `_attach_outfit()`
+  (284), em `_creator_mesh()` (492) e no laço de `_configure_mesh_shadows()`
+  (622); todas ficavam logo depois de `cast_shadow = SHADOW_CASTING_SETTING_ON`.
+- `scripts/world_animal.gd` — mesma remoção em `_mesh()` (linha 90).
+- O resultado visual é o mesmo: no Godot 4 a malha recebe sombra por padrão
+  (nenhum material do projeto usa `disable_receive_shadows`) e a projeção de
+  sombra continua garantida por `cast_shadow`.
+- `tools/check_gdscript.py` ganhou a checagem `UNKNOWN_MEMBER`: propriedades
+  inexistentes em receptores de tipo conhecido passam a ser detectadas sem abrir
+  o editor, com dica para nomes do Godot 3 (`receive_shadow` →
+  `disable_receive_shadows`, `translation` → `position`, `lightmap_mode` →
+  `gi_mode`, `set_as_toplevel` → `top_level`, ...). Para isso o analisador
+  também passou a inferir o tipo de construtores (`var x := Classe.new()`), de
+  casts (`x as T`) e de laços sobre `Array[T]` (`for mesh in _skinned_meshes(n)`),
+  que é exatamente o caso do laço de sombras.
+
+- Varredura complementar de API: todas as chamadas de engine/singleton usadas
+  pelos scripts (`Input`, `Time`, `OS`, `DisplayServer`, `RenderingServer`,
+  `Engine`, `ProjectSettings`, `ResourceLoader`, `AudioServer`, `FileAccess`,
+  `DirAccess`, `JSON`, `SceneTree`, `RandomNumberGenerator`) foram conferidas
+  contra os XMLs do Godot 4.7.2 — nenhuma função removida no Godot 4 continua no
+  código, e não há `File.new()`, `Directory.new()`, `.instance()`,
+  `change_scene()`, `interpolate_property()`, `yield()`, `set_as_toplevel()` nem
+  conexões de sinal apontando para métodos inexistentes.
+- Atribuições compostas (`mesh.receive_shadow += 1`) também entram na checagem.
+
+Resultado atual: `python3 tools/check_gdscript.py` → 0 problema(s),
+`python3 tools/validate_project.py` → PRE-FLIGHT OK e
+`python3 tools/audit_balance.py` → mesma curva (piso R$ 5425, 2200 moedas,
+metas 20=45 e 50=120). Os 14 scripts continuam com sintaxe válida no parser do
+gdtoolkit. Contra o estado anterior do projeto (`git archive` do commit
+`c6e7d8b`) o verificador acusa exatamente os 25 defeitos já corrigidos mais os
+5 `receive_shadow`, sem nenhum falso positivo; um arquivo de teste com
+`if mesh.receive_shadow:` é detectado pela checagem de leitura.
+
+## Orientação, cadência e posição do corredor (18/09/2026)
+
+Sintoma relatado: o boneco corria "para baixo", de frente para a câmera, com
+movimentação estranha. A apuração foi feita direto nos assets (geometria e curvas
+de animação) e no fluxo do jogo, e virou ferramenta reproduzível:
+`python3 tools/audit_runner_rig.py`.
+
+- **Sentido do modelo (causa do "correndo para baixo")**: no
+  `Superhero_Male_FullBody.gltf` as sobrancelhas (z = +0,057..+0,094) e os olhos
+  (+0,051..+0,081) ficam no lado **+Z**, as costas em -Z, e o vetor
+  tornozelo→ponta do pé aponta para +Z nos dois pés. O corredor avança para -Z
+  (o cenário desliza para +Z), então o personagem corria com o rosto voltado para
+  a câmera. `model_root` agora recebe `rotation.y = PI` (`MODEL_FACING_YAW`).
+- **Inclinação lateral preservada**: o balanço lateral passou para um pivô
+  (`ModelPivot`) acima do modelo, e o giro de 180° ficou no próprio `model_root`.
+  Separar os dois mantém o balanço exatamente igual ao de antes (mesma rotação em
+  espaço de mundo) sem depender da ordem de Euler do Godot para o sinal.
+- **Rig de animação**: o `UAL1_Standard.glb` usa o mesmo rig de 65 ossos do corpo
+  (`root`, `pelvis`, `spine_01`, ...), então `Sprint_Loop`, `Jump_Loop` e os
+  clips de deslize realmente animam o personagem. Já o `UAL1_Standard.res`
+  comitado é de outro rig (Universal Humanoid: `%GeneralSkeleton`,
+  `Hips`/`LeftUpperLeg`) e não mexe em osso nenhum deste corpo — por isso
+  `_library_drives_skeleton()` confere se as trilhas apontam para ossos
+  existentes antes de ligar `using_external_animation`; sem essa checagem o
+  corredor congelaria na pose de repouso se a biblioteca errada fosse a
+  escolhida.
+- **Cadência (o "skate")**: medindo por cinemática direta, um ciclo do
+  `Sprint_Loop` dura 0,667 s e desloca o pé ~1,35 m — o equivalente a ~4,0 m/s de
+  solo. O jogo anda de 5 m/s (início) até 18 m/s (fim da campanha, 12 m/s no fim
+  do capítulo 1, com dash ×1,22), então as pernas giravam muito devagar para o
+  mundo. `AnimationPlayer.speed_scale` agora segue a velocidade real
+  (`_match_playback_to_speed`, limitado a 2,2×) e `game_3d.gd` passa
+  `motion_speed` para `set_motion()`.
+- **Posição e contato com o chão**: o pé mais baixo do GLTF está em y = -0,01;
+  com `MODEL_SCALE` 1,18 e `MODEL_FLOOR_OFFSET` 0,012 as solas ficam em
+  y = +0,0008, sem flutuar nem afundar. Altura final 1,81 × 1,18 = 2,14 m,
+  coerente com `PLAYER_HEIGHT` (2,15).
+
+Resultado: `python3 tools/audit_runner_rig.py` → OK (rosto em +Z, 65/65 ossos
+compatíveis, ciclo de 4,04 m/s batendo com a constante do script, sola em y≈0);
+`python3 tools/check_gdscript.py` → 0 problema(s);
+`python3 tools/validate_project.py` → PRE-FLIGHT OK;
+`python3 tools/audit_balance.py` → curva inalterada.
+
+## Sombreamento de identificadores e a última divisão inteira (18/09/2026)
+
+Mensagens trazidas do editor: `Too many arguments for
+get_unix_time_from_datetime_dict() call. Expected at most 1 but received 2`
+(638, 66) e cinco avisos marcados como `[Ignorar]` em `save_data.gd` — dois
+`SHADOWED_VARIABLE` (164 e 554, um local `retention_flags` sombreando a função da
+linha 577), um `SHADOWED_VARIABLE_BASE_CLASS` (297, o parâmetro `name` do
+`set_preference()` sombreando `Node.name`) e dois `INTEGER_DIVISION` (487 e 618).
+
+- **De onde vinham:** as seis linhas batem exatamente com a branch
+  `arena/01a0adcf-busao` (commit 845b35b), que é a base do PR #1. Na branch de
+  trabalho (`arena/01a0b48a-busao`, PR #2) o erro de parser da 638 e a divisão da
+  487 já tinham sido corrigidos no primeiro round; os quatro avisos restantes
+  (164, 297, 554 e 618) também existiam aqui e foram corrigidos agora.
+- **Erro de parser (638):** `Time.get_unix_time_from_datetime_dict(dict, utc)`
+  nunca teve o segundo parâmetro — o dicionário já é interpretado como UTC. A
+  chamada na branch antiga é a que quebra a compilação do arquivo inteiro.
+- **Sombreamento (164, 297, 554):** em GDScript 4 nomes locais não podem repetir
+  um símbolo da classe, da cadeia de scripts pais ou da cadeia nativa. Os locais
+  `retention_flags` viraram `flags` (sem tocar na função `retention_flags()`, que
+  continua sendo a única dona do nome) e o parâmetro `name` do
+  `set_preference()` virou `preference` — as chamadas em `game_3d.gd` são
+  posicionais, então nada muda para quem chama.
+- **Divisão inteira (618):** `1 + int(xp() / maxi(1, ...))` dividia inteiro por
+  inteiro e truncava antes do `int()`; virou `int(float(xp()) / maxi(1, ...))`,
+  como nas outras 19 do primeiro round.
+- **Precisão do aviso:** `tools/check_gdscript.py` passou a reproduzir
+  `GDScriptAnalyzer::is_shadowing()` — a ordem de busca (funções globais →
+  classes/tipos do engine → membro da classe atual → cadeia de scripts pais →
+  cadeia nativa) e o texto literal de cada aviso do engine, incluindo o contexto
+  (`variable`, `function parameter`, `` `for` iterator variable ``, `pattern
+  bind`, `enum member`). Contra a branch antiga o verificador imprime as mesmas
+  seis linhas que o editor mostrou, com os mesmos números.
+- **Armadilha silenciosa:** um nome antigo que continua no corpo depois de uma
+  renomeação não gera erro nenhum no Godot 4 — ele resolve para o membro herdado
+  (`self.scale`, `Control.size`) ou, se for o nome de um método, produz um
+  `Callable` (`FUNCTION_USED_AS_PROPERTY` está morto desde o 3.x). Por isso as
+  renomeações (`scale`, `size`, `ready`, `position`, `retention_flags`, `name`)
+  foram auditadas token a token: o que é acesso a membro (`obj.scale`) fica, e
+  nenhum uso nu do nome antigo sobrou dentro das funções alteradas.
+
+Resultado: `python3 tools/check_gdscript.py` → 0 problema(s) (idem com
+`--godot-doc`), `python3 tools/check_gdscript.py --selftest` → fixture com
+sombreamento, divisão inteira, argumentos a mais e variável duplicada detectados
+nas linhas esperadas, `python3 tools/validate_project.py` → PRE-FLIGHT OK,
+`python3 tools/audit_balance.py` → curva inalterada, os 14 scripts com sintaxe
+válida no gdtoolkit. Varredura extra de API do Godot 3 (`.instance()`, `yield()`,
+`Pool*Array`, `onready var`, `VisualServer`, `set_as_toplevel`, `connect` com
+assinatura antiga): nada encontrado.
+
 ## Limitações conhecidas / validação ainda obrigatória
 
-- Não há binário Godot 4.x disponível no sandbox para executar `godot --headless --editor --quit --path .`; portanto, a confirmação final de parser, importação GLTF/GLB, retarget da AnimationLibrary, APIs 3D e warnings do editor está pendente.
+- Não há binário Godot 4.x disponível no sandbox para executar `godot --headless --editor --quit --path .`; a checagem possível aqui é estática (`tools/check_gdscript.py`, que reproduz as classes de erro do analisador) e a confirmação final de importação GLTF/GLB, retarget da AnimationLibrary, renderização e warnings restantes precisa ser feita em uma máquina com Godot 4.x.
 - Ainda é necessário fazer uma exportação APK debug, instalar em Android 8.0 ou superior e medir FPS, memória, aquecimento e consumo em um aparelho médio.
 - O runner trata `NOTIFICATION_WM_GO_BACK_REQUEST`: primeiro Voltar pausa a corrida, o segundo encerra sem perda de save e Voltar no ponto embarca; ainda é necessário testar safe areas, notch, áudio interrompido por chamada/notificação e gestos em telas com diferentes densidades.
 - O pacote usa `GL Compatibility` para manter o alvo Android amplo. A contagem de meshes, sombras e partículas deve ser medida em aparelho real antes da publicação.

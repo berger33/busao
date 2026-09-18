@@ -317,7 +317,7 @@ func _phase_at_position(pos: Vector2) -> int:
     var first_phase := map_page * 10
     for local_index in 10:
         var col := local_index % 2
-        var row := int(local_index / 2)
+        var row := int(float(local_index) / 2.0)
         var rect := Rect2(25.0 + col * 340.0, origin_y + row * 170.0, 330.0, 140.0)
         if rect.has_point(pos):
             return first_phase + local_index
@@ -331,7 +331,7 @@ func _daily_at_position(pos: Vector2) -> int:
 
 func _start_run(index: int) -> void:
     index = clampi(index, 0, 49)
-    map_page = int(index / 10)
+    map_page = int(float(index) / 10.0)
     endless_mode = false
     if not GameSave.is_phase_unlocked(index):
         _show_toast("Essa tela ainda está fechada. Mais estrelas!")
@@ -481,7 +481,7 @@ func _build_course() -> void:
             ["turnstile", "traffic", "luggage", "truck", "dog"],
             ["drone", "cart", "traffic", "umbrella", "truck"]
         ]
-        forced = expansion_sets[mini(5, int((phase_index - 20) / 5))]
+        forced = expansion_sets[mini(5, int(float(phase_index - 20) / 5.0))]
     for j in forced.size():
         var forced_z := 68.0 + j * maxf(15.0, (total - 105.0) / maxf(1.0, float(forced.size())))
         entities.append({"kind": str(forced[j]), "lane": (j + phase_index) % 3, "z": forced_z, "passed": false, "resolved": false})
@@ -936,11 +936,11 @@ func _feedback(
     detail: String,
     color: Color,
     sound: String = "",
-    position: Vector2 = Vector2(-1, -1),
+    panel_position: Vector2 = Vector2(-1, -1),
     intensity: float = 0.0,
     flash: float = 0.0
 ) -> void:
-    var origin := position if position.x >= 0.0 else Vector2(360, 540)
+    var origin := panel_position if panel_position.x >= 0.0 else Vector2(360, 540)
     feedback_title = title
     feedback_detail = detail
     feedback_color = color
@@ -1079,7 +1079,7 @@ func _draw_map() -> void:
     for local_index in 10:
         var i := first_phase + local_index
         var col := local_index % 2
-        var row := int(local_index / 2)
+        var row := int(float(local_index) / 2.0)
         var rect := Rect2(25.0 + col * 340.0, origin_y + row * 170.0, 330.0, 140.0)
         var unlocked := GameSave.is_phase_unlocked(i)
         var p := PhaseData.get_phase(i)
@@ -1224,7 +1224,7 @@ func _shop_tap(pos: Vector2) -> void:
     else:
         for i in items.size():
             var col := i % 2
-            var row := int(i / 2)
+            var row := int(float(i) / 2.0)
             var rect := Rect2(30 + col * 345, 250 + row * 175, 315, 150)
             if rect.has_point(pos):
                 var id: String = items[i][0]
@@ -1279,12 +1279,12 @@ func _draw_daily() -> void:
     for i in missions.size():
         var y := 200.0 + i * 190.0
         var done := i in completed
-        var ready := _daily_ready(i, progress)
+        var is_ready := _daily_ready(i, progress)
         _panel(Rect2(35, y, 650, 145), Color("#24445a") if done else Color("#1a2a45"), 17)
         _text(Vector2(65, y + 43), missions[i][0], 25, WHITE)
         _text(Vector2(65, y + 78), missions[i][1], 17, MUTED)
         _text(Vector2(65, y + 116), "FEITO" if done else _daily_status(i, progress), 15, GREEN if done else YELLOW)
-        _button(Rect2(505, y + 43, 145, 58), "FEITO" if done else ("RESGATAR" if ready else "IR"), GREEN if done else (Color("#5dbd7d") if ready else Color("#3d7191")), 15)
+        _button(Rect2(505, y + 43, 145, 58), "FEITO" if done else ("RESGATAR" if is_ready else "IR"), GREEN if done else (Color("#5dbd7d") if is_ready else Color("#3d7191")), 15)
     _panel(Rect2(45, 800, 630, 165), Color("#1e2f4d"), 18)
     _text(Vector2(75, 850), "SEQUÊNCIA", 17, MUTED)
     _text(Vector2(75, 895), "🔥 %02d dias  •  XP %04d" % [int(GameSave.data.get("daily_streak", 0)), GameSave.xp()], 25, Color("#ffbd6e"))
@@ -1526,22 +1526,22 @@ func _draw_entities() -> void:
         var depth := 1.0 - clampf(z / VISIBLE_Z, 0.0, 1.0)
         var x := _world_lane_x(int(entity["lane"]), depth)
         var y := lerpf(HORIZON_Y + 22.0, GROUND_Y, depth)
-        var scale := 0.28 + depth * 0.95
+        var depth_scale := 0.28 + depth * 0.95
         var kind := str(entity["kind"])
         if kind in COLLECTIBLE_NAMES:
-            draw_circle(Vector2(x, y - 4), 34.0 * scale, Color(1.0, 0.82, 0.28, 0.07 + depth * 0.08))
+            draw_circle(Vector2(x, y - 4), 34.0 * depth_scale, Color(1.0, 0.82, 0.28, 0.07 + depth * 0.08))
         else:
-            _ellipse(Vector2(x, y + 4), 30.0 * scale, 7.0 * scale, Color(0.02, 0.04, 0.08, 0.20 + depth * 0.16))
+            _ellipse(Vector2(x, y + 4), 30.0 * depth_scale, 7.0 * depth_scale, Color(0.02, 0.04, 0.08, 0.20 + depth * 0.16))
         if kind in COLLECTIBLE_NAMES:
-            _draw_collectible(kind, Vector2(x, y - 62.0 * scale), scale)
+            _draw_collectible(kind, Vector2(x, y - 62.0 * depth_scale), depth_scale)
         elif kind == "dog":
-            _draw_dog(Vector2(x, y - 40.0 * scale), scale, false)
+            _draw_dog(Vector2(x, y - 40.0 * depth_scale), depth_scale, false)
         elif kind == "wall":
-            _draw_wall(Vector2(x, y), scale, int(entity["lane"]) == 0)
+            _draw_wall(Vector2(x, y), depth_scale, int(entity["lane"]) == 0)
         elif kind == "ramp":
-            _draw_ramp(Vector2(x, y), scale)
+            _draw_ramp(Vector2(x, y), depth_scale)
         else:
-            _draw_obstacle(kind, Vector2(x, y), scale)
+            _draw_obstacle(kind, Vector2(x, y), depth_scale)
 
 func _draw_hud() -> void:
     draw_rect(Rect2(0, 0, 720, 128), Color(0.025, 0.055, 0.12, 0.94))
@@ -1710,15 +1710,15 @@ func _draw_city_silhouette(alpha: float) -> void:
         x += w + 7
         i += 1
 
-func _draw_tree(pos: Vector2, scale: float) -> void:
-    draw_rect(Rect2(pos.x - 7 * scale, pos.y, 14 * scale, 62 * scale), Color("#67452f"))
-    draw_circle(pos + Vector2(-25, -15) * scale, 31 * scale, Color("#2e8b5b"))
-    draw_circle(pos + Vector2(10, -30) * scale, 38 * scale, Color("#3ba66a"))
-    draw_circle(pos + Vector2(35, -5) * scale, 27 * scale, Color("#287e58"))
+func _draw_tree(pos: Vector2, object_scale: float) -> void:
+    draw_rect(Rect2(pos.x - 7 * object_scale, pos.y, 14 * object_scale, 62 * object_scale), Color("#67452f"))
+    draw_circle(pos + Vector2(-25, -15) * object_scale, 31 * object_scale, Color("#2e8b5b"))
+    draw_circle(pos + Vector2(10, -30) * object_scale, 38 * object_scale, Color("#3ba66a"))
+    draw_circle(pos + Vector2(35, -5) * object_scale, 27 * object_scale, Color("#287e58"))
 
-func _draw_wave(pos: Vector2, scale: float) -> void:
+func _draw_wave(pos: Vector2, object_scale: float) -> void:
     for i in 4:
-        draw_arc(pos + Vector2(i * 30, 0) * scale, 25 * scale, 0, PI, 16, Color("#6bbdcc"), 4 * scale)
+        draw_arc(pos + Vector2(i * 30, 0) * object_scale, 25 * object_scale, 0, PI, 16, Color("#6bbdcc"), 4 * object_scale)
 
 func _draw_terminal() -> void:
     draw_rect(Rect2(35, 255, 650, 130), Color("#26384c"))
@@ -1746,10 +1746,10 @@ func _draw_factory() -> void:
     _ellipse(Vector2(178, 178), 33, 16, Color(0.7, 0.74, 0.72, 0.22))
     _ellipse(Vector2(543, 202), 40, 18, Color(0.7, 0.74, 0.72, 0.20))
 
-func _draw_obstacle(kind: String, pos: Vector2, scale: float) -> void:
+func _draw_obstacle(kind: String, pos: Vector2, object_scale: float) -> void:
     var x := pos.x
     var y := pos.y
-    var s := scale
+    var s := object_scale
     match kind:
         "trash":
             draw_rect(Rect2(x - 25 * s, y - 64 * s, 50 * s, 64 * s), Color("#3b5b63"))
@@ -1879,7 +1879,7 @@ func draw_ellipse_horse(pos: Vector2, s: float) -> void:
     draw_line(pos + Vector2(-25, -22) * s, pos + Vector2(-31, 1) * s, Color("#714a38"), 8 * s)
     draw_line(pos + Vector2(20, -22) * s, pos + Vector2(27, 1) * s, Color("#714a38"), 8 * s)
 
-func _draw_collectible(kind: String, pos: Vector2, scale: float) -> void:
+func _draw_collectible(kind: String, pos: Vector2, object_scale: float) -> void:
     var color := Color("#ffd34e")
     if kind == "coffee": color = Color("#b87d55")
     elif kind == "bread": color = Color("#f2b04c")
@@ -1893,46 +1893,46 @@ func _draw_collectible(kind: String, pos: Vector2, scale: float) -> void:
     elif kind == "pix": color = Color("#54dfbf")
     elif kind == "umbrella": color = Color("#72b9f2")
     elif kind == "clover": color = Color("#77d866")
-    var bob := sin(pulse * 4.0 + pos.x * 0.01) * 3.0 * scale
+    var bob := sin(pulse * 4.0 + pos.x * 0.01) * 3.0 * object_scale
     var center := pos + Vector2(0, bob)
-    var radius := 18.0 * scale
+    var radius := 18.0 * object_scale
     draw_circle(center, radius * 2.0, Color(color, 0.08))
-    draw_arc(center, radius * 1.55, pulse * 1.8, pulse * 1.8 + 4.2, 18, Color(color, 0.42), maxf(1.0, 2.0 * scale))
+    draw_arc(center, radius * 1.55, pulse * 1.8, pulse * 1.8 + 4.2, 18, Color(color, 0.42), maxf(1.0, 2.0 * object_scale))
     draw_circle(center, radius * 1.12, Color(0.02, 0.06, 0.12, 0.50))
     draw_circle(center, radius, color)
-    draw_arc(center, radius * 0.78, PI * 1.05, PI * 1.85, 12, Color(1, 1, 1, 0.62), maxf(1.0, 2.0 * scale))
+    draw_arc(center, radius * 0.78, PI * 1.05, PI * 1.85, 12, Color(1, 1, 1, 0.62), maxf(1.0, 2.0 * object_scale))
     var bonus_labels := {"coffee": "☕", "bread": "P", "pastel": "★", "sugarcane": "C", "mint": "M", "pass": "VT", "golden": "★", "coxinha": "C", "guarana": "G", "pix": "₱", "umbrella": "U", "clover": "♣"}
     var label: String = "¢" if kind == "coin" else str(bonus_labels.get(kind, "•"))
-    _text_center(center + Vector2(0, 6 * scale), label, int(14 * scale + 4), UI_INK)
-    if scale > 0.55:
-        _text_center(center + Vector2(0, -34 * scale), COLLECTIBLE_NAMES.get(kind, kind), int(8 * scale + 3), WHITE)
+    _text_center(center + Vector2(0, 6 * object_scale), label, int(14 * object_scale + 4), UI_INK)
+    if object_scale > 0.55:
+        _text_center(center + Vector2(0, -34 * object_scale), COLLECTIBLE_NAMES.get(kind, kind), int(8 * object_scale + 3), WHITE)
 
-func _draw_wall(pos: Vector2, scale: float, left: bool) -> void:
+func _draw_wall(pos: Vector2, object_scale: float, left: bool) -> void:
     var direction := -1.0 if left else 1.0
-    draw_rect(Rect2(pos.x + direction * 27 * scale - 13 * scale, pos.y - 135 * scale, 26 * scale, 135 * scale), Color("#8b6b61"))
-    draw_rect(Rect2(pos.x + direction * 52 * scale - 18 * scale, pos.y - 108 * scale, 36 * scale, 12 * scale), Color("#ecb54b"))
-    _text_center(pos + Vector2(direction * 45 * scale, -153 * scale), "↑", int(22 * scale + 5), BLUE)
+    draw_rect(Rect2(pos.x + direction * 27 * object_scale - 13 * object_scale, pos.y - 135 * object_scale, 26 * object_scale, 135 * object_scale), Color("#8b6b61"))
+    draw_rect(Rect2(pos.x + direction * 52 * object_scale - 18 * object_scale, pos.y - 108 * object_scale, 36 * object_scale, 12 * object_scale), Color("#ecb54b"))
+    _text_center(pos + Vector2(direction * 45 * object_scale, -153 * object_scale), "↑", int(22 * object_scale + 5), BLUE)
 
-func _draw_ramp(pos: Vector2, scale: float) -> void:
-    draw_colored_polygon(PackedVector2Array([pos + Vector2(-55, 0) * scale, pos + Vector2(53, 0) * scale, pos + Vector2(35, -55) * scale, pos + Vector2(-18, -18) * scale]), Color("#ed9f3c"))
-    draw_line(pos + Vector2(-35, -7) * scale, pos + Vector2(33, -39) * scale, Color("#fff0a4"), 4 * scale)
-    _text_center(pos + Vector2(0, -68 * scale), "↑ SUPER", int(10 * scale + 3), YELLOW)
+func _draw_ramp(pos: Vector2, object_scale: float) -> void:
+    draw_colored_polygon(PackedVector2Array([pos + Vector2(-55, 0) * object_scale, pos + Vector2(53, 0) * object_scale, pos + Vector2(35, -55) * object_scale, pos + Vector2(-18, -18) * object_scale]), Color("#ed9f3c"))
+    draw_line(pos + Vector2(-35, -7) * object_scale, pos + Vector2(33, -39) * object_scale, Color("#fff0a4"), 4 * object_scale)
+    _text_center(pos + Vector2(0, -68 * object_scale), "↑ SUPER", int(10 * object_scale + 3), YELLOW)
 
-func _draw_dog(pos: Vector2, scale: float, chase: bool) -> void:
-    _ellipse(pos + Vector2(0, -30) * scale, 42 * scale, 24 * scale, Color("#b8794d"))
-    _ellipse(pos + Vector2(34, -56) * scale, 23 * scale, 22 * scale, Color("#c28656"))
-    draw_colored_polygon(PackedVector2Array([pos + Vector2(18, -70) * scale, pos + Vector2(12, -100) * scale, pos + Vector2(30, -78) * scale]), Color("#86553f"))
-    draw_circle(pos + Vector2(40, -60) * scale, 3 * scale, Color("#171d28"))
-    draw_line(pos + Vector2(-20, -13) * scale, pos + Vector2(-27, 10) * scale, Color("#774832"), 8 * scale)
-    draw_line(pos + Vector2(22, -13) * scale, pos + Vector2(28, 10) * scale, Color("#774832"), 8 * scale)
-    draw_line(pos + Vector2(-36, -43) * scale, pos + Vector2(-65, -60) * scale, Color("#c28656"), 7 * scale)
+func _draw_dog(pos: Vector2, object_scale: float, chase: bool) -> void:
+    _ellipse(pos + Vector2(0, -30) * object_scale, 42 * object_scale, 24 * object_scale, Color("#b8794d"))
+    _ellipse(pos + Vector2(34, -56) * object_scale, 23 * object_scale, 22 * object_scale, Color("#c28656"))
+    draw_colored_polygon(PackedVector2Array([pos + Vector2(18, -70) * object_scale, pos + Vector2(12, -100) * object_scale, pos + Vector2(30, -78) * object_scale]), Color("#86553f"))
+    draw_circle(pos + Vector2(40, -60) * object_scale, 3 * object_scale, Color("#171d28"))
+    draw_line(pos + Vector2(-20, -13) * object_scale, pos + Vector2(-27, 10) * object_scale, Color("#774832"), 8 * object_scale)
+    draw_line(pos + Vector2(22, -13) * object_scale, pos + Vector2(28, 10) * object_scale, Color("#774832"), 8 * object_scale)
+    draw_line(pos + Vector2(-36, -43) * object_scale, pos + Vector2(-65, -60) * object_scale, Color("#c28656"), 7 * object_scale)
     if chase:
-        _text_center(pos + Vector2(0, -112) * scale, "AU AU!", int(12 * scale + 5), Color("#ffeaa4"))
+        _text_center(pos + Vector2(0, -112) * object_scale, "AU AU!", int(12 * object_scale + 5), Color("#ffeaa4"))
 
-func _draw_player(x: float, y: float, scale: float, character: String) -> void:
-    _draw_runner(Vector2(x, y), scale, false, character)
+func _draw_player(x: float, y: float, object_scale: float, character: String) -> void:
+    _draw_runner(Vector2(x, y), object_scale, false, character)
 
-func _draw_runner(pos: Vector2, scale: float, mirrored: bool, character := "ze") -> void:
+func _draw_runner(pos: Vector2, object_scale: float, mirrored: bool, character := "ze") -> void:
     var direction := -1.0 if mirrored else 1.0
     var skin := Color("#d8946d")
     var shirt := Color("#e94f5a")
@@ -1948,36 +1948,36 @@ func _draw_runner(pos: Vector2, scale: float, mirrored: bool, character := "ze")
             pants = Color("#20293b")
         "influencer": shirt = Color("#e45d99")
     var squish := 0.72 if slide_timer > 0.0 else 1.0
-    _ellipse(pos + Vector2(0, 5), 46 * scale, 12 * scale, Color(0.02, 0.04, 0.08, 0.38))
+    _ellipse(pos + Vector2(0, 5), 46 * object_scale, 12 * object_scale, Color(0.02, 0.04, 0.08, 0.38))
     if dash_timer > 0.0:
         for trail in 3:
-            draw_line(pos + Vector2(-58 - trail * 18, -30 + trail * 13) * scale, pos + Vector2(-105 - trail * 22, -30 + trail * 13) * scale, Color(YELLOW, 0.34 - trail * 0.08), 5 * scale)
-    draw_line(pos + Vector2(-15 * direction, -4) * scale, pos + Vector2(-30 * direction, 36) * scale, pants, 14 * scale)
-    draw_line(pos + Vector2(15 * direction, -4) * scale, pos + Vector2(30 * direction, 36) * scale, pants, 14 * scale)
-    draw_line(pos + Vector2(-30 * direction, 35) * scale, pos + Vector2(-47 * direction, 35) * scale, skin, 9 * scale)
-    draw_line(pos + Vector2(30 * direction, 35) * scale, pos + Vector2(47 * direction, 35) * scale, skin, 9 * scale)
-    var torso := Rect2(pos.x - 28 * scale, pos.y - 65 * scale, 56 * scale, 66 * scale * squish)
+            draw_line(pos + Vector2(-58 - trail * 18, -30 + trail * 13) * object_scale, pos + Vector2(-105 - trail * 22, -30 + trail * 13) * object_scale, Color(YELLOW, 0.34 - trail * 0.08), 5 * object_scale)
+    draw_line(pos + Vector2(-15 * direction, -4) * object_scale, pos + Vector2(-30 * direction, 36) * object_scale, pants, 14 * object_scale)
+    draw_line(pos + Vector2(15 * direction, -4) * object_scale, pos + Vector2(30 * direction, 36) * object_scale, pants, 14 * object_scale)
+    draw_line(pos + Vector2(-30 * direction, 35) * object_scale, pos + Vector2(-47 * direction, 35) * object_scale, skin, 9 * object_scale)
+    draw_line(pos + Vector2(30 * direction, 35) * object_scale, pos + Vector2(47 * direction, 35) * object_scale, skin, 9 * object_scale)
+    var torso := Rect2(pos.x - 28 * object_scale, pos.y - 65 * object_scale, 56 * object_scale, 66 * object_scale * squish)
     draw_rect(torso, shirt)
-    draw_rect(torso, Color(0.04, 0.08, 0.14, 0.54), false, maxf(1.0, 2.0 * scale))
-    draw_rect(Rect2(torso.position + Vector2(7, 7) * scale, Vector2(torso.size.x - 14 * scale, 5 * scale)), Color(1, 1, 1, 0.16))
-    draw_line(pos + Vector2(-26 * direction, -48) * scale, pos + Vector2(-53 * direction, -24) * scale, skin, 11 * scale)
-    draw_line(pos + Vector2(26 * direction, -48) * scale, pos + Vector2(53 * direction, -73) * scale, skin, 11 * scale)
-    draw_circle(pos + Vector2(0, -94 * scale * (1.0 if squish > 0.9 else 0.7)), 28 * scale, skin)
-    draw_arc(pos + Vector2(0, -94 * scale * (1.0 if squish > 0.9 else 0.7)), 28 * scale, PI, TAU, 12, Color("#3a2831"), 11 * scale)
-    draw_circle(pos + Vector2(10 * direction, -94 * scale), 3 * scale, Color("#222533"))
-    draw_line(pos + Vector2(8 * direction, -82) * scale, pos + Vector2(19 * direction, -79) * scale, Color("#5c3038"), 3 * scale)
+    draw_rect(torso, Color(0.04, 0.08, 0.14, 0.54), false, maxf(1.0, 2.0 * object_scale))
+    draw_rect(Rect2(torso.position + Vector2(7, 7) * object_scale, Vector2(torso.size.x - 14 * object_scale, 5 * object_scale)), Color(1, 1, 1, 0.16))
+    draw_line(pos + Vector2(-26 * direction, -48) * object_scale, pos + Vector2(-53 * direction, -24) * object_scale, skin, 11 * object_scale)
+    draw_line(pos + Vector2(26 * direction, -48) * object_scale, pos + Vector2(53 * direction, -73) * object_scale, skin, 11 * object_scale)
+    draw_circle(pos + Vector2(0, -94 * object_scale * (1.0 if squish > 0.9 else 0.7)), 28 * object_scale, skin)
+    draw_arc(pos + Vector2(0, -94 * object_scale * (1.0 if squish > 0.9 else 0.7)), 28 * object_scale, PI, TAU, 12, Color("#3a2831"), 11 * object_scale)
+    draw_circle(pos + Vector2(10 * direction, -94 * object_scale), 3 * object_scale, Color("#222533"))
+    draw_line(pos + Vector2(8 * direction, -82) * object_scale, pos + Vector2(19 * direction, -79) * object_scale, Color("#5c3038"), 3 * object_scale)
     if character in ["carlos", "chefe"]:
-        _text_center(pos + Vector2(0, -138) * scale, "CARLOS", int(9 * scale + 3), WHITE)
+        _text_center(pos + Vector2(0, -138) * object_scale, "CARLOS", int(9 * object_scale + 3), WHITE)
     elif character == "motoboy":
-        draw_arc(pos + Vector2(0, -98) * scale, 31 * scale, PI, TAU, 12, Color("#ed4e45"), 8 * scale)
+        draw_arc(pos + Vector2(0, -98) * object_scale, 31 * object_scale, PI, TAU, 12, Color("#ed4e45"), 8 * object_scale)
     elif character == "maria":
-        draw_circle(pos + Vector2(-31 * direction, -43) * scale, 16 * scale, Color("#d64c88"))
+        draw_circle(pos + Vector2(-31 * direction, -43) * object_scale, 16 * object_scale, Color("#d64c88"))
     elif character == "influencer":
-        draw_rect(Rect2(pos.x + 35 * direction * scale, pos.y - 78 * scale, 22 * scale, 35 * scale), Color("#1d334f"))
+        draw_rect(Rect2(pos.x + 35 * direction * object_scale, pos.y - 78 * object_scale, 22 * object_scale, 35 * object_scale), Color("#1d334f"))
 
-func _draw_bus(pos: Vector2, scale: float, leaving: bool) -> void:
+func _draw_bus(pos: Vector2, object_scale: float, leaving: bool) -> void:
     var p := pos
-    var s := scale
+    var s := object_scale
     _ellipse(p + Vector2(0, 58) * s, 139 * s, 18 * s, Color(0.02, 0.04, 0.08, 0.35))
     var body := Rect2(p.x - 125 * s, p.y - 70 * s, 250 * s, 116 * s)
     draw_rect(body, Color("#f4bf3d"), true)
@@ -2005,9 +2005,9 @@ func _draw_bus(pos: Vector2, scale: float, leaving: bool) -> void:
     if leaving:
         _text_center(p + Vector2(0, -95) * s, "TCHAU!", int(18 * s + 7), RED)
 
-func _draw_bus_stop(pos: Vector2, scale: float) -> void:
+func _draw_bus_stop(pos: Vector2, object_scale: float) -> void:
     var p := pos
-    var s := scale
+    var s := object_scale
     draw_line(p + Vector2(0, -150) * s, p + Vector2(0, 30) * s, Color("#d9dde1"), 8 * s)
     draw_rect(Rect2(p.x - 47 * s, p.y - 160 * s, 94 * s, 60 * s), Color("#eec442"))
     _text_center(p + Vector2(0, -121) * s, "P", int(28 * s + 8), Color("#253650"))

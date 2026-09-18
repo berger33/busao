@@ -21,6 +21,17 @@ const MODEL_SCALE := 1.18
 const MODEL_FLOOR_OFFSET := 0.012
 const CLOTHING_INFLATE := 0.008
 const PLAYER_HEIGHT := 2.15
+## O GLTF do Quaternius é exportado olhando para +Z: as sobrancelhas e os olhos
+## ficam nesse eixo e as costas no lado oposto. O corredor avança para -Z (fundo
+## da tela), então o modelo é girado 180 graus — sem isso ele corre de costas
+## para o sentido do movimento, de frente para a câmera.
+const MODEL_FACING_YAW := PI
+## Velocidade de solo que o clipe Sprint_Loop cobre sozinho: o ciclo dura 0,667 s
+## e desloca o pé ~1,35 m (medido por cinemática direta dos ossos do GLB), o
+## equivalente a ~4 m/s. A cadência da animação é escalada pela velocidade real
+## do jogo para o pé não patinar no asfalto.
+const LOCOMOTION_CLIP_SPEED := 4.0
+const LOCOMOTION_MAX_PLAYBACK := 2.2
 
 const BODY_PATHS: Dictionary = {
     "M": BASE_ROOT + "/Superhero_Male_FullBody.gltf",
@@ -67,6 +78,10 @@ const REGION_BONES: Dictionary = {
 var character_id: String = "ze"
 var gender: String = "M"
 var model_root: Node3D
+## Pivô acima do modelo: recebe o balanço lateral enquanto o modelo guarda o
+## giro de 180° em `model_root`. Separar os dois evita depender da ordem de
+## Euler para o sinal da inclinação.
+var model_pivot: Node3D
 var skeleton: Skeleton3D
 var animation_player: AnimationPlayer
 var runner_shadow: MeshInstance3D
@@ -99,10 +114,14 @@ func set_character(next_id: String) -> void:
     if model_root == null:
         _build_fallback("cena GLTF inválida")
         return
+    model_pivot = Node3D.new()
+    model_pivot.name = "ModelPivot"
+    add_child(model_pivot)
     model_root.name = "QuaterniusHuman"
+    model_root.rotation.y = MODEL_FACING_YAW
     model_root.scale = Vector3.ONE * MODEL_SCALE
     model_root.position.y = MODEL_FLOOR_OFFSET
-    add_child(model_root)
+    model_pivot.add_child(model_root)
     skeleton = _find_skeleton(model_root)
     if skeleton == null:
         _build_fallback("esqueleto humano não encontrado")
@@ -120,8 +139,9 @@ func set_character(next_id: String) -> void:
     primary_asset_loaded = true
 
 func _clear_character() -> void:
-    if is_instance_valid(model_root):
-        model_root.free()
+    if is_instance_valid(model_pivot):
+        model_pivot.free()
+    model_pivot = null
     model_root = null
     skeleton = null
     animation_player = null
@@ -202,7 +222,6 @@ func _split_base_body() -> void:
         # default parent-skeleton behavior.
         region_mesh.skeleton = region_mesh.get_path_to(skeleton)
         region_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-        region_mesh.receive_shadow = true
     body_mesh.visible = false
 
 func _split_regions(body_mesh: MeshInstance3D) -> Dictionary:
@@ -224,7 +243,7 @@ func _split_regions(body_mesh: MeshInstance3D) -> Dictionary:
         var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
         if vertices.is_empty() or bones.is_empty() or weights.is_empty() or indices.is_empty():
             continue
-        var influences: int = int(bones.size() / vertices.size())
+        var influences: int = int(float(bones.size()) / float(vertices.size()))
         var region_indices: Dictionary = {}
         for triangle in range(0, indices.size(), 3):
             var votes: Dictionary = {}
@@ -282,7 +301,6 @@ func _attach_outfit(body_gender: String) -> void:
             # Rebind each garment to the live body skeleton after instancing.
             worn.skeleton = worn.get_path_to(skeleton)
             worn.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-            worn.receive_shadow = true
             _tint_exposed_skin_materials(worn)
         outfit_root.free()
 
@@ -409,7 +427,9 @@ func _attach_creator_details(profile: Dictionary) -> void:
             sequin_mesh.radial_segments = 12
             sequin_mesh.rings = 6
             var sequin := _creator_mesh(torso_attachment, "CreatorSequin_%02d" % index, sequin_mesh, metal_material)
-            sequin.position = Vector3(-0.16 + float(index % 3) * 0.16, 0.10 + float(index / 3) * 0.07, -0.245)
+            var column := index % 3
+            var row := int(float(index) / 3.0)
+            sequin.position = Vector3(-0.16 + float(column) * 0.16, 0.10 + float(row) * 0.07, -0.245)
             sequin.scale = Vector3(1.0, 0.55, 0.42)
 
     var pelvis_attachment := _bone_attachment("pelvis", "CreatorPelvisAttachment")
@@ -690,7 +710,6 @@ func _creator_mesh(parent: Node3D, node_name: String, mesh: Mesh, material: Mate
     instance.mesh = mesh
     instance.material_override = material
     instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-    instance.receive_shadow = true
     parent.add_child(instance)
     return instance
 
@@ -719,7 +738,7 @@ func _setup_animation_library() -> void:
         _apply_neutral_pose()
         return
     animation_player.add_animation_library("body", library)
-    using_external_animation = animation_player.has_animation("body/Idle_Loop")
+    using_external_animation = animation_player.has_animation("body/Idle_Loop") and _library_drives_skeleton(library)
     if using_external_animation:
         _play_clip("Idle_Loop")
     else:
@@ -727,6 +746,35 @@ func _setup_animation_library() -> void:
 
 func _library_has(library: AnimationLibrary, clip: String) -> bool:
     return library != null and library.has_animation(clip)
+
+## A biblioteca precisa animar ESTE esqueleto: as trilhas guardam o osso no
+## subcaminho (`Skeleton3D:pelvis`). Pacotes de animação de outro rig (por
+## exemplo o Universal Humanoid, com Hips/LeftUpperLeg) não mexem em nenhum osso
+## do corpo e precisam cair na pose procedural em vez de congelar o personagem.
+func _library_drives_skeleton(library: AnimationLibrary) -> bool:
+    if library == null or skeleton == null:
+        return false
+    var bones: Dictionary = {}
+    for index in skeleton.get_bone_count():
+        bones[skeleton.get_bone_name(index)] = true
+    var checked := 0
+    var matched := 0
+    for clip_name in library.get_animation_list():
+        var animation := library.get_animation(clip_name)
+        if animation == null:
+            continue
+        for track in animation.get_track_count():
+            if animation.track_get_type(track) != Animation.TYPE_ROTATION_3D:
+                continue
+            var path := animation.track_get_path(track)
+            if path.get_subname_count() == 0:
+                continue
+            checked += 1
+            if bones.has(str(path.get_subname(0))):
+                matched += 1
+        if checked > 0:
+            break
+    return checked > 0 and float(matched) / float(checked) >= 0.5
 
 func _extract_animation_library_from_glb() -> AnimationLibrary:
     var source_scene := load(ANIMATION_SOURCE_PATH) as PackedScene
@@ -794,7 +842,7 @@ func _apply_procedural_fallback_pose(stride: float, crouching: bool, jumping: bo
     _set_bone_extra("upperarm_l", Quaternion(Vector3(0.0, 0.0, 1.0), -1.38 - stride * 0.42))
     _set_bone_extra("upperarm_r", Quaternion(Vector3(0.0, 0.0, 1.0), 1.38 + stride * 0.42))
 
-func set_motion(run_phase: float, is_running: bool, is_crouching: bool, jump_height: float, lane_velocity: float) -> void:
+func set_motion(run_phase: float, is_running: bool, is_crouching: bool, jump_height: float, lane_velocity: float, speed: float = 0.0) -> void:
     motion_clock = run_phase
     var jumping := jump_height > 0.05
     var clip := "Idle_Loop"
@@ -809,18 +857,31 @@ func set_motion(run_phase: float, is_running: bool, is_crouching: bool, jump_hei
     else:
         var stride := sin(run_phase * 0.82) if is_running and not is_crouching else 0.0
         _apply_procedural_fallback_pose(stride, is_crouching, jumping)
+    _match_playback_to_speed(speed, is_running, is_crouching, jumping)
     if runner_shadow != null:
         runner_shadow.position.y = 0.025 - position.y
         var shadow_factor := 1.0 - clampf(jump_height * 0.12, 0.0, 0.24)
         runner_shadow.scale = Vector3.ONE * shadow_factor
-    if model_root != null:
+    if model_pivot != null:
         var model_lean := clampf(lane_velocity * 0.018, -0.12, 0.12)
-        model_root.rotation.z = lerpf(model_root.rotation.z, -model_lean, 0.16)
+        model_pivot.rotation.z = lerpf(model_pivot.rotation.z, -model_lean, 0.16)
+
+## O jogo avança o cenário na velocidade real da corrida; a animação de sprint
+## sozinha cobre ~4 m/s. Escalar a cadência mantém o pé plantado no chão (sem
+## patinação) durante o dash e os capítulos rápidos.
+func _match_playback_to_speed(speed: float, is_running: bool, is_crouching: bool, jumping: bool) -> void:
+    if animation_player == null:
+        return
+    var playback := 1.0
+    if using_external_animation and is_running and not is_crouching and not jumping and speed > LOCOMOTION_CLIP_SPEED:
+        playback = clampf(speed / LOCOMOTION_CLIP_SPEED, 1.0, LOCOMOTION_MAX_PLAYBACK)
+    animation_player.speed_scale = playback
 
 func _configure_mesh_shadows(node: Node) -> void:
+    # No Godot 4 existem apenas "cast_shadow" por instancia; o recebimento e dado
+    # pelo material (BaseMaterial3D.disable_receive_shadows, falso por padrao).
     for mesh in _skinned_meshes(node):
         mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-        mesh.receive_shadow = true
 
 func _build_fallback(reason: String) -> void:
     push_warning("Humanoide Quaternius indisponível (%s); ativando fallback de diagnóstico." % reason)
@@ -830,7 +891,11 @@ func _build_fallback(reason: String) -> void:
     primary_asset_loaded = false
     var fallback_root := Node3D.new()
     fallback_root.name = "HumanAssetFallback"
-    add_child(fallback_root)
+    if not is_instance_valid(model_pivot):
+        model_pivot = Node3D.new()
+        model_pivot.name = "ModelPivot"
+        add_child(model_pivot)
+    model_pivot.add_child(fallback_root)
     var body := MeshInstance3D.new()
     var body_mesh := CapsuleMesh.new()
     body_mesh.radius = 0.34

@@ -392,7 +392,7 @@ func _start_run(index: int) -> void:
         return
     selected_phase = clamped_index
     phase_index = clamped_index
-    map_page = int(clamped_index / 10)
+    map_page = int(float(clamped_index) / 10.0)
     endless_mode = false
     phase = PhaseData.get_phase(phase_index)
     scenario = SCENARIO_DATA.get_profile(phase_index)
@@ -599,7 +599,7 @@ func _spawn_forced_gags(total: float) -> void:
             ["truck", "car", "dog", "umbrella", "motorcycle"],
             ["bus_traffic", "pothole", "vendor", "truck", "dog"],
             ["car", "payphone", "motorcycle", "hydrant", "truck"]
-        ][mini(5, int((phase_index - 20) / 5))]
+        ][mini(5, int(float(phase_index - 20) / 5.0))]
     for i in forced.size():
         var forced_distance: float = 72.0 + float(i) * maxf(16.0, (total - 110.0) / maxf(1.0, float(forced.size())))
         var forced_lane: int = ROAD_LANE if str(forced[i]) in ROAD_OBSTACLES else (SIDEWALK_CENTER + (i % 2))
@@ -1065,7 +1065,7 @@ func _update_player(dt: float) -> void:
         var shadow_factor: float = 1.0 - clampf(jump_height * 0.12, 0.0, 0.24)
         shadow.scale = Vector3.ONE * shadow_factor
     if player_visual.has_method("set_motion"):
-        player_visual.call("set_motion", run_phase, is_running, is_crouching, jump_height, lane_change_velocity)
+        player_visual.call("set_motion", run_phase, is_running, is_crouching, jump_height, lane_change_velocity, motion_speed)
     var lane_lean: float = clampf(lane_change_velocity * 0.08, -0.20, 0.20)
     var target_lean: float = lane_lean + (0.055 if is_running else 0.0)
     player_visual.rotation.z = lerpf(player_visual.rotation.z, target_lean, minf(1.0, dt * 9.0))
@@ -1115,7 +1115,6 @@ func _apply_scenario_atmosphere() -> void:
     environment.environment.fog_density = 0.0045 if weather in ["manhã clara", "sol confortável"] else 0.007
     environment.environment.fog_sky_affect = 0.18 + float(chapter % 4) * 0.025
     if sun:
-        var chapter: int = int(scenario.get("chapter_index", 0))
         sun.light_color = scenario.get("sun", Color("#ffe0a3"))
         sun.light_energy = 0.92 if chapter >= 7 else 1.18
         sun.rotation_degrees = Vector3(-42.0 - chapter * 1.8, -28.0 + chapter * 4.0, 0.0)
@@ -1593,13 +1592,13 @@ func _build_construction(pos: Vector3, index: int) -> void:
     if index % 2 == 0:
         _cone(decor_root, 0.28, 0.65, pos + Vector3(1.6, 0.34, -1.0), orange, "ConstructionCone")
 
-func _build_guard_post(pos: Vector3, index: int) -> void:
+func _build_guard_post(pos: Vector3, _index: int) -> void:
     _box(decor_root, Vector3(1.9, 1.9, 1.8), pos + Vector3(0.0, 0.95, 0.0), _material(_scenario_color("building_alt", Color("#b9a770")), 0.0, 0.74, "stucco"), "GuardPost")
     _box(decor_root, Vector3(1.3, 0.46, 0.05), pos + Vector3(0.0, 1.3, -0.94), _material(Color("#263d4b"), 0.0, 0.34, "glass"), "GuardWindow")
     _box(decor_root, Vector3(2.1, 0.10, 2.0), pos + Vector3(0.0, 2.0, 0.0), _material(_scenario_color("accent", YELLOW), 0.0, 0.72, "metal"), "GuardRoof")
     _build_flag(pos + Vector3(0.75, 0.0, 0.0), _scenario_color("accent", YELLOW))
 
-func _build_church(pos: Vector3, index: int) -> void:
+func _build_church(pos: Vector3, _index: int) -> void:
     var wall := _material(_scenario_color("building", Color("#d8a46d")), 0.0, 0.84, "stucco")
     _box(decor_root, Vector3(2.9, 4.0, 3.6), pos + Vector3(0.0, 2.0, 0.0), wall, "ChurchBody")
     _box(decor_root, Vector3(1.1, 5.6, 1.0), pos + Vector3(-1.0, 2.8, 0.0), wall, "ChurchTower")
@@ -1607,17 +1606,17 @@ func _build_church(pos: Vector3, index: int) -> void:
     _box(decor_root, Vector3(0.72, 1.24, 0.05), pos + Vector3(0.0, 0.72, -1.84), _material(Color("#684a58"), 0.0, 0.66), "ChurchDoor")
     _box(decor_root, Vector3(0.25, 0.92, 0.05), pos + Vector3(-1.0, 6.9, -0.05), _material(_scenario_color("accent", VIOLET), 0.0, 0.42), "ChurchCross")
 
-func _build_tourist_kiosk(pos: Vector3, index: int) -> void:
+func _build_tourist_kiosk(pos: Vector3, _index: int) -> void:
     _cylinder(decor_root, 0.72, 0.82, 1.55, pos + Vector3(0.0, 0.78, 0.0), _material(_scenario_color("building_alt", Color("#72b1ad")), 0.0, 0.74, "stucco"), "Kiosk")
     _cone(decor_root, 1.05, 0.52, pos + Vector3(0.0, 1.82, 0.0), _material(_scenario_color("accent", CYAN), 0.0, 0.62, "fabric"), "KioskRoof")
     _box(decor_root, Vector3(0.72, 0.22, 0.05), pos + Vector3(0.0, 0.98, -0.8), _material(Color("#f5e6bc"), 0.0, 0.45, "wood"), "KioskCounter")
 
-func _build_terminal_facade(pos: Vector3, index: int) -> void:
+func _build_terminal_facade(pos: Vector3, _index: int) -> void:
     _box(decor_root, Vector3(3.2, 3.2, 2.8), pos + Vector3(0.0, 1.6, 0.0), _material(_scenario_color("building", Color("#344b70")), 0.0, 0.68, "metal"), "TerminalFacade")
     _box(decor_root, Vector3(2.9, 0.95, 0.05), pos + Vector3(0.0, 1.35, -1.46), _material(Color("#7ed3d0"), 0.0, 0.25, "glass"), "TerminalGlass")
     _box(decor_root, Vector3(3.5, 0.12, 0.72), pos + Vector3(0.0, 3.25, 0.0), _material(_scenario_color("accent", CYAN), 0.0, 0.42, "metal"), "TerminalRoof")
 
-func _build_market_stall(pos: Vector3, index: int) -> void:
+func _build_market_stall(pos: Vector3, _index: int) -> void:
     _box(decor_root, Vector3(1.5, 1.1, 1.0), pos + Vector3(0.0, 0.56, 0.0), _material(Color("#d88c43"), 0.0, 0.76, "wood"), "MarketCart")
     _box(decor_root, Vector3(1.75, 0.10, 1.15), pos + Vector3(0.0, 1.34, 0.0), _material(_scenario_color("accent", RED), 0.0, 0.62, "fabric"), "MarketAwning")
     _sphere(decor_root, 0.23, pos + Vector3(0.0, 1.52, -0.08), _material(Color("#b8785a"), 0.0, 0.78), "MarketSeller")
@@ -1626,11 +1625,11 @@ func _build_colonial_facade(pos: Vector3, index: int) -> void:
     _build_house_facade(pos, index, false)
     _box(decor_root, Vector3(2.55, 0.09, 0.08), pos + Vector3(0.0, 2.1, -1.64), _material(_scenario_color("accent", CYAN), 0.0, 0.45, "paint"), "ColonialTrim")
 
-func _build_palm(pos: Vector3, scale: float) -> void:
-    _cylinder(decor_root, 0.10 * scale, 0.15 * scale, 2.7 * scale, pos + Vector3(0.0, 1.35 * scale, 0.0), _material(Color("#805338"), 0.0, 0.9), "PalmTrunk")
+func _build_palm(pos: Vector3, object_scale: float) -> void:
+    _cylinder(decor_root, 0.10 * object_scale, 0.15 * object_scale, 2.7 * object_scale, pos + Vector3(0.0, 1.35 * object_scale, 0.0), _material(Color("#805338"), 0.0, 0.9), "PalmTrunk")
     var leaf := _material(Color("#3eaa75"), 0.0, 0.84, "leaves")
     for i in 5:
-        var branch := _box(decor_root, Vector3(0.08, 0.06, 1.0 * scale), pos + Vector3(0.0, 2.75 * scale, 0.0), leaf, "PalmLeaf")
+        var branch := _box(decor_root, Vector3(0.08, 0.06, 1.0 * object_scale), pos + Vector3(0.0, 2.75 * object_scale, 0.0), leaf, "PalmLeaf")
         branch.rotation.y = float(i) * TAU / 5.0
         branch.rotation.x = -0.28
 
@@ -1652,7 +1651,7 @@ func _build_gate(pos: Vector3, color: Color) -> void:
     for i in 4:
         _box(decor_root, Vector3(0.035, 1.5, 0.10), pos + Vector3(-0.68 + i * 0.45, 0.78, -0.05), metal, "GateBar")
 
-func _build_decor_car(pos: Vector3, color: Color) -> void:
+func _build_decor_car(pos: Vector3, _color: Color) -> void:
     var parent := Node3D.new()
     parent.name = "ParkedCar"
     parent.position = pos
@@ -1706,12 +1705,12 @@ func _build_lamp(pos: Vector3, accent: Color) -> void:
     _sphere(decor_root, 0.12, pos + Vector3(0.0, 3.24, 0.0), lamp_material, "LampGlow")
     _box(decor_root, Vector3(0.65, 0.06, 0.06), pos + Vector3(0.27, 3.18, 0.0), _material(Color("#3c4654"), 0.35, 0.4, "metal"), "LampArm")
 
-func _build_tree(pos: Vector3, scale: float) -> void:
-    _cylinder(decor_root, 0.12 * scale, 0.16 * scale, 1.7 * scale, pos + Vector3(0.0, 0.85 * scale, 0.0), _material(Color("#67452f"), 0.0, 0.95, "wood"), "TreeTrunk")
+func _build_tree(pos: Vector3, object_scale: float) -> void:
+    _cylinder(decor_root, 0.12 * object_scale, 0.16 * object_scale, 1.7 * object_scale, pos + Vector3(0.0, 0.85 * object_scale, 0.0), _material(Color("#67452f"), 0.0, 0.95, "wood"), "TreeTrunk")
     var foliage := _material(Color("#3b9b69"), 0.0, 0.86, "leaves")
-    _sphere(decor_root, 0.62 * scale, pos + Vector3(-0.28, 1.65 * scale, 0.0), foliage, "TreeLeaf")
-    _sphere(decor_root, 0.75 * scale, pos + Vector3(0.28, 1.82 * scale, 0.0), foliage, "TreeLeaf")
-    _sphere(decor_root, 0.5 * scale, pos + Vector3(0.0, 2.2 * scale, 0.0), foliage, "TreeLeaf")
+    _sphere(decor_root, 0.62 * object_scale, pos + Vector3(-0.28, 1.65 * object_scale, 0.0), foliage, "TreeLeaf")
+    _sphere(decor_root, 0.75 * object_scale, pos + Vector3(0.28, 1.82 * object_scale, 0.0), foliage, "TreeLeaf")
+    _sphere(decor_root, 0.5 * object_scale, pos + Vector3(0.0, 2.2 * object_scale, 0.0), foliage, "TreeLeaf")
 
 func _create_bus_stop(total: float) -> void:
     bus_stop_node = Node3D.new()
@@ -1886,6 +1885,7 @@ func _build_animal_obstacle(parent: Node3D, species: String) -> Node3D:
 func _build_sidewalk_obstacle(parent: Node3D, kind: String) -> void:
     var dark := _material(Color("#29354d"), 0.0, 0.72, "fabric")
     var red := _material(Color("#e94f5a"), 0.0, 0.66, "paint")
+    var chrome := _material(Color("#aebdc0"), 0.72, 0.24, "metal")
     match kind:
         "old_lady":
             # A velhinha alterna entre a Vovó Zilda (lote 2) e a Maria do
@@ -2124,9 +2124,9 @@ func _torus(parent: Node3D, inner_radius: float, outer_radius: float, pos: Vecto
     parent.add_child(node)
     return node
 
-func _ellipse_mesh(parent: Node3D, pos: Vector3, scale: Vector3, material: Material, node_name: String) -> MeshInstance3D:
+func _ellipse_mesh(parent: Node3D, pos: Vector3, object_scale: Vector3, material: Material, node_name: String) -> MeshInstance3D:
     var node := _sphere(parent, 1.0, pos, material, node_name)
-    node.scale = scale
+    node.scale = object_scale
     return node
 
 func _material(color: Color, metallic: float, roughness: float, surface: String = "paint") -> StandardMaterial3D:
@@ -2524,7 +2524,7 @@ func _phase_at_position(pos: Vector2) -> int:
     var first_phase: int = map_page * 10
     for local_index in 10:
         var col: int = local_index % 2
-        var row: int = int(local_index / 2)
+        var row: int = int(float(local_index) / 2.0)
         var rect := Rect2(25.0 + col * 340.0, origin_y + row * 170.0, 330.0, 140.0)
         if rect.has_point(pos):
             return first_phase + local_index
@@ -2545,7 +2545,7 @@ func _shop_tap(pos: Vector2) -> void:
         var local_pos := Vector2(pos.x, pos.y + shop_scroll)
         for i in chars.size():
             var col: int = i % 2
-            var row: int = int(i / 2)
+            var row: int = int(float(i) / 2.0)
             var rect := Rect2(25 + col * 340, 250 + row * 145, 330, 126)
             if rect.has_point(local_pos):
                 var id: String = str(chars[i].get("id", "ze"))
@@ -2564,7 +2564,7 @@ func _shop_tap(pos: Vector2) -> void:
     else:
         for i in items.size():
             var col: int = i % 2
-            var row: int = int(i / 2)
+            var row: int = int(float(i) / 2.0)
             var rect := Rect2(30 + col * 345, 250 + row * 175, 315, 150)
             if rect.has_point(pos):
                 var id: String = str(items[i].get("id", ""))
@@ -2601,8 +2601,8 @@ func _claim_daily(index: int) -> void:
         _show_feedback("JÁ RESGATADO", "Volte amanhã", MUTED, "ui_back")
         return
     var progress: Dictionary = GameSave.daily_progress(key)
-    var ready := (index == 0 and int(progress.get("meters", 0)) >= BALANCE.daily_distance_target) or (index == 1 and int(progress.get("coins", 0)) >= BALANCE.daily_coin_target) or (index == 2 and bool(progress.get("clean", false)))
-    if not ready:
+    var is_ready := (index == 0 and int(progress.get("meters", 0)) >= BALANCE.daily_distance_target) or (index == 1 and int(progress.get("coins", 0)) >= BALANCE.daily_coin_target) or (index == 2 and bool(progress.get("clean", false)))
+    if not is_ready:
         _show_feedback("QUASE LÁ!", "Complete a missão primeiro", RED, "ui_back")
         return
     completed.append(index)
