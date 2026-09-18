@@ -87,6 +87,24 @@ const UI_PANEL := Color("#14233f")
 const PLAYER_HEIGHT := 2.15
 const WORLD_LENGTH_MARGIN := 80.0
 
+# --- Lote 2: constantes de render/câmera (roteiro game_3d_lote2_patch.gd) --
+const RQ_PATH := "/root/RenderQuality"      # autoload do Lote 2
+const RENDER_FOV := 49.0                    # era 59.0 (retrato: menos distorção)
+const RENDER_FOV_RUN := 52.0                # era 64/69 na corrida
+const RENDER_CAMERA_Y := 2.65               # era 4.85 (câmera no ombro, não no telhado)
+const RENDER_CAMERA_Z := 6.2                # era 9.4
+const RENDER_CAMERA_FAR := 380.0            # era 125 (deixa a serra/skyline entrar)
+
+# --- Lote 3: rua construída pelo building_kit.gd --------------------------
+const WORLD_KIT_ATIVO := true          # false desliga a rua nova
+const WORLD_Y_OFFSET := -0.15          # deixa a calçada no nível do chão do jogo
+const WORLD_INVERTER := false          # true se a rua aparecer virada (correndo ao contrário)
+const WORLD_SPEED_PADRAO := 18.0       # só para reciclar o quarteirão na hora certa
+
+# --- Lote 4: clima --------------------------------------------------------
+const CLIMA_ATIVO := true              # false desliga chuva/relâmpago/molhado
+
+
 const ROAD_OBSTACLES: Array[String] = [
     "car", "car", "motorcycle", "pothole", "bus_traffic", "car", "truck"
 ]
@@ -196,6 +214,14 @@ var feedback_timer := 0.0
 var camera_shake := 0.0
 var flash_alpha := 0.0
 
+# --- Lote 3: estado da rua (building_kit) ---------------------------------
+var _world_kit: Node3D = null
+var _world_travel := 0.0
+var _world_last_head := 0.0
+
+# --- Lote 4: clima --------------------------------------------------------
+var _clima: WeatherSystem = null
+
 func _ready() -> void:
     rng.seed = 20240917
     fx_rng.seed = 778899
@@ -214,6 +240,9 @@ func _ready() -> void:
     else:
         _show_feedback("CORRE PRO PONTO 3D", "Rua à esquerda • calçadas à direita", YELLOW, "ui_confirm")
     _sync_hud()
+    _apply_render_quality()      # Lote 2: controlador de render (RenderQuality)
+    _setup_world_kit()           # Lote 3: rua do building_kit
+    _setup_clima()               # Lote 4: clima (por cima do render e da rua)
 
 func _notification(what: int) -> void:
     if what == NOTIFICATION_WM_GO_BACK_REQUEST:
@@ -264,6 +293,8 @@ func _process(delta: float) -> void:
     _update_sky_motion(dt)
     if screen == 2:
         _update_run(dt)
+    _update_world_kit(dt)        # Lote 3: recicla os quarteirões da rua
+    _update_clima(dt)            # Lote 4: chuva/poças seguem o corredor
     _update_player(dt)
     _update_camera(dt)
     hud_sync_timer -= dt
@@ -377,10 +408,10 @@ func _setup_world() -> void:
 
     camera = Camera3D.new()
     camera.name = "RunnerCamera"
-    camera.position = Vector3(0.0, 4.85, 9.4)
-    camera.fov = 59.0
+    camera.position = Vector3(0.0, RENDER_CAMERA_Y, RENDER_CAMERA_Z)
+    camera.fov = RENDER_FOV
     camera.near = 0.1
-    camera.far = 125.0
+    camera.far = RENDER_CAMERA_FAR
     camera.current = true
     add_child(camera)
     camera.look_at(Vector3(0.0, 1.15, -14.0), Vector3.UP)
@@ -520,6 +551,9 @@ func _start_run(index: int) -> void:
         slow_motion_timer = 2.0
     _clear_course()
     _build_course()
+    _apply_render_quality()              # Lote 2: clima do capítulo instantâneo
+    _update_world_kit(0.0)               # Lote 3: rua acompanha o novo capítulo
+    _trocar_clima_do_capitulo(phase_index)   # Lote 4: clima do capítulo
     tutorial_hint = ""
     AudioManager.play_music(int(phase["music_group"]))
     _show_feedback("FAIXAS: RUA + CALÇADAS", str(phase["name"]), phase["accent"], "ui_confirm")
@@ -1111,9 +1145,9 @@ func _update_camera(dt: float) -> void:
         camera_shake = 0.0
     var camera_bob: float = sin(run_phase * 1.6) * 0.035 if not reduced_motion and screen == 2 and run_mode == "playing" else 0.0
     var target := Vector3(player_x * 0.18, 1.15 + player_visual.position.y * 0.16, -14.0)
-    var desired := Vector3(player_x * 0.15, 4.85 + camera_bob, 9.4 + sin(run_phase * 0.8) * 0.04) + shake_offset
+    var desired := Vector3(player_x * 0.15, RENDER_CAMERA_Y + camera_bob, RENDER_CAMERA_Z + sin(run_phase * 0.8) * 0.04) + shake_offset
     camera.position = camera.position.lerp(desired, minf(1.0, dt * 5.0))
-    var desired_fov: float = 64.0 if reduced_motion else 64.0 + clampf(motion_speed * 0.34, 0.0, 5.0) + (4.0 if dash_timer > 0.0 else 0.0)
+    var desired_fov: float = RENDER_FOV_RUN if reduced_motion else RENDER_FOV_RUN + clampf(motion_speed * 0.34, 0.0, 5.0) + (4.0 if dash_timer > 0.0 else 0.0)
     camera.fov = lerpf(camera.fov, desired_fov, minf(1.0, dt * 4.0))
     camera.look_at(target, Vector3.UP)
 
@@ -1423,7 +1457,13 @@ func _update_fx(dt: float) -> void:
             node.queue_free()
     fx_nodes = alive
 
+# Lote 3: a rua agora vem do building_kit. O traçado antigo continua disponível
+# em _build_track_antigo() — para reverter, troque a chamada de volta.
 func _build_track() -> void:
+    return
+
+
+func _build_track_antigo() -> void:
     var total_length: float = run_total + WORLD_LENGTH_MARGIN
     var center_z: float = -(run_total - 10.0) * 0.5
     var road_color: Color = _scenario_color("road", Color("#303a4b"))
@@ -2818,6 +2858,77 @@ func _claim_daily(index: int) -> void:
     GameSave.set_daily_completed(completed, key, reward)
     _show_feedback("RECOMPENSA!", "+R$ %d • objetivo claro" % reward, GOLD, "reward")
 
-# -----------------------------------------------------------------------------
-# Materials and primitive meshes
-# -----------------------------------------------------------------------------
+# =============================================================================
+# LOTES 2/3/4 — rodada visual (blocos de colagem dos pacotes lote2/lote3/lote4;
+# contratos conferidos por verificar_lotes.py)
+# =============================================================================
+
+# --- Lote 2: perfil de clima/render + aplicação via autoload RenderQuality --
+func _render_profile() -> Dictionary:
+    # Lote 3, Colagem 4: o corpo do perfil do Lote 2 passa a vir do
+    # world_spec.json — a mesma paleta que o BuildingKit usa no cenário.
+    return _render_profile_world()
+
+
+func _apply_render_quality() -> void:
+    var rq := get_node_or_null(RQ_PATH)
+    if rq == null:
+        return
+    rq.apply(_render_profile())
+
+
+# --- Lote 3: rua ------------------------------------------------------------
+func _setup_world_kit() -> void:
+    if not WORLD_KIT_ATIVO:
+        return
+    var kit := BuildingKit.ChunkStreamer.new()
+    kit.name = "CenarioRua"
+    kit.position = Vector3(0.0, WORLD_Y_OFFSET, 0.0)
+    kit.rotation.y = PI if WORLD_INVERTER else 0.0
+    add_child(kit)
+    kit.setup()
+    _world_kit = kit
+
+
+func _update_world_kit(delta: float) -> void:
+    if _world_kit == null:
+        return
+    # O jogo já tem a distância em `distance`, mas ela zera a cada corrida;
+    # o acumulador por tempo (roteiro do Lote 3) evita recuar a cabeça da rua.
+    _world_travel += WORLD_SPEED_PADRAO * delta
+    if _world_travel - _world_last_head < 1.0:
+        return
+    _world_last_head = _world_travel
+    _world_kit.update_head(_world_travel)
+
+
+func _render_profile_world() -> Dictionary:
+    # Paleta do capítulo vinda do world_spec.json (a mesma que o kit usa).
+    # `phase_index` é a variável de capítulo deste jogo (roteiro: run_level).
+    var spec := BuildingKit.load_spec()
+    return BuildingKit.chapter_profile(spec, phase_index)
+
+
+# --- Lote 4: clima ----------------------------------------------------------
+func _setup_clima() -> void:
+    if not CLIMA_ATIVO:
+        return
+    var clima := WeatherSystem.new()
+    clima.name = "Clima"
+    add_child(clima)
+    # usa o mesmo perfil que o RenderQuality recebe (Lote 2) e o mesmo
+    # deslocamento do piso do kit (Lote 3)
+    clima.setup(_render_profile(), WORLD_Y_OFFSET)
+    _clima = clima
+
+
+func _update_clima(_delta: float) -> void:
+    if _clima == null:
+        return
+    _clima.update_head(_world_travel)
+
+
+func _trocar_clima_do_capitulo(indice: int) -> void:
+    if _clima != null:
+        _clima.set_chapter(indice)
+

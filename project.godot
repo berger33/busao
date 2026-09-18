@@ -14,6 +14,7 @@ config/icon="res://assets/art/icon.svg"
 [autoload]
 GameSave="*res://scripts/save_data.gd"
 AudioManager="*res://scripts/audio_manager.gd"
+RenderQuality="*res://scripts/render_quality.gd"
 
 [display/window]
 size/viewport_width=720
@@ -24,9 +25,16 @@ stretch/mode="canvas_items"
 handheld/orientation=1
 
 [rendering]
-renderer/rendering_method="gl_compatibility"
+; Lote 2: renderizador Mobile (Vulkan) com plano B automatico para OpenGL se o
+; aparelho nao criar o contexto; anti-aliasing de partida (o controlador
+; RenderQuality troca em tempo de execucao) e sombra direcional 2048.
+renderer/rendering_method="mobile"
 renderer/rendering_method.mobile="gl_compatibility"
-environment/defaults/default_clear_color=Color(0.035, 0.055, 0.09, 1)
+anti_aliasing/quality/msaa_3d=1
+anti_aliasing/quality/use_debanding=true
+anti_aliasing/quality/screen_space_aa=0
+lights_and_shadows/directional_shadow/size=2048
+environment/defaults/default_clear_color=Color(0.72, 0.78, 0.85, 1)
 textures/default_filters/use_nearest_mipmap_filter=false
 
 [gui]

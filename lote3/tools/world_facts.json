@@ -1,0 +1,49 @@
+{
+  "tag": "4.7.2-stable",
+  "descricao": "Fatos do Godot 4.7.2 usados pelo Lote 3 (materiais PBR do cenario e montagem por MultiMesh).",
+  "fontes": {
+    "classe": "https://raw.githubusercontent.com/godotengine/godot/4.7.2-stable/doc/classes/<CLASSE>.xml"
+  },
+  "citacoes": {
+    "orm": "ORMMaterial3D: 'ORMMaterial3D's properties are inherited from BaseMaterial3D. Unlike StandardMaterial3D, ORMMaterial3D uses a single texture for ambient occlusion, roughness and metallic maps, known as an ORM texture.' E BaseMaterial3D.orm_texture: 'Ambient occlusion is stored in the red channel. Roughness map is stored in the green channel. Metallic map is stored in the blue channel.'",
+    "canais": "BaseMaterial3D.ao_texture_channel / roughness_texture_channel: servem para 'armazenar a informacao de varios efeitos numa unica textura' (o caminho orm_texture e o equivalente pronto).",
+    "normal": "BaseMaterial3D.normal_texture: usa apenas os canais vermelho e verde; exige tangentes na malha."
+  },
+  "confirmados_nesta_rodada": [
+    "ORMMaterial3D (classe + descricao)",
+    "BaseMaterial3D.orm_texture",
+    "BaseMaterial3D.ao_texture",
+    "BaseMaterial3D.ao_texture_channel",
+    "BaseMaterial3D.roughness_texture",
+    "BaseMaterial3D.roughness_texture_channel",
+    "BaseMaterial3D.normal_texture",
+    "BaseMaterial3D.normal_scale"
+  ],
+  "conhecidos_estaveis": [
+    "BaseMaterial3D.albedo_texture", "BaseMaterial3D.albedo_color", "BaseMaterial3D.metallic",
+    "BaseMaterial3D.metallic_texture", "BaseMaterial3D.metallic_texture_channel",
+    "BaseMaterial3D.roughness", "BaseMaterial3D.uv1_scale", "BaseMaterial3D.uv1_triplanar",
+    "BaseMaterial3D.texture_filter", "BaseMaterial3D.specular_mode",
+    "MeshInstance3D.material_override", "MeshInstance3D.cast_shadow",
+    "GeometryInstance3D.SHADOW_CASTING_SETTING_ON", "GeometryInstance3D.SHADOW_CASTING_SETTING_OFF",
+    "GeometryInstance3D.visibility_range_end",
+    "MultiMesh", "MultiMesh.transform_format", "MultiMesh.TRANSFORM_3D",
+    "MultiMesh.instance_count", "MultiMesh.set_instance_transform",
+    "MultiMeshInstance3D", "MultiMeshInstance3D.multimesh", "MultiMeshInstance3D.material_override",
+    "BoxMesh.size", "CylinderMesh.top_radius", "CylinderMesh.bottom_radius", "CylinderMesh.height",
+    "CylinderMesh.radial_segments", "SphereMesh.radius", "SphereMesh.height",
+    "SphereMesh.radial_segments", "SphereMesh.rings",
+    "RandomNumberGenerator.seed", "RandomNumberGenerator.randf", "RandomNumberGenerator.randf_range",
+    "RandomNumberGenerator.randi_range",
+    "JSON.parse_string", "FileAccess.get_file_as_string", "ResourceLoader.exists",
+    "Basis.from_euler", "Basis.scaled", "Transform3D", "Node3D.position", "Node3D.set_meta",
+    "Node.set_meta", "Node.get_meta", "Color.lerp", "clampf", "posmod", "typeof", "TAU"
+  ],
+  "orcamento": {
+    "nota": "Valores de referencia para o Adreno 610 (Honor X8b): manter as malhas por quarteirao baixas e o que se repete em MultiMesh e o que sustenta o desempenho.",
+    "malhas_max_por_quarteirao": 80,
+    "multimesh_limite": 12,
+    "distancia_visibilidade_min_m": 60,
+    "distancia_visibilidade_max_m": 200
+  }
+}

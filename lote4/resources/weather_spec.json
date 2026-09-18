@@ -1,0 +1,292 @@
+{
+  "versao": 4,
+  "seed": 20260918,
+  "descricao": "Clima do Lote 4: chuva, relampago, molhado, pocas e sonda de reflexo. O jogo e o auditor leem daqui; nenhum numero de clima fica solto no codigo.",
+  "transicoes": {
+    "molhagem_s": 3.0,
+    "secagem_s": 16.0,
+    "estado_s": 5.0,
+    "reaplicar_s": 2.0
+  },
+  "mapa_capitulo": [
+    "limpo",
+    "nublado",
+    "chuva",
+    "tempestade"
+  ],
+  "estados": {
+    "limpo": {
+      "nome_pt": "limpo",
+      "sol_multiplicador": 1.0,
+      "nevoa_multiplicador": 1.0,
+      "nuvens": 0.2,
+      "ambiente_multiplicador": 1.0,
+      "molhado_alvo": 0.0,
+      "turbidez_extra": 0.0,
+      "cinza": 0.0
+    },
+    "nublado": {
+      "nome_pt": "nublado",
+      "sol_multiplicador": 0.78,
+      "nevoa_multiplicador": 1.2,
+      "nuvens": 0.7,
+      "ambiente_multiplicador": 1.08,
+      "molhado_alvo": 0.1,
+      "turbidez_extra": 2.5,
+      "cinza": 0.45
+    },
+    "chuva": {
+      "nome_pt": "chuva",
+      "sol_multiplicador": 0.48,
+      "nevoa_multiplicador": 1.55,
+      "nuvens": 0.92,
+      "ambiente_multiplicador": 1.18,
+      "molhado_alvo": 0.8,
+      "turbidez_extra": 5.0,
+      "cinza": 0.7
+    },
+    "tempestade": {
+      "nome_pt": "tempestade",
+      "sol_multiplicador": 0.3,
+      "nevoa_multiplicador": 1.85,
+      "nuvens": 1.0,
+      "ambiente_multiplicador": 1.28,
+      "molhado_alvo": 1.0,
+      "turbidez_extra": 7.0,
+      "cinza": 0.85
+    }
+  },
+  "chuva": {
+    "malha_m": [
+      0.02,
+      0.72,
+      0.02
+    ],
+    "cor": [
+      0.72,
+      0.78,
+      0.9,
+      0.55
+    ],
+    "area_m": [
+      44.0,
+      26.0,
+      44.0
+    ],
+    "altura_m": 18.0,
+    "lifetime_s": 1.1,
+    "fixed_fps": 30,
+    "orcamento": {
+      "max_particulas_mobile": 1200,
+      "max_particulas_desktop": 4000,
+      "min_velocidade_ms": 15.0,
+      "max_velocidade_ms": 40.0,
+      "espessura_max_m": 0.04
+    },
+    "estados": {
+      "limpo": {
+        "quantidade": 0,
+        "velocidade_ms": 0.0,
+        "inclinacao": [
+          0.0,
+          -1.0,
+          0.0
+        ],
+        "escala": 1.0
+      },
+      "nublado": {
+        "quantidade": 0,
+        "velocidade_ms": 0.0,
+        "inclinacao": [
+          0.0,
+          -1.0,
+          0.0
+        ],
+        "escala": 1.0
+      },
+      "chuva": {
+        "quantidade": 700,
+        "velocidade_ms": 22.0,
+        "inclinacao": [
+          0.12,
+          -1.0,
+          0.05
+        ],
+        "escala": 1.0
+      },
+      "tempestade": {
+        "quantidade": 1150,
+        "velocidade_ms": 30.0,
+        "inclinacao": [
+          0.3,
+          -1.0,
+          0.12
+        ],
+        "escala": 1.25
+      }
+    }
+  },
+  "relampago": {
+    "estados": [
+      "tempestade"
+    ],
+    "intervalo_s": [
+      4.0,
+      11.0
+    ],
+    "quadros_aceso": 3,
+    "piscadas": 2,
+    "energia_pico": 3.0,
+    "tira_alpha": 0.2,
+    "cor": [
+      0.85,
+      0.9,
+      1.0
+    ],
+    "trovejar": {
+      "arquivo": "res://assets/audio/trovao.wav",
+      "atraso_s": [
+        0.7,
+        2.6
+      ],
+      "volume_db": [
+        -9.0,
+        -4.0
+      ],
+      "altura_m": 6.0,
+      "distancia_m": 30.0
+    }
+  },
+  "molhado": {
+    "materiais": {
+      "pista": {
+        "rugosidade_seca": 0.62,
+        "rugosidade_molhada": 0.14,
+        "albedo_molhado": 0.52,
+        "especular_extra": 0.2
+      },
+      "linha_amarela": {
+        "rugosidade_seca": 0.55,
+        "rugosidade_molhada": 0.12,
+        "albedo_molhado": 0.72,
+        "especular_extra": 0.2
+      },
+      "piso_central": {
+        "rugosidade_seca": 0.92,
+        "rugosidade_molhada": 0.4,
+        "albedo_molhado": 0.68,
+        "especular_extra": 0.1
+      },
+      "calcada_lateral": {
+        "rugosidade_seca": 0.88,
+        "rugosidade_molhada": 0.38,
+        "albedo_molhado": 0.7,
+        "especular_extra": 0.1
+      },
+      "guia": {
+        "rugosidade_seca": 0.85,
+        "rugosidade_molhada": 0.35,
+        "albedo_molhado": 0.7,
+        "especular_extra": 0.1
+      },
+      "telhado": {
+        "rugosidade_seca": 0.85,
+        "rugosidade_molhada": 0.45,
+        "albedo_molhado": 0.7,
+        "especular_extra": 0.1
+      },
+      "fachada_tijolo": {
+        "rugosidade_seca": 0.95,
+        "rugosidade_molhada": 0.62,
+        "albedo_molhado": 0.68,
+        "especular_extra": 0.06
+      },
+      "fachada_reboco": {
+        "rugosidade_seca": 0.92,
+        "rugosidade_molhada": 0.58,
+        "albedo_molhado": 0.66,
+        "especular_extra": 0.06
+      },
+      "madeira": {
+        "rugosidade_seca": 0.9,
+        "rugosidade_molhada": 0.55,
+        "albedo_molhado": 0.62,
+        "especular_extra": 0.08
+      },
+      "estrutura_metalica": {
+        "rugosidade_seca": 0.45,
+        "rugosidade_molhada": 0.12,
+        "albedo_molhado": 0.8,
+        "especular_extra": 0.15
+      },
+      "folhagem": {
+        "rugosidade_seca": 0.85,
+        "rugosidade_molhada": 0.55,
+        "albedo_molhado": 0.62,
+        "especular_extra": 0.08
+      }
+    },
+    "albedo_minimo": 0.35
+  },
+  "pocas": {
+    "quantidade_por_trecho": 12,
+    "trechos_a_vista": 3,
+    "tamanho_m": [
+      0.7,
+      1.1,
+      2.4,
+      0.8
+    ],
+    "rugosidade": 0.06,
+    "cor": [
+      0.05,
+      0.06,
+      0.07,
+      1.0
+    ],
+    "especular": 0.85,
+    "aparecer_em": 0.45,
+    "afastamento_guia_m": 0.5,
+    "altura_do_piso_m": 0.006
+  },
+  "sonda": {
+    "ativo_forward_plus": true,
+    "ativo_mobile": false,
+    "tamanho_m": [
+      52.0,
+      16.0,
+      64.0
+    ],
+    "intensidade": 0.55,
+    "box_projection": true,
+    "atualizar_sempre": false
+  },
+  "orcamento": {
+    "max_particulas_mobile": 1200,
+    "max_luzes_extras": 1,
+    "max_pocas_visiveis": 48,
+    "sonda_max_m": 64.0,
+    "fog_volume_somente_forward_plus": true
+  },
+  "ceu": {
+    "textura": "res://assets/textures/ceu/nuvens.png",
+    "tinta_cobertura": [
+      0.92,
+      0.94,
+      1.0
+    ],
+    "sobrecast_cor_alto": [
+      0.6,
+      0.63,
+      0.67
+    ],
+    "sobrecast_cor_horizonte": [
+      0.72,
+      0.74,
+      0.77
+    ],
+    "energia_minima": 0.5,
+    "turbidez_base": 10.0,
+    "cobertura_minima_para_textura": 0.02
+  }
+}
