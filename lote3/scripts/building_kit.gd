@@ -312,11 +312,11 @@ static func _contar(no: Node, contagem: Dictionary) -> void:
 		_contar(filho, contagem)
 
 
-static func _build_piso(spec: Dictionary, raiz: Node3D, comprimento: float, visibilidade: float) -> void:
+static func _build_piso(spec: Dictionary, raiz: Node3D, comprimento: float, _visibilidade: float) -> void:
 	var f: Dictionary = spec.get("faixas", {})
 	var piso := float(f.get("piso_central_m", 4.4))
 	var guia_l := float(f.get("guia_largura_m", 0.35))
-	var guia_h := float(f.get("guia_altura_m", 0.15))
+	var _guia_h := float(f.get("guia_altura_m", 0.15))
 	var calcada := float(f.get("calcada_lateral_m", 3.0))
 	var pista := float(f.get("pista_m", 8.0))
 	var x_guia := piso * 0.5
@@ -454,6 +454,7 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
 	var x_centro := x_frente + profundidade * 0.5
 	for lado in [-1.0, 1.0]:
 		var z := 0.0
+		var lote := 0
 		while z < comprimento - 0.6:
 			# o ultimo lote fecha o quarteirao: pode ser estreito, mas nao pode
 			# sobrar buraco (a rua ficaria com um vazio no fim do quarteirao)
@@ -472,18 +473,19 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
 			var frente := _malha(_box(Vector3(profundidade, altura, largura)),
 					material(spec, chave),
 					Vector3(lado * x_centro, altura * 0.5, -(z + largura * 0.5)), raiz,
-					"Predio%s%d" % ["E", "D"][int(lado > 0.0)], false)
+					"Predio%s%d" % [("D" if lado > 0.0 else "E"), lote], false)
 			_marca(frente, "fachada")
 			var teto := _malha(_box(Vector3(profundidade + 0.2, telhado, largura + 0.2)),
 					material(spec, "telhado"),
 					Vector3(lado * x_centro, altura + telhado * 0.5, -(z + largura * 0.5)), raiz,
-					"Telhado%s%d" % ["E", "D"][int(lado > 0.0)], false)
+					"Telhado%s%d" % [("D" if lado > 0.0 else "E"), lote], false)
 			_marca(teto, "telhado")
 			if tipo != "obra":
-				_build_janelas(spec, raiz, rng, janela, lado, x_frente, z, largura, andares, pe, tipo)
+				_build_janelas(spec, raiz, rng, janela, lado, x_frente, z, largura, andares, pe, tipo, lote)
 			if tipo == "loja":
-				_build_loja(spec, raiz, p, lado, x_frente, z, largura)
+				_build_loja(spec, raiz, p, lado, x_frente, z, largura, lote)
 			z += largura
+			lote += 1
 
 
 static func _tipo_predio(p: Dictionary, rng: RandomNumberGenerator) -> String:
@@ -502,7 +504,7 @@ static func _tipo_predio(p: Dictionary, rng: RandomNumberGenerator) -> String:
 
 static func _build_janelas(spec: Dictionary, raiz: Node3D, rng: RandomNumberGenerator,
 		janela: Dictionary, lado: float, x_frente: float, z: float, largura: float,
-		andares: int, pe: float, tipo: String) -> void:
+		andares: int, pe: float, tipo: String, indice: int = 0) -> void:
 	var jl := float(janela.get("largura_m", 1.2))
 	var ja := float(janela.get("altura_m", 1.5))
 	var peitoril := float(janela.get("peitoril_m", 0.9))
@@ -519,11 +521,11 @@ static func _build_janelas(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
 				Vector3(lado * (x_frente - 0.03), peitoril + ja * 0.5 + float(andar) * pe, -zc),
 				Vector3(0.06, ja, jl)))
 	_multimesh(_box(Vector3.ONE), material(spec, "vidro"), xforms, raiz,
-			"Janelas%s" % ["E", "D"][int(lado > 0.0)], false)
+			"Janelas%s%d" % [("D" if lado > 0.0 else "E"), indice], false)
 
 
 static func _build_loja(spec: Dictionary, raiz: Node3D, p: Dictionary, lado: float,
-		x_frente: float, z: float, largura: float) -> void:
+		x_frente: float, z: float, largura: float, indice: int = 0) -> void:
 	var loja: Dictionary = p.get("loja", {})
 	var altura_toldo := float(loja.get("toldo_altura_m", 2.6))
 	var prof := float(loja.get("toldo_profundidade_m", 1.1))
@@ -532,12 +534,12 @@ static func _build_loja(spec: Dictionary, raiz: Node3D, p: Dictionary, lado: flo
 	var toldo := _malha(_box(Vector3(prof, 0.12, largura * 0.8)),
 			material(spec, "estrutura_metalica"),
 			Vector3(lado * (x_frente - prof * 0.5), altura_toldo, -(z + largura * 0.5)), raiz,
-			"Toldo%s%d" % ["E", "D"][int(lado > 0.0)], false)
+			"Toldo%s%d" % [("D" if lado > 0.0 else "E"), indice], false)
 	_marca(toldo, "toldo")
 	var porta := _malha(_box(Vector3(0.08, porta_a, porta_l)),
 			material(spec, "madeira"),
 			Vector3(lado * (x_frente - 0.04), porta_a * 0.5, -(z + largura * 0.5)), raiz,
-			"Porta%s%d" % ["E", "D"][int(lado > 0.0)], false)
+			"Porta%s%d" % [("D" if lado > 0.0 else "E"), indice], false)
 	_marca(porta, "porta")
 
 

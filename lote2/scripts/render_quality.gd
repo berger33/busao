@@ -247,7 +247,13 @@ func _configure_viewport() -> void:
 	if _method != "gl_compatibility":
 		# MSAA 3D e escala 3D existem em Forward+ e Mobile; no caminho de
 		# Compatibilidade o jogo segue na resolucao cheia.
-		vp.msaa_3d = int(cfg.get("msaa", 0))
+		var msaa_nivel: int = int(cfg.get("msaa", 0))
+		if msaa_nivel <= 0:
+			vp.msaa_3d = Viewport.MSAA_DISABLED
+		elif msaa_nivel == 1:
+			vp.msaa_3d = Viewport.MSAA_2X
+		else:
+			vp.msaa_3d = Viewport.MSAA_4X
 		if _tier_index <= 1:
 			vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR2
 		else:
