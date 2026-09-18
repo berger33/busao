@@ -733,6 +733,9 @@ class ChunkStreamer extends Node3D:
 		var novo := BuildingKit.build_chunk(spec, indice, -float(indice) * comprimento_m)
 		no.set_meta("spec_index", indice)
 		no.name = novo.name
+		# O no reciclado ocupa a posicao do novo indice (sem isso, o conteudo
+		# reconstruido nasceria no lugar do quarteirao antigo, atras do corredor).
+		no.position = novo.position
 		for filho in novo.get_children():
 			novo.remove_child(filho)
 			no.add_child(filho)

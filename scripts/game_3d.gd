@@ -218,6 +218,7 @@ var flash_alpha := 0.0
 var _world_kit: Node3D = null
 var _world_travel := 0.0
 var _world_last_head := 0.0
+var _world_horizonte: Node3D = null   # silhueta fixa (reparentada p/ world_root)
 
 # --- Lote 4: clima --------------------------------------------------------
 var _clima: WeatherSystem = null
@@ -576,6 +577,7 @@ func _start_endless() -> void:
 
 func _clear_course() -> void:
     course_root.position.z = 0.0
+    _destroi_world_kit()   # Lote 3: a rua e recriada no proximo _build_course
     _clear_sky_fx()
     _clear_ambient_fx()
     for child in decor_root.get_children():
@@ -588,6 +590,7 @@ func _clear_course() -> void:
 
 func _build_course() -> void:
     _build_track()
+    _setup_world_kit()   # Lote 3: a rua nasce junto com o curso (distancia zero)
     _rebuild_sky_fx()
     _rebuild_ambient_fx()
     var total: float = run_total
@@ -2879,25 +2882,40 @@ func _apply_render_quality() -> void:
 
 # --- Lote 3: rua ------------------------------------------------------------
 func _setup_world_kit() -> void:
-    if not WORLD_KIT_ATIVO:
+    if not WORLD_KIT_ATIVO or course_root == null:
         return
     var kit := BuildingKit.ChunkStreamer.new()
     kit.name = "CenarioRua"
     kit.position = Vector3(0.0, WORLD_Y_OFFSET, 0.0)
     kit.rotation.y = PI if WORLD_INVERTER else 0.0
-    add_child(kit)
+    # Filho do course_root: o mundo do jogo rola (course_root.position.z =
+    # distance em _update_run), entao a rua rola junto, em sincronia com os
+    # obstaculos; a reciclagem dos quarteiroes usa a propria `distance`.
+    course_root.add_child(kit)
     kit.setup()
     _world_kit = kit
+    # O horizonte e silhueta fixa (como o HORIZON_Z antigo): nao pode rolar,
+    # senao ele "passa" pelo corredor no meio da corrida.
+    if kit.horizonte != null and world_root != null:
+        kit.horizonte.reparent(world_root)
+        _world_horizonte = kit.horizonte
 
 
-func _update_world_kit(delta: float) -> void:
+func _destroi_world_kit() -> void:
+    if _world_kit != null:
+        _world_kit.queue_free()
+        _world_kit = null
+    if _world_horizonte != null:
+        _world_horizonte.queue_free()
+        _world_horizonte = null
+
+
+func _update_world_kit(_delta: float) -> void:
     if _world_kit == null:
         return
-    # O jogo já tem a distância em `distance`, mas ela zera a cada corrida;
-    # o acumulador por tempo (roteiro do Lote 3) evita recuar a cabeça da rua.
-    _world_travel += WORLD_SPEED_PADRAO * delta
-    if _world_travel - _world_last_head < 1.0:
-        return
+    # Roteiro do Lote 3: se o jogo tem a distancia percorrida, use-a. Aqui e a
+    # `distance` — o mesmo valor que rola o course_root (1 unidade = 1 m).
+    _world_travel = distance
     _world_last_head = _world_travel
     _world_kit.update_head(_world_travel)
 
@@ -2915,7 +2933,13 @@ func _setup_clima() -> void:
         return
     var clima := WeatherSystem.new()
     clima.name = "Clima"
-    add_child(clima)
+    # Filho do course_root: as pocas ficam em z local fixo por trecho e precisam
+    # rolar com a rua. Chuva e sonda se reposicionam sozinhas na camera (global,
+    # em _seguir_camera), entao nao sentem o rolamento.
+    if course_root != null:
+        course_root.add_child(clima)
+    else:
+        add_child(clima)
     # usa o mesmo perfil que o RenderQuality recebe (Lote 2) e o mesmo
     # deslocamento do piso do kit (Lote 3)
     clima.setup(_render_profile(), WORLD_Y_OFFSET)
