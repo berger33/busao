@@ -336,7 +336,11 @@ def gen_denim(rng: np.random.Generator) -> None:
     twill = ((x + y) % 8) < 4
     noise = fbm(96, 2, rng)
     base = np.where(twill, 0.30, 0.22) + 0.16 * noise
-    save(np.stack([base * 0.82, base * 1.0, base * 1.55, ] , axis=-1) * 255.0, "jeans_realista.png")
+    save(np.stack([base * 0.82, base * 1.0, base * 1.55], axis=-1) * 255.0, "jeans_realista.png")
+    height = np.where(twill, 0.60, 0.44) + noise * 0.10
+    rough = 0.78 + 0.12 * (1.0 - noise)
+    save(height_to_normal(height, 0.8), "jeans_realista_normal.png")
+    save(rough_to_gray(rough), "jeans_realista_roughness.png")
 
 
 # ----------------------------------------------------------------------------
@@ -524,6 +528,75 @@ def gen_rubber(rng: np.random.Generator) -> None:
 
 
 # ----------------------------------------------------------------------------
+# Pele (bases neutras para tingir por albedo_color)
+# ----------------------------------------------------------------------------
+
+def gen_skin(rng: np.random.Generator) -> None:
+    fine = fbm(96, 2, rng)
+    blotch = fbm(12, 3, rng)
+    speck = rng.random((SIZE, SIZE))
+    lum = 0.90 + 0.14 * (fine - 0.5) + 0.08 * (blotch - 0.5)
+    lum = np.where(speck > 0.992, lum - 0.07, lum)  # poros
+    base = np.stack([lum, lum * 0.955, lum * 0.90], axis=-1)
+    red = np.clip(blotch - 0.62, 0, 1) * 0.06  # areas levemente avermelhadas
+    base[..., 0] = np.clip(base[..., 0] + red, 0, 1)
+    base[..., 2] = np.clip(base[..., 2] - red * 0.6, 0, 1)
+    height = 0.5 + (fine - 0.5) * 0.12 - np.where(speck > 0.992, 0.08, 0.0)
+    rough = 0.46 - 0.06 * blotch + 0.08 * (1.0 - fine)
+    save(base * 255.0, "pele_realista.png")
+    save(height_to_normal(height, 0.25), "pele_realista_normal.png")
+    save(rough_to_gray(rough), "pele_realista_roughness.png")
+
+
+# ----------------------------------------------------------------------------
+# Pelo (fios direcionais com espaco escuro entre mechas)
+# ----------------------------------------------------------------------------
+
+def gen_fur(rng: np.random.Generator) -> None:
+    src = fbm(32, 2, rng)
+    smear = np.zeros((SIZE, SIZE))
+    for k in range(14):
+        smear += np.roll(np.roll(src, k * (SIZE // 14), axis=0), k * 10, axis=1)
+    smear /= 14.0
+    smear = np.clip((smear - smear.mean()) * 2.8 + 0.5, 0.0, 1.0)
+    fine = fbm(200, 2, rng)
+    strand = np.clip(smear * 0.70 + fine * 0.45, 0.0, 1.0)
+    lum = np.clip(0.45 + 0.75 * strand, 0.0, 1.0)
+    base = np.stack([lum, lum * 0.965, lum * 0.92], axis=-1)
+    height = strand * 0.7 + 0.3 * fbm(96, 2, rng)
+    rough = 0.68 + 0.16 * (1.0 - strand)
+    save(base * 255.0, "pelo_realista.png")
+    save(height_to_normal(height, 0.7), "pelo_realista_normal.png")
+    save(rough_to_gray(rough), "pelo_realista_roughness.png")
+
+
+# ----------------------------------------------------------------------------
+# Penas (barbas diagonais + pente fino + iridescencia sutil)
+# ----------------------------------------------------------------------------
+
+def gen_feathers(rng: np.random.Generator) -> None:
+    src = fbm(24, 2, rng)
+    smear = np.zeros((SIZE, SIZE))
+    for k in range(16):
+        smear += np.roll(np.roll(src, k * (SIZE // 16), axis=0), k * 8, axis=1)
+    smear /= 16.0
+    barb = np.clip((smear - smear.mean()) * 3.0 + 0.5, 0.0, 1.0)
+    y, x = np.mgrid[0:SIZE, 0:SIZE]
+    comb = 0.5 + 0.5 * np.sin((x * 0.35 + y * 0.14) * (2.0 * math.pi / 8.0))
+    fine = fbm(160, 2, rng)
+    lum = 0.68 + 0.34 * barb + 0.08 * comb + 0.08 * fine
+    base = np.stack([lum, lum * 0.99, lum * 0.965], axis=-1)
+    irid = np.clip(fbm(8, 2, rng) - 0.55, 0, 1) * 0.10  # brilho iridescente sutil
+    base[..., 1] = np.clip(base[..., 1] + irid * 0.6, 0, 1)
+    base[..., 2] = np.clip(base[..., 2] + irid, 0, 1)
+    height = barb * 0.55 + comb * 0.25 + fine * 0.20
+    rough = 0.52 + 0.20 * (1.0 - barb)
+    save(base * 255.0, "pena_realista.png")
+    save(height_to_normal(height, 0.65), "pena_realista_normal.png")
+    save(rough_to_gray(rough), "pena_realista_roughness.png")
+
+
+# ----------------------------------------------------------------------------
 # Ceus equiretangulares (2048 x 1024)
 # ----------------------------------------------------------------------------
 
@@ -649,6 +722,9 @@ def main() -> None:
     gen_dirt(np.random.default_rng(MASTER_SEED + 15))
     gen_fabric(np.random.default_rng(MASTER_SEED + 16))
     gen_rubber(np.random.default_rng(MASTER_SEED + 17))
+    gen_skin(np.random.default_rng(MASTER_SEED + 23))
+    gen_fur(np.random.default_rng(MASTER_SEED + 24))
+    gen_feathers(np.random.default_rng(MASTER_SEED + 25))
     for kind in ["tropical", "entardecer", "nublado"]:
         gen_sky(kind, np.random.default_rng(MASTER_SEED + 20 + ["tropical", "entardecer", "nublado"].index(kind)))
     print("OK: texturas regeneradas.")

@@ -107,13 +107,20 @@ de sucesso. As lacunas estão na camada de plataforma (seção 3), não no desig
     (capítulos de favela), tecido tramado (toldos e varais) e borracha granulada
     (pneus). Novo acabamento **cromo** (sem textura de pintura) para para-choques,
     calotas e racks; "stucco" e "concreto" unificados no concreto PBR.
+11. **Lote C — personagens vivos com material liso** → pele humana com poros,
+    vermelhidão sutil e variação de oleosidade (superfície `skin`); **pelo animal**
+    com fios direcionais e sombra entre mechas (caramelo, capivara, cavalo, boi,
+    macaco — com subsurface scattering mantido); **penas** com barbas diagonais,
+    pente fino e iridescência sutil (pombo, passarinho, gaivota, urubu); bicos e
+    patas em borracha granulada; coleira/placa em metal pintado riscado; e o
+    figurino Creator (top em tecido tramado, jeans com sarja em relevo, metal e
+    borracha) — todos agora com albedo+normal+roughness em
+    `world_animal.gd`/`runner_character.gd`.
 
 ## 5. Inconsistências conhecidas — pendentes (próximos lotes)
 
-- Props (árvores, postes, bancos, banca) ainda com cor lisa — próximo lote:
-  texturas de madeira/folhagem/metal pintado com normal+roughness.
-- Animais são estilizados de propósito (silhuetas de primitivas) junto a humanos
-  realistas — opção de estilo a validar com jogadores.
+- Animais seguem estilizados nas silhuetas (primitivas articuladas), agora com
+  materiais PBR de pelo/pena — opção de estilo a validar com jogadores.
 - Conferir no editor se algum normal map pede "Invert Y" (geramos OpenGL; o
   Godot 4 detecta e reimporta sozinho ao ser usado como normal).
 - `game.gd` 2D legado não referenciado (remover ou arquivar).

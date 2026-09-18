@@ -7,10 +7,18 @@ extends Node3D
 ## só existem no fallback de diagnóstico caso o importador do GLTF falhe.
 
 const CHARACTER_DATA = preload("res://scripts/character_data.gd")
-const TEXTURE_CREATOR_TOP = preload("res://assets/textures/tecido_urbano.svg")
+const TEXTURE_CREATOR_TOP = preload("res://assets/textures/tecido_realista.png")
+const TEXTURE_CREATOR_TOP_N = preload("res://assets/textures/tecido_realista_normal.png")
+const TEXTURE_CREATOR_TOP_R = preload("res://assets/textures/tecido_realista_roughness.png")
 const TEXTURE_CREATOR_DENIM = preload("res://assets/textures/jeans_realista.png")
-const TEXTURE_CREATOR_METAL = preload("res://assets/textures/metal_pintado.svg")
-const TEXTURE_CREATOR_RUBBER = preload("res://assets/textures/borracha.svg")
+const TEXTURE_CREATOR_DENIM_N = preload("res://assets/textures/jeans_realista_normal.png")
+const TEXTURE_CREATOR_DENIM_R = preload("res://assets/textures/jeans_realista_roughness.png")
+const TEXTURE_CREATOR_METAL = preload("res://assets/textures/metal_pintado_realista.png")
+const TEXTURE_CREATOR_METAL_N = preload("res://assets/textures/metal_pintado_realista_normal.png")
+const TEXTURE_CREATOR_METAL_R = preload("res://assets/textures/metal_pintado_realista_roughness.png")
+const TEXTURE_CREATOR_RUBBER = preload("res://assets/textures/borracha_realista.png")
+const TEXTURE_CREATOR_RUBBER_N = preload("res://assets/textures/borracha_realista_normal.png")
+const TEXTURE_CREATOR_RUBBER_R = preload("res://assets/textures/borracha_realista_roughness.png")
 
 const MODEL_ROOT := "res://assets/characters/quaternius"
 const BASE_ROOT := MODEL_ROOT + "/base"
@@ -720,6 +728,32 @@ func _creator_material(texture: Texture2D, color: Color, roughness: float, metal
     material.roughness = roughness
     material.metallic = metallic
     material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+    if texture == TEXTURE_CREATOR_TOP:
+        material.normal_enabled = true
+        material.normal_texture = TEXTURE_CREATOR_TOP_N
+        material.normal_scale = 0.5
+        material.roughness = 1.0
+        material.roughness_texture = TEXTURE_CREATOR_TOP_R
+        material.uv1_scale = Vector3(3.0, 3.0, 3.0)
+    elif texture == TEXTURE_CREATOR_DENIM:
+        material.normal_enabled = true
+        material.normal_texture = TEXTURE_CREATOR_DENIM_N
+        material.normal_scale = 0.6
+        material.roughness = 1.0
+        material.roughness_texture = TEXTURE_CREATOR_DENIM_R
+        material.uv1_scale = Vector3(3.0, 3.0, 3.0)
+    elif texture == TEXTURE_CREATOR_METAL:
+        material.normal_enabled = true
+        material.normal_texture = TEXTURE_CREATOR_METAL_N
+        material.normal_scale = 0.4
+        material.roughness = 1.0
+        material.roughness_texture = TEXTURE_CREATOR_METAL_R
+    elif texture == TEXTURE_CREATOR_RUBBER:
+        material.normal_enabled = true
+        material.normal_texture = TEXTURE_CREATOR_RUBBER_N
+        material.normal_scale = 0.3
+        material.roughness = 1.0
+        material.roughness_texture = TEXTURE_CREATOR_RUBBER_R
     return material
 
 func _setup_animation_library() -> void:

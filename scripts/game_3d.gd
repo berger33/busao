@@ -42,7 +42,6 @@ const TEXTURE_HAIR_REAL = preload("res://assets/textures/cabelo_realista.png")
 const TEXTURE_DENIM_REAL = preload("res://assets/textures/jeans_realista.png")
 const TEXTURE_CAR_PAINT_REAL = preload("res://assets/textures/pintura_carro_realista.png")
 const TEXTURE_GLASS = preload("res://assets/textures/vidro_azul.svg")
-const TEXTURE_SKIN = preload("res://assets/textures/pele_suave.svg")
 const TEXTURE_PAINT = preload("res://assets/textures/pintura_micro.svg")
 const TEXTURE_DIRT_REAL = preload("res://assets/textures/terra_realista.png")
 const TEXTURE_DIRT_REAL_N = preload("res://assets/textures/terra_realista_normal.png")
@@ -65,6 +64,9 @@ const TEXTURE_WOOD_REAL_R = preload("res://assets/textures/madeira_realista_roug
 const TEXTURE_RUBBER_REAL = preload("res://assets/textures/borracha_realista.png")
 const TEXTURE_RUBBER_REAL_N = preload("res://assets/textures/borracha_realista_normal.png")
 const TEXTURE_RUBBER_REAL_R = preload("res://assets/textures/borracha_realista_roughness.png")
+const TEXTURE_SKIN_REAL = preload("res://assets/textures/pele_realista.png")
+const TEXTURE_SKIN_REAL_N = preload("res://assets/textures/pele_realista_normal.png")
+const TEXTURE_SKIN_REAL_R = preload("res://assets/textures/pele_realista_roughness.png")
 const LANE_X: Array[float] = [-3.25, 0.0, 3.25]
 const ROAD_LANE := 0
 const SIDEWALK_CENTER := 1
@@ -2302,6 +2304,8 @@ func _material(color: Color, metallic: float, roughness: float, surface: String 
             material.normal_scale = 0.45
         elif surface == "rubber":
             material.normal_scale = 0.3
+        elif surface == "skin":
+            material.normal_scale = 0.2
     var rough_map: Texture2D = _roughness_for_surface(surface)
     if rough_map != null:
         material.roughness_texture = rough_map
@@ -2339,7 +2343,7 @@ func _texture_for_surface(surface: String) -> Texture2D:
         "vehicle_paint":
             return TEXTURE_CAR_PAINT_REAL
         "skin":
-            return TEXTURE_SKIN
+            return TEXTURE_SKIN_REAL
         "hair":
             return TEXTURE_HAIR_REAL
         "leaves":
@@ -2381,6 +2385,8 @@ func _normal_for_surface(surface: String) -> Texture2D:
             return TEXTURE_FABRIC_REAL_N
         "rubber":
             return TEXTURE_RUBBER_REAL_N
+        "skin":
+            return TEXTURE_SKIN_REAL_N
         _:
             return null
 
@@ -2410,6 +2416,8 @@ func _roughness_for_surface(surface: String) -> Texture2D:
             return TEXTURE_FABRIC_REAL_R
         "rubber":
             return TEXTURE_RUBBER_REAL_R
+        "skin":
+            return TEXTURE_SKIN_REAL_R
         _:
             return null
 

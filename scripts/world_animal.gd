@@ -6,10 +6,18 @@ extends Node3D
 ## compartilham o mesmo contrato para que TODAS as posições existam em cada
 ## espécie criada.
 
-const TEXTURE_FUR = preload("res://assets/textures/pele_suave.svg")
-const TEXTURE_RUBBER = preload("res://assets/textures/borracha.svg")
-const TEXTURE_METAL = preload("res://assets/textures/metal_pintado.svg")
-const TEXTURE_FEATHER = preload("res://assets/textures/tecido_urbano.svg")
+const TEXTURE_FUR = preload("res://assets/textures/pelo_realista.png")
+const TEXTURE_FUR_N = preload("res://assets/textures/pelo_realista_normal.png")
+const TEXTURE_FUR_R = preload("res://assets/textures/pelo_realista_roughness.png")
+const TEXTURE_RUBBER = preload("res://assets/textures/borracha_realista.png")
+const TEXTURE_RUBBER_N = preload("res://assets/textures/borracha_realista_normal.png")
+const TEXTURE_RUBBER_R = preload("res://assets/textures/borracha_realista_roughness.png")
+const TEXTURE_METAL = preload("res://assets/textures/metal_pintado_realista.png")
+const TEXTURE_METAL_N = preload("res://assets/textures/metal_pintado_realista_normal.png")
+const TEXTURE_METAL_R = preload("res://assets/textures/metal_pintado_realista_roughness.png")
+const TEXTURE_FEATHER = preload("res://assets/textures/pena_realista.png")
+const TEXTURE_FEATHER_N = preload("res://assets/textures/pena_realista_normal.png")
+const TEXTURE_FEATHER_R = preload("res://assets/textures/pena_realista_roughness.png")
 
 const BIRD_PROFILES: Dictionary = {
     "pombo": {"body": Color("#8d95a5"), "wing": Color("#6f7889"), "beak": Color("#454b5e"), "size": 0.9, "span": 0.42, "flap": 7.6, "legs": Color("#c56b4a")},
@@ -702,6 +710,33 @@ func _material(color: Color, texture: Texture2D, roughness: float, metallic: flo
         material.subsurf_scatter_enabled = true
         material.subsurf_scatter_skin_mode = true
         material.subsurf_scatter_strength = 0.06
+        material.normal_enabled = true
+        material.normal_texture = TEXTURE_FUR_N
+        material.normal_scale = 0.7
+        material.roughness = 1.0
+        material.roughness_texture = TEXTURE_FUR_R
+        material.uv1_scale = Vector3(2.0, 2.0, 2.0)
+    elif texture == TEXTURE_FEATHER:
+        material.normal_enabled = true
+        material.normal_texture = TEXTURE_FEATHER_N
+        material.normal_scale = 0.6
+        material.roughness = 1.0
+        material.roughness_texture = TEXTURE_FEATHER_R
+        material.uv1_scale = Vector3(2.0, 2.0, 2.0)
+    elif texture == TEXTURE_RUBBER:
+        material.normal_enabled = true
+        material.normal_texture = TEXTURE_RUBBER_N
+        material.normal_scale = 0.3
+        material.roughness = 1.0
+        material.roughness_texture = TEXTURE_RUBBER_R
+        material.uv1_scale = Vector3(3.0, 3.0, 3.0)
+    elif texture == TEXTURE_METAL:
+        material.normal_enabled = true
+        material.normal_texture = TEXTURE_METAL_N
+        material.normal_scale = 0.4
+        material.roughness = 1.0
+        material.roughness_texture = TEXTURE_METAL_R
+        material.uv1_scale = Vector3(3.0, 3.0, 3.0)
     return material
 
 func _mesh(parent: Node3D, node_name: String, mesh: Mesh, material: Material) -> MeshInstance3D:

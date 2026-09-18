@@ -409,6 +409,10 @@ def check_assets() -> None:
         "terra_realista.png", "terra_realista_normal.png", "terra_realista_roughness.png",
         "tecido_realista.png", "tecido_realista_normal.png", "tecido_realista_roughness.png",
         "borracha_realista.png", "borracha_realista_normal.png", "borracha_realista_roughness.png",
+        "pele_realista.png", "pele_realista_normal.png", "pele_realista_roughness.png",
+        "pelo_realista.png", "pelo_realista_normal.png", "pelo_realista_roughness.png",
+        "pena_realista.png", "pena_realista_normal.png", "pena_realista_roughness.png",
+        "jeans_realista_normal.png", "jeans_realista_roughness.png",
     }
     for tool in ("tools/generate_textures.py", "assets/vehicles/README.md"):
         if not (ROOT / tool).is_file():
