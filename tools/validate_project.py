@@ -75,10 +75,10 @@ def check_3d_entrypoint() -> None:
     shop_data = (ROOT / "scripts/shop_data.gd").read_text(encoding="utf-8")
     if scenario_data.count('"id":') != 10:
         fail("scenario_data.gd does not declare 10 scenario chapters")
-    if character_data.count('"id":') != 10:
-        fail("character_data.gd does not declare 10 characters")
-    if character_data.count('"gender": "M"') != 5 or character_data.count('"gender": "F"') != 5:
-        fail("character_data.gd does not contain five M and five F characters")
+    if character_data.count('"id":') != 20:
+        fail("character_data.gd does not declare 20 characters")
+    if character_data.count('"gender": "M"') != 10 or character_data.count('"gender": "F"') != 10:
+        fail("character_data.gd does not contain ten M and ten F characters")
     for shop_id in ("tenis", "mochila", "fone", "cafe", "confete", "placa"):
         if f'"id": "{shop_id}"' not in shop_data or "price" not in shop_data:
             fail(f"shop_data.gd missing authoritative item: {shop_id}")
@@ -90,10 +90,16 @@ def check_3d_entrypoint() -> None:
         if f'"id": "{obstacle_id}"' not in obstacle_data:
             fail(f"obstacle_data.gd missing 3D contract: {obstacle_id}")
     game_3d = (ROOT / "scripts/game_3d.gd").read_text(encoding="utf-8")
+    hud_3d = (ROOT / "scripts/hud_3d.gd").read_text(encoding="utf-8")
     runner_character = (ROOT / "scripts/runner_character.gd").read_text(encoding="utf-8")
     world_character = (ROOT / "scripts/world_character.gd").read_text(encoding="utf-8")
     world_animal = (ROOT / "scripts/world_animal.gd").read_text(encoding="utf-8")
-    character_sources = game_3d + "\n" + runner_character + "\n" + world_character + "\n" + world_animal
+    character_sources = game_3d + "\n" + hud_3d + "\n" + runner_character + "\n" + world_character + "\n" + world_animal
+    for batch2_id in ("chico", "tiao", "beto", "nilo", "professor", "marta", "zilda", "clara", "deise", "cida"):
+        if f'"id": "{batch2_id}"' not in character_data:
+            fail(f"character_data.gd missing batch 2 runner: {batch2_id}")
+        if f'== "{batch2_id}"' not in game_3d:
+            fail(f"3D runner missing gameplay effect wiring for: {batch2_id}")
     required_tokens = (
         'const LANE_X: Array[float] = [-3.25, 0.0, 3.25]',
         'const ROAD_OBSTACLES',
@@ -118,6 +124,7 @@ def check_3d_entrypoint() -> None:
         'Animal3D_caramelo',
         'BoneAttachment3D',
         '_attach_creator_details(profile)',
+        '_attach_batch2_details(profile)',
         'TEXTURE_CREATOR_DENIM',
         'TEXTURE_CREATOR_METAL',
         'CreatorTexturedTop',
@@ -126,6 +133,20 @@ def check_3d_entrypoint() -> None:
         'CreatorTattoo',
         'CreatorEarring',
         'CreatorBracelet',
+        'PostmanCap',
+        'VaqueroHat',
+        'SurferNecklace',
+        'BakerTray',
+        'ProfessorTie',
+        'FairBandana',
+        'GrannyScarf',
+        'NurseCap',
+        'CaptainArmband',
+        'DriverCap',
+        'dash_recharge_fast',
+        'bus_wait_bonus',
+        'shop_scroll',
+        '_mask_band(1125.0, 1280.0)',
         'set_world_mode',
         'CarameloDog3D',
         'DogEye',

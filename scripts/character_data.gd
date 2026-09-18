@@ -1,6 +1,8 @@
 class_name CharacterData
 extends RefCounted
-## Dez corredores humanos brasileiros, cinco masculinos e cinco femininos.
+## Vinte corredores humanos brasileiros, dez masculinos e dez femininos.
+## O primeiro lote cobre os arquétipos do dia a dia urbano; o lote 2
+## ("Turma do Ponto 2") traz profissões e clima regional do Brasil.
 ## As identidades são arquétipos cotidianos, sem depender de retrato ou asset
 ## externo: o visual final é montado com meshes humanoides 3D detalhados, materiais e acessórios.
 
@@ -164,6 +166,166 @@ const CATALOG: Array[Dictionary] = [
         "shoes": Color("#171a26"),
         "accent": Color("#d7b9e9"),
         "style": "creator"
+    },
+    {
+        "id": "chico",
+        "name": "Chico Carteiro",
+        "gender": "M",
+        "role": "carteiro",
+        "description": "boné, sacola de cartas e tênis de entrega",
+        "effect": "velocidade +22%",
+        "price": 480,
+        "skin": Color("#8a5a3c"),
+        "hair": Color("#1c1614"),
+        "shirt": Color("#2f6db8"),
+        "pants": Color("#22314a"),
+        "shoes": Color("#2b2b33"),
+        "accent": Color("#ffd23e"),
+        "style": "carteiro"
+    },
+    {
+        "id": "tiao",
+        "name": "Tião Vaqueiro",
+        "gender": "M",
+        "role": "peão de vaquejada",
+        "description": "chapéu de couro, gibão e bota de vaquejada",
+        "effect": "pulo prolongado",
+        "price": 560,
+        "skin": Color("#6e452c"),
+        "hair": Color("#191210"),
+        "shirt": Color("#a8672f"),
+        "pants": Color("#5a3d28"),
+        "shoes": Color("#3a2617"),
+        "accent": Color("#d9b06a"),
+        "style": "vaqueiro"
+    },
+    {
+        "id": "beto",
+        "name": "Beto Praiano",
+        "gender": "M",
+        "role": "surfista",
+        "description": "regata, bermuda e colar de contas",
+        "effect": "dash recarrega rápido",
+        "price": 620,
+        "skin": Color("#c98a5e"),
+        "hair": Color("#7a5c34"),
+        "shirt": Color("#35c4b0"),
+        "pants": Color("#e0d29a"),
+        "shoes": Color("#f2efe6"),
+        "accent": Color("#ff8c42"),
+        "style": "praiano"
+    },
+    {
+        "id": "nilo",
+        "name": "Nilo Padeiro",
+        "gender": "M",
+        "role": "padeiro",
+        "description": "avental, touca e bandeja de pão de queijo",
+        "effect": "+1 coração de energia",
+        "price": 700,
+        "skin": Color("#e3ad82"),
+        "hair": Color("#3d2b1f"),
+        "shirt": Color("#f4efe6"),
+        "pants": Color("#cfd4da"),
+        "shoes": Color("#4b4f57"),
+        "accent": Color("#e0993e"),
+        "style": "padeiro"
+    },
+    {
+        "id": "professor",
+        "name": "Professor Everaldo",
+        "gender": "M",
+        "role": "professor",
+        "description": "camisa social, gravata e livro na mão",
+        "effect": "câmera lenta inicial",
+        "price": 780,
+        "skin": Color("#7f5236"),
+        "hair": Color("#8e8e94"),
+        "shirt": Color("#eae4d6"),
+        "pants": Color("#2e3a52"),
+        "shoes": Color("#26221f"),
+        "accent": Color("#b8864f"),
+        "style": "professor"
+    },
+    {
+        "id": "marta",
+        "name": "Dona Marta da Feira",
+        "gender": "F",
+        "role": "feirante",
+        "description": "avental, bandana e banca de frutas",
+        "effect": "ímã de moedas",
+        "price": 500,
+        "skin": Color("#9c6647"),
+        "hair": Color("#2a1c1e"),
+        "shirt": Color("#ef8f3f"),
+        "pants": Color("#4f7a4a"),
+        "shoes": Color("#d8c9a8"),
+        "accent": Color("#f5d76e"),
+        "style": "feirante"
+    },
+    {
+        "id": "zilda",
+        "name": "Vovó Zilda",
+        "gender": "F",
+        "role": "aposentada turbo",
+        "description": "vestido florido, lenço e bolsa de mercado",
+        "effect": "escudo de impacto",
+        "price": 540,
+        "skin": Color("#caa07b"),
+        "hair": Color("#d8d5cf"),
+        "shirt": Color("#d98cb0"),
+        "pants": Color("#6a4f7c"),
+        "shoes": Color("#3a2e2a"),
+        "accent": Color("#8fd4c2"),
+        "style": "vovo"
+    },
+    {
+        "id": "clara",
+        "name": "Enfermeira Clara",
+        "gender": "F",
+        "role": "enfermeira",
+        "description": "uniforme branco, gorro e prancheta",
+        "effect": "+1 coração de cuidado",
+        "price": 640,
+        "skin": Color("#d9a583"),
+        "hair": Color("#5b3a29"),
+        "shirt": Color("#f4f7fa"),
+        "pants": Color("#dfe7ee"),
+        "shoes": Color("#eef1f5"),
+        "accent": Color("#e05263"),
+        "style": "enfermeira"
+    },
+    {
+        "id": "deise",
+        "name": "Deise Craque",
+        "gender": "F",
+        "role": "jogadora de futebol",
+        "description": "camisa dez, calção e chuteira",
+        "effect": "velocidade +22%",
+        "price": 720,
+        "skin": Color("#75492f"),
+        "hair": Color("#1f1719"),
+        "shirt": Color("#f6c945"),
+        "pants": Color("#1f4f8f"),
+        "shoes": Color("#245c3f"),
+        "accent": Color("#2fa36b"),
+        "style": "craque"
+    },
+    {
+        "id": "cida",
+        "name": "Motorista Cida",
+        "gender": "F",
+        "role": "motorista de ônibus",
+        "description": "farda da empresa, quepe e crachá do busão",
+        "effect": "ônibus espera +2s",
+        "price": 860,
+        "skin": Color("#8d5c3e"),
+        "hair": Color("#241a1c"),
+        "shirt": Color("#3f7fae"),
+        "pants": Color("#2b3f5e"),
+        "shoes": Color("#23252d"),
+        "accent": Color("#f6c945"),
+        "style": "motorista"
     }
 ]
 

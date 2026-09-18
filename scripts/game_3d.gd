@@ -84,6 +84,7 @@ var screen := 0 # menu, mapa, corrida, resultado, loja, conquistas, diários, gu
 var previous_screen := 0
 var map_page := 0
 var shop_tab := 0
+var shop_scroll := 0.0
 var selected_phase := 0
 var phase_index := 0
 var phase: Dictionary = {}
@@ -109,6 +110,8 @@ var jump_duration := 0.9
 var slide_timer := 0.0
 var dash_timer := 0.0
 var dash_cooldown := 0.0
+var dash_recharge_fast := false
+var bus_wait_bonus := 0.0
 var shield_hits := 0
 var speed_boost_timer := 0.0
 var slow_motion_timer := 0.0
@@ -414,6 +417,8 @@ func _start_run(index: int) -> void:
     slide_timer = 0.0
     dash_timer = 0.0
     dash_cooldown = 0.0
+    dash_recharge_fast = false
+    bus_wait_bonus = 0.0
     jump_duration = 0.9
     shield_hits = 0
     speed_boost_timer = 0.0
@@ -449,6 +454,28 @@ func _start_run(index: int) -> void:
         jump_duration = 1.15
     elif equipped == "influencer":
         magnet_timer = 9999.0
+    elif equipped == "chico":
+        speed_boost_timer = 9999.0
+    elif equipped == "tiao":
+        jump_duration = 1.15
+    elif equipped == "beto":
+        dash_recharge_fast = true
+    elif equipped == "nilo":
+        hearts = 4
+        max_hearts = 4
+    elif equipped == "professor":
+        slow_motion_timer = 2.0
+    elif equipped == "marta":
+        magnet_timer = 9999.0
+    elif equipped == "zilda":
+        shield_hits = 1
+    elif equipped == "clara":
+        hearts = 4
+        max_hearts = 4
+    elif equipped == "deise":
+        speed_boost_timer = 9999.0
+    elif equipped == "cida":
+        bus_wait_bonus = 2.0
     if GameSave.owns("mochila"):
         shield_hits += 1
     if GameSave.owns("tenis"):
@@ -722,12 +749,13 @@ func _update_run(dt: float) -> void:
             return
         run_mode = "at_stop"
         stop_wait_total = _phase_wait_for(phase_index) if not endless_mode else 0.0
+        stop_wait_total += bus_wait_bonus
         stop_wait = stop_wait_total
         if bus_stop_node:
             bus_stop_node.visible = true
         if bus_node:
             bus_node.visible = true
-        _show_feedback("CHEGOU NO PONTO!", "SEGURA O BUSÃO!", YELLOW, "horn")
+        _show_feedback("CHEGOU NO PONTO!", "SEGURA O BUSÃO!" if bus_wait_bonus <= 0.0 else "MOTORISTA ACIONADA: +2s", YELLOW, "horn")
     if hearts <= 0:
         _finish_run(false, true)
 
@@ -835,7 +863,8 @@ func _change_lane(direction: int) -> void:
 func _jump() -> void:
     if screen != 2 or run_mode != "playing" or jump_timer > 0.0 or slide_timer > 0.0:
         return
-    if CHARACTER_DATA.canonical_id(GameSave.equipped_character()) == "julia":
+    var jumper: String = CHARACTER_DATA.canonical_id(GameSave.equipped_character())
+    if jumper == "julia" or jumper == "tiao":
         jump_duration = 1.15
     else:
         jump_duration = 0.9
@@ -855,7 +884,7 @@ func _dash() -> void:
     if screen != 2 or run_mode != "playing" or dash_cooldown > 0.0:
         return
     dash_timer = 0.42
-    dash_cooldown = 3.2
+    dash_cooldown = 1.9 if dash_recharge_fast else 3.2
     GameSave.record_event("dash")
     camera_shake = 0.18
     _show_feedback("DASH!", "Invencível por um instante", YELLOW, "whoosh")
@@ -1776,7 +1805,10 @@ func _build_sidewalk_obstacle(parent: Node3D, kind: String) -> void:
     var red := _material(Color("#e94f5a"), 0.0, 0.66, "paint")
     match kind:
         "old_lady":
-            _build_pedestrian_obstacle(parent, "maria", "old_lady", 0.80)
+            # A velhinha alterna entre a Vovó Zilda (lote 2) e a Maria do
+            # Bairro: variedade de calçada sem quebrar o contrato de obstáculo.
+            var granny_profiles: Array[String] = ["zilda", "maria"]
+            _build_pedestrian_obstacle(parent, granny_profiles[abs(parent.name.hash()) % granny_profiles.size()], "old_lady", 0.80)
         "hydrant":
             var hydrant_red := _material(Color("#d95750"), 0.0, 0.62, "metal")
             _cylinder(parent, 0.28, 0.34, 0.64, Vector3(0.0, 0.40, 0.0), hydrant_red, "HydrantBody")
@@ -1827,7 +1859,10 @@ func _build_sidewalk_obstacle(parent: Node3D, kind: String) -> void:
             _cylinder(parent, 0.18, 0.18, 0.10, Vector3(0.50, 0.12, 0.52), dark, "VendorWheel")
             _cylinder(parent, 0.06, 0.06, 1.05, Vector3(-0.64, 1.55, 0.0), chrome, "VendorPole")
             _cylinder(parent, 0.06, 0.06, 1.05, Vector3(0.64, 1.55, 0.0), chrome, "VendorPole")
-            var vendor_character := _build_pedestrian_obstacle(parent, "ze", "vendor", 0.78)
+            # O camelô alterna entre a Dona Marta da Feira (lote 2) e o Zé:
+            # a banca ganha bandana e avental sem perder a leitura de obstáculo.
+            var vendor_profiles: Array[String] = ["marta", "ze"]
+            var vendor_character := _build_pedestrian_obstacle(parent, vendor_profiles[abs(parent.name.hash()) % vendor_profiles.size()], "vendor", 0.78)
             vendor_character.position = Vector3(0.0, 0.0, -0.18)
         "bench":
             var bench_wood := _material(Color("#9a633d"), 0.0, 0.8, "wood")
@@ -2206,6 +2241,8 @@ func _sync_hud() -> void:
         "cards": cards,
         "result": result,
         "shop_tab": shop_tab,
+        "shop_scroll": shop_scroll,
+        "shop_scroll_max": _shop_scroll_max(),
         "daily_progress": daily_progress,
         "daily_completed": GameSave.get_daily_completed(),
         "daily_targets": {"meters": BALANCE.daily_distance_target, "coins": BALANCE.daily_coin_target},
@@ -2298,7 +2335,17 @@ func _handle_pointer_release(pos: Vector2, duration_ms: int) -> void:
     if screen == 2 and run_mode == "playing" and duration_ms < 360 and delta.length() < 35.0 and not Rect2(620, 36, 72, 58).has_point(pos):
         _dash()
         return
+    if screen == 4 and shop_tab == 0 and absf(delta.y) > absf(delta.x) and absf(delta.y) > 24.0:
+        shop_scroll = clampf(shop_scroll - delta.y, 0.0, _shop_scroll_max())
+        return
     _handle_tap(pos)
+
+func _shop_scroll_max() -> float:
+    if shop_tab != 0:
+        return 0.0
+    var rows: float = ceilf(float(CHARACTER_DATA.all().size()) / 2.0)
+    var content_bottom: float = 250.0 + (rows - 1.0) * 145.0 + 126.0
+    return maxf(0.0, content_bottom - 1125.0)
 
 func _handle_tap(pos: Vector2) -> void:
     if screen == 0:
@@ -2374,6 +2421,7 @@ func _handle_tap(pos: Vector2) -> void:
             _show_feedback("DE VOLTA", "Seu estilo ficou salvo", BLUE, "ui_back")
         elif Rect2(30, 150, 660, 80).has_point(pos):
             shop_tab = 0 if pos.x < 360.0 else 1
+            shop_scroll = 0.0
             _show_feedback("CATÁLOGO ATUALIZADO", "Toque para equipar", RED, "ui_confirm")
         else:
             _shop_tap(pos)
@@ -2411,11 +2459,12 @@ func _shop_tap(pos: Vector2) -> void:
     var chars: Array[Dictionary] = CHARACTER_DATA.all()
     var items: Array[Dictionary] = SHOP_DATA.item_catalog()
     if shop_tab == 0:
+        var local_pos := Vector2(pos.x, pos.y + shop_scroll)
         for i in chars.size():
             var col: int = i % 2
             var row: int = int(i / 2)
             var rect := Rect2(25 + col * 340, 250 + row * 145, 330, 126)
-            if rect.has_point(pos):
+            if rect.has_point(local_pos):
                 var id: String = str(chars[i].get("id", "ze"))
                 var price: int = int(chars[i].get("price", 0))
                 if GameSave.owns(id):

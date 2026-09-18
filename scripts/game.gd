@@ -1168,6 +1168,7 @@ func _draw_shop() -> void:
         _draw_character_card(Rect2(30, 685, 660, 126), "julia", "Júlia Atleta", "pulo prolongado", 360, Color("#e9d459"))
         _draw_character_card(Rect2(30, 830, 660, 126), "carlos", "Carlos da Obra", "escudo de impacto", 440, Color("#5e7bc4"))
         _draw_character_card(Rect2(30, 975, 660, 126), "influencer", "Nina Creator", "ímã de moedas", 420, Color("#e56b98"))
+        _text(Vector2(30, 1108), "Modo 2D de referência: o catálogo completo com os 20 corredores fica na loja do runner 3D.", 13, MUTED)
     else:
         _draw_item_card(Rect2(30, 250, 315, 150), "tenis", "Tênis turbo", "velocidade +", 200, Color("#55d7c0"))
         _draw_item_card(Rect2(375, 250, 315, 150), "mochila", "Mochila", "escudo extra", 180, Color("#f4b84e"))
@@ -2029,4 +2030,4 @@ func _draw_global_particles() -> void:
         draw_line(confetti_pos, confetti_pos + Vector2(7, 0), Color(1, 1, 1, confetti_alpha * 0.35), 1.0)
 
 func _character_name(id: String) -> String:
-    return {"ze": "Zé Atrasado", "maria": "Maria do Bairro", "motoboy": "Rafa Motoboy", "julia": "Júlia Atleta", "caramelo": "Júlia Atleta", "carlos": "Carlos da Obra", "chefe": "Carlos da Obra", "influencer": "Nina Creator"}.get(id, id)
+    return {"ze": "Zé Atrasado", "maria": "Maria do Bairro", "motoboy": "Rafa Motoboy", "julia": "Júlia Atleta", "caramelo": "Júlia Atleta", "carlos": "Carlos da Obra", "chefe": "Carlos da Obra", "influencer": "Nina Creator", "chico": "Chico Carteiro", "tiao": "Tião Vaqueiro", "beto": "Beto Praiano", "nilo": "Nilo Padeiro", "professor": "Professor Everaldo", "marta": "Dona Marta da Feira", "zilda": "Vovó Zilda", "clara": "Enfermeira Clara", "deise": "Deise Craque", "cida": "Motorista Cida"}.get(id, id)

@@ -244,17 +244,20 @@ func _draw_results() -> void:
 
 func _draw_shop() -> void:
     _draw_ui_background()
-    _header("LOJA DO PONTO", "R$ %03d" % int(state.get("coins", 0)))
-    _text(Vector2(30, 126), "10 brasileiros para correr do seu jeito.", 16, MUTED)
-    _button(Rect2(30, 150, 330, 70), "PERSONAGENS", BLUE if int(state.get("shop_tab", 0)) == 0 else Color("#263958"), 18)
-    _button(Rect2(360, 150, 330, 70), "ITENS", RED if int(state.get("shop_tab", 0)) == 1 else Color("#263958"), 20)
+    var scroll: float = float(state.get("shop_scroll", 0.0))
+    var scroll_max: float = float(state.get("shop_scroll_max", 0.0))
+    var characters: Array = state.get("characters", [])
     if int(state.get("shop_tab", 0)) == 0:
-        var characters: Array = state.get("characters", [])
         for i in characters.size():
             var col: int = i % 2
             var row: int = int(i / 2)
-            var rect := Rect2(25.0 + col * 340.0, 250.0 + row * 145.0, 330.0, 126.0)
+            var card_y: float = 250.0 + row * 145.0 - scroll
+            if card_y + 126.0 < 250.0 or card_y > 1125.0:
+                continue
+            var rect := Rect2(25.0 + col * 340.0, card_y, 330.0, 126.0)
             _character_card(rect, characters[i])
+        _mask_band(126.0, 250.0)
+        _mask_band(1125.0, 1280.0)
     else:
         var items: Array = state.get("items", [])
         for i in items.size():
@@ -262,7 +265,32 @@ func _draw_shop() -> void:
             var row: int = int(i / 2)
             var rect := Rect2(30.0 + col * 345.0, 250.0 + row * 175.0, 315.0, 150.0)
             _item_card(rect, items[i])
+    _header("LOJA DO PONTO", "R$ %03d" % int(state.get("coins", 0)))
+    _text(Vector2(30, 126), "%d brasileiros para correr do seu jeito." % characters.size(), 16, MUTED)
+    _button(Rect2(30, 150, 330, 70), "PERSONAGENS", BLUE if int(state.get("shop_tab", 0)) == 0 else Color("#263958"), 18)
+    _button(Rect2(360, 150, 330, 70), "ITENS", RED if int(state.get("shop_tab", 0)) == 1 else Color("#263958"), 20)
+    if int(state.get("shop_tab", 0)) == 0 and scroll_max > 0.0:
+        var track_height: float = 875.0
+        var thumb_height: float = maxf(72.0, track_height * (875.0 / (875.0 + scroll_max)))
+        var thumb_y: float = 250.0 + (scroll / scroll_max) * (track_height - thumb_height)
+        draw_rect(Rect2(703, 250, 6, track_height), Color(1, 1, 1, 0.10))
+        draw_rect(Rect2(703, thumb_y, 6, thumb_height), Color(0.45, 0.85, 0.88, 0.55))
+        _text_center(Vector2(676, 1128), "arraste a lista", 11, MUTED)
     _button(Rect2(45, 1135, 630, 70), "VOLTAR", Color("#293955"), 22)
+
+func _mask_band(y0: float, y1: float) -> void:
+    # Reconstrói as faixas do gradiente de fundo para esconder cards que
+    # atravessam os limites da janela da loja sem depender de clip nodes.
+    var top := Color("#081329")
+    var bottom := Color("#173858")
+    for i in 16:
+        var band_y: float = i * 80.0
+        var band_bottom: float = band_y + 82.0
+        if band_bottom <= y0 or band_y >= y1:
+            continue
+        var clipped_top: float = maxf(y0, band_y)
+        var clipped_bottom: float = minf(y1, band_bottom)
+        draw_rect(Rect2(0, clipped_top, 720, clipped_bottom - clipped_top), top.lerp(bottom, float(i) / 15.0))
 
 func _character_card(rect: Rect2, character: Dictionary) -> void:
     var accent: Color = character.get("accent", BLUE)

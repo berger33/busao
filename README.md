@@ -17,7 +17,7 @@ Um runner mobile-first **totalmente 3D** em **Godot 4.x**, inspirado na leitura 
 - Estrelas por fase, mapa paginado em 5 capítulos, Tela 20 liberada com 45 estrelas e Tela 50 com 120 estrelas.
 - **Endless** liberado ao concluir a Tela 50, com corrida de 1000 m, XP, combo e recorde local persistido.
 - Sequência diária: login consecutivo, bônus de R$ 100 a cada 7 dias e badges de coleção; a sequência é informativa e não bloqueia fases.
-- Loja com **10 perfis humanos brasileiros** (5 masculinos e 5 femininos): o asset skinned compartilhado recebe corpo, pele, cabelo e paletas de roupa diferentes por perfil, enquanto preços, descrições e habilidades ficam persistidos localmente.
+- Loja com **20 perfis humanos brasileiros** (10 masculinos e 10 femininos, em dois lotes de criação): o asset skinned compartilhado recebe corpo, pele, cabelo, paletas de roupa e acessórios presos ao esqueleto diferentes por perfil, enquanto preços, descrições e habilidades ficam persistidos localmente. A grade de personagens tem rolagem por arraste.
 - Conquistas, badges, desafios diários, marco semanal e save JSON versionado em `user://corre_pro_ponto.json`, com autosave amortizado, backup e recuperação de escrita interrompida.
 - Progressão/economia com primeira conclusão, replay de bônus fixo, diferença de estrela, saldo de moedas sem duplicação e loja com estado adquirido/equipado comunicado na HUD.
 - Instrumentação local sem PII para sessões, tentativas, conclusões, falhas, primeiros clears, tempo, distância e compras; não há telemetria de rede neste escopo.
@@ -41,7 +41,7 @@ scenes/main.tscn           Cena de entrada
 scripts/game_3d.gd          Mundo 3D, câmera, pista, entidades, input e corrida
 scripts/hud_3d.gd           HUD/menu/mapa/loja/resultados sobre o mundo 3D
 scripts/scenario_data.gd     Dez capítulos visuais e paletas do Brasil
-scripts/character_data.gd    Catálogo dos 10 corredores humanos
+scripts/character_data.gd    Catálogo dos 20 corredores humanos (lotes 1 e 2)
 scripts/runner_character.gd  Instância GLTF skinned, roupa modular, rig e clips de locomoção
 scripts/world_character.gd   Adaptador de pedestres humanos 3D para obstáculos
 scripts/world_animal.gd      Cachorro caramelo 3D articulado e animado
@@ -78,12 +78,14 @@ A expansão fica acessível no mapa paginado, dez fases por capítulo:
 
 As telas novas variam tema, velocidade, densidade, clima e especiais no catálogo. No runner 3D, a expansão mantém o tráfego e os objetos urbanos do contrato de faixa e acrescenta PIX Turbo, coxinha, guaraná, guarda-chuva e outros bônus brasileiros.
 
-## Os 10 corredores
+## Os 20 corredores
 
-- **Masculinos:** Zé Atrasado (casual), Rafa Motoboy (colete e capacete), Luan do Skate (moletom e skate), João Gamer (fone e mochila pixel) e Carlos da Obra (capacete e colete).
-- **Femininos:** Maria do Bairro (bolsa e saia), Bia Estudante (uniforme e mochila), Camila do Negócio (macacão e tablet), Júlia Atleta (look esportivo) e Nina Creator (cabelo volumoso, top, botas e celular).
+- **Masculinos (lote 1):** Zé Atrasado (casual), Rafa Motoboy (colete e capacete), Luan do Skate (moletom e skate), João Gamer (fone e mochila pixel) e Carlos da Obra (capacete e colete).
+- **Femininos (lote 1):** Maria do Bairro (bolsa e saia), Bia Estudante (uniforme e mochila), Camila do Negócio (macacão e tablet), Júlia Atleta (look esportivo) e Nina Creator (cabelo volumoso, top, botas e celular).
+- **Masculinos (lote 2 — Turma do Ponto 2):** Chico Carteiro (boné e sacola de cartas), Tião Vaqueiro (chapéu de couro), Beto Praiano (regata e colar), Nilo Padeiro (touca e bandeja de pão de queijo) e Professor Everaldo (gravata e livro).
+- **Femininos (lote 2):** Dona Marta da Feira (bandana e avental), Vovó Zilda (lenço e bolsa de mercado), Enfermeira Clara (gorro e crachá), Deise Craque (camisa dez e faixa de capitã) e Motorista Cida (quepe e crachá do busão).
 
-O catálogo continua oferecendo dez identidades e progressão de loja, mas a representação de gameplay agora usa um asset humano 3D real compartilhado: corpo Quaternius masculino/feminino, rosto, olhos, cabelo com material próprio e roupa modular Peasant com meshes skinned e mapas PBR separados. A identidade Nina Creator recebe uma camada de figurino texturizada de top, shorts jeans e botas, além de acessórios metálicos e celular ancorados nos ossos, sem transformar o corpo principal em uma montagem de primitivas. Os NPCs de obstáculo reutilizam o mesmo corpo profissional no modo de mundo, e o caramelo possui um animal 3D próprio com animação de cauda/patas. O esqueleto humanoide é animado pelos clips CC0 da Universal Animation Library; `Sprint_Loop`, `Jump_Loop`, `Crouch_Idle_Loop` e `Crouch_Fwd_Loop` acompanham corrida, pulo e deslize, com fallback somente para diagnóstico. O asset, os binários, as texturas, o texto de licença e o manifesto SHA-256 estão em `assets/characters/quaternius/`. As cores/estilos da loja permanecem dados de progressão.
+O catálogo continua oferecendo vinte identidades e progressão de loja, mas a representação de gameplay agora usa um asset humano 3D real compartilhado: corpo Quaternius masculino/feminino, rosto, olhos, cabelo com material próprio e roupa modular Peasant com meshes skinned e mapas PBR separados. A identidade Nina Creator recebe uma camada de figurino texturizada de top, shorts jeans e botas, além de acessórios metálicos e celular ancorados nos ossos, sem transformar o corpo principal em uma montagem de primitivas. O lote 2 segue o mesmo padrão com `BoneAttachment3D`: boné e sacola do carteiro, chapéu de vaqueiro, colar do praiano, touca e bandeja do padeiro, gravata e livro do professor, bandana e avental da feirante, lenço e bolsa da vovó, gorro e crachá da enfermeira, faixa de capitã da craque e quepe e crachá da motorista. Os NPCs de obstáculo reutilizam o mesmo corpo profissional no modo de mundo, e o caramelo possui um animal 3D próprio com animação de cauda/patas. O esqueleto humanoide é animado pelos clips CC0 da Universal Animation Library; `Sprint_Loop`, `Jump_Loop`, `Crouch_Idle_Loop` e `Crouch_Fwd_Loop` acompanham corrida, pulo e deslize, com fallback somente para diagnóstico. O asset, os binários, as texturas, o texto de licença e o manifesto SHA-256 estão em `assets/characters/quaternius/`. As cores/estilos da loja permanecem dados de progressão.
 
 ## Abrir e rodar no Godot 4
 

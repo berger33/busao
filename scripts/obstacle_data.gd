@@ -16,7 +16,7 @@ const CATALOG: Array[Dictionary] = [
     {"id": "dog", "space": "sidewalk", "kind": "animal", "builder": "_build_animal_obstacle", "asset": "caramelo_animal_3d"},
     {"id": "bicycle", "space": "sidewalk", "kind": "vehicle_prop", "builder": "_build_sidewalk_obstacle", "asset": "bicycle_assembly"},
     {"id": "cone", "space": "sidewalk", "kind": "construction_prop", "builder": "_build_sidewalk_obstacle", "asset": "traffic_cone_assembly"},
-    {"id": "vendor", "space": "sidewalk", "kind": "pedestrian", "builder": "_build_pedestrian_obstacle", "asset": "quaternius_skinned_male"},
+    {"id": "vendor", "space": "sidewalk", "kind": "pedestrian", "builder": "_build_pedestrian_obstacle", "asset": "quaternius_skinned_human_rotating"},
     {"id": "bench", "space": "sidewalk", "kind": "street_prop", "builder": "_build_sidewalk_obstacle", "asset": "bench_assembly"},
 ]
 

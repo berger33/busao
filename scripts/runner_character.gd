@@ -113,6 +113,7 @@ func set_character(next_id: String) -> void:
     _apply_skin_tint(profile.get("skin", Color.WHITE))
     _apply_profile_palette(profile)
     _attach_creator_details(profile)
+    _attach_batch2_details(profile)
     if use_animation_library:
         _setup_animation_library()
     _configure_mesh_shadows(model_root)
@@ -471,6 +472,208 @@ func _attach_creator_details(profile: Dictionary) -> void:
             var earring := _creator_mesh(head_attachment, "CreatorEarring", earring_mesh, metal_material)
             earring.position = Vector3(side * 0.19, 0.015, 0.085)
             earring.rotation_degrees = Vector3(90.0, 0.0, 0.0)
+
+func _attach_batch2_details(profile: Dictionary) -> void:
+    # Lote 2: cada corredor novo recebe 1-2 props simples presos ao esqueleto,
+    # no mesmo padrão da Nina Creator, mas com materiais de cor sólida.
+    if skeleton == null:
+        return
+    var shirt: Color = profile.get("shirt", Color.WHITE)
+    var pants: Color = profile.get("pants", Color.WHITE)
+    var accent: Color = profile.get("accent", Color.WHITE)
+    match character_id:
+        "chico":
+            _attach_cap("PostmanCap", shirt, accent, true)
+            _attach_strap("PostmanStrap", accent)
+            _attach_side_pouch("PostmanBag", pants)
+        "tiao":
+            _attach_hat("VaqueroHat", accent, 0.30, 0.16, 0.16)
+        "beto":
+            _attach_torus("SurferNecklace", "neck_01", accent, 0.085, 0.014, Vector3(0.0, -0.01, 0.0))
+            _attach_torus("SurferWristband", "lowerarm_r", accent, 0.068, 0.016, Vector3(0.0, 0.13, 0.0))
+        "nilo":
+            _attach_hat("BakerToque", shirt, 0.155, 0.15, 0.17)
+            _attach_baker_tray("BakerTray", accent)
+        "professor":
+            _attach_tie("ProfessorTie", accent)
+            _attach_hand_book("ProfessorBook", pants)
+        "marta":
+            _attach_bandana("FairBandana", shirt)
+            _attach_apron("FairApron", shirt.lightened(0.18))
+        "zilda":
+            _attach_headscarf("GrannyScarf", shirt)
+            _attach_side_pouch("GrannyPurse", accent)
+        "clara":
+            _attach_cap("NurseCap", shirt, accent, false)
+            _attach_badge("NurseBadge", accent)
+        "deise":
+            _attach_torus("CaptainArmband", "upperarm_l", accent, 0.066, 0.02, Vector3(0.0, 0.17, 0.0))
+        "cida":
+            _attach_cap("DriverCap", shirt, accent, true)
+            _attach_badge("DriverBadge", accent)
+
+func _batch_material(color: Color, roughness: float, metallic: float = 0.0) -> StandardMaterial3D:
+    var material := StandardMaterial3D.new()
+    material.albedo_color = color
+    material.roughness = roughness
+    material.metallic = metallic
+    return material
+
+func _attach_cap(node_name: String, crown_color: Color, visor_color: Color, with_visor: bool) -> void:
+    var head := _bone_attachment("Head", node_name + "Attachment")
+    if head == null:
+        return
+    var crown_mesh := CylinderMesh.new()
+    crown_mesh.top_radius = 0.145
+    crown_mesh.bottom_radius = 0.16
+    crown_mesh.height = 0.11
+    crown_mesh.radial_segments = 20
+    var crown := _creator_mesh(head, node_name + "Crown", crown_mesh, _batch_material(crown_color, 0.62))
+    crown.position = Vector3(0.0, 0.165, 0.0)
+    if with_visor:
+        var visor_mesh := BoxMesh.new()
+        visor_mesh.size = Vector3(0.30, 0.025, 0.17)
+        var visor := _creator_mesh(head, node_name + "Visor", visor_mesh, _batch_material(visor_color.darkened(0.25), 0.55))
+        visor.position = Vector3(0.0, 0.105, 0.16)
+
+func _attach_hat(node_name: String, color: Color, brim_radius: float, crown_radius: float, crown_height: float) -> void:
+    var head := _bone_attachment("Head", node_name + "Attachment")
+    if head == null:
+        return
+    var brim_mesh := CylinderMesh.new()
+    brim_mesh.top_radius = brim_radius
+    brim_mesh.bottom_radius = brim_radius
+    brim_mesh.height = 0.025
+    brim_mesh.radial_segments = 24
+    var brim := _creator_mesh(head, node_name + "Brim", brim_mesh, _batch_material(color, 0.66))
+    brim.position = Vector3(0.0, 0.135, 0.0)
+    var crown_mesh := CylinderMesh.new()
+    crown_mesh.top_radius = crown_radius * 0.82
+    crown_mesh.bottom_radius = crown_radius
+    crown_mesh.height = crown_height
+    crown_mesh.radial_segments = 20
+    var crown := _creator_mesh(head, node_name + "Crown", crown_mesh, _batch_material(color.darkened(0.12), 0.66))
+    crown.position = Vector3(0.0, 0.135 + crown_height * 0.5, 0.0)
+
+func _attach_torus(node_name: String, bone_name: String, color: Color, inner_radius: float, outer_radius: float, offset: Vector3) -> void:
+    var bone := _bone_attachment(bone_name, node_name + "Attachment")
+    if bone == null:
+        return
+    var torus_mesh := TorusMesh.new()
+    torus_mesh.inner_radius = inner_radius
+    torus_mesh.outer_radius = outer_radius
+    torus_mesh.rings = 20
+    torus_mesh.ring_segments = 10
+    var torus := _creator_mesh(bone, node_name, torus_mesh, _batch_material(color, 0.5))
+    torus.position = offset
+    torus.rotation_degrees.x = 90.0
+
+func _attach_strap(node_name: String, color: Color) -> void:
+    var torso := _bone_attachment("spine_02", node_name + "Attachment")
+    if torso == null:
+        return
+    var strap_mesh := BoxMesh.new()
+    strap_mesh.size = Vector3(0.055, 0.58, 0.035)
+    var strap := _creator_mesh(torso, node_name, strap_mesh, _batch_material(color, 0.55))
+    strap.position = Vector3(0.05, -0.02, -0.20)
+    strap.rotation_degrees.z = 38.0
+
+func _attach_side_pouch(node_name: String, color: Color) -> void:
+    var pelvis := _bone_attachment("pelvis", node_name + "Attachment")
+    if pelvis == null:
+        return
+    var pouch_mesh := BoxMesh.new()
+    pouch_mesh.size = Vector3(0.24, 0.19, 0.09)
+    var pouch := _creator_mesh(pelvis, node_name, pouch_mesh, _batch_material(color, 0.6))
+    pouch.position = Vector3(0.235, -0.06, -0.05)
+    pouch.rotation_degrees.z = 12.0
+
+func _attach_baker_tray(node_name: String, bread_color: Color) -> void:
+    var hand := _bone_attachment("hand_l", node_name + "Attachment")
+    if hand == null:
+        return
+    var tray_mesh := CylinderMesh.new()
+    tray_mesh.top_radius = 0.15
+    tray_mesh.bottom_radius = 0.15
+    tray_mesh.height = 0.025
+    tray_mesh.radial_segments = 20
+    var tray := _creator_mesh(hand, node_name, tray_mesh, _batch_material(Color("#b9bec7"), 0.35, 0.55))
+    tray.position = Vector3(0.0, 0.09, 0.0)
+    for index in 3:
+        var bread_mesh := SphereMesh.new()
+        bread_mesh.radius = 0.045
+        bread_mesh.height = 0.075
+        bread_mesh.radial_segments = 12
+        bread_mesh.rings = 6
+        var bread := _creator_mesh(hand, "%sBread_%d" % [node_name, index], bread_mesh, _batch_material(bread_color, 0.7))
+        bread.position = Vector3(-0.075 + float(index) * 0.075, 0.135, 0.0)
+        bread.scale = Vector3(1.0, 0.78, 1.0)
+
+func _attach_tie(node_name: String, color: Color) -> void:
+    var torso := _bone_attachment("spine_02", node_name + "Attachment")
+    if torso == null:
+        return
+    var knot_mesh := BoxMesh.new()
+    knot_mesh.size = Vector3(0.06, 0.055, 0.03)
+    var knot := _creator_mesh(torso, node_name + "Knot", knot_mesh, _batch_material(color.darkened(0.15), 0.55))
+    knot.position = Vector3(0.0, 0.13, -0.215)
+    var blade_mesh := BoxMesh.new()
+    blade_mesh.size = Vector3(0.07, 0.30, 0.025)
+    var blade := _creator_mesh(torso, node_name + "Blade", blade_mesh, _batch_material(color, 0.55))
+    blade.position = Vector3(0.0, -0.045, -0.22)
+
+func _attach_hand_book(node_name: String, color: Color) -> void:
+    var hand := _bone_attachment("hand_l", node_name + "Attachment")
+    if hand == null:
+        return
+    var book_mesh := BoxMesh.new()
+    book_mesh.size = Vector3(0.17, 0.055, 0.23)
+    var book := _creator_mesh(hand, node_name, book_mesh, _batch_material(color, 0.72))
+    book.position = Vector3(0.0, 0.11, 0.0)
+    book.rotation_degrees.y = 12.0
+
+func _attach_bandana(node_name: String, color: Color) -> void:
+    var head := _bone_attachment("Head", node_name + "Attachment")
+    if head == null:
+        return
+    var cloth_mesh := CylinderMesh.new()
+    cloth_mesh.top_radius = 0.185
+    cloth_mesh.bottom_radius = 0.185
+    cloth_mesh.height = 0.09
+    cloth_mesh.radial_segments = 20
+    var cloth := _creator_mesh(head, node_name, cloth_mesh, _batch_material(color, 0.8))
+    cloth.position = Vector3(0.0, 0.135, 0.0)
+
+func _attach_apron(node_name: String, color: Color) -> void:
+    var torso := _bone_attachment("spine_01", node_name + "Attachment")
+    if torso == null:
+        return
+    var apron_mesh := BoxMesh.new()
+    apron_mesh.size = Vector3(0.32, 0.40, 0.02)
+    var apron := _creator_mesh(torso, node_name, apron_mesh, _batch_material(color, 0.8))
+    apron.position = Vector3(0.0, -0.14, -0.20)
+
+func _attach_headscarf(node_name: String, color: Color) -> void:
+    var head := _bone_attachment("Head", node_name + "Attachment")
+    if head == null:
+        return
+    var scarf_mesh := SphereMesh.new()
+    scarf_mesh.radius = 0.185
+    scarf_mesh.height = 0.37
+    scarf_mesh.radial_segments = 16
+    scarf_mesh.rings = 8
+    var scarf := _creator_mesh(head, node_name, scarf_mesh, _batch_material(color, 0.82))
+    scarf.position = Vector3(0.0, 0.07, -0.01)
+    scarf.scale = Vector3(1.02, 0.72, 1.04)
+
+func _attach_badge(node_name: String, color: Color) -> void:
+    var torso := _bone_attachment("spine_02", node_name + "Attachment")
+    if torso == null:
+        return
+    var badge_mesh := BoxMesh.new()
+    badge_mesh.size = Vector3(0.075, 0.095, 0.015)
+    var badge := _creator_mesh(torso, node_name, badge_mesh, _batch_material(color, 0.4, 0.3))
+    badge.position = Vector3(0.125, 0.03, -0.215)
 
 func _bone_attachment(bone_name: String, node_name: String) -> BoneAttachment3D:
     if skeleton == null or not bone_indices.has(bone_name):
