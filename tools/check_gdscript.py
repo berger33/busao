@@ -12,6 +12,12 @@ Erros:
   UNKNOWN_METHOD   - metodo inexistente em receptor com tipo conhecido
   UNKNOWN_MEMBER   - propriedade inexistente em receptor de tipo conhecido
                      (ex.: `mesh.receive_shadow`, API do Godot 3)
+  SHADOWED_VARIABLE / SHADOWED_VARIABLE_BASE_CLASS - local ou parametro com o
+                     mesmo nome de um membro do proprio script, de um script pai
+                     ou de uma classe nativa (ex.: `name`, `scale`, `size`,
+                     `position`, `ready`); o Godot mostra isso como aviso no
+                     editor, e as mensagens saem iguais as dele
+  SHADOWED_GLOBAL_IDENTIFIER - local com nome de funcao, classe ou tipo do engine
   MISSING_RETURN   - funcao com tipo de retorno sem nenhum `return`
   ASSIGN_CONST     - atribuicao a constante
 Advertencias:
@@ -53,6 +59,7 @@ class Sig:
     name: str
     required: int
     maximum: int | None  # None => vararg
+    returns: str = ""    # tipo de retorno ("" => desconhecido)
 
 
 class EngineDB:
@@ -75,7 +82,9 @@ class EngineDB:
         params = list(node.findall("param"))
         required = sum(1 for p in params if "default" not in p.attrib)
         vararg = "vararg" in node.attrib.get("qualifiers", "").split()
-        return Sig(name, required, None if vararg else len(params))
+        ret = node.find("return")
+        returns = ret.attrib.get("type", "") if ret is not None else ""
+        return Sig(name, required, None if vararg else len(params), returns)
 
     def _load(self, path: Path) -> None:
         try:
@@ -120,6 +129,23 @@ class EngineDB:
                 return sig
         return None
 
+    def symbol_kind(self, cls: str, name: str) -> tuple[str, str] | None:
+        """(tipo do simbolo, classe nativa onde ele nasce)."""
+        cur = cls
+        seen: set[str] = set()
+        while cur and cur not in seen:
+            seen.add(cur)
+            if name in self.methods.get(cur, {}):
+                return ("method", cur)
+            if name in self.signals.get(cur, set()):
+                return ("signal", cur)
+            if name in self.members.get(cur, set()):
+                return ("property", cur)
+            if name in self.consts.get(cur, set()):
+                return ("constant", cur)
+            cur = self.inherits.get(cur, "")
+        return None
+
     def has_member(self, cls: str, attr: str) -> bool:
         for c in self.chain(cls):
             if attr in self.members.get(c, set()) or attr in self.consts.get(c, set()):
@@ -152,6 +178,10 @@ class ScriptInfo:
     funcs: dict[str, Sig] = field(default_factory=dict)
     ret_types: dict[str, str] = field(default_factory=dict)
     preloads: dict[str, str] = field(default_factory=dict)  # const name -> res:// path
+    symbol_kinds: dict[str, tuple[str, int]] = field(default_factory=dict)  # nome -> (tipo, linha)
+
+    def symbol_kind(self, name: str) -> tuple[str, int] | None:
+        return self.symbol_kinds.get(name)
 
     @property
     def symbols(self) -> set[str]:
@@ -247,6 +277,7 @@ def load_script(path: Path) -> ScriptInfo:
             inner = child.children[0] if child.children else None
             toks = token_nodes(child)
             name = str(toks[0])
+            info.symbol_kinds[name] = ("constant", int(toks[0].line))
             if isinstance(inner, Tree) and inner.data == "const_assigned":
                 info.consts[name] = ""
             else:
@@ -257,6 +288,7 @@ def load_script(path: Path) -> ScriptInfo:
                 info.preloads[name] = "res://" + m.group(1)
         elif child.data == "class_var_stmt":
             toks = token_nodes(child)
+            info.symbol_kinds[str(toks[0])] = ("variable", int(toks[0].line))
             typed = next((t for t in toks if t.type == "TYPE_HINT"), None)
             if typed:
                 info.members[str(toks[0])] = str(typed)
@@ -264,11 +296,14 @@ def load_script(path: Path) -> ScriptInfo:
                 inner_expr = next((c for c in token_trees(child) if isinstance(c, Tree) and str(c.data) == "expr"), None)
                 info.members[str(toks[0])] = literal_type_of(inner_expr)
         elif child.data == "signal_stmt":
-            info.signals.add(str(token_nodes(child)[0]))
+            toks = token_nodes(child)
+            info.signals.add(str(toks[0]))
+            info.symbol_kinds[str(toks[0])] = ("signal", int(toks[0].line))
         elif child.data == "enum_stmt":
             toks = token_nodes(child)
             if toks:
                 info.enums[str(toks[0])] = [str(t) for t in toks[1:]]
+                info.symbol_kinds[str(toks[0])] = ("enum", int(toks[0].line))
         elif child.data in ("func_def", "static_func_def"):
             func = child.children[0] if child.data == "static_func_def" else child
             header = func.children[0]
@@ -292,12 +327,15 @@ def load_script(path: Path) -> ScriptInfo:
                     pass
             elif args is not None:
                 pass
-            info.funcs[name] = Sig(name, required, None if vararg else maximum)
             ret = ""
             for t in token_nodes(header):
                 if t.type == "TYPE_HINT":
                     ret = str(t)
+            info.funcs[name] = Sig(name, required, None if vararg else maximum, ret)
             info.ret_types[name] = ret
+            name_tok = next((t for t in token_nodes(header) if t.type == "NAME"), None)
+            if name_tok is not None:
+                info.symbol_kinds[name] = ("function", int(name_tok.line))
     return info
 
 
@@ -455,6 +493,8 @@ class Analyzer:
                     continue
                 pname = str(toks[0])
                 ptype = next((str(t) for t in toks if t.type == "TYPE_HINT"), "")
+                param_tok = next((t for t in toks if t.type == "NAME"), a)
+                self.is_shadowing(info, param_tok, pname, "function parameter")
                 if pname in scope.names:
                     self.error(info.path, a, "DUPLICATE", f'There is already a variable named "{pname}" declared in this scope.')
                 scope.names[pname] = ptype
@@ -525,6 +565,7 @@ class Analyzer:
         inner = Scope(scope, "for")
         if isinstance(var_tok, Token):
             name = str(var_tok)
+            self.is_shadowing(info, var_tok, name, '"for" iterator variable')
             if inner.declared_in_chain(name, scope):
                 self.error(info.path, var_tok, "DUPLICATE", f'There is already a variable named "{name}" declared in this scope.')
             inner.names[name] = self.iter_type(info, children[1]) or ""
@@ -634,7 +675,38 @@ class Analyzer:
         for c in node.children:
             self.expr_tree(info, c, scope)
 
+    ## Reproduz GDScriptAnalyzer::is_shadowing: um nome local nao pode repetir um
+    ## identificador global, um membro do proprio script, um membro da cadeia de
+    ## scripts pais nem um membro da cadeia de classes nativas.
+    def is_shadowing(self, info: ScriptInfo, tok, name: str, context: str) -> None:
+        if name in self.engine.global_funcs or name in self.engine.classes or name in BUILTIN_TYPES:
+            self.error(info.path, tok, "SHADOWED_GLOBAL_IDENTIFIER",
+                       f'The {context} "{name}" has the same name as a built-in identifier.')
+            return
+        own = info.symbol_kind(name)
+        if own is not None:
+            self.error(info.path, tok, "SHADOWED_VARIABLE",
+                       f'The local {context} "{name}" is shadowing an already-declared '
+                       f'{own[0]} at line {own[1]} in the current class.')
+            return
+        parents, engine_base = self.base_chain(info)
+        for parent in parents:
+            inherited = parent.symbol_kind(name)
+            if inherited is not None:
+                self.error(info.path, tok, "SHADOWED_VARIABLE_BASE_CLASS",
+                           f'The local {context} "{name}" is shadowing an already-declared '
+                           f'{inherited[0]} at line {inherited[1]} in the base class '
+                           f'"{parent.cls or parent.path.stem}".')
+                return
+        if engine_base:
+            found = self.engine.symbol_kind(engine_base, name)
+            if found is not None:
+                self.error(info.path, tok, "SHADOWED_VARIABLE_BASE_CLASS",
+                           f'The local {context} "{name}" is shadowing an already-declared '
+                           f'{found[0]} in the base class "{found[1]}".')
+
     def declare(self, info: ScriptInfo, tok, name: str, ptype: str, scope: Scope) -> None:
+        self.is_shadowing(info, tok, name, "variable")
         if name in scope.names:
             self.error(info.path, tok, "DUPLICATE", f'There is already a variable named "{name}" declared in this scope.')
         elif scope.declared_in_chain(name, scope.parent):
@@ -798,6 +870,53 @@ class Analyzer:
             label = f"{label}.{name}"
         return label, ctype, member
 
+    def call_return_type(self, info: ScriptInfo, scope: Scope, node: Tree) -> str:
+        """Tipo de retorno de uma chamada (funcao do projeto ou do engine)."""
+        if str(node.data) == "expr" and node.children:
+            return self.call_return_type(info, scope, node.children[0])
+        if str(node.data) == "standalone_call" and node.children:
+            callee = node.children[0]
+            if isinstance(callee, Token):
+                name = str(callee)
+                if name in info.ret_types:
+                    return info.ret_types[name]
+                sig = self.engine.global_funcs.get(name)
+                if sig is not None:
+                    return sig.returns
+                if name in self.engine.classes:
+                    return name
+            return ""
+        if str(node.data) == "getattr_call" and node.children:
+            _label, ctype, member = self.receiver_type(info, scope, node.children[0])
+            if not member or not ctype:
+                return ""
+            if ctype in self.engine.classes:
+                if member == "new":
+                    return ctype
+                sig = self.engine.find_method(ctype, member)
+                if sig is not None:
+                    return sig.returns
+                return self.engine.member_type(ctype, member)
+            target = self.script_of(info, ctype)
+            if target is not None:
+                if member in target.funcs:
+                    return target.funcs[member].returns
+                return target.members.get(member, "")
+            return ""
+        return ""
+
+    def property_type(self, info: ScriptInfo, scope: Scope, node: Tree) -> str:
+        """Tipo estatico de uma leitura `a.b`."""
+        _label, ctype, member = self.receiver_type(info, scope, node)
+        if not member or not ctype:
+            return ""
+        if ctype in self.engine.classes:
+            return self.engine.member_type(ctype, member)
+        target = self.script_of(info, ctype)
+        if target is not None:
+            return target.members.get(member, "")
+        return ""
+
     def owner_type(self, info: ScriptInfo, scope: Scope, attr: Tree) -> tuple[str, str]:
         label, ctype, _member = self.receiver_type(info, scope, attr)
         return label, ctype
@@ -936,13 +1055,27 @@ class Analyzer:
             return self.is_intish(info, scope, node.children[0])
         if str(node.data) == "standalone_call" and node.children:
             callee = node.children[0]
-            if isinstance(callee, Token) and str(callee) in (
-                    "int", "maxi", "mini", "absi", "clampi", "roundi", "floori",
-                    "ceili", "snappedi", "range", "range_stepped"):
+            if isinstance(callee, Token):
+                cname = str(callee)
+                if cname in ("int", "maxi", "mini", "absi", "clampi", "roundi", "floori",
+                             "ceili", "snappedi", "range", "range_stepped"):
+                    return True
+                if info.ret_types.get(cname, "") == "int":
+                    return True
+                sig = self.engine.global_funcs.get(cname)
+                if sig is not None and sig.returns == "int":
+                    return True
+        if str(node.data) == "standalone_call" and node.children:
+            if self.call_return_type(info, scope, node) == "int":
                 return True
         if str(node.data) == "getattr_call":
             toks = token_nodes(node.children[0])
             if toks and str(toks[-1]) in ("size", "count", "length"):
+                return True
+            if self.call_return_type(info, scope, node) == "int":
+                return True
+        if str(node.data) == "getattr" and node.children:
+            if self.property_type(info, scope, node) == "int":
                 return True
         if str(node.data) in ("mdr_expr", "arith_expr"):
             kids = list(node.children)
@@ -987,6 +1120,7 @@ class Analyzer:
                     toks = token_nodes(a)
                     if toks:
                         ptype = next((str(t) for t in toks if t.type == "TYPE_HINT"), "")
+                        self.is_shadowing(info, toks[0], str(toks[0]), "function parameter")
                         inner.names[str(toks[0])] = ptype
         elif isinstance(header, Tree) and str(header.data) == "func_args":
             for a in header.children:
@@ -1176,6 +1310,20 @@ class Analyzer:
         self.error(info.path, node, "UNDECLARED", f'Identifier "{name}" not declared in the current scope.')
 
 
+# Tipos nativos do Variant: declarar um local com esses nomes gera
+# SHADOWED_GLOBAL_IDENTIFIER ("built-in type") no Godot.
+BUILTIN_TYPES = {
+    "bool", "int", "float", "String", "StringName", "NodePath", "Vector2", "Vector2i",
+    "Vector3", "Vector3i", "Vector4", "Vector4i", "Rect2", "Rect2i", "Transform2D",
+    "Transform3D", "Basis", "Quaternion", "Plane", "Projection", "Color", "RID",
+    "Callable", "Signal", "Dictionary", "Array", "PackedByteArray", "PackedInt32Array",
+    "PackedInt64Array", "PackedFloat32Array", "PackedFloat64Array", "PackedStringArray",
+    "PackedVector2Array", "PackedVector3Array", "PackedColorArray", "Variant", "Object",
+    "AABB", "Nil", "Type", "Error", "Key", "JoyAxis", "JoyButton", "MouseButton",
+    "Variant.Type", "Variant.Operator",
+}
+
+
 # Propriedades do Godot 3 que sumiram no Godot 4 (leitura gera erro em runtime).
 GODOT4_RENAMES = {
     "receive_shadow": "BaseMaterial3D.disable_receive_shadows (falso por padrao)",
@@ -1232,12 +1380,73 @@ def _default_docs() -> Path | None:
     return None
 
 
+from pathlib import Path as _Path  # noqa: E402  (selftest)
+
+SELFTEST_SCRIPT = """extends SelftestBase
+
+const LIMIT := 10
+
+var counter := 0
+
+func helper() -> int:
+    return 1
+
+func sample(scale: float) -> int:
+    var counter := 0
+    var scale := 2.0
+    var inherited_value := 3
+    var helper := 4
+    var total := 0
+    total = 10 / 3
+    total = int(3.5 / 2.0)
+    helper(1, 2)
+    return total
+"""
+
+SELFTEST_BASE = """class_name SelftestBase
+
+var inherited_value := 0
+"""
+
+SELFTEST_EXPECTED = {
+    (11, "SHADOWED_VARIABLE"),                 # local counter sombreia o membro da linha 5
+    (12, "DUPLICATE"),                         # local scale duplica o parametro
+    (13, "SHADOWED_VARIABLE_BASE_CLASS"),      # inherited_value vem de SelftestBase
+    (14, "SHADOWED_VARIABLE"),                 # helper sombreia a funcao
+    (16, "INTEGER_DIVISION"),                  # 10 / 3 com inteiros
+    (18, "TOO_MANY_ARGS"),                     # helper() aceita 0 argumentos
+}
+
+
+def selftest() -> int:
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _Path(tmp)
+        (root / "scripts").mkdir()
+        (root / "scripts" / "selftest_base.gd").write_text(SELFTEST_BASE, encoding="utf-8")
+        (root / "scripts" / "selftest_sample.gd").write_text(SELFTEST_SCRIPT, encoding="utf-8")
+        problems = Analyzer(root, _default_docs() or Path("/nonexistent")).run()
+    found = {(p.line, p.code) for p in problems if p.path.name == "selftest_sample.gd"}
+    missing = SELFTEST_EXPECTED - found
+    extra = found - SELFTEST_EXPECTED
+    for line, code in sorted(missing):
+        print(f"FALTANDO {code} na linha {line}")
+    for line, code in sorted(extra):
+        print(f"INESPERADO {code} na linha {line}")
+    if missing or extra:
+        return 1
+    print(f"selftest OK: {len(found)} achados na fixture (sombreamento, divisao inteira, argumentos, duplicata)")
+    return 0
+
+
 def main() -> int:
     import argparse
 
     parser = argparse.ArgumentParser(description="Analise estatica de GDScript (Godot 4).")
     parser.add_argument("project", nargs="?", default=".", help="raiz do projeto Godot")
     parser.add_argument("--godot-doc", default="", help="pasta doc/classes do Godot (opcional)")
+    parser.add_argument("--selftest", action="store_true", help="auto-verificacao das regras do analisador")
     ns = parser.parse_args()
 
     try:
@@ -1245,6 +1454,9 @@ def main() -> int:
     except ImportError:
         print("gdtoolkit ausente: rode `pip install gdtoolkit` antes de usar este script.")
         return 2
+
+    if ns.selftest:
+        return selftest()
 
     project = Path(ns.project).resolve()
     docs = Path(ns.godot_doc).resolve() if ns.godot_doc else _default_docs()

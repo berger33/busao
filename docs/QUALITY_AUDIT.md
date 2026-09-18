@@ -158,6 +158,56 @@ compatíveis, ciclo de 4,04 m/s batendo com a constante do script, sola em y≈0
 `python3 tools/validate_project.py` → PRE-FLIGHT OK;
 `python3 tools/audit_balance.py` → curva inalterada.
 
+## Sombreamento de identificadores e a última divisão inteira (18/09/2026)
+
+Mensagens trazidas do editor: `Too many arguments for
+get_unix_time_from_datetime_dict() call. Expected at most 1 but received 2`
+(638, 66) e cinco avisos marcados como `[Ignorar]` em `save_data.gd` — dois
+`SHADOWED_VARIABLE` (164 e 554, um local `retention_flags` sombreando a função da
+linha 577), um `SHADOWED_VARIABLE_BASE_CLASS` (297, o parâmetro `name` do
+`set_preference()` sombreando `Node.name`) e dois `INTEGER_DIVISION` (487 e 618).
+
+- **De onde vinham:** as seis linhas batem exatamente com a branch
+  `arena/01a0adcf-busao` (commit 845b35b), que é a base do PR #1. Na branch de
+  trabalho (`arena/01a0b48a-busao`, PR #2) o erro de parser da 638 e a divisão da
+  487 já tinham sido corrigidos no primeiro round; os quatro avisos restantes
+  (164, 297, 554 e 618) também existiam aqui e foram corrigidos agora.
+- **Erro de parser (638):** `Time.get_unix_time_from_datetime_dict(dict, utc)`
+  nunca teve o segundo parâmetro — o dicionário já é interpretado como UTC. A
+  chamada na branch antiga é a que quebra a compilação do arquivo inteiro.
+- **Sombreamento (164, 297, 554):** em GDScript 4 nomes locais não podem repetir
+  um símbolo da classe, da cadeia de scripts pais ou da cadeia nativa. Os locais
+  `retention_flags` viraram `flags` (sem tocar na função `retention_flags()`, que
+  continua sendo a única dona do nome) e o parâmetro `name` do
+  `set_preference()` virou `preference` — as chamadas em `game_3d.gd` são
+  posicionais, então nada muda para quem chama.
+- **Divisão inteira (618):** `1 + int(xp() / maxi(1, ...))` dividia inteiro por
+  inteiro e truncava antes do `int()`; virou `int(float(xp()) / maxi(1, ...))`,
+  como nas outras 19 do primeiro round.
+- **Precisão do aviso:** `tools/check_gdscript.py` passou a reproduzir
+  `GDScriptAnalyzer::is_shadowing()` — a ordem de busca (funções globais →
+  classes/tipos do engine → membro da classe atual → cadeia de scripts pais →
+  cadeia nativa) e o texto literal de cada aviso do engine, incluindo o contexto
+  (`variable`, `function parameter`, `` `for` iterator variable ``, `pattern
+  bind`, `enum member`). Contra a branch antiga o verificador imprime as mesmas
+  seis linhas que o editor mostrou, com os mesmos números.
+- **Armadilha silenciosa:** um nome antigo que continua no corpo depois de uma
+  renomeação não gera erro nenhum no Godot 4 — ele resolve para o membro herdado
+  (`self.scale`, `Control.size`) ou, se for o nome de um método, produz um
+  `Callable` (`FUNCTION_USED_AS_PROPERTY` está morto desde o 3.x). Por isso as
+  renomeações (`scale`, `size`, `ready`, `position`, `retention_flags`, `name`)
+  foram auditadas token a token: o que é acesso a membro (`obj.scale`) fica, e
+  nenhum uso nu do nome antigo sobrou dentro das funções alteradas.
+
+Resultado: `python3 tools/check_gdscript.py` → 0 problema(s) (idem com
+`--godot-doc`), `python3 tools/check_gdscript.py --selftest` → fixture com
+sombreamento, divisão inteira, argumentos a mais e variável duplicada detectados
+nas linhas esperadas, `python3 tools/validate_project.py` → PRE-FLIGHT OK,
+`python3 tools/audit_balance.py` → curva inalterada, os 14 scripts com sintaxe
+válida no gdtoolkit. Varredura extra de API do Godot 3 (`.instance()`, `yield()`,
+`Pool*Array`, `onready var`, `VisualServer`, `set_as_toplevel`, `connect` com
+assinatura antiga): nada encontrado.
+
 ## Limitações conhecidas / validação ainda obrigatória
 
 - Não há binário Godot 4.x disponível no sandbox para executar `godot --headless --editor --quit --path .`; a checagem possível aqui é estática (`tools/check_gdscript.py`, que reproduz as classes de erro do analisador) e a confirmação final de importação GLTF/GLB, retarget da AnimationLibrary, renderização e warnings restantes precisa ser feita em uma máquina com Godot 4.x.

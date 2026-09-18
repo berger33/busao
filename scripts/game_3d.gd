@@ -1513,11 +1513,11 @@ func _build_colonial_facade(pos: Vector3, index: int) -> void:
     _build_house_facade(pos, index, false)
     _box(decor_root, Vector3(2.55, 0.09, 0.08), pos + Vector3(0.0, 2.1, -1.64), _material(_scenario_color("accent", CYAN), 0.0, 0.45, "paint"), "ColonialTrim")
 
-func _build_palm(pos: Vector3, scale: float) -> void:
-    _cylinder(decor_root, 0.10 * scale, 0.15 * scale, 2.7 * scale, pos + Vector3(0.0, 1.35 * scale, 0.0), _material(Color("#805338"), 0.0, 0.9), "PalmTrunk")
+func _build_palm(pos: Vector3, object_scale: float) -> void:
+    _cylinder(decor_root, 0.10 * object_scale, 0.15 * object_scale, 2.7 * object_scale, pos + Vector3(0.0, 1.35 * object_scale, 0.0), _material(Color("#805338"), 0.0, 0.9), "PalmTrunk")
     var leaf := _material(Color("#3eaa75"), 0.0, 0.84, "leaves")
     for i in 5:
-        var branch := _box(decor_root, Vector3(0.08, 0.06, 1.0 * scale), pos + Vector3(0.0, 2.75 * scale, 0.0), leaf, "PalmLeaf")
+        var branch := _box(decor_root, Vector3(0.08, 0.06, 1.0 * object_scale), pos + Vector3(0.0, 2.75 * object_scale, 0.0), leaf, "PalmLeaf")
         branch.rotation.y = float(i) * TAU / 5.0
         branch.rotation.x = -0.28
 
@@ -1593,12 +1593,12 @@ func _build_lamp(pos: Vector3, accent: Color) -> void:
     _sphere(decor_root, 0.12, pos + Vector3(0.0, 3.24, 0.0), lamp_material, "LampGlow")
     _box(decor_root, Vector3(0.65, 0.06, 0.06), pos + Vector3(0.27, 3.18, 0.0), _material(Color("#3c4654"), 0.35, 0.4, "metal"), "LampArm")
 
-func _build_tree(pos: Vector3, scale: float) -> void:
-    _cylinder(decor_root, 0.12 * scale, 0.16 * scale, 1.7 * scale, pos + Vector3(0.0, 0.85 * scale, 0.0), _material(Color("#67452f"), 0.0, 0.95, "wood"), "TreeTrunk")
+func _build_tree(pos: Vector3, object_scale: float) -> void:
+    _cylinder(decor_root, 0.12 * object_scale, 0.16 * object_scale, 1.7 * object_scale, pos + Vector3(0.0, 0.85 * object_scale, 0.0), _material(Color("#67452f"), 0.0, 0.95, "wood"), "TreeTrunk")
     var foliage := _material(Color("#3b9b69"), 0.0, 0.86, "leaves")
-    _sphere(decor_root, 0.62 * scale, pos + Vector3(-0.28, 1.65 * scale, 0.0), foliage, "TreeLeaf")
-    _sphere(decor_root, 0.75 * scale, pos + Vector3(0.28, 1.82 * scale, 0.0), foliage, "TreeLeaf")
-    _sphere(decor_root, 0.5 * scale, pos + Vector3(0.0, 2.2 * scale, 0.0), foliage, "TreeLeaf")
+    _sphere(decor_root, 0.62 * object_scale, pos + Vector3(-0.28, 1.65 * object_scale, 0.0), foliage, "TreeLeaf")
+    _sphere(decor_root, 0.75 * object_scale, pos + Vector3(0.28, 1.82 * object_scale, 0.0), foliage, "TreeLeaf")
+    _sphere(decor_root, 0.5 * object_scale, pos + Vector3(0.0, 2.2 * object_scale, 0.0), foliage, "TreeLeaf")
 
 func _create_bus_stop(total: float) -> void:
     bus_stop_node = Node3D.new()
@@ -2006,9 +2006,9 @@ func _torus(parent: Node3D, inner_radius: float, outer_radius: float, pos: Vecto
     parent.add_child(node)
     return node
 
-func _ellipse_mesh(parent: Node3D, pos: Vector3, scale: Vector3, material: Material, node_name: String) -> MeshInstance3D:
+func _ellipse_mesh(parent: Node3D, pos: Vector3, object_scale: Vector3, material: Material, node_name: String) -> MeshInstance3D:
     var node := _sphere(parent, 1.0, pos, material, node_name)
-    node.scale = scale
+    node.scale = object_scale
     return node
 
 func _material(color: Color, metallic: float, roughness: float, surface: String = "paint") -> StandardMaterial3D:
@@ -2469,8 +2469,8 @@ func _claim_daily(index: int) -> void:
         _show_feedback("JÁ RESGATADO", "Volte amanhã", MUTED, "ui_back")
         return
     var progress: Dictionary = GameSave.daily_progress(key)
-    var ready := (index == 0 and int(progress.get("meters", 0)) >= BALANCE.daily_distance_target) or (index == 1 and int(progress.get("coins", 0)) >= BALANCE.daily_coin_target) or (index == 2 and bool(progress.get("clean", false)))
-    if not ready:
+    var is_ready := (index == 0 and int(progress.get("meters", 0)) >= BALANCE.daily_distance_target) or (index == 1 and int(progress.get("coins", 0)) >= BALANCE.daily_coin_target) or (index == 2 and bool(progress.get("clean", false)))
+    if not is_ready:
         _show_feedback("QUASE LÁ!", "Complete a missão primeiro", RED, "ui_back")
         return
     completed.append(index)

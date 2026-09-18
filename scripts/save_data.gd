@@ -161,11 +161,11 @@ func _sanitize_data() -> void:
     data["high_contrast"] = bool(data.get("high_contrast", false))
     if not (data.get("retention_flags", {}) is Dictionary):
         data["retention_flags"] = {"d1": false, "d7": false, "d30": false}
-    var retention_flags: Dictionary = data["retention_flags"]
+    var flags: Dictionary = data["retention_flags"]
     data["retention_flags"] = {
-        "d1": bool(retention_flags.get("d1", false)),
-        "d7": bool(retention_flags.get("d7", false)),
-        "d30": bool(retention_flags.get("d30", false))
+        "d1": bool(flags.get("d1", false)),
+        "d7": bool(flags.get("d7", false)),
+        "d30": bool(flags.get("d30", false))
     }
     var normalized_stars: Array = []
     var raw_stars = data.get("phase_stars", [])
@@ -294,10 +294,10 @@ func flush() -> void:
     autosave_timer = 0.0
     skip_backup_once = false
 
-func set_preference(name: String, enabled: bool) -> void:
-    if name not in ["reduced_motion", "high_contrast"]:
+func set_preference(preference: String, enabled: bool) -> void:
+    if preference not in ["reduced_motion", "high_contrast"]:
         return
-    data[name] = enabled
+    data[preference] = enabled
     flush()
 
 func coins() -> int:
@@ -551,14 +551,14 @@ func register_login() -> int:
         add_coins(BALANCE.streak_reward)
     var first_day := int(data.get("first_seen_day", today))
     var days_since_first := maxi(0, today - first_day)
-    var retention_flags: Dictionary = data.get("retention_flags", {})
+    var flags: Dictionary = data.get("retention_flags", {})
     if days_since_first >= 1:
-        retention_flags["d1"] = true
+        flags["d1"] = true
     if days_since_first >= 7:
-        retention_flags["d7"] = true
+        flags["d7"] = true
     if days_since_first >= 30:
-        retention_flags["d30"] = true
-    data["retention_flags"] = retention_flags
+        flags["d30"] = true
+    data["retention_flags"] = flags
     data["metrics"]["sessions"] = int(data["metrics"].get("sessions", 0)) + 1
     record_event("session_start")
     flush()
@@ -615,7 +615,7 @@ func xp() -> int:
     return int(data.get("xp", 0))
 
 func xp_level() -> int:
-    return 1 + int(xp() / maxi(1, BALANCE.xp_level_size))
+    return 1 + int(float(xp()) / maxi(1, BALANCE.xp_level_size))
 
 func xp_into_level() -> int:
     return xp() % maxi(1, BALANCE.xp_level_size)

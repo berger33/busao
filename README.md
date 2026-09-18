@@ -60,7 +60,7 @@ assets/audio/*.wav           SFX e músicas procedurais originais
 tools/generate_audio.py    Gerador reproduzível dos WAVs
 tools/validate_project.py  Preflight de catálogo, caminhos, economia e assets
 tools/audit_balance.py     Simulação determinística de curva, metas e densidade
-tools/check_gdscript.py    Análise estática GDScript (erros de parser e de API do Godot 4)
+tools/check_gdscript.py    Análise estática GDScript (parser, API do Godot 4, sombreamento e membros inexistentes)
 tools/audit_runner_rig.py  Orientação, rig de animação, cadência e contato do corredor com o chão
 docs/QUALITY_AUDIT.md      Auditoria e roadmap de qualidade visual/técnica
 docs/PRODUCT_AUDIT.md      Auditoria de produto, economia, retenção e métricas
@@ -97,7 +97,7 @@ O catálogo continua oferecendo dez identidades e progressão de loja, mas a rep
 
 O projeto não precisa de plugins, fontes, conexão de internet, banco de dados ou assets baixados. O save é criado automaticamente em `user://`; para reiniciar o progresso, apague `corre_pro_ponto.json`, `corre_pro_ponto.bak.json` e `corre_pro_ponto.tmp.json` na pasta de dados do usuário do Godot.
 
-Antes de abrir um PR, rode `python3 tools/validate_project.py`, `python3 tools/audit_balance.py` e `python3 tools/check_gdscript.py`. O primeiro valida contratos e integridade estrutural; o segundo confirma que as metas de moedas são alcançáveis e que a rua permanece mais densa que as calçadas; o terceiro reproduz, sem precisar do editor, os erros que impedem o projeto de abrir (identificador não declarado, variável duplicada, argumentos a mais, divisão inteira e uso de propriedades que não existem no Godot 4, como o `receive_shadow` do Godot 3) — para checar também as assinaturas da API do engine, rode `python3 tools/check_gdscript.py --godot-doc /caminho/para/doc/classes`. Os três são barreiras rápidas, não substitutos para playtest. Para mexer no boneco (modelo, animação, escala ou pé no chão), rode também `python3 tools/audit_runner_rig.py`: ele lê os GLTF/GLB do Quaternius e confere para que lado o modelo olha, se os clips animam os 65 ossos deste corpo, quantos metros por segundo o ciclo de sprint cobre e se as solas ficam em `y = 0`.
+Antes de abrir um PR, rode `python3 tools/validate_project.py`, `python3 tools/audit_balance.py` e `python3 tools/check_gdscript.py`. O primeiro valida contratos e integridade estrutural; o segundo confirma que as metas de moedas são alcançáveis e que a rua permanece mais densa que as calçadas; o terceiro reproduz, sem precisar do editor, os erros e avisos que aparecem no console e na aba de depuração (identificador não declarado, variável duplicada, argumentos a mais, divisão inteira, propriedades que não existem no Godot 4 — como o `receive_shadow` do Godot 3 — e nomes locais que sombreiam um membro da classe, de um script pai ou da classe nativa, com o mesmo texto que o Godot usa). Ele aceita `--selftest` para conferir as próprias regras numa fixture temporária — para checar também as assinaturas da API do engine, rode `python3 tools/check_gdscript.py --godot-doc /caminho/para/doc/classes`. Os três são barreiras rápidas, não substitutos para playtest. Para mexer no boneco (modelo, animação, escala ou pé no chão), rode também `python3 tools/audit_runner_rig.py`: ele lê os GLTF/GLB do Quaternius e confere para que lado o modelo olha, se os clips animam os 65 ossos deste corpo, quantos metros por segundo o ciclo de sprint cobre e se as solas ficam em `y = 0`.
 
 ## Android 8.0+
 
