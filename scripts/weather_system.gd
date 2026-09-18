@@ -354,7 +354,7 @@ func _montar_pocas() -> void:
 	mat.metallic_specular = float(cfg.get("especular", 0.85))
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
 	malha.material = mat
-	var n := int(cfg.get("quantidade_por_trecho", 12)) * max(1, int(cfg.get("trechos_a_vista", 3)))
+	var n: int = int(cfg.get("quantidade_por_trecho", 12)) * maxi(1, int(cfg.get("trechos_a_vista", 3)))
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.mesh = malha
@@ -384,7 +384,7 @@ func update_head(distancia: float) -> void:
 func _reconstruir_pocas(trecho: int, trecho_m: float, kit: Dictionary) -> void:
 	var cfg: Dictionary = spec.get("pocas", {})
 	var quantas := int(cfg.get("quantidade_por_trecho", 12))
-	var visiveis := max(1, int(cfg.get("trechos_a_vista", 3)))
+	var visiveis: int = maxi(1, int(cfg.get("trechos_a_vista", 3)))
 	var faixas: Dictionary = kit.get("faixas", {})
 	var piso := float(faixas.get("piso_central_m", 4.4))
 	var guia := float(faixas.get("guia_largura_m", 0.35))
@@ -491,7 +491,7 @@ func _atualizar_transicao(delta: float) -> void:
 	var alvo := _estado_do_spec(_estado)
 	if alvo.is_empty():
 		return
-	var segundos := max(0.1, float(_transicao.get("estado_s", 5.0)))
+	var segundos := maxf(0.1, float(_transicao.get("estado_s", 5.0)))
 	var t := clampf(delta / segundos, 0.0, 1.0)
 	for chave in alvo.keys():
 		var valor = alvo[chave]

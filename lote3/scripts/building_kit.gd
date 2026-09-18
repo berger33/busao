@@ -426,10 +426,10 @@ static func _build_mosaicos(spec: Dictionary, raiz: Node3D, rng: RandomNumberGen
 	for lado in [-1.0, 1.0]:
 		var z := 0.0
 		while z < comprimento - 0.05:
-			var z_lado := min(lado_m + rng.randf_range(-variacao, variacao), comprimento - z)
+			var z_lado := minf(lado_m + rng.randf_range(-variacao, variacao), comprimento - z)
 			var x := 0.0
 			while x < calcada - 0.05:
-				var x_lado := min(lado_m + rng.randf_range(-variacao, variacao), calcada - x)
+				var x_lado := minf(lado_m + rng.randf_range(-variacao, variacao), calcada - x)
 				var x_abs := x_borda - calcada + x + x_lado * 0.5
 				xforms.append(_xform(
 					Vector3(lado * x_abs, 0.10 + altura * 0.5, -(z + z_lado * 0.5)),
@@ -457,7 +457,7 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
 		while z < comprimento - 0.6:
 			# o ultimo lote fecha o quarteirao: pode ser estreito, mas nao pode
 			# sobrar buraco (a rua ficaria com um vazio no fim do quarteirao)
-			var largura := min(rng.randf_range(float(largura_lote[0]), float(largura_lote[1])),
+			var largura := minf(rng.randf_range(float(largura_lote[0]), float(largura_lote[1])),
 					comprimento - z)
 			var tipo := _tipo_predio(p, rng)
 			var andares := rng.randi_range(int(pisos[0]), int(pisos[1]))
@@ -491,7 +491,7 @@ static func _tipo_predio(p: Dictionary, rng: RandomNumberGenerator) -> String:
 	var total := 0
 	for k in pesos.keys():
 		total += int(pesos[k])
-	var escolha := rng.randi_range(1, max(1, total))
+	var escolha := rng.randi_range(1, maxi(1, total))
 	var acumulado := 0
 	for k in pesos.keys():
 		acumulado += int(pesos[k])

@@ -88,3 +88,14 @@ git push -u origin visual/lotes-2-3-4
 Depois, aplicar (ou pedir para a sessão aplicar) os blocos de colagem dos
 checklists no `scripts/game_3d.gd` e no `project.godot` — é isso que faz os
 lotes entrarem em ação dentro do jogo.
+
+## 5. Por que as pastas `lote*/` têm um arquivo `.gdignore`
+
+As pastas dos pacotes são material de referência (roteiros de colagem,
+auditores Python, previews). O arquivo `.gdignore` diz ao Godot para **não**
+escanear `lote2/`, `lote3/` e `lote4/` — sem isso o editor tentaria compilar as
+cópias dos scripts dos pacotes junto com as do jogo (`class_name BuildingKit` e
+`WeatherSystem` duplicados) e ainda carregaria de propósito o fixture quebrado
+`lote2/tests/fixtures/erro_sintaxe.gd` (que existe para testar o auditor).
+Os arquivos continuam no disco: `verificar_lotes.py` e os tools Python funcionam
+normalmente (rode-os do terminal, não de dentro do Godot).
