@@ -1,6 +1,6 @@
 # Corre pro Ponto 🚌
 
-Um runner mobile-first **totalmente 3D** em **Godot 4.x**, inspirado na leitura de terceira pessoa de Subway Surfers e Sonic Dash. O corredor avança por uma avenida brasileira até o ponto de ônibus: a faixa esquerda é exclusivamente rua, com tráfego mais denso, e as faixas central e direita são calçadas. O mundo é construído com meshes procedurais leves, sem download em tempo de execução e sem dependências externas.
+Um runner mobile-first **totalmente 3D** em **Godot 4.x**, inspirado na leitura de terceira pessoa de Subway Surfers e Sonic Dash. O corredor avança por uma avenida brasileira até o ponto de ônibus: a faixa esquerda é exclusivamente rua, com tráfego mais denso, e as faixas central e direita são calçadas. O mundo combina meshes procedurais leves, assets locais licenciados e materiais PBR; não há download em tempo de execução nem dependência de CDN.
 
 ## O que está pronto
 
@@ -17,7 +17,7 @@ Um runner mobile-first **totalmente 3D** em **Godot 4.x**, inspirado na leitura 
 - Estrelas por fase, mapa paginado em 5 capítulos, Tela 20 liberada com 45 estrelas e Tela 50 com 120 estrelas.
 - **Endless** liberado ao concluir a Tela 50, com corrida de 1000 m, XP, combo e recorde local persistido.
 - Sequência diária: login consecutivo, bônus de R$ 100 a cada 7 dias, XP e badges de coleção.
-- Loja com **10 personagens humanos brasileiros** (5 masculinos e 5 femininos), cada um com cabelo, roupa, paleta, acessórios e habilidade visual próprios; itens cosméticos/buffs persistidos localmente.
+- Loja com **10 perfis humanos brasileiros** (5 masculinos e 5 femininos): o asset skinned compartilhado recebe corpo, pele, cabelo e paletas de roupa diferentes por perfil, enquanto preços, descrições e habilidades ficam persistidos localmente.
 - Conquistas, desafios diários e save JSON em `user://corre_pro_ponto.json`.
 - Ganchos “clipáveis” do runner 3D: perseguição do caramelo, chegada no ônibus amarelo, tráfego pesado, mudança rua/calçada, dash com partículas e bônus de comida brasileira.
 - Elementos de retenção: combo de moedas, badges, XP, login streak, capítulo 1 + expansão de 30 telas, mapa por capítulos e Endless final.
@@ -25,7 +25,7 @@ Um runner mobile-first **totalmente 3D** em **Godot 4.x**, inspirado na leitura 
 - **Feedback premium de ação:** pool de oito canais de SFX, assinatura sonora para cada gesto, feedback de combo/recompensa, whoosh, impacto e confirmação de UI sem cortar sons simultâneos.
 - **Texturização completa:** o asfalto e a calçada usam imagens raster realistas de alta definição, mapas normais e mapeamento triplanar; terra, paralelepípedo, tijolo, reboco, metal, vidro, tecido, pele, madeira, borracha e folhagem usam materiais SVG leves com roughness, metallic e emissive accents coerentes.
 - **Céu e profundidade:** panorama tropical com nuvens, fog/aerial perspective, tonemapping, glow sutil, sombras e iluminação direcional por capítulo; as variações de clima ajustam energia, névoa e cor ambiente sem perder a leitura 3D.
-- **Personagem e tráfego:** corredor humanoide montado com cápsulas, juntas de cotovelo/joelho, mãos, olhos, íris, cabelo com fibras, pele com subsurface scattering, jeans, roupa e acessórios 3D; pivôs de pernas e braços executam passada alternada, salto e agachamento. O avatar Creator usa top preto texturizado, shorts jeans, botas altas, brincos e detalhes metálicos inspirados na referência enviada, sem copiar uma pessoa real. Carros, ônibus, motos e caminhões avançam no eixo da rua com velocidade própria e rodas animadas.
+- **Personagem humano principal:** o boneco procedural foi substituído por um asset real Quaternius Universal Base Characters, com corpo humano reconhecível, rosto, olhos, cabelo, pele, UVs, materiais PBR, esqueleto humanoide e skin weights. O conjunto Peasant adiciona camisa/colete, mangas, calça e calçados como meshes skinned separados, com mapas de cor, normal e ORM. O corpo masculino/feminino é escolhido pelo catálogo de personagens, recebe escala arcade de 2,15 m e mantém contato dos pés com o chão. `scripts/runner_character.gd` usa a Universal Animation Library para `Idle`, `Sprint`, `Jump` e `Crouch`; há fallback procedural somente para falha de importação. A origem e as licenças CC0 estão em `assets/characters/quaternius/PROVENANCE.md`. Carros, ônibus, motos e caminhões avançam no eixo da rua com velocidade própria e rodas animadas.
 - **Veículos brasileiros:** os carros de trânsito usam três silhuetas de compactos populares brasileiros — hatch urbano, sedã compacto e utilitário/van — sem logotipos, com pintura metálica, placa, faróis, lanternas, retrovisores, maçanetas, grade, rodas e variantes de cor. O ônibus amarelo, moto de entrega e caminhão também recebem assemblies detalhados e materiais automotivos.
 - **Polimento audiovisual 3D:** materiais por ambiente, câmera tremida, HUD sobreposto com barra de progresso, textos de feedback, partículas 3D e microanimações pensadas para 60 FPS sem assets pesados.
 - Ícone vetorial original em `assets/art/icon.svg`.
@@ -40,6 +40,7 @@ scripts/game_3d.gd          Mundo 3D, câmera, pista, entidades, input e corrida
 scripts/hud_3d.gd           HUD/menu/mapa/loja/resultados sobre o mundo 3D
 scripts/scenario_data.gd     Dez capítulos visuais e paletas do Brasil
 scripts/character_data.gd    Catálogo dos 10 corredores humanos
+scripts/runner_character.gd  Instância GLTF skinned, roupa modular, rig e clips de locomoção
 scripts/game.gd              Implementação vetorial 2D histórica mantida como referência
 scripts/phase_data.gd        Dados das 50 fases e curva de dificuldade
 scripts/save_data.gd         Save local/progressão
@@ -48,6 +49,7 @@ resources/game_balance.tres Balanceamento documentado como recurso Godot
 assets/art/icon.svg         Ícone original
 assets/textures/*.svg       Texturas procedurais e mapas normais leves para superfícies, roupas, personagens e props
 assets/textures/*.png       Asfalto, calçada, panoramas de céu, fibras de cabelo, jeans e pintura automotiva realistas
+assets/characters/quaternius/  Corpo humano GLTF, roupa skinned, PBR, licença e AnimationLibrary CC0
 assets/audio/*.wav           SFX e músicas procedurais originais
 tools/generate_audio.py    Gerador reproduzível dos WAVs
 tools/validate_project.py  Preflight de catálogo, caminhos e assets
@@ -73,7 +75,7 @@ As telas novas variam tema, velocidade, densidade, clima e especiais no catálog
 - **Masculinos:** Zé Atrasado (casual), Rafa Motoboy (colete e capacete), Luan do Skate (moletom e skate), João Gamer (fone e mochila pixel) e Carlos da Obra (capacete e colete).
 - **Femininos:** Maria do Bairro (bolsa e saia), Bia Estudante (uniforme e mochila), Camila do Negócio (macacão e tablet), Júlia Atleta (look esportivo) e Nina Creator (tranças, jaqueta e celular).
 
-Cada personagem é um humanoide 3D original, com torso e membros em cápsulas, juntas separadas, rosto, cabelo, figurino e acessórios em materiais texturizados. Pivôs de pernas e braços alternam a passada durante a corrida; sombra, inclinação, salto e deslize acompanham o movimento. As habilidades continuam leves e offline: escudo, ímã, moedas, velocidade, pulo ou leitura visual.
+O catálogo continua oferecendo dez identidades e progressão de loja, mas a representação de gameplay agora usa um asset humano 3D real compartilhado: corpo Quaternius masculino/feminino, rosto, olhos, cabelo e roupa modular Peasant com meshes skinned e mapas PBR separados. O esqueleto humanoide é animado pelos clips CC0 da Universal Animation Library; `Sprint_Loop`, `Jump_Loop`, `Crouch_Idle_Loop` e `Crouch_Fwd_Loop` acompanham corrida, pulo e deslize, com fallback somente para diagnóstico. O asset, os binários, as texturas, o texto de licença e o manifesto SHA-256 estão em `assets/characters/quaternius/`. As cores/estilos da loja permanecem dados de progressão, sem voltar a montar o personagem principal com cápsulas e caixas.
 
 ## Abrir e rodar no Godot 4
 
@@ -142,4 +144,4 @@ Para gravar, rode no editor ou em um APK, escolha a fase no mapa e use a gravaç
 
 ## Créditos
 
-Consulte [`CREDITS.md`](CREDITS.md). Não há asset externo de arte, áudio ou código no projeto.
+Consulte [`CREDITS.md`](CREDITS.md) e [`assets/characters/quaternius/PROVENANCE.md`](assets/characters/quaternius/PROVENANCE.md). Os assets de personagem são distribuídos localmente com a licença CC0 documentada; não há download em runtime.

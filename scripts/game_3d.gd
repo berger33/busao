@@ -11,6 +11,7 @@ extends Node3D
 const BALANCE = preload("res://resources/game_balance.tres")
 const SCENARIO_DATA = preload("res://scripts/scenario_data.gd")
 const CHARACTER_DATA = preload("res://scripts/character_data.gd")
+const RUNNER_CHARACTER_SCRIPT = preload("res://scripts/runner_character.gd")
 const TEXTURE_ASPHALT = preload("res://assets/textures/asfalto_brasil.svg")
 const TEXTURE_ASPHALT_REAL = preload("res://assets/textures/asfalto_realista.png")
 const TEXTURE_ASPHALT_NORMAL = preload("res://assets/textures/asfalto_normal.svg")
@@ -276,238 +277,16 @@ func _build_player() -> void:
     player_root.name = "Player"
     player_root.position = Vector3(LANE_X[SIDEWALK_CENTER], 0.0, PLAYER_Z)
     world_root.add_child(player_root)
-    player_visual = Node3D.new()
+    player_visual = RUNNER_CHARACTER_SCRIPT.new() as Node3D
     player_visual.name = "RunnerVisual"
+    player_visual.set("character_id", CHARACTER_DATA.canonical_id(GameSave.equipped_character()))
     player_root.add_child(player_visual)
-    _rebuild_player_visual(GameSave.equipped_character())
 
 func _rebuild_player_visual(character_id: String) -> void:
     if player_visual == null:
         return
-    for child in player_visual.get_children():
-        child.free()
-    var character: Dictionary = CHARACTER_DATA.get_character(character_id)
-    var skin_color: Color = character.get("skin", Color("#b87655"))
-    var hair_color: Color = character.get("hair", Color("#211b1a"))
-    var shirt_color: Color = character.get("shirt", Color("#e55359"))
-    var pants_color: Color = character.get("pants", Color("#263a55"))
-    var shoe_color: Color = character.get("shoes", Color("#f3ca55"))
-    var accent_color: Color = character.get("accent", CYAN)
-    var style: String = str(character.get("style", "casual"))
-    var pants_surface: String = "denim" if style in ["creator", "bairro"] else "fabric"
-    var skin := _material(skin_color, 0.0, 0.58, "skin")
-    skin.subsurf_scatter_enabled = true
-    skin.subsurf_scatter_skin_mode = true
-    skin.subsurf_scatter_strength = 0.16
-    skin.rim_enabled = true
-    skin.rim = 0.10
-    skin.rim_tint = 0.72
-    var hair := _material(hair_color, 0.04, 0.38, "hair")
-    hair.anisotropy_enabled = true
-    hair.anisotropy = 0.24
-    hair.rim_enabled = true
-    hair.rim = 0.16
-    hair.rim_tint = 0.72
-    var shirt := _material(shirt_color, 0.0, 0.62, "fabric")
-    var pants := _material(pants_color, 0.0, 0.68, pants_surface)
-    var shoes := _material(shoe_color, 0.12, 0.42, "rubber")
-    var accent := _material(accent_color, 0.0, 0.42, "paint")
-
-    var shadow_material := _material(Color(0.02, 0.04, 0.07, 0.32), 0.0, 1.0)
-    shadow_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-    _ellipse_mesh(player_visual, Vector3(0.0, 0.035, 0.05), Vector3(0.52, 0.035, 0.76), shadow_material, "RunnerShadow")
-    var torso := _capsule(player_visual, 0.37, 1.02, Vector3(0.0, 1.28, 0.0), shirt, "Body")
-    torso.scale = Vector3(1.05, 1.0, 0.88)
-    _capsule(player_visual, 0.34, 0.34, Vector3(0.0, 0.78, 0.0), pants, "Hips")
-    _cylinder(player_visual, 0.32, 0.34, 0.10, Vector3(0.0, 0.82, -0.01), _material(Color("#27334a"), 0.0, 0.56, "fabric"), "WaistBand")
-    _cylinder(player_visual, 0.15, 0.17, 0.22, Vector3(0.0, 1.78, 0.0), skin, "Neck")
-    _torus(player_visual, 0.14, 0.025, Vector3(0.0, 1.70, 0.0), shirt, "ShirtCollar")
-    var head := _sphere(player_visual, 0.36, Vector3(0.0, 2.10, 0.0), skin, "Head")
-    head.scale = Vector3(0.95, 1.08, 0.92)
-    var left_leg := _build_limb_pivot(player_visual, "LeftLegPivot", Vector3(-0.19, 0.92, 0.0), 0.84, 0.14, pants)
-    var right_leg := _build_limb_pivot(player_visual, "RightLegPivot", Vector3(0.19, 0.92, 0.0), 0.84, 0.14, pants)
-    _box(left_leg, Vector3(0.32, 0.14, 0.50), Vector3(0.0, -0.84, -0.10), shoes, "LeftShoe")
-    _box(right_leg, Vector3(0.32, 0.14, 0.50), Vector3(0.0, -0.84, -0.10), shoes, "RightShoe")
-    _box(left_leg, Vector3(0.34, 0.045, 0.48), Vector3(0.0, -0.91, -0.10), _material(Color("#111925"), 0.12, 0.48, "rubber"), "LeftSole")
-    _box(right_leg, Vector3(0.34, 0.045, 0.48), Vector3(0.0, -0.91, -0.10), _material(Color("#111925"), 0.12, 0.48, "rubber"), "RightSole")
-    var left_arm := _build_limb_pivot(player_visual, "LeftArmPivot", Vector3(-0.45, 1.58, 0.0), 0.74, 0.11, skin)
-    var right_arm := _build_limb_pivot(player_visual, "RightArmPivot", Vector3(0.45, 1.58, 0.0), 0.74, 0.11, skin)
-    _sphere(player_visual, 0.16, Vector3(-0.43, 1.58, 0.0), shirt, "LeftShoulder")
-    _sphere(player_visual, 0.16, Vector3(0.43, 1.58, 0.0), shirt, "RightShoulder")
-    _capsule(left_arm, 0.115, 0.23, Vector3(0.0, -0.10, 0.0), shirt, "LeftSleeve")
-    _capsule(right_arm, 0.115, 0.23, Vector3(0.0, -0.10, 0.0), shirt, "RightSleeve")
-    _sphere(left_arm, 0.125, Vector3(0.0, -0.75, 0.0), skin, "LeftHand")
-    _sphere(right_arm, 0.125, Vector3(0.0, -0.75, 0.0), skin, "RightHand")
-    var eye_white := _material(Color("#f4f0e4"), 0.0, 0.24, "paint")
-    var iris := _material(Color("#25364d"), 0.05, 0.20, "paint")
-    var eye_glint := _material(Color("#ffffff"), 0.0, 0.12, "paint")
-    for side in [-1.0, 1.0]:
-        _sphere(player_visual, 0.075, Vector3(side * 0.125, 2.12, -0.325), eye_white, "EyeWhite")
-        _sphere(player_visual, 0.039, Vector3(side * 0.125, 2.12, -0.389), iris, "Iris")
-        _sphere(player_visual, 0.014, Vector3(side * 0.108, 2.135, -0.423), eye_glint, "EyeGlint")
-        _sphere(player_visual, 0.12, Vector3(side * 0.345, 2.10, -0.005), skin, "Ear")
-        _sphere(player_visual, 0.055, Vector3(side * 0.345, 2.10, -0.078), _material(skin_color.darkened(0.15), 0.0, 0.62, "skin"), "EarInner")
-    _sphere(player_visual, 0.058, Vector3(0.0, 2.005, -0.365), skin, "Nose")
-    _box(player_visual, Vector3(0.19, 0.035, 0.024), Vector3(0.0, 1.92, -0.354), _material(Color("#9b3e54"), 0.0, 0.44, "skin"), "Mouth")
-    _box(player_visual, Vector3(0.22, 0.035, 0.035), Vector3(-0.125, 2.235, -0.315), hair, "LeftBrow")
-    _box(player_visual, Vector3(0.22, 0.035, 0.035), Vector3(0.125, 2.235, -0.315), hair, "RightBrow")
-    _build_hair_style(style, hair, accent)
-    _build_character_accessories(style, accent, shirt, pants, shoes)
-
-func _build_hair_style(style: String, hair: Material, accent: Material) -> void:
-    var hair_cap := _sphere(player_visual, 0.35, Vector3(0.0, 2.29, 0.02), hair, "HairCap")
-    hair_cap.scale = Vector3(1.02, 0.82, 0.96)
-    var hair_back := _sphere(player_visual, 0.34, Vector3(0.0, 2.08, 0.16), hair, "HairBack")
-    hair_back.scale = Vector3(1.02, 1.12, 0.56)
-    match style:
-        "motoboy":
-            _sphere(player_visual, 0.43, Vector3(0.0, 2.25, 0.02), accent, "Helmet")
-            _box(player_visual, Vector3(0.62, 0.06, 0.16), Vector3(0.0, 2.08, -0.31), _material(Color("#eef5ef"), 0.05, 0.3), "HelmetVisor")
-        "skater":
-            _box(player_visual, Vector3(0.7, 0.12, 0.38), Vector3(0.0, 2.31, 0.02), accent, "SkaterCap")
-            _sphere(player_visual, 0.11, Vector3(-0.32, 2.2, 0.02), hair, "Curl")
-            _sphere(player_visual, 0.11, Vector3(0.32, 2.2, 0.02), hair, "Curl")
-        "gamer":
-            _box(player_visual, Vector3(0.66, 0.2, 0.34), Vector3(0.0, 2.25, 0.02), hair, "GamerHair")
-            _add_headphones(accent)
-        "obra":
-            _sphere(player_visual, 0.43, Vector3(0.0, 2.26, 0.0), accent, "SafetyHelmet")
-            _box(player_visual, Vector3(0.72, 0.07, 0.18), Vector3(0.0, 2.05, -0.31), accent, "HelmetBrim")
-        "bairro":
-            var long_back := _sphere(player_visual, 0.42, Vector3(0.0, 2.12, 0.18), hair, "LongHair")
-            long_back.scale = Vector3(1.02, 1.32, 0.62)
-            for side in [-1.0, 1.0]:
-                var lock := _capsule(player_visual, 0.09, 0.58, Vector3(side * 0.35, 1.98, -0.01), hair, "HairSide")
-                lock.rotation.z = side * 0.12
-                _sphere(player_visual, 0.10, Vector3(side * 0.36, 1.69, -0.01), hair, "HairTip")
-        "estudante":
-            _sphere(player_visual, 0.39, Vector3(0.0, 2.18, 0.04), hair, "PonytailBase")
-            _sphere(player_visual, 0.16, Vector3(0.34, 2.26, 0.14), hair, "Ponytail")
-            _box(player_visual, Vector3(0.66, 0.06, 0.08), Vector3(0.0, 2.19, -0.34), accent, "Headband")
-        "empreendedora":
-            for i in 5:
-                var curl_x: float = -0.28 + float(i % 3) * 0.28
-                var curl_y: float = 2.12 + float(int(i / 3)) * 0.18
-                _sphere(player_visual, 0.16, Vector3(curl_x, curl_y, 0.08), hair, "Curl")
-        "atleta":
-            _sphere(player_visual, 0.40, Vector3(0.0, 2.18, 0.02), hair, "SportHair")
-            _sphere(player_visual, 0.16, Vector3(-0.38, 2.22, 0.12), hair, "Ponytail")
-            _box(player_visual, Vector3(0.72, 0.06, 0.08), Vector3(0.0, 2.15, -0.34), accent, "SportBand")
-        "creator":
-            var creator_back := _sphere(player_visual, 0.43, Vector3(0.0, 2.02, 0.18), hair, "CreatorLongHair")
-            creator_back.scale = Vector3(1.06, 1.45, 0.64)
-            for side in [-1.0, 1.0]:
-                for strand in 3:
-                    var braid := _capsule(player_visual, 0.065, 0.40 + float(strand) * 0.06, Vector3(side * (0.24 + strand * 0.075), 2.00 - strand * 0.15, 0.04), hair, "Braid")
-                    braid.rotation.z = side * 0.10
-                    _sphere(player_visual, 0.075, Vector3(side * (0.24 + strand * 0.075), 1.80 - strand * 0.18, -0.01), accent, "HairBead")
-            _box(player_visual, Vector3(0.7, 0.08, 0.20), Vector3(0.0, 2.30, 0.02), accent, "CreatorBand")
-        _:
-            _box(player_visual, Vector3(0.7, 0.09, 0.12), Vector3(0.0, 2.31, 0.0), hair, "HairFringe")
-
-func _build_character_accessories(style: String, accent: Material, shirt: Material, pants: Material, shoes: Material) -> void:
-    match style:
-        "casual":
-            _add_backpack(accent)
-            _box(player_visual, Vector3(0.42, 0.08, 0.04), Vector3(0.0, 1.35, -0.34), accent, "ShirtStripe")
-        "motoboy":
-            _add_backpack(Color("#252b35"))
-            _add_reflective_vest(accent)
-            _box(player_visual, Vector3(0.30, 0.35, 0.08), Vector3(0.47, 1.05, -0.26), _material(Color("#e3e8dd"), 0.0, 0.4), "DeliveryBadge")
-        "skater":
-            _add_backpack(accent)
-            var board := _box(player_visual, Vector3(0.15, 0.12, 0.9), Vector3(0.35, 0.95, 0.27), _material(Color("#ec6b72"), 0.0, 0.5), "Skateboard")
-            board.rotation.x = 0.28
-            _cylinder(player_visual, 0.06, 0.06, 0.12, Vector3(0.35, 0.9, -0.1), shoes, "BoardWheel")
-        "gamer":
-            _add_backpack(accent)
-            _box(player_visual, Vector3(0.22, 0.42, 0.06), Vector3(-0.46, 0.96, -0.25), accent, "GameBadge")
-        "obra":
-            _add_tool_belt(accent)
-            _box(player_visual, Vector3(0.72, 0.06, 0.08), Vector3(0.0, 1.28, -0.34), accent, "SafetyStripe")
-        "bairro":
-            _add_bag(accent, Vector3(0.48, 1.0, -0.22))
-            _add_skirt(accent)
-        "estudante":
-            _add_backpack(accent)
-            _box(player_visual, Vector3(0.34, 0.44, 0.05), Vector3(0.0, 1.02, -0.34), accent, "SchoolTie")
-        "empreendedora":
-            _add_bag(accent, Vector3(-0.48, 1.0, -0.2))
-            _box(player_visual, Vector3(0.58, 0.68, 0.06), Vector3(0.0, 1.05, -0.34), accent, "Apron")
-            _add_phone(Vector3(0.44, 1.13, -0.36), shoes)
-        "atleta":
-            _box(player_visual, Vector3(0.58, 0.06, 0.08), Vector3(0.0, 1.3, -0.34), accent, "SportsStripe")
-            _add_bottle(accent)
-        "creator":
-            _add_bag(accent, Vector3(-0.48, 0.98, -0.19))
-            _add_phone(Vector3(0.45, 1.22, -0.37), shoes)
-            var creator_metal := _material(Color("#d8d1dc"), 0.82, 0.18, "metal")
-            var creator_black := _material(Color("#0b0d16"), 0.05, 0.24, "paint")
-            _box(player_visual, Vector3(0.64, 0.12, 0.05), Vector3(0.0, 1.10, -0.34), creator_black, "CreatorCropTop")
-            _box(player_visual, Vector3(0.76, 0.18, 0.42), Vector3(0.0, 0.78, 0.0), pants, "CreatorDenimShorts")
-            var left_boot := player_visual.get_node_or_null("LeftLegPivot") as Node3D
-            var right_boot := player_visual.get_node_or_null("RightLegPivot") as Node3D
-            if left_boot:
-                _capsule(left_boot, 0.16, 0.48, Vector3(0.0, -0.59, -0.01), shoes, "LeftHighBoot")
-                _box(left_boot, Vector3(0.31, 0.07, 0.48), Vector3(0.0, -0.88, -0.11), creator_black, "LeftBootSole")
-            if right_boot:
-                _capsule(right_boot, 0.16, 0.48, Vector3(0.0, -0.59, -0.01), shoes, "RightHighBoot")
-                _box(right_boot, Vector3(0.31, 0.07, 0.48), Vector3(0.0, -0.88, -0.11), creator_black, "RightBootSole")
-            for index in 6:
-                var sequin := _sphere(player_visual, 0.025, Vector3(-0.22 + float(index % 3) * 0.22, 1.25 + float(int(index / 3)) * 0.16, -0.36), creator_metal, "TopSequin")
-                sequin.scale = Vector3(1.0, 0.42, 0.40)
-            var left_earring := _torus(player_visual, 0.055, 0.018, Vector3(-0.35, 2.02, -0.08), creator_metal, "LeftEarring")
-            var right_earring := _torus(player_visual, 0.055, 0.018, Vector3(0.35, 2.02, -0.08), creator_metal, "RightEarring")
-            left_earring.rotation.x = PI / 2.0
-            right_earring.rotation.x = PI / 2.0
-            _box(player_visual, Vector3(0.06, 0.24, 0.035), Vector3(0.40, 1.30, -0.34), creator_metal, "Bracelet")
-        _:
-            _add_backpack(accent)
-
-func _add_backpack(color) -> void:
-    var material: Material = color if color is Material else _material(Color(color), 0.0, 0.72)
-    _box(player_visual, Vector3(0.52, 0.78, 0.22), Vector3(0.0, 1.08, 0.27), material, "Backpack")
-
-func _add_bag(color: Material, pos: Vector3) -> void:
-    _box(player_visual, Vector3(0.22, 0.42, 0.16), pos, color, "Bag")
-
-func _add_phone(pos: Vector3, material: Material) -> void:
-    _box(player_visual, Vector3(0.09, 0.22, 0.035), pos, material, "Phone")
-
-func _add_headphones(color: Material) -> void:
-    _box(player_visual, Vector3(0.08, 0.42, 0.10), Vector3(-0.37, 2.05, -0.02), color, "HeadphoneLeft")
-    _box(player_visual, Vector3(0.08, 0.42, 0.10), Vector3(0.37, 2.05, -0.02), color, "HeadphoneRight")
-    _box(player_visual, Vector3(0.58, 0.06, 0.08), Vector3(0.0, 2.35, 0.02), color, "HeadphoneBand")
-
-func _add_reflective_vest(color: Material) -> void:
-    _box(player_visual, Vector3(0.08, 0.76, 0.38), Vector3(-0.27, 1.06, -0.28), color, "VestLeft")
-    _box(player_visual, Vector3(0.08, 0.76, 0.38), Vector3(0.27, 1.06, -0.28), color, "VestRight")
-
-func _add_tool_belt(color: Material) -> void:
-    _box(player_visual, Vector3(0.72, 0.13, 0.36), Vector3(0.0, 0.62, -0.04), color, "ToolBelt")
-    _box(player_visual, Vector3(0.14, 0.32, 0.14), Vector3(-0.38, 0.66, -0.05), color, "ToolPouch")
-
-func _add_skirt(color: Material) -> void:
-    _cylinder(player_visual, 0.55, 0.36, 0.38, Vector3(0.0, 0.72, 0.0), color, "Skirt")
-
-func _add_bottle(color: Material) -> void:
-    _cylinder(player_visual, 0.07, 0.08, 0.38, Vector3(0.48, 0.86, -0.15), color, "Bottle")
-
-func _build_limb_pivot(parent: Node3D, node_name: String, pos: Vector3, length: float, radius: float, material: Material) -> Node3D:
-    var pivot := Node3D.new()
-    pivot.name = node_name
-    pivot.position = pos
-    parent.add_child(pivot)
-    var upper_length: float = length * 0.53
-    var lower_length: float = length * 0.47
-    _capsule(pivot, radius, upper_length, Vector3(0.0, -upper_length * 0.5, 0.0), material, "%sUpper" % node_name)
-    var elbow := Node3D.new()
-    elbow.name = "%sElbow" % node_name
-    elbow.position = Vector3(0.0, -upper_length, 0.0)
-    pivot.add_child(elbow)
-    _sphere(elbow, radius * 1.04, Vector3.ZERO, material, "%sJoint" % node_name)
-    _capsule(elbow, radius * 0.94, lower_length, Vector3(0.0, -lower_length * 0.5, 0.0), material, "%sLower" % node_name)
-    return pivot
+    if player_visual.has_method("set_character"):
+        player_visual.call("set_character", CHARACTER_DATA.canonical_id(character_id))
 
 func _start_run(index: int) -> void:
     var clamped_index: int = clampi(index, 0, 49)
@@ -1012,55 +791,22 @@ func _update_player(dt: float) -> void:
     var is_crouching: bool = slide_timer > 0.0
     var bob: float = sin(run_phase * 1.6) * 0.045 if is_running and not is_crouching else 0.0
     player_visual.position.y = jump_height + bob - (0.16 if is_crouching else 0.0)
-    var squash: float = 0.80 if is_crouching else 1.0
-    player_visual.scale = Vector3(1.04 if is_crouching else 1.0, squash, 1.04 if is_crouching else 1.0)
+    # The authored crouch clip handles the silhouette. A small root compression
+    # preserves the arcade read without flattening the imported skeleton.
+    var squash: float = 0.94 if is_crouching else 1.0
+    player_visual.scale = Vector3(1.02 if is_crouching else 1.0, squash, 1.02 if is_crouching else 1.0)
     var shadow := player_visual.get_node_or_null("RunnerShadow") as Node3D
     if shadow:
-        shadow.position.y = 0.035 - player_visual.position.y
-        var shadow_factor: float = 1.0 - clampf(jump_height * 0.12, 0.0, 0.22)
-        shadow.scale = Vector3(0.52, 0.035, 0.76) * shadow_factor
-    var stride: float = sin(run_phase * 0.82) if is_running and not is_crouching else 0.0
-    var left_leg := player_visual.get_node_or_null("LeftLegPivot") as Node3D
-    var right_leg := player_visual.get_node_or_null("RightLegPivot") as Node3D
-    var left_arm := player_visual.get_node_or_null("LeftArmPivot") as Node3D
-    var right_arm := player_visual.get_node_or_null("RightArmPivot") as Node3D
-    var crouch_bend: float = 0.56 if is_crouching else 0.0
-    var air_bend: float = 0.22 if jump_timer > 0.0 else 0.0
-    if left_leg:
-        left_leg.rotation.x = stride * 0.62 + crouch_bend + air_bend
-        var left_knee := left_leg.get_node_or_null("LeftLegPivotElbow") as Node3D
-        if left_knee:
-            left_knee.rotation.x = maxf(0.0, stride) * 0.28 + crouch_bend * 0.78 + air_bend
-    if right_leg:
-        right_leg.rotation.x = -stride * 0.62 + crouch_bend + air_bend
-        var right_knee := right_leg.get_node_or_null("RightLegPivotElbow") as Node3D
-        if right_knee:
-            right_knee.rotation.x = maxf(0.0, -stride) * 0.28 + crouch_bend * 0.78 + air_bend
-    if left_arm:
-        left_arm.rotation.x = -stride * 0.46 + (0.22 if is_crouching else 0.0)
-        var left_elbow := left_arm.get_node_or_null("LeftArmPivotElbow") as Node3D
-        if left_elbow:
-            left_elbow.rotation.x = -maxf(0.0, stride) * 0.20 + (0.24 if is_crouching else 0.0)
-    if right_arm:
-        right_arm.rotation.x = stride * 0.46 + (0.22 if is_crouching else 0.0)
-        var right_elbow := right_arm.get_node_or_null("RightArmPivotElbow") as Node3D
-        if right_elbow:
-            right_elbow.rotation.x = maxf(0.0, stride) * 0.20 + (0.24 if is_crouching else 0.0)
-    var torso := player_visual.get_node_or_null("Body") as Node3D
-    if torso:
-        var torso_target: float = -0.14 if is_crouching else (-0.035 if is_running else 0.0)
-        torso.rotation.x = lerpf(torso.rotation.x, torso_target, minf(1.0, dt * 10.0))
-    var head := player_visual.get_node_or_null("Head") as Node3D
-    if head:
-        head.rotation.y = lerpf(head.rotation.y, sin(run_phase * 0.41) * 0.025 if is_running else 0.0, minf(1.0, dt * 6.0))
-        head.rotation.z = lerpf(head.rotation.z, -lane_change_velocity * 0.035, minf(1.0, dt * 8.0))
-    var hips := player_visual.get_node_or_null("Hips") as Node3D
-    if hips:
-        hips.rotation.x = lerpf(hips.rotation.x, 0.08 if is_crouching else 0.0, minf(1.0, dt * 10.0))
+        shadow.position.y = 0.025 - player_visual.position.y
+        var shadow_factor: float = 1.0 - clampf(jump_height * 0.12, 0.0, 0.24)
+        shadow.scale = Vector3.ONE * shadow_factor
+    if player_visual.has_method("set_motion"):
+        player_visual.call("set_motion", run_phase, is_running, is_crouching, jump_height, lane_change_velocity)
     var lane_lean: float = clampf(lane_change_velocity * 0.08, -0.20, 0.20)
     var target_lean: float = lane_lean + (0.055 if is_running else 0.0)
     player_visual.rotation.z = lerpf(player_visual.rotation.z, target_lean, minf(1.0, dt * 9.0))
     player_visual.rotation.x = lerpf(player_visual.rotation.x, -0.035 if is_running else 0.0, minf(1.0, dt * 7.0))
+
 func _update_camera(dt: float) -> void:
     if camera == null:
         return

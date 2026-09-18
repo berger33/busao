@@ -1,6 +1,6 @@
 # Auditoria de qualidade — Corre pro Ponto
 
-Data da varredura: 17/09/2026.
+Data da varredura: 18/09/2026.
 
 ## Resultado rápido
 
@@ -12,12 +12,12 @@ Data da varredura: 17/09/2026.
 - **Densidade:** `_build_course()` usa intervalos menores para a rua que para as calçadas. A rua recebe carros, ônibus, motos, buracos e caminhões; as calçadas recebem velha usando celular, hidrante, orelhão, cachorro, bicicleta, cone, camelô e banco.
 - **Catálogo:** 50 fases, incluindo 30 telas da expansão, continuam em `scripts/phase_data.gd` e são consumidas pelo runner 3D.
 - **Progressão:** `GameSave`, loja, personagens, desafios diários, conquistas, moedas, estrelas, Endless e streak continuam conectados ao HUD 3D.
-- **Assets:** SVGs do ícone, superfícies e mapas normais, PNGs de asfalto/calçada, três panoramas de céu (dia, entardecer e nublado), fibras de cabelo, jeans e pintura automotiva, além de WAVs legíveis; os meshes 3D recebem materiais gerados em GDScript, sem download em runtime.
+- **Assets:** SVGs do ícone, superfícies e mapas normais, PNGs de asfalto/calçada, três panoramas de céu (dia, entardecer e nublado), fibras de cabelo, jeans e pintura automotiva, WAVs legíveis e o pacote humano Quaternius em `assets/characters/quaternius/`. Corpo, cabelo, olhos, roupa, binários, mapas PBR, licença, AnimationLibrary e hashes ficam versionados; nada é baixado em runtime.
 - **Céu e atmosfera:** `PanoramaSkyMaterial` usa panorama tropical com nuvens; fog/aerial perspective, tonemapping, glow sutil, iluminação e energia variam por capítulo, com vida aérea contextual: pombo, urubu, passarinho, drone, avião e gaivota.
-- **Personagens:** catálogo procedural com 10 humanos brasileiros, cinco masculinos e cinco femininos; torso, cabeça, braços, pernas, mãos, rosto, cabelo com fibras, pele com subsurface scattering, jeans e acessórios são meshes 3D texturizados, com juntas de cotovelo/joelho e pivôs de passada, salto e agachamento. O estilo visual é compartilhado por todo o catálogo; o avatar Creator acrescenta top, shorts, botas, brincos e detalhes metálicos.
+- **Personagem principal:** catálogo de 10 identidades, cinco masculinas e cinco femininas, com representação de gameplay baseada no humanoide Quaternius GLTF/skin real. Corpo, rosto, olhos e cabelo usam o asset Universal Base Characters; camisa/colete, braços, calça e calçados vêm de meshes Peasant skinned separados com mapas PBR. `runner_character.gd` mantém escala de 2,15 m, pés no piso, sombra de contato e clips de locomoção, sem voltar a montar o corpo principal com cápsulas.
 - **Tráfego:** carros, ônibus, motos e caminhões são assemblies 3D detalhados com cabine, vidros, faróis, lanternas, para-choques, placas, retrovisores, maçanetas, rodas orientadas e velocidade própria no eixo da rua. Os carros variam entre hatch compacto, sedã compacto e utilitário/van inspirados na frota popular brasileira, sem logotipos.
 - **Preflight reproduzível:** `python3 tools/validate_project.py` passou após a migração.
-- **Parser auxiliar:** `gdparse scripts/game_3d.gd` e `gdparse scripts/hud_3d.gd` passaram; isso não substitui a importação pelo editor Godot.
+- **Parser auxiliar:** `gdparse 4.5.0 scripts/*.gd` passou sem erro, e o preflight inclui referências, binários e manifesto SHA-256; a importação/renderização dos GLTF/GLB ainda precisa passar pelo editor Godot 4.x.
 - **Godot editor:** não está instalado neste ambiente; o parser/editor headless, a renderização efetiva e a exportação Android ainda precisam ser executados em uma máquina com Godot 4.x e SDK Android.
 
 ## Verificações realizadas nesta etapa
@@ -28,9 +28,9 @@ Data da varredura: 17/09/2026.
 4. A geração de obstáculos mantém categorias por espaço: tráfego somente na rua e elementos urbanos/pedestres somente nas calçadas; veículos recebem velocidade e animação de rodas enquanto avançam.
 5. A troca de faixa, pulo, deslize, dash, colisão, coleta, combo, partículas 3D, tremor, áudio, save e progressão foram mantidos na implementação 3D.
 6. A movimentação do mundo foi ligada à distância da corrida: a câmera permanece em terceira pessoa enquanto `course_root` avança sob o personagem, evitando a sensação de personagem deslizando em um fundo parado.
-7. Os 10 personagens foram catalogados em `scripts/character_data.gd` e o menu de loja passou a mostrar seus estilos, gênero de apresentação, preço, descrição e estado equipado.
+7. Os 10 personagens continuam catalogados em `scripts/character_data.gd` e o menu de loja continua mostrando estilos, gênero de apresentação, preço, descrição e estado equipado; a aparência de gameplay passa pelo adaptador humano skinned compartilhado.
 8. Os meshes recebem texturas raster realistas para asfalto/calçada, mapas normais e mapeamento triplanar; as demais superfícies usam materiais SVG específicos para terra, tijolo, reboco, metal, vidro, tecido, pele, madeira, borracha e folhas.
-9. O personagem usa pivôs de membros, cotovelos/joelhos, rosto, cabelo e materiais de pele, fibra e jeans; a passada, o salto e o agachamento mudam a pose.
+9. O personagem principal usa meshes GLTF reais com esqueleto humanoide, cabelo/olhos/pele texturizados, quatro partes de roupa skinned e materiais PBR separados. A Universal Animation Library seleciona `Idle_Loop`, `Sprint_Loop`, `Jump_Loop`, `Crouch_Idle_Loop` e `Crouch_Fwd_Loop`; um fallback de pose procedural só é acionado se a importação/clips falharem.
 10. Os meshes de tráfego possuem detalhes 3D reconhecíveis: silhuetas de hatch, sedã e utilitário populares, cabine, faróis, vidros, placas, retrovisores, para-choques, guidão, carga, rodas e acessórios. O cone de obra é laranja com base e faixas refletivas; o cachorro possui focinho, orelhas, quatro pernas e cauda.
 11. O preflight confirmou caminhos `res://`, ausência de funções duplicadas, balanceamento de catálogo, 50 fases, SVG e metadados dos WAVs:
 
@@ -40,12 +40,20 @@ Data da varredura: 17/09/2026.
 
 ## Limitações conhecidas / validação ainda obrigatória
 
-- Não há binário Godot 4.x disponível no sandbox para executar `godot --headless --editor --quit --path .`; portanto, a confirmação final de parser, import de cena, APIs 3D e warnings do editor está pendente.
+- Não há binário Godot 4.x disponível no sandbox para executar `godot --headless --editor --quit --path .`; portanto, a confirmação final de parser, importação GLTF/GLB, retarget da AnimationLibrary, APIs 3D e warnings do editor está pendente.
 - Ainda é necessário fazer uma exportação APK debug, instalar em Android 8.0 ou superior e medir FPS, memória, aquecimento e consumo em um aparelho médio.
 - É necessário testar safe areas, notch, botão Voltar do Android, pausa ao perder foco, áudio interrompido por chamada/notificação e gestos em telas com diferentes densidades.
 - O pacote usa `GL Compatibility` para manter o alvo Android amplo. A contagem de meshes, sombras e partículas deve ser medida em aparelho real antes da publicação.
 - O runner 3D usa geometria procedural e não substitui a validação de design/arte por capítulo; o HUD, o balanceamento de colisão e a legibilidade dos obstáculos devem receber playtest.
 - Não há SDK de anúncios ou permissões de rede no runner 3D. Qualquer revive recompensado só deve entrar depois de consentimento, política de privacidade e fluxo validado para a LGPD.
+
+## Auditoria do asset humano
+
+- **Asset principal:** `assets/characters/quaternius/base/Superhero_Male_FullBody.gltf` e variante feminina, com binário, cabelo, olhos, pele, normal e roughness.
+- **Roupa:** `assets/characters/quaternius/parts/*Peasant*.gltf`, com Body/Arms/Legs/Feet separados e mapas `T_Peasant_*`/`T_Regular_*`.
+- **Rig e animação:** cada GLTF de corpo/roupa declara skin, joints e weights; `animation/UAL1_Standard.glb` contém os clips completos e `animation/UAL1_Standard.res` é o cache compacto offline.
+- **Integração:** `runner_character.gd` monta o asset no `_ready`, anexa as roupas ao Skeleton3D, remove o poke-through por divisão regional/inflação de malha, controla estado de locomoção e expõe fallback isolado.
+- **Licença:** CC0 1.0 e origem oficial registradas em `CREDITS.md`, `QUATERNIUS-LICENSE.txt` e `PROVENANCE.md`; o validator verifica a presença dos arquivos, referências de textura/binário, skin weights, assinatura GLB, clips e PNGs.
 
 ## Checklist de aceite do modo 3D
 
@@ -59,7 +67,7 @@ Data da varredura: 17/09/2026.
 - [x] Cenário móvel com animação de corrida, passos, câmera, FOV e scroll do mundo.
 - [x] Dez capítulos de cenário brasileiro com casas, prédios, lojas, construções e marcos temáticos.
 - [x] Panorama tropical com nuvens, fog, aerial perspective, glow sutil, cores por capítulo e fauna/tráfego aéreo animado.
-- [x] Dez personagens humanoides 3D, cinco masculinos e cinco femininos, com rosto, pele, cabelo, jeans/tecidos, juntas de cotovelo/joelho, acessórios, passada, salto e agachamento.
+- [x] Asset humano 3D principal rigged/skinned, com corpos masculino/feminino, rosto, pele, cabelo, olhos, roupa modular com materiais PBR separados, escala e contato dos pés; corrida, salto e agachamento usam clips/pose de fallback.
 - [x] Texturização realista do chão com PNGs e mapas normais, além de prédios, lojas, construções, veículos, obstáculos, personagens e vegetação.
 - [x] Carros, ônibus, motos e caminhões avançando na rua com velocidades próprias e rodas animadas.
 - [x] Obstáculos urbanos brasileiros detalhados em assemblies 3D reconhecíveis: cone laranja refletivo, cachorro caramelo, hidrante, orelhão, bicicleta, camelô, banco e pedestre.
@@ -70,8 +78,8 @@ Data da varredura: 17/09/2026.
 
 ## Próximos passos de produção
 
-1. Rodar o editor Godot 4.7 em modo headless e abrir a cena principal.
-2. Corrigir qualquer erro de parser, warning de API ou material reportado pelo editor.
+1. Rodar o editor Godot 4.7 em modo headless e abrir a cena principal; confirmar a importação dos GLTF/GLB Quaternius.
+2. Verificar visualmente o Skeleton3D, o encaixe Body/Arms/Legs/Feet, os pés no piso, o sentido de corrida e os clips de sprint, jump e crouch; corrigir qualquer erro de parser, retarget, warning de API ou material.
 3. Exportar APK debug, instalar em um Android 8.0+ e executar o checklist de gestos, pausa e safe area.
 4. Medir 60 FPS em celular médio; reduzir sombras, segmentos de meshes ou partículas se necessário.
 5. Exportar AAB assinado com keystore fora do repositório e validar em internal testing do Play Console.
