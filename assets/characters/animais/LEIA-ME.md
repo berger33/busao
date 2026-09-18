@@ -18,6 +18,27 @@ Escala, assentamento no chao e animacao de caminhada (loop) sao automaticos.
   Rigada e skinada, com os clips `Survey`, `Walk` e `Run` — o jogo toca o
   `Walk` em loop. Canino laranja: em escala de arcade, le como um caramelo
   de rua. Para voltar ao cachorro procedural, basta apagar este arquivo.
+- **`passaro.glb`** — tico-tico (Thraupis sayaca) **modelado no proprio
+  repositorio** por Blender headless (lote 2, `tools/blender/build_aves.py`):
+  peito amarelo, costas/cabeça escuras, cauda listrada,
+  patas rosas; rig de 12 ossos e clipes `Walk` (14 frames) e `Fly`
+  (bater de asas). No voo o jogo toca o `Fly` em loop; no chao, o `Walk`.
+  Licenca: trabalho original do projeto (CC0).
+- **`gaivota.glb`** — gaivota de praia (Larus livia) **modelada no proprio
+  repositorio** por Blender headless (lote 2, `tools/blender/build_aves.py`):
+  corpo branco, capa cinza-azulada, bico amarelo com anel vermelho, patas
+  amarelas; rig de 12 ossos e clipes `Walk` (16 frames) e `Fly`. Idem acima
+  sobre os clipes. Licenca: trabalho original do projeto (CC0).
+- **`urubu.glb`** — urubu-de-crista (Coragyps atratus) **modelado no proprio
+  repositorio** por Blender headless (lote 2, `tools/blender/build_aves.py`):
+  plumagem preto-carvao, cabeca nua vermelho-alaranjada, cristas curtas,
+  patas rosadas; rig de 12 ossos e clipes `Walk` (22 frames, andar arrastado)
+  e `Fly`. Idem acima sobre os clipes. Licenca: trabalho original do projeto
+  (CC0).
+
+  Aves do lote 2 seguem o mesmo contrato: frente +Z, origem no chao
+  (rest e `Walk` assentados — `Fly` eh a pose de voo de pernas recolhidas),
+  `Fly` no nome do clip para o ciclo aereo.
 
 ## Como trocar por outros modelos
 

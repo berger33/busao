@@ -21,9 +21,9 @@ const TEXTURE_FEATHER_R = preload("res://assets/textures/pena_realista_roughness
 
 const BIRD_PROFILES: Dictionary = {
     "pombo": {"body": Color("#8d95a5"), "wing": Color("#6f7889"), "beak": Color("#454b5e"), "size": 0.9, "span": 0.42, "flap": 7.6, "legs": Color("#c56b4a"), "glb_comprimento": 0.26, "glb_altura": 0.21},
-    "passaro": {"body": Color("#7c6a4b"), "wing": Color("#5d4f39"), "beak": Color("#3a352d"), "size": 0.62, "span": 0.34, "flap": 10.5, "legs": Color("#8a6a4a")},
-    "gaivota": {"body": Color("#f2efe2"), "wing": Color("#d9d4c4"), "beak": Color("#e8a13c"), "size": 1.0, "span": 0.60, "flap": 5.4, "legs": Color("#e8a13c")},
-    "urubu": {"body": Color("#36322f"), "wing": Color("#211e1c"), "beak": Color("#9aa0a8"), "size": 1.15, "span": 0.76, "flap": 3.6, "legs": Color("#6b6f75")},
+    "passaro": {"body": Color("#7c6a4b"), "wing": Color("#5d4f39"), "beak": Color("#3a352d"), "size": 0.62, "span": 0.34, "flap": 10.5, "legs": Color("#8a6a4a"), "glb_comprimento": 0.18, "glb_altura": 0.11},
+    "gaivota": {"body": Color("#f2efe2"), "wing": Color("#d9d4c4"), "beak": Color("#e8a13c"), "size": 1.0, "span": 0.60, "flap": 5.4, "legs": Color("#e8a13c"), "glb_comprimento": 0.80, "glb_altura": 0.46},
+    "urubu": {"body": Color("#36322f"), "wing": Color("#211e1c"), "beak": Color("#9aa0a8"), "size": 1.15, "span": 0.76, "flap": 3.6, "legs": Color("#6b6f75"), "glb_comprimento": 1.30, "glb_altura": 0.80},
 }
 
 # Quadrúpedes de interior: capivara se deita (lie), cavalo e boi pastam
@@ -507,7 +507,8 @@ func _build_animal_glb(p_species: String) -> bool:
     _animar_glb(modelo)
     return true
 
-## Escala pelo bbox real do modelo e assenta o menor z no chao local.
+## Escala pelo bbox real do modelo (espaco local, pre-rotacao) e assenta o
+## fundo no chao local, com o centro X/Z do modelo sobre a origem da entidade.
 func _fit_glb(modelo: Node3D, comp_alvo: float, alt_alvo: float) -> void:
     var aabb := AABB()
     var primeiro := true
@@ -528,21 +529,39 @@ func _fit_glb(modelo: Node3D, comp_alvo: float, alt_alvo: float) -> void:
         return
     var fator := minf(comp_alvo / maxf(aabb.size.z, 0.001), alt_alvo / maxf(aabb.size.y, 0.001))
     modelo.scale = Vector3.ONE * fator
-    modelo.position -= Vector3(aabb.get_center().x, aabb.position.y, aabb.get_center().z) * fator
+    # O aabb esta no espaco local do modelo (que chega girado 90° em Y); o
+    # deslocamento de assentamento precisa ser rotacionado pelo proprio modelo
+    # para cair no espaco do pai, senao o animal aparece deslocado do spawn.
+    var assento_local := Vector3(aabb.get_center().x, aabb.position.y, aabb.get_center().z)
+    modelo.position -= (modelo.basis * assento_local) * fator
 
-## Toca clip "walk"/"trot" (ou o primeiro) em loop; guarda refs para o _process.
+## Escolhe o clip conforme o comportamento e toca em loop:
+## - no voo (behavior_mode == "flight"): clip "fly"/"voo" (bater de asas),
+##   se existir — o pombo (lote 1) nao tem, entao cai no walk como antes;
+## - no chao: clip "walk"/"trot" (andar), ou o primeiro disponivel.
 func _animar_glb(modelo: Node3D) -> void:
     var player := _achar_player(modelo)
     if player == null or player.get_animation_list().is_empty():
         return
+    var nomes := player.get_animation_list()
+    var em_voo := behavior_mode == "flight"
     var escolhido := ""
-    for nome in player.get_animation_list():
-        var baixo := nome.to_lower()
-        if baixo.contains("walk") or baixo.contains("trot"):
-            escolhido = nome
-            break
+    if em_voo:
+        # No voo, prefere o clip de bater de asas ("fly"/"voo").
+        for nome in nomes:
+            var baixo := nome.to_lower()
+            if baixo.contains("fly") or baixo.contains("voo"):
+                escolhido = nome
+                break
     if escolhido == "":
-        escolhido = player.get_animation_list()[0]
+        # No chao, ou sem clip de voo (ex.: pombo no aereo): clip de caminhada.
+        for nome in nomes:
+            var baixo := nome.to_lower()
+            if baixo.contains("walk") or baixo.contains("trot"):
+                escolhido = nome
+                break
+    if escolhido == "":
+        escolhido = nomes[0]
     var anim := player.get_animation(escolhido)
     if anim != null:
         anim.loop_mode = Animation.LOOP_LINEAR
