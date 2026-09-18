@@ -2078,6 +2078,7 @@ func _build_animal_obstacle(parent: Node3D, species: String) -> Node3D:
     # primeira animacao de caminhada encontrada, em loop.
     var modelo := _modelo_animal_opcional(species)
     if modelo != null:
+        modelo.rotation.y = PI / 2.0   # GLBs chegam olhando +Z; a convensao da entidade e +X
         parent.add_child(modelo)
         _fit_model(modelo, 0.95, 0.72)
         _tocar_animal(modelo)

@@ -1,27 +1,25 @@
-# Modelos de animais opcionais (drop-in)
+# Modelos de animais (drop-in)
 
-Esta pasta aceita modelos **GLB** que substituem automaticamente os animais
-procedurais do jogo. O arquivo existe? Ele entra; não existe? O jogo segue com
-o modelo procedural. Nada quebra.
+O jogo usa o arquivo `<especie>.glb` desta pasta se ele existir
+(`caramelo.glb`, `pombo.glb`); sem o arquivo, entra o modelo procedural.
+Escala, assentamento no chao e animacao de caminhada (loop) sao automaticos.
 
-## Nomes reconhecidos
+## O que ja vem aqui
 
-| Arquivo       | Substitui                        | Observação |
-| ------------- | -------------------------------- | ---------- |
-| `caramelo.glb` | o cachorro caramelo (obstáculo) | toca a 1ª animação com "walk" no nome, em loop |
-| `pombo.glb`    | os pombos do chão               | idem |
+- **`caramelo.glb`** — a **raposa** da colecao oficial da Khronos
+  (`glTF-Sample-Assets`, CC0 1.0; conversao glTF por AsoboStudio/scurest).
+  Rigada e skinada, com os clips `Survey`, `Walk` e `Run` — o jogo toca o
+  `Walk` em loop. Canino laranja: em escala de arcade, le como um caramelo
+  de rua. Para voltar ao cachorro procedural, basta apagar este arquivo.
 
-O jogo escala o modelo para ~0,95 m de comprimento e o assenta no chão.
+## Como trocar por um cachorro "de verdade"
 
-## Onde baixar (CC0, uso comercial livre)
+Substitua `caramelo.glb` por qualquer GLB rigado com animacao de caminhada.
+Fonte CC0 recomendada (uso comercial livre):
 
-- **Quaternius — Ultimate Animated Animals** (cachorro, raposa, galinha etc.
-  rigados, com Walk/Run/Idle): <https://quaternius.itch.io/ultimate-animated-animals>
-  — licença CC0. Baixe o pack, pegue o `.glb` do cão, renomeie para
-  `caramelo.glb` e solte aqui.
-- **Khronos glTF-Sample-Assets** — `Fox.glb` (CC0, animada) e `Boxer.glb`
-  (Apple, CC-BY 4.0 — credite no `CREDITS.md`):
-  <https://github.com/KhronosGroup/glTF-Sample-Assets>
+- **Quaternius — Ultimate Animated Animals** (dog/shiba/husky com Walk/Run/
+  Idle): <https://quaternius.itch.io/ultimate-animated-animals>
 
-Ao adicionar um modelo de terceiros, atualize o `CREDITS.md` com autor, URL e
-licença (obrigatório para CC-BY; CC0 dispensa, mas é boa prática).
+Requisitos: frente do modelo no eixo **+Z**, origem no chao, animacao com
+"walk" no nome (o jogo escolhe sozinho). Ao adicionar assets de terceiros,
+atualize o `CREDITS.md` com autor, URL e licenca.
