@@ -1233,9 +1233,10 @@ func _rebuild_ground_fauna() -> void:
     for child in ground_fauna_root.get_children():
         child.free()
     ground_fauna_nodes.clear()
-    # Aves de chão na borda externa da calçada direita: comportamento de
-    # pombo urbano (anda, bica o chão e se assusta com um pulo) usando as
-    # mesmas poses do sistema animal, sem virar obstáculo de gameplay.
+    # Aves de chão na borda externa da calçada direita + a fauna de interior
+    # definida por capítulo ("fauna"): todos decorativos e animados com o
+    # contrato completo de poses (idle, run, jump, crouch e crouch em
+    # movimento), sem virar obstáculo de gameplay.
     var kinds: Array = scenario.get("aerial", ["pombo"])
     var bird_kinds: Array[String] = []
     for kind in kinds:
@@ -1243,13 +1244,29 @@ func _rebuild_ground_fauna() -> void:
             bird_kinds.append(str(kind))
     if bird_kinds.is_empty():
         bird_kinds.append("pombo")
-    var count: int = 3 if int(scenario.get("chapter_index", 0)) >= 7 else 2
-    for i in count:
-        var kind: String = bird_kinds[i % bird_kinds.size()]
+    var ground_kinds: Array = scenario.get("fauna", [])
+    var chapter: int = int(scenario.get("chapter_index", 0))
+    var entries: Array[Dictionary] = []
+    for kind in ground_kinds:
+        var species: String = str(kind)
+        # Quadrúpedes e macaco são construídos olhando para +X; virar para +Z
+        # deixa a fauna de frente para o corredor ao longo do corredor.
+        var facing: float = 0.0 if species == "caranguejo" else -PI / 2.0
+        entries.append({"kind": species, "x": 4.35, "facing": facing})
+    var bird_count: int = 2 if chapter < 7 or not ground_kinds.is_empty() else 3
+    for i in bird_count:
+        entries.append({
+            "kind": bird_kinds[i % bird_kinds.size()],
+            "x": 4.45 - float(i % 2) * 0.5,
+            "facing": -0.5 + float(i) * 0.55
+        })
+    for i in entries.size():
+        var entry: Dictionary = entries[i]
+        var kind: String = str(entry["kind"])
         var node := Node3D.new()
         node.name = "GroundFauna_%s_%02d" % [kind, i]
-        node.position = Vector3(4.45 - float(i % 2) * 0.5, 0.08, -26.0 - float(i) * 24.0)
-        node.rotation.y = -0.5 + float(i) * 0.55
+        node.position = Vector3(float(entry["x"]), 0.08, -26.0 - float(i) * 24.0)
+        node.rotation.y = float(entry["facing"])
         ground_fauna_root.add_child(node)
         var animal := WORLD_ANIMAL_SCRIPT.new() as Node3D
         animal.name = "Animal3D_%s" % kind
@@ -1267,6 +1284,7 @@ func _update_ground_fauna(dt: float) -> void:
         var scroll: float = player_speed * dt if screen == 2 and run_mode == "playing" else 0.0
         node.position.z += scroll + sin(pulse * 0.5 + phase_offset) * dt * 0.05
         node.position.x += cos(pulse * 0.33 + phase_offset) * dt * 0.04
+        node.position.x = clampf(node.position.x, 4.0, 4.62)
         if node.position.z > 12.0:
             node.position.z = -70.0 - fx_rng.randf_range(0.0, 40.0)
             node.position.x = 3.9 + fx_rng.randf_range(0.0, 0.55)

@@ -79,6 +79,7 @@ const PROFILES: Array[Dictionary] = [
         "weather": "fim de tarde",
         "aerial": ["pombo", "drone"],
         "aerial_count": 4,
+        "fauna": ["capivara", "cavalo"],
         "building_style": "center",
         "landmark": "storefront"
     },
@@ -183,6 +184,7 @@ const PROFILES: Array[Dictionary] = [
         "weather": "sinos ao entardecer",
         "aerial": ["pombo", "passaro"],
         "aerial_count": 4,
+        "fauna": ["macaco"],
         "building_style": "religious",
         "landmark": "church"
     },
@@ -209,6 +211,7 @@ const PROFILES: Array[Dictionary] = [
         "weather": "letreiros acesos",
         "aerial": ["drone", "pombo", "aviao"],
         "aerial_count": 5,
+        "fauna": ["caranguejo", "boi"],
         "building_style": "commercial",
         "landmark": "market"
     },

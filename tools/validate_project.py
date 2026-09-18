@@ -75,6 +75,8 @@ def check_3d_entrypoint() -> None:
     shop_data = (ROOT / "scripts/shop_data.gd").read_text(encoding="utf-8")
     if scenario_data.count('"id":') != 10:
         fail("scenario_data.gd does not declare 10 scenario chapters")
+    if scenario_data.count('"fauna":') != 3:
+        fail("scenario_data.gd does not declare fauna for the three interior chapters")
     if character_data.count('"id":') != 20:
         fail("character_data.gd does not declare 20 characters")
     if character_data.count('"gender": "M"') != 10 or character_data.count('"gender": "F"') != 10:
@@ -186,6 +188,22 @@ def check_3d_entrypoint() -> None:
         'GroundFauna_',
         '_rebuild_ground_fauna',
         '_update_ground_fauna',
+        'QUADRUPED_PROFILES',
+        '_animate_quadruped',
+        '_animate_macaco',
+        '_animate_caranguejo',
+        'Capivara3D',
+        'Cavalo3D',
+        'Boi3D',
+        'Macaco3D',
+        'Caranguejo3D',
+        'HorseMane',
+        'OxHorn',
+        'MonkeyShoulderL',
+        'MonkeyTailPivot',
+        'CrabClawPivotL',
+        'CrabPincerTop',
+        'scenario.get("fauna", [])',
     )
     required_obstacles = (
         "car", "bus_traffic", "motorcycle", "pothole", "truck",
