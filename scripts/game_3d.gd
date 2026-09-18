@@ -149,6 +149,8 @@ var sky_fx_root: Node3D
 var sky_fx_nodes: Array[Dictionary] = []
 var ambient_fx_root: Node3D
 var ambient_fx_nodes: Array[Dictionary] = []
+var ground_fauna_root: Node3D
+var ground_fauna_nodes: Array[Dictionary] = []
 var entities: Array[Dictionary] = []
 var fx_nodes: Array[Dictionary] = []
 var primitive_mesh_cache: Dictionary = {}
@@ -231,6 +233,7 @@ func _process(delta: float) -> void:
     _update_fx(dt)
     _update_sky_fx(dt)
     _update_ambient_fx(dt)
+    _update_ground_fauna(dt)
     _update_sky_motion(dt)
     if screen == 2:
         _update_run(dt)
@@ -327,6 +330,9 @@ func _setup_world() -> void:
     ambient_fx_root = Node3D.new()
     ambient_fx_root.name = "AmbientMotion"
     world_root.add_child(ambient_fx_root)
+    ground_fauna_root = Node3D.new()
+    ground_fauna_root.name = "GroundFauna"
+    world_root.add_child(ground_fauna_root)
 
     sun = DirectionalLight3D.new()
     sun.name = "WarmSun"
@@ -1155,8 +1161,19 @@ func _rebuild_sky_fx() -> void:
             "phase": float(i) * 1.8,
             "drift": 0.15 + float(i % 2) * 0.12
         })
+    _rebuild_ground_fauna()
 
 func _build_aerial(parent: Node3D, kind: String) -> void:
+    # Aves urbanas usam o mesmo Animal3D articulado do caramelo: as poses
+    # de voo (run), planeio (idle), decolagem (jump) e agachado (crouch)
+    # fazem parte do contrato compartilhado de animais.
+    if kind in ["pombo", "passaro", "gaivota", "urubu"]:
+        var animal := WORLD_ANIMAL_SCRIPT.new() as Node3D
+        animal.name = "Animal3D_%s" % kind
+        animal.set("species", kind)
+        animal.call("enable_flight_cycle")
+        parent.add_child(animal)
+        return
     var dark := _material(Color("#283242"), 0.0, 0.92)
     var pale := _material(Color("#f1f0de"), 0.0, 0.82)
     var sky_blue := _material(Color("#78cbd8"), 0.0, 0.54)
@@ -1199,12 +1216,60 @@ func _update_sky_fx(dt: float) -> void:
         node.position.z += speed * dt
         node.position.x += sin(pulse * 0.35 + phase_offset) * float(item["drift"]) * dt
         node.position.y += sin(pulse * 0.55 + phase_offset) * 0.012
-        node.rotation.y += dt * 0.035
         if str(item["kind"]) in ["pombo", "passaro", "gaivota", "urubu"]:
+            # Aves articuladas balançam a rota em vez de girar sem parar:
+            # o giro contínuo deixaria a cabeça de costas para a direção.
+            node.rotation.y = sin(pulse * 0.4 + phase_offset) * 0.35
             node.rotation.z = sin(pulse * 2.0 + phase_offset) * 0.14
+        else:
+            node.rotation.y += dt * 0.035
         if node.position.z > 28.0:
             node.position.z = -112.0 - fx_rng.randf_range(0.0, 30.0)
             node.position.x = fx_rng.randf_range(-13.0, 13.0)
+
+func _rebuild_ground_fauna() -> void:
+    if ground_fauna_root == null:
+        return
+    for child in ground_fauna_root.get_children():
+        child.free()
+    ground_fauna_nodes.clear()
+    # Aves de chão na borda externa da calçada direita: comportamento de
+    # pombo urbano (anda, bica o chão e se assusta com um pulo) usando as
+    # mesmas poses do sistema animal, sem virar obstáculo de gameplay.
+    var kinds: Array = scenario.get("aerial", ["pombo"])
+    var bird_kinds: Array[String] = []
+    for kind in kinds:
+        if str(kind) in ["pombo", "passaro", "gaivota", "urubu"]:
+            bird_kinds.append(str(kind))
+    if bird_kinds.is_empty():
+        bird_kinds.append("pombo")
+    var count: int = 3 if int(scenario.get("chapter_index", 0)) >= 7 else 2
+    for i in count:
+        var kind: String = bird_kinds[i % bird_kinds.size()]
+        var node := Node3D.new()
+        node.name = "GroundFauna_%s_%02d" % [kind, i]
+        node.position = Vector3(4.45 - float(i % 2) * 0.5, 0.08, -26.0 - float(i) * 24.0)
+        node.rotation.y = -0.5 + float(i) * 0.55
+        ground_fauna_root.add_child(node)
+        var animal := WORLD_ANIMAL_SCRIPT.new() as Node3D
+        animal.name = "Animal3D_%s" % kind
+        animal.set("species", kind)
+        animal.call("enable_ground_behavior")
+        node.add_child(animal)
+        ground_fauna_nodes.append({"node": node, "kind": kind, "phase": float(i) * 1.7})
+
+func _update_ground_fauna(dt: float) -> void:
+    for item in ground_fauna_nodes:
+        var node: Node3D = item["node"]
+        var phase_offset: float = float(item["phase"])
+        # Durante a corrida as aves varrem com o mundo; paradas, elas só
+        # passeiam no lugar, mantendo o cenário vivo também atrás do menu.
+        var scroll: float = player_speed * dt if screen == 2 and run_mode == "playing" else 0.0
+        node.position.z += scroll + sin(pulse * 0.5 + phase_offset) * dt * 0.05
+        node.position.x += cos(pulse * 0.33 + phase_offset) * dt * 0.04
+        if node.position.z > 12.0:
+            node.position.z = -70.0 - fx_rng.randf_range(0.0, 40.0)
+            node.position.x = 3.9 + fx_rng.randf_range(0.0, 0.55)
 
 func _clear_ambient_fx() -> void:
     if ambient_fx_root == null:
