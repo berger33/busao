@@ -17,8 +17,8 @@ Data da varredura: 18/09/2026.
 - **Personagem principal:** catálogo de 10 identidades, cinco masculinas e cinco femininas, com representação de gameplay baseada no humanoide Quaternius GLTF/skinned real. Corpo, rosto, olhos e cabelo usam o asset Universal Base Characters; roupa modular e mapas PBR vêm de meshes separados. Para Nina Creator, `runner_character.gd` mantém top, shorts jeans, botas, telefone, tatuagem, brincos, pulseiras, lantejoulas e metal em `BoneAttachment3D`, todos acompanhando o esqueleto. A escala de 2,15 m, os pés no piso, a sombra de contato e os clips de locomoção são preservados, sem montar o corpo principal com cápsulas.
 - **Tráfego:** carros, ônibus, motos e caminhões são assemblies 3D detalhados com cabine, vidros, faróis, lanternas, para-choques, placas, retrovisores, maçanetas, rodas orientadas e velocidade própria no eixo da rua. Os carros variam entre hatch compacto, sedã compacto e utilitário/van inspirados na frota popular brasileira, sem logotipos.
 - **Preflight reproduzível:** `python3 tools/validate_project.py` passou após a migração.
-- **Parser auxiliar:** `gdparse 4.5.0 scripts/*.gd` passou sem erro, e o preflight inclui referências, binários e manifesto SHA-256; a importação/renderização dos GLTF/GLB ainda precisa passar pelo editor Godot 4.x.
-- **Godot editor:** não está instalado neste ambiente; o parser/editor headless, a renderização efetiva e a exportação Android ainda precisam ser executados em uma máquina com Godot 4.x e SDK Android.
+- **Preflight auxiliar:** `python3 tools/validate_project.py` inclui referências, binários, texturas, clips e manifesto SHA-256; a importação/renderização dos GLTF/GLB e a sintaxe final da nova camada `BoneAttachment3D` ainda precisam passar pelo editor Godot 4.x.
+- **Godot/parser:** não estão instalados neste ambiente; o parser/editor headless, a renderização efetiva, o retarget da AnimationLibrary e a exportação Android ainda precisam ser executados em uma máquina com Godot 4.x e SDK Android.
 
 ## Verificações realizadas nesta etapa
 
