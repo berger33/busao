@@ -114,6 +114,50 @@ gdtoolkit. Contra o estado anterior do projeto (`git archive` do commit
 5 `receive_shadow`, sem nenhum falso positivo; um arquivo de teste com
 `if mesh.receive_shadow:` é detectado pela checagem de leitura.
 
+## Orientação, cadência e posição do corredor (18/09/2026)
+
+Sintoma relatado: o boneco corria "para baixo", de frente para a câmera, com
+movimentação estranha. A apuração foi feita direto nos assets (geometria e curvas
+de animação) e no fluxo do jogo, e virou ferramenta reproduzível:
+`python3 tools/audit_runner_rig.py`.
+
+- **Sentido do modelo (causa do "correndo para baixo")**: no
+  `Superhero_Male_FullBody.gltf` as sobrancelhas (z = +0,057..+0,094) e os olhos
+  (+0,051..+0,081) ficam no lado **+Z**, as costas em -Z, e o vetor
+  tornozelo→ponta do pé aponta para +Z nos dois pés. O corredor avança para -Z
+  (o cenário desliza para +Z), então o personagem corria com o rosto voltado para
+  a câmera. `model_root` agora recebe `rotation.y = PI` (`MODEL_FACING_YAW`).
+- **Inclinação lateral preservada**: o balanço lateral passou para um pivô
+  (`ModelPivot`) acima do modelo, e o giro de 180° ficou no próprio `model_root`.
+  Separar os dois mantém o balanço exatamente igual ao de antes (mesma rotação em
+  espaço de mundo) sem depender da ordem de Euler do Godot para o sinal.
+- **Rig de animação**: o `UAL1_Standard.glb` usa o mesmo rig de 65 ossos do corpo
+  (`root`, `pelvis`, `spine_01`, ...), então `Sprint_Loop`, `Jump_Loop` e os
+  clips de deslize realmente animam o personagem. Já o `UAL1_Standard.res`
+  comitado é de outro rig (Universal Humanoid: `%GeneralSkeleton`,
+  `Hips`/`LeftUpperLeg`) e não mexe em osso nenhum deste corpo — por isso
+  `_library_drives_skeleton()` confere se as trilhas apontam para ossos
+  existentes antes de ligar `using_external_animation`; sem essa checagem o
+  corredor congelaria na pose de repouso se a biblioteca errada fosse a
+  escolhida.
+- **Cadência (o "skate")**: medindo por cinemática direta, um ciclo do
+  `Sprint_Loop` dura 0,667 s e desloca o pé ~1,35 m — o equivalente a ~4,0 m/s de
+  solo. O jogo anda de 5 m/s (início) até 18 m/s (fim da campanha, 12 m/s no fim
+  do capítulo 1, com dash ×1,22), então as pernas giravam muito devagar para o
+  mundo. `AnimationPlayer.speed_scale` agora segue a velocidade real
+  (`_match_playback_to_speed`, limitado a 2,2×) e `game_3d.gd` passa
+  `motion_speed` para `set_motion()`.
+- **Posição e contato com o chão**: o pé mais baixo do GLTF está em y = -0,01;
+  com `MODEL_SCALE` 1,18 e `MODEL_FLOOR_OFFSET` 0,012 as solas ficam em
+  y = +0,0008, sem flutuar nem afundar. Altura final 1,81 × 1,18 = 2,14 m,
+  coerente com `PLAYER_HEIGHT` (2,15).
+
+Resultado: `python3 tools/audit_runner_rig.py` → OK (rosto em +Z, 65/65 ossos
+compatíveis, ciclo de 4,04 m/s batendo com a constante do script, sola em y≈0);
+`python3 tools/check_gdscript.py` → 0 problema(s);
+`python3 tools/validate_project.py` → PRE-FLIGHT OK;
+`python3 tools/audit_balance.py` → curva inalterada.
+
 ## Limitações conhecidas / validação ainda obrigatória
 
 - Não há binário Godot 4.x disponível no sandbox para executar `godot --headless --editor --quit --path .`; a checagem possível aqui é estática (`tools/check_gdscript.py`, que reproduz as classes de erro do analisador) e a confirmação final de importação GLTF/GLB, retarget da AnimationLibrary, renderização e warnings restantes precisa ser feita em uma máquina com Godot 4.x.

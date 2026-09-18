@@ -1030,7 +1030,7 @@ func _update_player(dt: float) -> void:
         var shadow_factor: float = 1.0 - clampf(jump_height * 0.12, 0.0, 0.24)
         shadow.scale = Vector3.ONE * shadow_factor
     if player_visual.has_method("set_motion"):
-        player_visual.call("set_motion", run_phase, is_running, is_crouching, jump_height, lane_change_velocity)
+        player_visual.call("set_motion", run_phase, is_running, is_crouching, jump_height, lane_change_velocity, motion_speed)
     var lane_lean: float = clampf(lane_change_velocity * 0.08, -0.20, 0.20)
     var target_lean: float = lane_lean + (0.055 if is_running else 0.0)
     player_visual.rotation.z = lerpf(player_visual.rotation.z, target_lean, minf(1.0, dt * 9.0))
