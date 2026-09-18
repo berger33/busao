@@ -284,6 +284,38 @@ def check_character_assets() -> None:
             fail(f"{texture.relative_to(ROOT)}: {exc}")
 
 
+def check_balance_and_persistence() -> None:
+    balance = (ROOT / "resources/game_balance.tres").read_text(encoding="utf-8")
+    required_numeric = {
+        "version", "phase_count", "chapter_unlock_phase", "endless_unlock_phase",
+        "base_speed", "chapter_one_final_speed", "final_speed", "first_wait_seconds",
+        "final_wait_seconds", "unlock_chapter_stars", "unlock_endless_stars",
+        "first_clear_reward", "replay_reward", "star_upgrade_reward", "daily_base_reward",
+        "daily_step_reward", "weekly_distance_target", "weekly_reward", "xp_level_size", "autosave_seconds",
+    }
+    values: dict[str, float] = {}
+    for key in required_numeric:
+        match = re.search(rf"^{re.escape(key)}\s*=\s*([-+]?\d+(?:\.\d+)?)\s*$", balance, re.MULTILINE)
+        if not match:
+            fail(f"balance resource missing field: {key}")
+        else:
+            values[key] = float(match.group(1))
+    if values and not (values.get("phase_count", 0) == 50 and values.get("base_speed", 0) < values.get("chapter_one_final_speed", 0) < values.get("final_speed", 0)):
+        fail("balance speed curve is not strictly increasing across its anchors")
+    if values and not (values.get("first_clear_reward", 0) > values.get("replay_reward", 0) > 0):
+        fail("balance replay reward must be positive and lower than first-clear reward")
+    if values and not (values.get("first_wait_seconds", 0) >= values.get("final_wait_seconds", 0) > 0):
+        fail("balance wait curve is invalid")
+    save = (ROOT / "scripts/save_data.gd").read_text(encoding="utf-8")
+    for token in ("SAVE_SCHEMA_VERSION := 2", "BACKUP_PATH", "TEMP_PATH", "DirAccess.rename_absolute", "_sanitize_data", "record_phase_attempt", "record_weekly_progress"):
+        if token not in save:
+            fail(f"save layer missing resilience token: {token}")
+    game_3d = (ROOT / "scripts/game_3d.gd").read_text(encoding="utf-8")
+    for token in ("_phase_speed_for", "_phase_wait_for", "record_phase_result", "reward_breakdown", "first_clear"):
+        if token not in game_3d:
+            fail(f"3D progression missing token: {token}")
+
+
 def check_assets() -> None:
     for svg in [ROOT / "assets/art/icon.svg", *sorted((ROOT / "assets/textures").glob("*.svg"))]:
         try:
@@ -323,6 +355,7 @@ def main() -> int:
     check_paths()
     check_scripts()
     check_catalog()
+    check_balance_and_persistence()
     check_3d_entrypoint()
     check_character_assets()
     check_assets()
@@ -330,7 +363,7 @@ def main() -> int:
         print("PRE-FLIGHT FAILED")
         print("\n".join(f"- {error}" for error in ERRORS))
         return 1
-    print("PRE-FLIGHT OK: paths, scripts, 50-phase catalog, 13-obstacle 3D contract, SVG/PNG textures, WAV and feedback audio assets")
+    print("PRE-FLIGHT OK: paths, scripts, 50-phase catalog, 13-obstacle 3D contract, balance/economy/save checks, SVG/PNG textures, WAV and feedback audio assets")
     return 0
 
 

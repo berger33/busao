@@ -77,6 +77,7 @@ func _draw_menu() -> void:
     _panel(Rect2(420, 68, 246, 48), Color(0.04, 0.08, 0.17, 0.82), 22)
     _text(Vector2(444, 99), "● 3D", 15, CYAN)
     _text(Vector2(542, 99), "50 FASES", 14, WHITE)
+    _button(Rect2(510, 132, 156, 46), "SOM: OFF" if AudioManager.muted else "SOM: ON", Color("#263958"), 13)
     _panel(Rect2(70, 564, 580, 104), Color("#f1b72f"), 22)
     draw_rect(Rect2(90, 574, 540, 4), Color(1, 1, 1, 0.35))
     _text_center(Vector2(360, 614), "CORRER AGORA", 30, INK)
@@ -92,13 +93,18 @@ func _draw_menu() -> void:
     _text(Vector2(72, 1095), "★ %03d / 150" % int(state.get("stars", 0)), 24, YELLOW)
     _text(Vector2(425, 1095), "R$ %03d" % int(state.get("coins", 0)), 22, Color("#8ee5bb"))
     _text(Vector2(72, 1140), "🔥 %02d dias" % int(state.get("streak", 0)), 17, Color("#ffb86b"))
-    _text(Vector2(330, 1140), "rua + duas calçadas", 15, Color("#f9c8ae"))
+    _text(Vector2(330, 1140), "NÍVEL %02d • XP %d/%d" % [int(state.get("xp_level", 1)), int(state.get("xp_into_level", 0)), int(state.get("xp_into_level", 0)) + int(state.get("xp_to_next_level", 250))], 14, Color("#f9c8ae"))
     _text(Vector2(72, 1178), "ônibus impossível • humor brasileiro • câmera 3D", 14, Color("#d3e5ef"))
 
 func _draw_map() -> void:
     _draw_ui_background()
     _header("MAPA 3D", "★ %03d / 150" % int(state.get("stars", 0)))
     _text(Vector2(30, 126), "Brasil sem Freio • capítulo %d / 5" % (int(state.get("map_page", 0)) + 1), 17, MUTED)
+    var next_unlock: int = int(state.get("next_unlock_stars", 0))
+    if next_unlock > 0:
+        _text(Vector2(430, 126), "próximo marco: ★ %d" % next_unlock, 14, GOLD)
+    else:
+        _text(Vector2(430, 126), "todos os marcos liberados", 14, GREEN)
     var cards: Array = state.get("cards", [])
     for local_index in cards.size():
         var card: Dictionary = cards[local_index]
@@ -158,6 +164,9 @@ func _draw_run() -> void:
         _text(Vector2(535, 160), "DASH %0.1f" % float(state.get("dash_cooldown", 0.0)), 13, MUTED)
     _panel(Rect2(20, 1192, 680, 48), Color(0.025, 0.055, 0.12, 0.76), 16)
     _text_center(Vector2(360, 1222), "← → FAIXA     ↑ PULO     ↓ DESLIZA     TOQUE DASH", 14, Color(0.87, 0.93, 0.95, 0.82))
+    if str(state.get("tutorial_hint", "")) != "" and float(state.get("distance", 0.0)) < float(state.get("first_session_hint_distance", 70.0)):
+        _panel(Rect2(55, 180, 610, 58), Color(0.05, 0.16, 0.25, 0.93), 15)
+        _text_center(Vector2(360, 216), str(state.get("tutorial_hint", "")), 15, CYAN)
     if str(state.get("run_mode", "playing")) == "at_stop":
         _draw_stop_card()
     elif str(state.get("run_mode", "playing")) == "paused":
@@ -187,14 +196,31 @@ func _draw_results() -> void:
         _text_center(Vector2(360, 155), "PEGUEI O BUSÃO!" if not bool(result_data.get("endless", false)) else "ENDLESS CONCLUÍDO!", 38, YELLOW)
         _text_center(Vector2(360, 198), str(state.get("phase_name", "CORRE")), 18, WHITE)
         _panel(Rect2(65, 285, 590, 430), Color("#122945"), 24)
-        _text_center(Vector2(360, 355), "★".repeat(int(result_data.get("stars", 0))) + "☆".repeat(3 - int(result_data.get("stars", 0))), 58, YELLOW)
-        _text_center(Vector2(360, 420), "%0.1f s" % float(result_data.get("time", 0.0)), 42, WHITE)
-        _text_center(Vector2(360, 454), "TEMPO DE CORRIDA", 14, MUTED)
-        _text(Vector2(105, 530), "MOEDAS", 15, MUTED)
+        if bool(result_data.get("endless", false)):
+            _text_center(Vector2(360, 355), "%dm" % int(result_data.get("distance", 0)), 48, VIOLET)
+            _text_center(Vector2(360, 404), "DISTÂNCIA NO ENDLESS", 14, MUTED)
+        else:
+            _text_center(Vector2(360, 355), "★".repeat(int(result_data.get("stars", 0))) + "☆".repeat(3 - int(result_data.get("stars", 0))), 58, YELLOW)
+        _text_center(Vector2(360, 465), "%0.1f s" % float(result_data.get("time", 0.0)), 42, WHITE)
+        _text_center(Vector2(360, 499), "TEMPO DE CORRIDA", 14, MUTED)
+        _text(Vector2(105, 530), "MOEDAS NA PISTA", 15, MUTED)
         _text(Vector2(105, 566), "+%02d" % int(result_data.get("coins", 0)), 30, GREEN)
-        _text(Vector2(370, 530), "RECOMPENSA", 15, MUTED)
+        _text(Vector2(370, 530), "BÔNUS DE CONCLUSÃO", 15, MUTED)
         _text(Vector2(370, 566), "+R$ %d" % int(result_data.get("reward", 0)), 30, GOLD)
-        _text_center(Vector2(360, 650), "NOVO RECORDE!" if bool(result_data.get("record", false)) else "O próximo ponto espera", 18, VIOLET if bool(result_data.get("record", false)) else MUTED)
+        var reward_note := "replay com bônus fixo"
+        if bool(result_data.get("endless", false)):
+            reward_note = "recorde local" if bool(result_data.get("record", false)) else "endless replay com teto"
+        elif bool(result_data.get("first_clear", false)):
+            reward_note = "primeira conclusão"
+        elif int(result_data.get("new_stars", 0)) > 0:
+            reward_note = "nova estrela"
+        _text_center(Vector2(360, 612), reward_note, 14, Color("#b9d8db"))
+        var progress_note := "NOVO RECORDE!" if bool(result_data.get("record", false)) else ("+%d estrela(s) nesta corrida" % int(result_data.get("new_stars", 0)))
+        _text_center(Vector2(360, 650), progress_note, 18, VIOLET if bool(result_data.get("record", false)) else MUTED)
+        _text_center(Vector2(360, 682), "+%d XP" % int(result_data.get("xp", 0)), 15, GREEN)
+        var breakdown: Dictionary = result_data.get("reward_breakdown", {})
+        if not breakdown.is_empty():
+            _text_center(Vector2(360, 708), "base %d • fase %d • estrelas %d • perfeito %d" % [int(breakdown.get("base", 0)), int(breakdown.get("level", 0)), int(breakdown.get("stars", 0)), int(breakdown.get("perfect", 0))], 11, Color("#a9b9ca"))
     else:
         _text_center(Vector2(360, 180), "O BUSÃO FOI EMBORA", 34, RED)
         _text_center(Vector2(360, 220), "Use rua e calçada como rotas diferentes.", 18, WHITE)
@@ -220,12 +246,12 @@ func _draw_shop() -> void:
             var rect := Rect2(25.0 + col * 340.0, 250.0 + row * 145.0, 330.0, 126.0)
             _character_card(rect, characters[i])
     else:
-        _item_card(Rect2(30, 250, 315, 150), "Tênis turbo", "velocidade +", 200, CYAN)
-        _item_card(Rect2(375, 250, 315, 150), "Mochila", "escudo extra", 180, GOLD)
-        _item_card(Rect2(30, 425, 315, 150), "Fone", "ímã de moedas", 220, VIOLET)
-        _item_card(Rect2(375, 425, 315, 150), "Café térmico", "slow-motion", 150, Color("#c68053"))
-        _item_card(Rect2(30, 600, 315, 150), "Kit confete", "só estilo", 120, RED)
-        _item_card(Rect2(375, 600, 315, 150), "Placa VIP", "atalho visual", 300, BLUE)
+        var items: Array = state.get("items", [])
+        for i in items.size():
+            var col: int = i % 2
+            var row: int = int(i / 2)
+            var rect := Rect2(30.0 + col * 345.0, 250.0 + row * 175.0, 315.0, 150.0)
+            _item_card(rect, items[i])
     _button(Rect2(45, 1135, 630, 70), "VOLTAR", Color("#293955"), 22)
 
 func _character_card(rect: Rect2, character: Dictionary) -> void:
@@ -250,40 +276,73 @@ func _shop_card(rect: Rect2, title: String, subtitle: String, price: int, color:
     _text(rect.position + Vector2(130, 67), subtitle, 15, MUTED)
     _button(Rect2(rect.end.x - 150, rect.position.y + 34, 125, 55), "R$ %d" % price if price > 0 else "USAR", color, 16)
 
-func _item_card(rect: Rect2, title: String, subtitle: String, price: int, color: Color) -> void:
-    _panel(rect, Color("#223655"), 15)
+func _item_card(rect: Rect2, item: Dictionary) -> void:
+    var title := str(item.get("title", "Item"))
+    var subtitle := str(item.get("subtitle", "efeito"))
+    var price := int(item.get("price", 0))
+    var color: Color = item.get("accent", BLUE)
+    var owned := bool(item.get("owned", false))
+    _panel(rect, Color("#2a4663") if owned else Color("#223655"), 15)
     _text(rect.position + Vector2(22, 42), title, 21, WHITE)
     _text(rect.position + Vector2(22, 70), subtitle, 15, MUTED)
-    _button(Rect2(rect.end.x - 126, rect.position.y + 42, 105, 52), "R$ %d" % price, color, 15)
+    _text(rect.position + Vector2(22, 105), "efeito aplicado na próxima corrida" if owned else "compra única • sem aleatoriedade", 11, CYAN if owned else MUTED)
+    _button(Rect2(rect.end.x - 126, rect.position.y + 42, 105, 52), "ADQUIRIDO" if owned else "R$ %d" % price, GREEN if owned else color, 13)
 
 func _draw_achievements() -> void:
     _draw_ui_background()
-    _header("CONQUISTAS", "%d / 8" % int(GameSave.data.get("achievements", []).size()))
-    _text(Vector2(30, 126), "Histórias que merecem um vídeo curto.", 17, MUTED)
-    var names: Array[String] = ["Peguei o busão!", "Sobrevivi à enchente", "Cachorro caramelo", "Jeitinho brasileiro", "Só mais um pouquinho", "Brasil sem freio", "Combo de respeito", "Maratonista"]
-    for i in names.size():
+    var catalog: Array = state.get("achievement_catalog", [])
+    var unlocked_count := 0
+    for item in catalog:
+        if bool(item.get("unlocked", false)):
+            unlocked_count += 1
+    _header("CONQUISTAS", "%d / %d" % [unlocked_count, catalog.size()])
+    _text(Vector2(30, 126), "Estados reais do seu perfil: conquista e badge ficam claros.", 15, MUTED)
+    for i in catalog.size():
+        var item: Dictionary = catalog[i]
         var y: float = 160.0 + i * 118.0
-        _panel(Rect2(35, y, 650, 104), Color("#1d3658"), 17)
-        _panel(Rect2(57, y + 17, 58, 58), VIOLET, 16)
-        _text_center(Vector2(86, y + 54), "★", 30, INK)
-        _text(Vector2(140, y + 38), names[i], 19, WHITE)
-        _text(Vector2(140, y + 68), "complete no mundo 3D", 14, MUTED)
+        var unlocked := bool(item.get("unlocked", false))
+        var accent: Color = GREEN if unlocked else Color("#53647a")
+        _panel(Rect2(35, y, 650, 104), Color("#214b50") if unlocked else Color("#182942"), 17)
+        _panel(Rect2(57, y + 17, 58, 58), accent, 16)
+        _text_center(Vector2(86, y + 54), "✓" if unlocked else "?", 27, INK if unlocked else MUTED)
+        _text(Vector2(140, y + 38), str(item.get("name", "Conquista")), 19, WHITE if unlocked else MUTED)
+        _text(Vector2(140, y + 68), "%s • %s" % [str(item.get("kind", "achievement")).to_upper(), str(item.get("description", ""))], 14, CYAN if unlocked else MUTED)
+        _text(Vector2(565, y + 57), "LIBERADO" if unlocked else "EM ABERTO", 11, GREEN if unlocked else Color("#8091a7"))
     _button(Rect2(45, 1110, 630, 70), "VOLTAR", Color("#293955"), 22)
 
 func _draw_daily() -> void:
     _draw_ui_background()
     _header("DESAFIOS DIÁRIOS", "R$ %03d" % int(state.get("coins", 0)))
-    _text(Vector2(30, 126), "Três missões curtinhas para voltar amanhã.", 16, MUTED)
+    _text(Vector2(30, 126), "Três objetivos curtos, sem streak punitivo e sem recompensa aleatória.", 15, MUTED)
     var progress: Dictionary = state.get("daily_progress", {})
-    var lines: Array[String] = ["corra 250 metros", "pegue 10 moedas", "termine sem dano"]
-    var status: Array[String] = ["%dm / 250m" % mini(int(progress.get("meters", 0)), 250), "%d / 10 moedas" % mini(int(progress.get("coins", 0)), 10), "pronto" if bool(progress.get("clean", false)) else "termine sem dano"]
+    var targets: Dictionary = state.get("daily_targets", {"meters": 250, "coins": 10})
+    var completed: Array = state.get("daily_completed", [])
+    var meter_target := int(targets.get("meters", 250))
+    var coin_target := int(targets.get("coins", 10))
+    var lines: Array[String] = ["corra %d metros" % meter_target, "pegue %d moedas" % coin_target, "termine sem dano"]
+    var ready: Array[bool] = [int(progress.get("meters", 0)) >= meter_target, int(progress.get("coins", 0)) >= coin_target, bool(progress.get("clean", false))]
+    var status: Array[String] = ["%dm / %dm" % [mini(int(progress.get("meters", 0)), meter_target), meter_target], "%d / %d moedas" % [mini(int(progress.get("coins", 0)), coin_target), coin_target], "pronto" if bool(progress.get("clean", false)) else "termine sem dano"]
+    var titles: Array[String] = ["Pé na tábua", "Troco certo", "Desvia que eu vou"]
     for i in 3:
         var y: float = 200.0 + i * 190.0
-        _panel(Rect2(35, y, 650, 145), Color("#1a2f4e"), 17)
-        _text(Vector2(65, y + 43), ["Pé na tábua", "Troco certo", "Desvia que eu vou"][i], 25, WHITE)
+        var claimed := i in completed
+        var button_label := "RESGATADO" if claimed else ("RESGATAR" if ready[i] else "EM ANDAMENTO")
+        var button_color: Color = GREEN if claimed else (YELLOW if ready[i] else Color("#314563"))
+        _panel(Rect2(35, y, 650, 145), Color("#214b50") if claimed else Color("#1a2f4e"), 17)
+        _text(Vector2(65, y + 43), titles[i], 25, WHITE)
         _text(Vector2(65, y + 78), lines[i], 17, MUTED)
-        _text(Vector2(65, y + 116), status[i], 15, YELLOW)
-        _button(Rect2(505, y + 43, 145, 58), "RESGATAR", GREEN, 15)
+        _text(Vector2(65, y + 116), status[i], 15, GREEN if ready[i] else YELLOW)
+        _button(Rect2(505, y + 43, 145, 58), button_label, button_color, 13)
+    var weekly: Dictionary = state.get("weekly_progress", {})
+    var weekly_target := int(state.get("weekly_target", 2500))
+    var weekly_meters := int(weekly.get("meters", 0))
+    var weekly_claimed := bool(state.get("weekly_claimed", false))
+    var weekly_ready := weekly_meters >= weekly_target
+    _panel(Rect2(35, 790, 650, 155), Color("#342d57") if not weekly_claimed else Color("#214b50"), 17)
+    _text(Vector2(65, 830), "MARCO SEMANAL", 23, VIOLET if not weekly_claimed else GREEN)
+    _text(Vector2(65, 862), "%dm / %dm • objetivo acumulado" % [mini(weekly_meters, weekly_target), weekly_target], 15, MUTED)
+    _text(Vector2(65, 900), "sem pressão: o progresso fica até a virada da semana", 13, Color("#c6c5df"))
+    _button(Rect2(505, 832, 145, 58), "RESGATADO" if weekly_claimed else ("RESGATAR" if weekly_ready else "EM ANDAMENTO"), GREEN if weekly_claimed else (YELLOW if weekly_ready else Color("#314563")), 12)
     _button(Rect2(45, 1110, 630, 70), "VOLTAR", Color("#293955"), 22)
 
 func _draw_how_to() -> void:

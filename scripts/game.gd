@@ -1,5 +1,7 @@
 extends Node2D
-## Corre pro Ponto
+## Corre pro Ponto — implementação 2D legada (não é a cena de entrada).
+## `scenes/main.tscn` usa `game_3d.gd`; este arquivo fica apenas como referência
+## histórica para não criar uma segunda fonte de verdade de produto.
 ## Um runner mobile-first desenhado inteiramente com CanvasItem: sem dependências,
 ## sem internet e com o mesmo código funcionando no editor e no Android.
 

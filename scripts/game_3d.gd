@@ -162,7 +162,7 @@ var flash_alpha := 0.0
 func _ready() -> void:
     rng.seed = 20240917
     fx_rng.seed = 778899
-    GameSave.register_login()
+    var login_streak := GameSave.register_login()
     _setup_world()
     _setup_hud()
     _validate_obstacle_catalog()
@@ -172,8 +172,24 @@ func _ready() -> void:
     _rebuild_sky_fx()
     _rebuild_ambient_fx()
     AudioManager.play_music(0)
-    _show_feedback("CORRE PRO PONTO 3D", "Rua à esquerda • calçadas à direita", YELLOW, "ui_confirm")
+    if login_streak > 0 and login_streak % BALANCE.streak_reward_days == 0:
+        _show_feedback("MARCO DE RETORNO", "+R$ %d • %d dias seguidos" % [BALANCE.streak_reward, login_streak], GOLD, "streak")
+    else:
+        _show_feedback("CORRE PRO PONTO 3D", "Rua à esquerda • calçadas à direita", YELLOW, "ui_confirm")
     _sync_hud()
+
+func _phase_speed_for(index: int) -> float:
+    var safe_index := clampi(index, 0, BALANCE.phase_count - 1)
+    if safe_index <= BALANCE.chapter_unlock_phase:
+        return lerpf(BALANCE.base_speed, BALANCE.chapter_one_final_speed, float(safe_index) / float(maxi(1, BALANCE.chapter_unlock_phase)))
+    return lerpf(BALANCE.chapter_one_final_speed, BALANCE.final_speed, float(safe_index - BALANCE.chapter_unlock_phase) / float(maxi(1, BALANCE.phase_count - BALANCE.chapter_unlock_phase - 1)))
+
+func _phase_wait_for(index: int) -> float:
+    var safe_index := clampi(index, 0, BALANCE.phase_count - 1)
+    if safe_index <= BALANCE.chapter_unlock_phase:
+        var progress := float(safe_index) / float(maxi(1, BALANCE.chapter_unlock_phase))
+        return lerpf(BALANCE.first_wait_seconds, BALANCE.final_wait_seconds, progress)
+    return BALANCE.final_wait_seconds
 
 func _process(delta: float) -> void:
     var dt: float = minf(delta, 0.05)
@@ -309,7 +325,7 @@ func _rebuild_player_visual(character_id: String) -> void:
         player_visual.call("set_character", CHARACTER_DATA.canonical_id(character_id))
 
 func _start_run(index: int) -> void:
-    var clamped_index: int = clampi(index, 0, 49)
+    var clamped_index: int = clampi(index, 0, BALANCE.phase_count - 1)
     if not GameSave.is_phase_unlocked(clamped_index):
         _show_feedback("TELA BLOQUEADA", "Junte estrelas para liberar", RED, "ui_back")
         return
@@ -330,8 +346,9 @@ func _start_run(index: int) -> void:
     run_total = float(phase["distance"])
     player_lane = SIDEWALK_CENTER
     player_x = LANE_X[player_lane]
-    player_speed = float(phase["speed"])
-    hearts = 1 if phase_index in [19, 49] else 3
+    player_speed = _phase_speed_for(phase_index)
+    hearts = 1 if phase_index in [BALANCE.chapter_unlock_phase, BALANCE.endless_unlock_phase] else 3
+    GameSave.record_phase_attempt()
     max_hearts = hearts
     collected_coins = 0
     coin_multiplier = 1
@@ -386,6 +403,7 @@ func _start_run(index: int) -> void:
         slow_motion_timer = 2.0
     _clear_course()
     _build_course()
+    tutorial_hint = ""
     AudioManager.play_music(int(phase["music_group"]))
     if phase_index == 0 and not GameSave.data.get("tutorial_seen", false):
         tutorial_hint = "DESLIZE para trocar de faixa • toque para dash"
@@ -571,7 +589,9 @@ func _update_run(dt: float) -> void:
     if run_mode == "at_stop":
         stop_wait = maxf(0.0, stop_wait - dt)
         if stop_wait <= 0.0:
-            _finish_run(false)
+            # Chegar ao ponto é a vitória; o toque apenas embarca antes do
+            # fim da contagem, em vez de transformar uma vitória em punição.
+            _finish_run(true)
         return
     elapsed += dt
     run_phase += dt * (8.0 + player_speed)
@@ -622,7 +642,7 @@ func _update_run(dt: float) -> void:
             _finish_run(true)
             return
         run_mode = "at_stop"
-        stop_wait_total = float(phase.get("wait", 3.0))
+        stop_wait_total = _phase_wait_for(phase_index) if not endless_mode else 0.0
         stop_wait = stop_wait_total
         if bus_stop_node:
             bus_stop_node.visible = true
@@ -695,7 +715,8 @@ func _collect(kind: String, pos: Vector3) -> void:
             "umbrella":
                 rain_guard_timer = 12.0
             "golden":
-                GameSave.unlock("caramelo", 0)
+                if GameSave.unlock_pet("caramelo"):
+                    _show_feedback("SKIN LIBERADA", "Cachorro Caramelo entrou no time", GOLD, "reward")
     GameSave.add_coins(value)
     _spawn_3d_burst(pos + Vector3(0, 1.0, 0), GOLD, 8)
 
@@ -717,6 +738,8 @@ func _hit_player(kind: String) -> void:
     _spawn_3d_burst(player_root.position + Vector3(0, 1.0, 0), RED, 18)
     if kind == "dog":
         GameSave.data["dog_hits"] = int(GameSave.data.get("dog_hits", 0)) + 1
+        if int(GameSave.data["dog_hits"]) >= 10:
+            GameSave.award_achievement("dog")
         GameSave.save()
 
 func _change_lane(direction: int) -> void:
@@ -761,51 +784,120 @@ func _catch_bus() -> void:
 func _finish_run(success: bool, game_over := false) -> void:
     if screen != 2:
         return
-    GameSave.record_daily_progress(Time.get_date_string_from_system(), int(distance), collected_coins, success and no_damage)
+    var date_key := Time.get_date_string_from_system()
+    GameSave.record_daily_progress(date_key, int(distance), collected_coins, success and no_damage)
+    GameSave.record_weekly_progress(GameSave.weekly_key(), int(distance), collected_coins, success and no_damage)
     if endless_mode:
         if success:
             var old_best: int = int(GameSave.data.get("endless_best", 0))
             var is_record: bool = int(distance) > old_best
             if is_record:
                 GameSave.data["endless_best"] = int(distance)
-                GameSave.save()
-            var reward: int = 40 + int(distance / 10.0) + collected_coins + combo * 2
+            var distance_bonus: int = mini(33, int(distance / 30.0))
+            var first_score_reward: int = 20 + distance_bonus + mini(15, collected_coins)
+            # Endless replay tem valor, mas não pode virar uma impressora de moedas.
+            var reward: int = first_score_reward + (25 if is_record else 0)
+            if not is_record:
+                reward = mini(reward, BALANCE.replay_reward + distance_bonus)
             GameSave.add_coins(reward)
-            GameSave.add_xp(100 + int(distance / 5.0))
-            result = {"success": true, "endless": true, "reward": reward, "time": elapsed, "coins": collected_coins, "record": is_record, "distance": int(distance)}
-            _show_feedback("ENDLESS CONCLUÍDO!", "%dm • +R$ %d" % [int(distance), reward], VIOLET, "streak")
+            var xp_reward := 40 + int(distance / 12.0) if is_record else BALANCE.xp_replay
+            GameSave.add_xp(xp_reward)
+            result = {
+                "success": true,
+                "endless": true,
+                "reward": reward,
+                "time": elapsed,
+                "coins": collected_coins,
+                "record": is_record,
+                "distance": int(distance),
+                "xp": xp_reward
+            }
+            _show_feedback("ENDLESS CONCLUÍDO!", "%dm • +R$ %d de bônus" % [int(distance), reward], VIOLET, "streak")
         else:
-            result = {"success": false, "endless": true, "reward": 0, "time": elapsed, "coins": collected_coins, "record": false, "game_over": game_over, "distance": int(distance)}
+            result = {
+                "success": false,
+                "endless": true,
+                "reward": 0,
+                "time": elapsed,
+                "coins": collected_coins,
+                "record": false,
+                "game_over": game_over,
+                "distance": int(distance),
+                "xp": 0
+            }
             _show_feedback("MAIS UM!", "Seu melhor corre ainda está aí", RED, "impact_heavy")
+        GameSave.flush()
         run_mode = "results"
         screen = 3
         return
+    GameSave.record_phase_result(success, phase_index, elapsed, int(distance))
     if success:
+        # A regra das estrelas é explícita: terminar, não sofrer dano e cumprir
+        # a meta de moedas. Tempo serve para recorde, não para esconder a regra.
         var stars := 1
         if no_damage:
-            stars = 2
+            stars += 1
+        if collected_coins >= int(phase["coin_target"]):
+            stars += 1
+        var previous_stars := GameSave.phase_stars(phase_index)
         var previous_time: float = GameSave.best_time(phase_index)
         var record: bool = previous_time <= 0.0 or elapsed < previous_time
-        if collected_coins >= int(phase["coin_target"]) and (record or elapsed < 100.0):
-            stars = 3
-        var reward: int = 20 + phase_index * 3 + stars * 5 + collected_coins + combo
-        GameSave.record_phase(phase_index, stars, elapsed)
+        var record_info: Dictionary = GameSave.record_phase(phase_index, stars, elapsed)
+        var first_clear: bool = bool(record_info.get("first_clear", false))
+        var new_stars: int = int(record_info.get("new_stars", 0))
+        var base_reward: int = BALANCE.first_clear_reward if first_clear else BALANCE.replay_reward
+        var level_reward: int = phase_index * BALANCE.phase_reward_per_level if first_clear else 0
+        var star_reward: int = stars * BALANCE.star_reward if first_clear else new_stars * BALANCE.star_upgrade_reward
+        var perfect_reward: int = BALANCE.perfect_run_bonus if no_damage and first_clear else 0
+        var reward: int = base_reward + level_reward + star_reward + perfect_reward
+        var xp_reward: int = (BALANCE.xp_first_clear + phase_index * BALANCE.xp_per_level) if first_clear else BALANCE.xp_replay + new_stars * 5
         GameSave.add_coins(reward)
-        GameSave.add_xp(25 + phase_index * 4 + int(run_score / 100.0))
-        if phase_index == 19:
+        GameSave.add_xp(xp_reward)
+        if phase_index == 8 and no_damage:
+            GameSave.award_achievement("enchente")
+        if no_damage:
+            GameSave.award_badge("sem_arranhao")
+        if phase_index == BALANCE.chapter_unlock_phase:
             GameSave.award_achievement("busao")
             GameSave.award_badge("capitulo1")
-        if phase_index == 49:
+        if phase_index == BALANCE.phase_count - 1:
             GameSave.award_achievement("busao50")
             GameSave.award_badge("maratonista")
             GameSave.data["endless_unlocked"] = true
-            GameSave.save()
-        result = {"success": true, "stars": stars, "reward": reward, "time": elapsed, "coins": collected_coins, "record": record}
-        _show_feedback("PEGUEI O BUSÃO!", "%d estrelas • +R$ %d" % [stars, reward], YELLOW, "streak")
+        result = {
+            "success": true,
+            "stars": stars,
+            "previous_stars": previous_stars,
+            "new_stars": new_stars,
+            "first_clear": first_clear,
+            "reward": reward,
+            "bonus_reward": reward,
+            "reward_breakdown": {
+                "base": base_reward,
+                "level": level_reward,
+                "stars": star_reward,
+                "perfect": perfect_reward
+            },
+            "time": elapsed,
+            "coins": collected_coins,
+            "record": record,
+            "xp": xp_reward
+        }
+        _show_feedback("PEGUEI O BUSÃO!", "%d estrelas • +R$ %d de bônus" % [stars, reward], YELLOW, "streak")
         _spawn_3d_burst(Vector3(player_x, 1.4, -8.0), YELLOW, 28)
     else:
-        result = {"success": false, "stars": 0, "reward": 0, "time": elapsed, "coins": collected_coins, "game_over": game_over, "record": false}
+        result = {
+            "success": false,
+            "stars": 0,
+            "reward": 0,
+            "time": elapsed,
+            "coins": collected_coins,
+            "game_over": game_over,
+            "record": false,
+            "xp": 0
+        }
         _show_feedback("O BUSÃO FOI EMBORA", "Use as três faixas a seu favor", RED, "impact_heavy")
+    GameSave.flush()
     run_mode = "results"
     screen = 3
 
@@ -1913,16 +2005,17 @@ func _sync_hud() -> void:
     if screen == 1:
         var first_phase: int = map_page * 10
         for local_index in 10:
-            var phase_data: Dictionary = PhaseData.get_phase(first_phase + local_index)
+            var absolute_index := first_phase + local_index
+            var phase_data: Dictionary = PhaseData.get_phase(absolute_index)
             cards.append({
-                "index": first_phase + local_index,
+                "index": absolute_index,
                 "name": str(phase_data["name"]),
                 "location": str(phase_data["location"]),
-                "scenario": SCENARIO_DATA.chapter_name(first_phase + local_index),
+                "scenario": SCENARIO_DATA.chapter_name(absolute_index),
                 "accent": phase_data["accent"],
                 "difficulty": int(phase_data["difficulty"]),
-                "stars": GameSave.phase_stars(first_phase + local_index),
-                "unlocked": GameSave.is_phase_unlocked(first_phase + local_index)
+                "stars": GameSave.phase_stars(absolute_index),
+                "unlocked": GameSave.is_phase_unlocked(absolute_index)
             })
     var characters: Array[Dictionary] = []
     var equipped_character: String = CHARACTER_DATA.canonical_id(GameSave.equipped_character())
@@ -1931,10 +2024,43 @@ func _sync_hud() -> void:
         character_card["owned"] = GameSave.owns(str(character.get("id", "")))
         character_card["equipped"] = str(character.get("id", "")) == equipped_character
         characters.append(character_card)
-    var daily_progress: Dictionary = GameSave.daily_progress(Time.get_date_string_from_system())
+    var items: Array[Dictionary] = [
+        {"id": "tenis", "title": "Tênis turbo", "subtitle": "velocidade +", "price": 200, "accent": CYAN, "owned": GameSave.owns("tenis")},
+        {"id": "mochila", "title": "Mochila", "subtitle": "escudo extra", "price": 180, "accent": GOLD, "owned": GameSave.owns("mochila")},
+        {"id": "fone", "title": "Fone", "subtitle": "ímã de moedas", "price": 220, "accent": VIOLET, "owned": GameSave.owns("fone")},
+        {"id": "cafe", "title": "Café térmico", "subtitle": "slow-motion", "price": 150, "accent": Color("#c68053"), "owned": GameSave.owns("cafe")},
+        {"id": "confete", "title": "Kit confete", "subtitle": "só estilo", "price": 120, "accent": RED, "owned": GameSave.owns("confete")},
+        {"id": "placa", "title": "Placa VIP", "subtitle": "atalho visual", "price": 300, "accent": BLUE, "owned": GameSave.owns("placa")}
+    ]
+    var achievement_catalog: Array[Dictionary] = [
+        {"id": "busao", "name": "Peguei o busão!", "description": "Conclua o capítulo 1", "kind": "achievement"},
+        {"id": "enchente", "name": "Chuva sem susto", "description": "Passe a fase 9 sem dano", "kind": "achievement"},
+        {"id": "dog", "name": "Cachorro caramelo", "description": "Aguente 10 encontros", "kind": "achievement"},
+        {"id": "busao50", "name": "Brasil sem freio", "description": "Conclua as 50 fases", "kind": "achievement"},
+        {"id": "capitulo1", "name": "Primeiro terminal", "description": "Badge de capítulo", "kind": "badge"},
+        {"id": "combo15", "name": "Combo de respeito", "description": "Chegue ao combo 15", "kind": "badge"},
+        {"id": "sem_arranhao", "name": "Sem arranhão", "description": "Conclua sem sofrer dano", "kind": "badge"},
+        {"id": "maratonista", "name": "Maratonista", "description": "Liberte o Endless", "kind": "badge"}
+    ]
+    for achievement in achievement_catalog:
+        var id := str(achievement["id"])
+        achievement["unlocked"] = GameSave.has_achievement(id) or id in GameSave.data.get("badges", [])
+    var date_key := Time.get_date_string_from_system()
+    var week_key := GameSave.weekly_key()
+    var daily_progress: Dictionary = GameSave.daily_progress(date_key)
+    var weekly_progress: Dictionary = GameSave.weekly_progress(week_key)
+    var next_unlock_stars := 0
+    if not GameSave.is_phase_unlocked(BALANCE.chapter_unlock_phase):
+        next_unlock_stars = BALANCE.unlock_chapter_stars
+    elif not GameSave.is_phase_unlocked(BALANCE.endless_unlock_phase):
+        next_unlock_stars = BALANCE.unlock_endless_stars
     var state: Dictionary = {
         "screen": screen,
         "coins": GameSave.coins(),
+        "xp": GameSave.xp(),
+        "xp_level": GameSave.xp_level(),
+        "xp_into_level": GameSave.xp_into_level(),
+        "xp_to_next_level": GameSave.xp_to_next_level(),
         "stars": GameSave.total_stars(),
         "streak": int(GameSave.data.get("daily_streak", 0)),
         "phase_index": phase_index,
@@ -1946,6 +2072,7 @@ func _sync_hud() -> void:
         "hearts": hearts,
         "max_hearts": max_hearts,
         "combo": combo,
+        "coins_run": collected_coins,
         "dash_cooldown": dash_cooldown,
         "run_mode": run_mode,
         "stop_wait": stop_wait,
@@ -1957,10 +2084,19 @@ func _sync_hud() -> void:
         "shop_tab": shop_tab,
         "daily_progress": daily_progress,
         "daily_completed": GameSave.get_daily_completed(),
+        "daily_targets": {"meters": BALANCE.daily_distance_target, "coins": BALANCE.daily_coin_target},
+        "weekly_progress": weekly_progress,
+        "weekly_claimed": GameSave.weekly_claimed(week_key),
+        "weekly_key": week_key,
+        "weekly_target": BALANCE.weekly_distance_target,
+        "next_unlock_stars": next_unlock_stars,
+        "achievement_catalog": achievement_catalog,
+        "items": items,
         "feedback_title": feedback_title,
         "feedback_detail": feedback_detail,
         "feedback_color": feedback_color,
         "tutorial_hint": tutorial_hint,
+        "first_session_hint_distance": BALANCE.first_session_hint_distance,
         "scenario_label": str(scenario.get("label", "Brasil")),
         "scenario_chapter": str(scenario.get("chapter", "Rua brasileira")),
         "scenario_weather": str(scenario.get("weather", "sol")),
@@ -1977,6 +2113,10 @@ func _handle_key(event: InputEventKey) -> void:
         elif screen != 0:
             screen = 0
             _show_feedback("MENU", "Escolha o próximo corre", BLUE, "ui_back")
+        return
+    if event.keycode == KEY_M:
+        AudioManager.toggle_mute()
+        _show_feedback("SOM DESLIGADO" if AudioManager.muted else "SOM LIGADO", "Você escolhe o feedback", BLUE, "ui_confirm")
         return
     if screen == 2:
         if event.is_action_pressed("move_left") or event.keycode == KEY_LEFT:
@@ -2038,7 +2178,10 @@ func _handle_pointer_release(pos: Vector2, duration_ms: int) -> void:
 
 func _handle_tap(pos: Vector2) -> void:
     if screen == 0:
-        if Rect2(70, 564, 580, 104).has_point(pos):
+        if Rect2(510, 132, 156, 46).has_point(pos):
+            AudioManager.toggle_mute()
+            _show_feedback("SOM DESLIGADO" if AudioManager.muted else "SOM LIGADO", "Você escolhe o feedback", BLUE, "ui_confirm")
+        elif Rect2(70, 564, 580, 104).has_point(pos):
             _start_run(0)
         elif Rect2(70, 700, 275, 82).has_point(pos):
             screen = 1
@@ -2128,6 +2271,8 @@ func _daily_at_position(pos: Vector2) -> int:
     for i in 3:
         if Rect2(35, 200 + i * 190, 650, 145).has_point(pos):
             return i
+    if Rect2(35, 800, 650, 145).has_point(pos):
+        return -2
     return -1
 
 func _shop_tap(pos: Vector2) -> void:
@@ -2160,32 +2305,49 @@ func _shop_tap(pos: Vector2) -> void:
             if rect.has_point(pos):
                 var id: String = str(items[i][0])
                 var price: int = int(items[i][1])
-                if GameSave.unlock(id, price):
+                if GameSave.owns(id):
+                    _show_feedback("JÁ ADQUIRIDO", "Efeito aplicado na próxima corrida", MUTED, "ui_back")
+                elif GameSave.unlock(id, price):
                     _show_feedback("ITEM ADQUIRIDO!", id.to_upper(), GOLD, "reward")
                 else:
                     _show_feedback("FALTAM MOEDAS", "Junte mais R$", RED, "ui_back")
                 return
 
 func _claim_daily(index: int) -> void:
+    if index == -2:
+        var current_week := GameSave.weekly_key()
+        if GameSave.weekly_claimed(current_week):
+            _show_feedback("JÁ RESGATADO", "O marco volta na próxima semana", MUTED, "ui_back")
+            return
+        var weekly := GameSave.weekly_progress(current_week)
+        if int(weekly.get("meters", 0)) < BALANCE.weekly_distance_target:
+            _show_feedback("MARCO SEMANAL", "%dm restantes" % maxi(0, BALANCE.weekly_distance_target - int(weekly.get("meters", 0))), RED, "ui_back")
+            return
+        GameSave.set_weekly_claimed(current_week)
+        GameSave.add_coins(BALANCE.weekly_reward)
+        GameSave.flush()
+        _show_feedback("MARCO COMPLETO!", "+R$ %d • semana garantida" % BALANCE.weekly_reward, GOLD, "reward")
+        return
     if index < 0:
         return
     var key := Time.get_date_string_from_system()
     var completed: Array = GameSave.get_daily_completed()
-    if GameSave.data.get("daily_date", "") != key:
+    if str(GameSave.data.get("daily_date", "")) != key:
         completed = []
     if index in completed:
         _show_feedback("JÁ RESGATADO", "Volte amanhã", MUTED, "ui_back")
         return
     var progress: Dictionary = GameSave.daily_progress(key)
-    var ready := (index == 0 and int(progress.get("meters", 0)) >= 250) or (index == 1 and int(progress.get("coins", 0)) >= 10) or (index == 2 and bool(progress.get("clean", false)))
+    var ready := (index == 0 and int(progress.get("meters", 0)) >= BALANCE.daily_distance_target) or (index == 1 and int(progress.get("coins", 0)) >= BALANCE.daily_coin_target) or (index == 2 and bool(progress.get("clean", false)))
     if not ready:
         _show_feedback("QUASE LÁ!", "Complete a missão primeiro", RED, "ui_back")
         return
     completed.append(index)
     GameSave.set_daily_completed(completed, key)
-    var reward: int = 25 + index * 10
+    var reward: int = BALANCE.daily_base_reward + index * BALANCE.daily_step_reward
     GameSave.add_coins(reward)
-    _show_feedback("RECOMPENSA!", "+R$ %d" % reward, GOLD, "reward")
+    GameSave.flush()
+    _show_feedback("RECOMPENSA!", "+R$ %d • objetivo claro" % reward, GOLD, "reward")
 
 # -----------------------------------------------------------------------------
 # Materials and primitive meshes

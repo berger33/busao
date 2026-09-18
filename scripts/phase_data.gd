@@ -3,6 +3,7 @@ extends RefCounted
 ## Catálogo completo das 50 corridas. As 30 telas extras formam a expansão
 ## "Brasil sem Freio" e usam as mesmas peças vetoriais para manter o APK leve.
 
+const BALANCE = preload("res://resources/game_balance.tres")
 const PHASE_COUNT := 50
 
 const THEMES := [
@@ -100,19 +101,20 @@ static func get_phase(index: int) -> Dictionary:
     var ramps: int
     var wall_runs: int
     var wait_time: float
-    if i <= 19:
-        speed = 5.0 + (9.0 * float(i) / 19.0)
-        obstacles = 2 + int(round(10.0 * float(i) / 19.0))
-        ramps = 1 + int(floor(float(i) * 4.0 / 19.0))
-        wall_runs = int(floor(float(i) * 4.0 / 19.0))
-        wait_time = 10.0 - (8.0 * float(i) / 19.0)
+    if i <= BALANCE.chapter_unlock_phase:
+        var chapter_progress := float(i) / float(maxi(1, BALANCE.chapter_unlock_phase))
+        speed = lerpf(BALANCE.base_speed, BALANCE.chapter_one_final_speed, chapter_progress)
+        obstacles = 2 + int(round(10.0 * chapter_progress))
+        ramps = 1 + int(floor(float(i) * 4.0 / float(maxi(1, BALANCE.chapter_unlock_phase))))
+        wall_runs = int(floor(float(i) * 4.0 / float(maxi(1, BALANCE.chapter_unlock_phase))))
+        wait_time = lerpf(BALANCE.first_wait_seconds, BALANCE.final_wait_seconds, chapter_progress)
     else:
-        var expansion_progress := float(i - 19) / 30.0
-        speed = 14.0 + 4.0 * expansion_progress
+        var expansion_progress := float(i - BALANCE.chapter_unlock_phase) / float(maxi(1, BALANCE.phase_count - BALANCE.chapter_unlock_phase - 1))
+        speed = lerpf(BALANCE.chapter_one_final_speed, BALANCE.final_speed, expansion_progress)
         obstacles = 12 + int(round(6.0 * expansion_progress))
         ramps = 5 + int(floor(3.0 * expansion_progress))
         wall_runs = 4 + int(floor(4.0 * expansion_progress))
-        wait_time = 2.0 - 1.0 * expansion_progress
+        wait_time = BALANCE.final_wait_seconds
     var difficulty: int = 1 + int(floor(float(i) * 8.0 / 49.0))
     return {
         "index": i,

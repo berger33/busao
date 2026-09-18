@@ -16,9 +16,11 @@ Um runner mobile-first **totalmente 3D** em **Godot 4.x**, inspirado na leitura 
 - Coletáveis 3D: R$ 0,25, café, pão de queijo, pastel, caldo de cana, vale-transporte, bilhete dourado, coxinha, guaraná, PIX Turbo e guarda-chuva.
 - Estrelas por fase, mapa paginado em 5 capítulos, Tela 20 liberada com 45 estrelas e Tela 50 com 120 estrelas.
 - **Endless** liberado ao concluir a Tela 50, com corrida de 1000 m, XP, combo e recorde local persistido.
-- Sequência diária: login consecutivo, bônus de R$ 100 a cada 7 dias, XP e badges de coleção.
+- Sequência diária: login consecutivo, bônus de R$ 100 a cada 7 dias e badges de coleção; a sequência é informativa e não bloqueia fases.
 - Loja com **10 perfis humanos brasileiros** (5 masculinos e 5 femininos): o asset skinned compartilhado recebe corpo, pele, cabelo e paletas de roupa diferentes por perfil, enquanto preços, descrições e habilidades ficam persistidos localmente.
-- Conquistas, desafios diários e save JSON em `user://corre_pro_ponto.json`.
+- Conquistas, badges, desafios diários, marco semanal e save JSON versionado em `user://corre_pro_ponto.json`, com autosave amortizado, backup e recuperação de escrita interrompida.
+- Progressão/economia com primeira conclusão, replay de bônus fixo, diferença de estrela, saldo de moedas sem duplicação e loja com estado adquirido/equipado comunicado na HUD.
+- Instrumentação local sem PII para sessões, tentativas, conclusões, falhas, primeiros clears, tempo, distância e compras; não há telemetria de rede neste escopo.
 - Ganchos “clipáveis” do runner 3D: perseguição do caramelo, chegada no ônibus amarelo, tráfego pesado, mudança rua/calçada, dash com partículas e bônus de comida brasileira.
 - Elementos de retenção: combo de moedas, badges, XP, login streak, capítulo 1 + expansão de 30 telas, mapa por capítulos e Endless final.
 - Sons essenciais: passos/ações, pulo, moeda, colisão, buzina, latido, grito do motoboy e trilhas de quatro grupos de cenário.
@@ -56,7 +58,8 @@ assets/characters/quaternius/  Corpo humano GLTF, roupa skinned, PBR, licença e
 assets/audio/*.wav           SFX e músicas procedurais originais
 tools/generate_audio.py    Gerador reproduzível dos WAVs
 tools/validate_project.py  Preflight de catálogo, caminhos e assets
-docs/QUALITY_AUDIT.md      Auditoria e roadmap de qualidade
+docs/QUALITY_AUDIT.md      Auditoria e roadmap de qualidade visual/técnica
+docs/PRODUCT_AUDIT.md      Auditoria de produto, economia, retenção e métricas
 CREDITS.md                 Créditos e licenças
 ```
 
@@ -86,9 +89,9 @@ O catálogo continua oferecendo dez identidades e progressão de loja, mas a rep
 2. Abra o Project Manager → **Import** → selecione a pasta que contém este `project.godot`.
 3. Se o Godot perguntar pelo renderer, escolha **Compatibility / GL Compatibility**.
 4. Pressione **F6** para a cena atual ou **F5** para o projeto. A cena principal já é `scenes/main.tscn`.
-5. O jogo abre em retrato, viewport lógico de 720×1280, na cena `Node3D` `CorreProPonto3D`. No desktop, use `A/D` ou setas para mudar entre rua e calçadas, `W/↑/Espaço` para pular, `S/↓` para deslizar e `X` para dash. No Android, use os gestos indicados na HUD.
+5. O jogo abre em retrato, viewport lógico de 720×1280, na cena `Node3D` `CorreProPonto3D`. No desktop, use `A/D` ou setas para mudar entre rua e calçadas, `W/↑/Espaço` para pular, `S/↓` para deslizar, `X` para dash e `M` para ligar/desligar o som. No Android, use os gestos indicados na HUD; o botão de som permanece disponível no menu.
 
-O projeto não precisa de plugins, fontes, conexão de internet, banco de dados ou assets baixados. O save é criado automaticamente em `user://`; para reiniciar o progresso, apague `corre_pro_ponto.json` na pasta de dados do usuário do Godot.
+O projeto não precisa de plugins, fontes, conexão de internet, banco de dados ou assets baixados. O save é criado automaticamente em `user://`; para reiniciar o progresso, apague `corre_pro_ponto.json`, `corre_pro_ponto.bak.json` e `corre_pro_ponto.tmp.json` na pasta de dados do usuário do Godot.
 
 ## Android 8.0+
 

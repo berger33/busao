@@ -39,6 +39,7 @@ var muted := false
 
 func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
+    muted = bool(GameSave.data.get("audio_muted", false))
     for i in SFX_POOL_SIZE:
         var audio := AudioStreamPlayer.new()
         audio.name = "SFX_%02d" % i
@@ -90,6 +91,8 @@ func play_music(group: int) -> void:
 
 func toggle_mute() -> void:
     muted = not muted
+    GameSave.data["audio_muted"] = muted
+    GameSave.flush()
     if muted and music_player:
         music_player.stop()
     elif not muted:
