@@ -361,8 +361,15 @@ func _build_sky_material(mode: String) -> Material:
 	proc.sun_curve = 0.08
 	proc.use_debanding = true
 	if _method != "gl_compatibility":
-		proc.sky_cover = clampf(float(_profile.get("clouds", 0.3)), 0.0, 1.0)
-		proc.sky_cover_modulate = Color(1.0, 0.97, 0.92)
+		# nuvens: sky_cover e uma TEXTURA (equirretangular — o nuvens.png do
+		# Lote 4, assets/textures/ceu/nuvens.png); a forca da cobertura vai na
+		# tinta (sky_cover_modulate), como no WeatherSystem.
+		var nuvens_caminho := "res://assets/textures/ceu/nuvens.png"
+		var nuvens_tex := ResourceLoader.load(nuvens_caminho) as Texture2D
+		if nuvens_tex != null:
+			proc.sky_cover = nuvens_tex
+			var forca := clampf(float(_profile.get("clouds", 0.3)), 0.0, 1.0)
+			proc.sky_cover_modulate = Color(1.0, 0.97, 0.92) * forca
 	return proc
 
 
@@ -457,7 +464,7 @@ func _measure() -> void:
 	var h := img.get_height()
 	if w <= 0 or h <= 0:
 		return
-	var step := int(max(1.0, sqrt(float(w * h) / 20000.0)))
+	var passo_luma := int(max(1.0, sqrt(float(w * h) / 20000.0)))
 	var min_luma := 8.0
 	var blown := 0
 	var samples := 0
@@ -472,8 +479,8 @@ func _measure() -> void:
 			if l > 0.985:
 				blown += 1
 			samples += 1
-			x += step
-		y += step
+			x += passo_luma
+		y += passo_luma
 	if samples <= 0:
 		return
 	_min_luma = min_luma
