@@ -1,0 +1,2483 @@
+extends Node3D
+## Corre pro Ponto — versão 3D mobile-first.
+##
+## O jogador corre por uma avenida brasileira em terceira pessoa. A faixa
+## esquerda é rua (carros, ônibus, motos e buracos); as faixas centro/direita
+## são calçadas (pedestres, hidrante, orelhão, cachorro, bicicleta e camelô).
+## O cenário é montado com assemblies 3D low-poly detalhados, materiais PBR leves
+## e texturas raster/SVG: o mundo desliza no eixo -Z, muda de arquitetura a cada
+## capítulo e mantém o APK leve para Android.
+
+const BALANCE = preload("res://resources/game_balance.tres")
+const SCENARIO_DATA = preload("res://scripts/scenario_data.gd")
+const CHARACTER_DATA = preload("res://scripts/character_data.gd")
+const SHOP_DATA = preload("res://scripts/shop_data.gd")
+const OBSTACLE_DATA = preload("res://scripts/obstacle_data.gd")
+const RUNNER_CHARACTER_SCRIPT = preload("res://scripts/runner_character.gd")
+const WORLD_CHARACTER_SCRIPT = preload("res://scripts/world_character.gd")
+const WORLD_ANIMAL_SCRIPT = preload("res://scripts/world_animal.gd")
+const TEXTURE_ASPHALT = preload("res://assets/textures/asfalto_brasil.svg")
+const TEXTURE_ASPHALT_REAL = preload("res://assets/textures/asfalto_realista.png")
+const TEXTURE_ASPHALT_NORMAL = preload("res://assets/textures/asfalto_normal.svg")
+const TEXTURE_DIRT = preload("res://assets/textures/terra_vermelha.svg")
+const TEXTURE_SIDEWALK = preload("res://assets/textures/calcada_portuguesa.svg")
+const TEXTURE_SIDEWALK_REAL = preload("res://assets/textures/calcada_realista.png")
+const TEXTURE_SIDEWALK_NORMAL = preload("res://assets/textures/calcada_normal.svg")
+const TEXTURE_COBBLE = preload("res://assets/textures/cobblestone.svg")
+const TEXTURE_SKY_PANORAMA = preload("res://assets/textures/ceu_tropical.png")
+const TEXTURE_SKY_SUNSET = preload("res://assets/textures/ceu_entardecer.png")
+const TEXTURE_SKY_CLOUDY = preload("res://assets/textures/ceu_nublado.png")
+const TEXTURE_HAIR_REAL = preload("res://assets/textures/cabelo_realista.png")
+const TEXTURE_DENIM_REAL = preload("res://assets/textures/jeans_realista.png")
+const TEXTURE_CAR_PAINT_REAL = preload("res://assets/textures/pintura_carro_realista.png")
+const TEXTURE_BRICK = preload("res://assets/textures/parede_tijolo.svg")
+const TEXTURE_STUCCO = preload("res://assets/textures/reboco_colorido.svg")
+const TEXTURE_METAL = preload("res://assets/textures/metal_pintado.svg")
+const TEXTURE_GLASS = preload("res://assets/textures/vidro_azul.svg")
+const TEXTURE_FABRIC = preload("res://assets/textures/tecido_urbano.svg")
+const TEXTURE_SKIN = preload("res://assets/textures/pele_suave.svg")
+const TEXTURE_LEAVES = preload("res://assets/textures/folhagem_brasil.svg")
+const TEXTURE_WOOD = preload("res://assets/textures/madeira_brasil.svg")
+const TEXTURE_RUBBER = preload("res://assets/textures/borracha.svg")
+const TEXTURE_PAINT = preload("res://assets/textures/pintura_micro.svg")
+const LANE_X: Array[float] = [-3.25, 0.0, 3.25]
+const ROAD_LANE := 0
+const SIDEWALK_CENTER := 1
+const SIDEWALK_RIGHT := 2
+const PLAYER_Z := 0.0
+const HORIZON_Z := -75.0
+const WHITE := Color("#fff8e7")
+const MUTED := Color("#a9b9ca")
+const YELLOW := Color("#ffd34e")
+const GOLD := Color("#ffb83e")
+const RED := Color("#f2635e")
+const GREEN := Color("#54d18b")
+const BLUE := Color("#63c8ed")
+const CYAN := Color("#63e6d2")
+const VIOLET := Color("#ac8cff")
+const UI_BG := Color("#0b1224")
+const UI_PANEL := Color("#14233f")
+const PLAYER_HEIGHT := 2.15
+const WORLD_LENGTH_MARGIN := 80.0
+
+const ROAD_OBSTACLES: Array[String] = [
+    "car", "car", "motorcycle", "pothole", "bus_traffic", "car", "truck"
+]
+const SIDEWALK_OBSTACLES: Array[String] = [
+    "old_lady", "hydrant", "payphone", "dog", "bicycle", "cone", "vendor", "bench"
+]
+const COLLECTIBLES: Dictionary = {
+    "coin": "R$ 0,25",
+    "coffee": "CAFÉ",
+    "bread": "PÃO DE QUEIJO",
+    "pastel": "PASTEL",
+    "sugarcane": "CALDO DE CANA",
+    "pass": "VALE-TRANSPORTE",
+    "golden": "BILHETE DOURADO",
+    "coxinha": "COXINHA",
+    "guarana": "GUARANÁ",
+    "pix": "PIX TURBO",
+    "umbrella": "GUARDA-CHUVA"
+}
+
+var screen := 0 # menu, mapa, corrida, resultado, loja, conquistas, diários, guia
+var previous_screen := 0
+var map_page := 0
+var shop_tab := 0
+var selected_phase := 0
+var phase_index := 0
+var phase: Dictionary = {}
+var scenario: Dictionary = {}
+var endless_mode := false
+var run_mode := "playing" # playing, paused, at_stop, results
+var distance := 0.0
+var elapsed := 0.0
+var run_total := 400.0
+var player_lane := SIDEWALK_CENTER
+var player_x := 0.0
+var player_speed := 5.0
+var hearts := 3
+var max_hearts := 3
+var collected_coins := 0
+var coin_multiplier := 1
+var combo := 0
+var combo_timer := 0.0
+var run_score := 0
+var no_damage := true
+var jump_timer := 0.0
+var jump_duration := 0.9
+var slide_timer := 0.0
+var dash_timer := 0.0
+var dash_cooldown := 0.0
+var shield_hits := 0
+var speed_boost_timer := 0.0
+var slow_motion_timer := 0.0
+var magnet_timer := 0.0
+var rain_guard_timer := 0.0
+var stop_wait := 0.0
+var stop_wait_total := 0.0
+var wall_run_count := 0
+var dog_chase_timer := 0.0
+var tutorial_hint := ""
+var tutorial_stage := -1
+var result: Dictionary = {}
+var pulse := 0.0
+var run_phase := 0.0
+var step_timer := 0.0
+var motion_speed := 0.0
+var lane_change_velocity := 0.0
+
+var world_root: Node3D
+var course_root: Node3D
+var entity_root: Node3D
+var decor_root: Node3D
+var fx_root: Node3D
+var player_root: Node3D
+var player_visual: Node3D
+var camera: Camera3D
+var bus_node: Node3D
+var bus_stop_node: Node3D
+var hud: Control
+var environment: WorldEnvironment
+var sun: DirectionalLight3D
+var sky: Sky
+var sky_material: PanoramaSkyMaterial
+var sky_fx_root: Node3D
+var sky_fx_nodes: Array[Dictionary] = []
+var ambient_fx_root: Node3D
+var ambient_fx_nodes: Array[Dictionary] = []
+var entities: Array[Dictionary] = []
+var fx_nodes: Array[Dictionary] = []
+var primitive_mesh_cache: Dictionary = {}
+var rng := RandomNumberGenerator.new()
+var fx_rng := RandomNumberGenerator.new()
+var touch_start := Vector2.ZERO
+var touch_started_at := 0
+var pointer_active := false
+var hud_sync_timer := 0.0
+var performance_sample_timer := 0.0
+
+var feedback_title := ""
+var feedback_detail := ""
+var feedback_color := YELLOW
+var feedback_timer := 0.0
+var camera_shake := 0.0
+var flash_alpha := 0.0
+
+func _ready() -> void:
+    rng.seed = 20240917
+    fx_rng.seed = 778899
+    var login_streak := GameSave.register_login()
+    _setup_world()
+    _setup_hud()
+    _validate_obstacle_catalog()
+    phase = PhaseData.get_phase(0)
+    scenario = SCENARIO_DATA.get_profile(0)
+    _apply_scenario_atmosphere()
+    _rebuild_sky_fx()
+    _rebuild_ambient_fx()
+    AudioManager.play_music(0)
+    if login_streak > 0 and login_streak % BALANCE.streak_reward_days == 0:
+        _show_feedback("MARCO DE RETORNO", "+R$ %d • %d dias seguidos" % [BALANCE.streak_reward, login_streak], GOLD, "streak")
+    else:
+        _show_feedback("CORRE PRO PONTO 3D", "Rua à esquerda • calçadas à direita", YELLOW, "ui_confirm")
+    _sync_hud()
+
+func _notification(what: int) -> void:
+    if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+        if screen == 2:
+            if run_mode == "playing":
+                run_mode = "paused"
+                _show_feedback("PAUSA", "Toque voltar novamente para sair", CYAN, "ui_back")
+            elif run_mode == "paused":
+                GameSave.record_event("run_abandoned")
+                GameSave.flush()
+                _clear_course()
+                screen = 1
+                run_mode = "playing"
+                _show_feedback("CORRIDA ENCERRADA", "Seu progresso já está seguro", BLUE, "ui_back")
+            elif run_mode == "at_stop":
+                _catch_bus()
+        elif screen != 0:
+            screen = 0
+            _show_feedback("MENU", "Escolha o próximo corre", BLUE, "ui_back")
+        return
+    if what in [NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT]:
+        if screen == 2 and run_mode == "playing":
+            run_mode = "paused"
+            _show_feedback("PAUSA AUTOMÁTICA", "O corre ficou seguro", CYAN, "ui_back")
+
+func _phase_speed_for(index: int) -> float:
+    var safe_index := clampi(index, 0, BALANCE.phase_count - 1)
+    if safe_index <= BALANCE.chapter_unlock_phase:
+        return lerpf(BALANCE.base_speed, BALANCE.chapter_one_final_speed, float(safe_index) / float(maxi(1, BALANCE.chapter_unlock_phase)))
+    return lerpf(BALANCE.chapter_one_final_speed, BALANCE.final_speed, float(safe_index - BALANCE.chapter_unlock_phase) / float(maxi(1, BALANCE.phase_count - BALANCE.chapter_unlock_phase - 1)))
+
+func _phase_wait_for(index: int) -> float:
+    var safe_index := clampi(index, 0, BALANCE.phase_count - 1)
+    if safe_index <= BALANCE.chapter_unlock_phase:
+        var progress := float(safe_index) / float(maxi(1, BALANCE.chapter_unlock_phase))
+        return lerpf(BALANCE.first_wait_seconds, BALANCE.final_wait_seconds, progress)
+    return BALANCE.final_wait_seconds
+
+func _process(delta: float) -> void:
+    var dt: float = minf(delta, 0.05)
+    pulse += dt
+    _update_feedback(dt)
+    _sample_performance(dt)
+    _update_fx(dt)
+    _update_sky_fx(dt)
+    _update_ambient_fx(dt)
+    _update_sky_motion(dt)
+    if screen == 2:
+        _update_run(dt)
+    _update_player(dt)
+    _update_camera(dt)
+    hud_sync_timer -= dt
+    if hud_sync_timer <= 0.0:
+        _sync_hud()
+        # A corrida precisa de leitura fluida, mas reconstruir todo o estado
+        # textual a cada frame desperdiça CPU no Android. 30 Hz é suficiente
+        # para distância, corações e progresso; telas paradas usam 10 Hz.
+        hud_sync_timer = 0.033 if screen == 2 else 0.10
+
+func _sample_performance(dt: float) -> void:
+    if screen != 2:
+        performance_sample_timer = 0.0
+        return
+    performance_sample_timer += dt
+    if performance_sample_timer < 1.0:
+        return
+    performance_sample_timer = 0.0
+    var fps := Engine.get_frames_per_second()
+    if fps >= 58:
+        GameSave.record_event("fps_60_plus")
+    elif fps >= 45:
+        GameSave.record_event("fps_45_59")
+    else:
+        GameSave.record_event("fps_below_45")
+
+func _validate_obstacle_catalog() -> void:
+    for item in OBSTACLE_DATA.all():
+        var obstacle_id := str(item.get("id", ""))
+        var space := str(item.get("space", ""))
+        var known_space := false
+        if space == "road":
+            known_space = obstacle_id in ROAD_OBSTACLES
+        else:
+            known_space = obstacle_id in SIDEWALK_OBSTACLES
+        if not known_space:
+            push_error("ObstacleData sem rota espacial: %s" % obstacle_id)
+        if str(item.get("builder", "")) == "_build_pedestrian_obstacle" and obstacle_id not in ["old_lady", "vendor"]:
+            push_error("ObstacleData pedestre sem adapter humano: %s" % obstacle_id)
+        if str(item.get("builder", "")) == "_build_animal_obstacle" and obstacle_id != "dog":
+            push_error("ObstacleData animal sem adapter: %s" % obstacle_id)
+
+func _setup_world() -> void:
+    world_root = Node3D.new()
+    world_root.name = "World3D"
+    add_child(world_root)
+    course_root = Node3D.new()
+    course_root.name = "Course"
+    world_root.add_child(course_root)
+    decor_root = Node3D.new()
+    decor_root.name = "Decor"
+    course_root.add_child(decor_root)
+    entity_root = Node3D.new()
+    entity_root.name = "Entities"
+    course_root.add_child(entity_root)
+    fx_root = Node3D.new()
+    fx_root.name = "FeedbackFX"
+    world_root.add_child(fx_root)
+
+    environment = WorldEnvironment.new()
+    environment.name = "BrazilianSky"
+    environment.environment = Environment.new()
+    environment.environment.background_mode = Environment.BG_SKY
+    environment.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+    environment.environment.ambient_light_color = Color("#b8d8e4")
+    environment.environment.ambient_light_energy = 0.72
+    environment.environment.background_energy_multiplier = 0.92
+    environment.environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+    environment.environment.glow_enabled = true
+    environment.environment.glow_intensity = 0.42
+    environment.environment.glow_bloom = 0.08
+    environment.environment.glow_hdr_threshold = 1.15
+    environment.environment.fog_enabled = true
+    environment.environment.fog_light_color = Color("#b9cbd0")
+    environment.environment.fog_light_energy = 0.42
+    environment.environment.fog_density = 0.006
+    environment.environment.fog_aerial_perspective = 0.42
+    environment.environment.fog_sky_affect = 0.20
+    sky = Sky.new()
+    sky_material = PanoramaSkyMaterial.new()
+    sky_material.panorama = TEXTURE_SKY_PANORAMA
+    sky_material.energy_multiplier = 0.92
+    sky_material.filter = true
+    sky.sky_material = sky_material
+    environment.environment.sky = sky
+    world_root.add_child(environment)
+
+    sky_fx_root = Node3D.new()
+    sky_fx_root.name = "SkyLife"
+    world_root.add_child(sky_fx_root)
+    ambient_fx_root = Node3D.new()
+    ambient_fx_root.name = "AmbientMotion"
+    world_root.add_child(ambient_fx_root)
+
+    sun = DirectionalLight3D.new()
+    sun.name = "WarmSun"
+    sun.rotation_degrees = Vector3(-48.0, -28.0, 0.0)
+    sun.light_color = Color("#ffe0a3")
+    sun.light_energy = 1.25
+    sun.shadow_enabled = true
+    sun.directional_shadow_max_distance = 72.0
+    sun.shadow_bias = 0.045
+    sun.shadow_normal_bias = 1.2
+    sun.shadow_opacity = 0.72
+    sun.light_angular_distance = 0.6
+    world_root.add_child(sun)
+
+    camera = Camera3D.new()
+    camera.name = "RunnerCamera"
+    camera.position = Vector3(0.0, 4.85, 9.4)
+    camera.fov = 59.0
+    camera.near = 0.1
+    camera.far = 125.0
+    camera.current = true
+    add_child(camera)
+    camera.look_at(Vector3(0.0, 1.15, -14.0), Vector3.UP)
+    _build_player()
+
+func _setup_hud() -> void:
+    var canvas := CanvasLayer.new()
+    canvas.name = "HUDLayer"
+    canvas.layer = 20
+    add_child(canvas)
+    hud = preload("res://scripts/hud_3d.gd").new()
+    hud.name = "HUD3D"
+    hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    canvas.add_child(hud)
+
+func _build_player() -> void:
+    player_root = Node3D.new()
+    player_root.name = "Player"
+    player_root.position = Vector3(LANE_X[SIDEWALK_CENTER], 0.0, PLAYER_Z)
+    world_root.add_child(player_root)
+    player_visual = RUNNER_CHARACTER_SCRIPT.new() as Node3D
+    player_visual.name = "RunnerVisual"
+    player_visual.set("character_id", CHARACTER_DATA.canonical_id(GameSave.equipped_character()))
+    player_root.add_child(player_visual)
+
+func _rebuild_player_visual(character_id: String) -> void:
+    if player_visual == null:
+        return
+    if player_visual.has_method("set_character"):
+        player_visual.call("set_character", CHARACTER_DATA.canonical_id(character_id))
+
+func _start_run(index: int) -> void:
+    var clamped_index: int = clampi(index, 0, BALANCE.phase_count - 1)
+    if not GameSave.is_phase_unlocked(clamped_index):
+        _show_feedback("TELA BLOQUEADA", "Junte estrelas para liberar", RED, "ui_back")
+        return
+    selected_phase = clamped_index
+    phase_index = clamped_index
+    map_page = int(float(clamped_index) / 10.0)
+    endless_mode = false
+    phase = PhaseData.get_phase(phase_index)
+    scenario = SCENARIO_DATA.get_profile(phase_index)
+    _rebuild_player_visual(GameSave.equipped_character())
+    _apply_scenario_atmosphere()
+    _rebuild_sky_fx()
+    screen = 2
+    previous_screen = 1
+    run_mode = "playing"
+    distance = 0.0
+    elapsed = 0.0
+    run_total = float(phase["distance"])
+    player_lane = SIDEWALK_CENTER
+    player_x = LANE_X[player_lane]
+    player_speed = _phase_speed_for(phase_index)
+    # As fases-gate aumentam a leitura, não a punição: a reserva de três
+    # corações permanece estável para que a dificuldade venha da pista.
+    hearts = 3
+    GameSave.record_phase_attempt()
+    max_hearts = hearts
+    collected_coins = 0
+    coin_multiplier = 1
+    combo = 0
+    combo_timer = 0.0
+    run_score = 0
+    no_damage = true
+    jump_timer = 0.0
+    slide_timer = 0.0
+    dash_timer = 0.0
+    dash_cooldown = 0.0
+    jump_duration = 0.9
+    shield_hits = 0
+    speed_boost_timer = 0.0
+    slow_motion_timer = 0.0
+    magnet_timer = 0.0
+    rain_guard_timer = 0.0
+    stop_wait = 0.0
+    stop_wait_total = 0.0
+    wall_run_count = 0
+    dog_chase_timer = 0.0
+    tutorial_stage = -1
+    performance_sample_timer = 0.0
+    step_timer = 0.0
+    motion_speed = 0.0
+    lane_change_velocity = 0.0
+    course_root.position.z = 0.0
+    var equipped: String = CHARACTER_DATA.canonical_id(GameSave.equipped_character())
+    if equipped == "motoboy":
+        speed_boost_timer = 9999.0
+    elif equipped == "maria":
+        shield_hits = 1
+    elif equipped == "carlos":
+        shield_hits = 1
+    elif equipped == "luan":
+        speed_boost_timer = 9999.0
+    elif equipped == "joao":
+        slow_motion_timer = 2.0
+    elif equipped == "bia":
+        magnet_timer = 9999.0
+    elif equipped == "camila":
+        coin_multiplier = 2
+    elif equipped == "julia":
+        jump_duration = 1.15
+    elif equipped == "influencer":
+        magnet_timer = 9999.0
+    if GameSave.owns("mochila"):
+        shield_hits += 1
+    if GameSave.owns("tenis"):
+        speed_boost_timer = 9999.0
+    if GameSave.owns("fone"):
+        magnet_timer = 9999.0
+    if GameSave.owns("cafe"):
+        slow_motion_timer = 2.0
+    _clear_course()
+    _build_course()
+    tutorial_hint = ""
+    AudioManager.play_music(int(phase["music_group"]))
+    _show_feedback("FAIXAS: RUA + CALÇADAS", str(phase["name"]), phase["accent"], "ui_confirm")
+
+func _start_endless() -> void:
+    if not GameSave.data.get("endless_unlocked", false):
+        _show_feedback("ENDLESS BLOQUEADO", "Termine a Tela 50", RED, "ui_back")
+        return
+    _start_run(BALANCE.endless_unlock_phase)
+    endless_mode = true
+    run_total = 1000.0
+    phase["name"] = "ENDLESS"
+    phase["location"] = "ranking local"
+    phase["special"] = "Rua, calçada e obstáculos sem parar."
+    phase["distance"] = run_total
+    phase["wait"] = 0.0
+    _clear_course()
+    _build_course()
+    _show_feedback("ENDLESS 3D", "Bata seu recorde local", VIOLET, "streak")
+
+func _clear_course() -> void:
+    course_root.position.z = 0.0
+    _clear_sky_fx()
+    _clear_ambient_fx()
+    for child in decor_root.get_children():
+        child.queue_free()
+    for child in entity_root.get_children():
+        child.queue_free()
+    entities.clear()
+    bus_node = null
+    bus_stop_node = null
+
+func _build_course() -> void:
+    _build_track()
+    _rebuild_sky_fx()
+    _rebuild_ambient_fx()
+    var total: float = run_total
+    var obstacle_count: int = int(phase.get("obstacles", 6))
+    # `obstacles` é uma intensidade de design, não uma contagem literal.
+    # A curva começa espaçada para ensinar rota e chega a intervalos curtos
+    # apenas no fim; a rua continua deliberadamente mais densa.
+    var road_interval: float = clampf(26.0 - float(obstacle_count), 6.0, 24.0)
+    var sidewalk_interval: float = maxf(15.0, road_interval * 2.1)
+    var road_distance: float = 24.0
+    var road_index := 0
+    while road_distance < total - 18.0:
+        var road_kind: String = ROAD_OBSTACLES[(road_index + phase_index) % ROAD_OBSTACLES.size()]
+        _spawn_entity(road_kind, ROAD_LANE, road_distance, false)
+        if phase_index >= 12 and road_index % 5 == 2:
+            _spawn_entity("motorcycle", ROAD_LANE, road_distance + 2.8, false)
+        road_distance += road_interval + rng.randf_range(-0.7, 1.0)
+        road_index += 1
+    var sidewalk_distance: float = 34.0
+    var sidewalk_index := 0
+    while sidewalk_distance < total - 20.0:
+        var sidewalk_lane: int = SIDEWALK_CENTER if sidewalk_index % 2 == 0 else SIDEWALK_RIGHT
+        var side_kind: String = SIDEWALK_OBSTACLES[(sidewalk_index + phase_index) % SIDEWALK_OBSTACLES.size()]
+        _spawn_entity(side_kind, sidewalk_lane, sidewalk_distance, false)
+        sidewalk_distance += sidewalk_interval + rng.randf_range(1.0, 3.0)
+        sidewalk_index += 1
+    var coin_distance: float = 18.0
+    var coin_index := 0
+    while coin_distance < total - 12.0:
+        var coin_lane: int = [ROAD_LANE, SIDEWALK_CENTER, SIDEWALK_RIGHT][(coin_index + phase_index) % 3]
+        _spawn_entity("coin", coin_lane, coin_distance, true)
+        if coin_index % 5 == 0 and phase_index >= 2:
+            _spawn_entity(_bonus_kind_for_phase(), SIDEWALK_CENTER + (coin_index % 2), coin_distance + 4.0, true)
+        coin_distance += 13.0 + rng.randf_range(-0.8, 1.4)
+        coin_index += 1
+    _spawn_forced_gags(total)
+    _create_bus_stop(total)
+    call_deferred("_audit_world_geometry")
+
+func _audit_world_geometry() -> void:
+    for pair in [["decor", decor_root], ["entities", entity_root], ["course", course_root]]:
+        var label: String = str(pair[0])
+        var root: Node3D = pair[1]
+        if root == null:
+            continue
+        if root.find_children("*", "MeshInstance3D", true, false).is_empty():
+            push_warning("3D asset contract: raiz %s sem MeshInstance3D" % label)
+
+func _spawn_forced_gags(total: float) -> void:
+    var forced: Array[String] = []
+    match phase_index:
+        1: forced = ["bread", "hydrant"]
+        3: forced = ["vendor", "pothole"]
+        5: forced = ["vendor", "bicycle"]
+        6: forced = ["bus_traffic", "dog"]
+        7: forced = ["cone", "pothole"]
+        8: forced = ["pothole", "car", "pothole"]
+        9: forced = ["motorcycle", "old_lady"]
+        10: forced = ["dog", "dog", "old_lady"]
+        13: forced = ["dog", "bicycle"]
+        14: forced = ["hydrant", "pothole"]
+        17: forced = ["truck", "cone"]
+        18: forced = ["dog", "motorcycle", "truck"]
+        19: forced = ["truck", "bus_traffic", "dog", "payphone", "motorcycle"]
+        _: forced = ["car", "cone"]
+    if phase_index >= 20:
+        forced = [
+            ["bus_traffic", "pix", "motorcycle", "hydrant", "dog"],
+            ["car", "umbrella", "dog", "payphone", "bus_traffic"],
+            ["motorcycle", "bicycle", "pothole", "vendor", "dog"],
+            ["truck", "car", "dog", "umbrella", "motorcycle"],
+            ["bus_traffic", "pothole", "vendor", "truck", "dog"],
+            ["car", "payphone", "motorcycle", "hydrant", "truck"]
+        ][mini(5, int(float(phase_index - 20) / 5.0))]
+    for i in forced.size():
+        var forced_distance: float = 72.0 + float(i) * maxf(16.0, (total - 110.0) / maxf(1.0, float(forced.size())))
+        var forced_lane: int = ROAD_LANE if str(forced[i]) in ROAD_OBSTACLES else (SIDEWALK_CENTER + (i % 2))
+        _spawn_entity(str(forced[i]), forced_lane, forced_distance, str(forced[i]) in COLLECTIBLES)
+
+func _bonus_kind_for_phase() -> String:
+    var options: Array[String] = ["coffee", "bread", "pastel", "sugarcane", "pass"]
+    if phase_index >= 19:
+        options.append("golden")
+    if phase_index >= 20:
+        options.append("coxinha")
+        options.append("guarana")
+        options.append("pix")
+        options.append("umbrella")
+    return options[(phase_index + int(distance)) % options.size()]
+
+func _spawn_entity(kind: String, lane: int, entity_distance: float, collectible: bool) -> void:
+    var node := Node3D.new()
+    node.name = "%s_%03d" % [kind, entities.size()]
+    node.position = Vector3(LANE_X[clampi(lane, 0, 2)], 0.0, -entity_distance)
+    entity_root.add_child(node)
+    if collectible:
+        _build_collectible(node, kind)
+    elif lane == ROAD_LANE:
+        _build_road_obstacle(node, kind)
+    else:
+        _build_sidewalk_obstacle(node, kind)
+    var traffic_speed: float = _traffic_speed_for(kind, entities.size()) if lane == ROAD_LANE and not collectible else 0.0
+    entities.append({
+        "node": node,
+        "kind": kind,
+        "lane": lane,
+        "distance": entity_distance,
+        "passed": false,
+        "collectible": collectible,
+        "traffic_speed": traffic_speed
+    })
+    call_deferred("_audit_3d_entity", node, kind, collectible)
+
+func _audit_3d_entity(node: Node3D, kind: String, collectible: bool) -> void:
+    if not is_instance_valid(node):
+        return
+    var meshes := node.find_children("*", "MeshInstance3D", true, false)
+    if meshes.is_empty():
+        push_warning("3D asset contract: %s não criou MeshInstance3D" % kind)
+        return
+    if collectible:
+        return
+    if kind in ["old_lady", "vendor"] and node.find_child("HumanPedestrian3D", true, false) == null:
+        push_warning("3D asset contract: %s não contém personagem humano skinned" % kind)
+    if kind == "dog" and node.find_child("Animal3D_caramelo", true, false) == null:
+        push_warning("3D asset contract: cachorro sem Animal3D_caramelo")
+
+func _traffic_speed_for(kind: String, seed_index: int) -> float:
+    var base: float = {
+        "car": 2.3,
+        "bus_traffic": 1.35,
+        "motorcycle": 3.8,
+        "truck": 1.05
+    }.get(kind, 0.0)
+    return base + float(seed_index % 3) * 0.42
+
+func _animate_traffic(node: Node3D, speed: float, dt: float) -> void:
+    var wheel_spin: float = speed * dt / 0.30
+    for wheel in node.get_children():
+        if wheel is Node3D and (str(wheel.name).begins_with("Wheel") or str(wheel.name).begins_with("BusWheel") or str(wheel.name).begins_with("MotoWheel")):
+            (wheel as Node3D).rotation.x -= wheel_spin
+    var body_bob: float = sin(pulse * 4.0 + node.position.z * 0.14) * 0.006
+    node.position.y = body_bob
+
+func _update_tutorial_hint() -> void:
+    if phase_index != 0 or bool(GameSave.data.get("tutorial_seen", false)):
+        tutorial_hint = ""
+        return
+    var next_stage := 0
+    var next_hint := "DESLIZE ← → para trocar de faixa"
+    if distance >= 18.0 and distance < 40.0:
+        next_stage = 1
+        next_hint = "TOQUE rápido para usar o DASH"
+    elif distance >= 40.0 and distance < BALANCE.first_session_hint_distance:
+        next_stage = 2
+        next_hint = "↑ pula • ↓ desliza • escolha sua rota"
+    elif distance >= BALANCE.first_session_hint_distance:
+        next_stage = 3
+        next_hint = "Boa leitura. Agora corra do seu jeito."
+    if next_stage != tutorial_stage:
+        tutorial_stage = next_stage
+        GameSave.record_event("tutorial_step")
+    tutorial_hint = next_hint
+    if tutorial_stage >= 3:
+        GameSave.data["tutorial_seen"] = true
+        GameSave.flush()
+        tutorial_hint = ""
+
+func _update_run(dt: float) -> void:
+    if run_mode == "paused":
+        return
+    if run_mode == "at_stop":
+        stop_wait = maxf(0.0, stop_wait - dt)
+        if stop_wait <= 0.0:
+            # Chegar ao ponto é a vitória; o toque apenas embarca antes do
+            # fim da contagem, em vez de transformar uma vitória em punição.
+            _finish_run(true)
+        return
+    elapsed += dt
+    run_phase += dt * (8.0 + player_speed)
+    jump_timer = maxf(0.0, jump_timer - dt)
+    slide_timer = maxf(0.0, slide_timer - dt)
+    dash_timer = maxf(0.0, dash_timer - dt)
+    dash_cooldown = maxf(0.0, dash_cooldown - dt)
+    combo_timer = maxf(0.0, combo_timer - dt)
+    speed_boost_timer = maxf(0.0, speed_boost_timer - dt)
+    slow_motion_timer = maxf(0.0, slow_motion_timer - dt)
+    magnet_timer = maxf(0.0, magnet_timer - dt)
+    rain_guard_timer = maxf(0.0, rain_guard_timer - dt)
+    dog_chase_timer = maxf(0.0, dog_chase_timer - dt)
+    if combo_timer <= 0.0:
+        combo = 0
+    var speed: float = player_speed
+    if speed_boost_timer > 0.0:
+        speed *= 1.22
+    if slow_motion_timer > 0.0:
+        speed *= 0.55
+    if dash_timer > 0.0:
+        speed *= 2.0
+    distance += speed * dt
+    _update_tutorial_hint()
+    motion_speed = lerpf(motion_speed, speed, minf(1.0, dt * 7.0))
+    course_root.position.z = distance
+    step_timer -= dt
+    if step_timer <= 0.0:
+        AudioManager.play_sfx("step", -13.0, 0.92 + fmod(run_phase, 0.4))
+        step_timer = maxf(0.18, 0.34 - motion_speed * 0.009)
+    for entity in entities:
+        if bool(entity["passed"]):
+            continue
+        var node: Node3D = entity["node"]
+        var traffic_speed: float = float(entity.get("traffic_speed", 0.0))
+        if traffic_speed > 0.0:
+            # Tráfego avança no sentido da avenida (-Z); como o corredor é
+            # mais rápido, os veículos se aproximam naturalmente pela rua.
+            node.position.z -= traffic_speed * dt
+            _animate_traffic(node, traffic_speed, dt)
+        var entity_z: float = node.position.z + distance
+        if entity_z >= 0.6:
+            entity["passed"] = true
+            _resolve_entity(entity)
+    if distance >= run_total:
+        distance = run_total
+        course_root.position.z = distance
+        if endless_mode:
+            _finish_run(true)
+            return
+        run_mode = "at_stop"
+        stop_wait_total = _phase_wait_for(phase_index) if not endless_mode else 0.0
+        stop_wait = stop_wait_total
+        if bus_stop_node:
+            bus_stop_node.visible = true
+        if bus_node:
+            bus_node.visible = true
+        _show_feedback("CHEGOU NO PONTO!", "SEGURA O BUSÃO!", YELLOW, "horn")
+    if hearts <= 0:
+        _finish_run(false, true)
+
+func _resolve_entity(entity: Dictionary) -> void:
+    var kind: String = str(entity["kind"])
+    var lane: int = int(entity["lane"])
+    var pos: Vector3 = Vector3(LANE_X[lane], 1.0, PLAYER_Z)
+    if bool(entity["collectible"]):
+        if lane == player_lane or magnet_timer > 0.0:
+            _collect(kind, pos)
+        return
+    if lane != player_lane:
+        return
+    var safe := false
+    if kind in ["car", "bus_traffic", "motorcycle", "truck", "pothole"]:
+        safe = jump_timer > 0.0 or dash_timer > 0.0
+    elif kind in ["old_lady", "hydrant", "payphone", "dog", "bicycle", "cone", "vendor", "bench"]:
+        safe = jump_timer > 0.0 or slide_timer > 0.0 or dash_timer > 0.0
+    if kind == "dog":
+        dog_chase_timer = 10.0
+        var dog_entity_node: Node3D = entity["node"]
+        var dog_node := dog_entity_node.get_node_or_null("Animal3D_caramelo") as Node3D
+        if dog_node and dog_node.has_method("set_running"):
+            dog_node.call("set_running", true)
+        _show_feedback("CARAMELO!", "10 segundos na sua cola", RED, "bark")
+    if safe:
+        _show_feedback("DESVIO LIMPO", _reaction_for(kind), GOLD, "reward")
+        _spawn_3d_burst(pos + Vector3(0, 1.0, -0.6), GOLD, 10)
+    else:
+        _hit_player(kind)
+
+func _collect(kind: String, pos: Vector3) -> void:
+    var value := 1
+    if kind == "coin":
+        value = coin_multiplier
+        collected_coins += 1
+        combo += 1
+        combo_timer = 4.0
+        run_score += value * 10 * maxi(1, combo)
+        _show_feedback("+R$ 0,25", "COMBO x%02d" % combo, GOLD, "coin")
+        if combo >= 5 and combo % 5 == 0:
+            _show_feedback("COMBO x%02d" % combo, "A rua está pagando", CYAN, "combo")
+        if combo >= 15:
+            GameSave.award_badge("combo15")
+    else:
+        _show_feedback("BÔNUS!", str(COLLECTIBLES.get(kind, kind)), GOLD, "reward")
+        match kind:
+            "coffee":
+                slow_motion_timer = 5.0
+            "bread":
+                jump_duration = 1.25
+            "pastel":
+                shield_hits = 1
+            "sugarcane":
+                speed_boost_timer = 6.0
+            "pass":
+                coin_multiplier = 2
+            "coxinha":
+                shield_hits = 2
+            "guarana":
+                speed_boost_timer = 9.0
+            "pix":
+                coin_multiplier = 3
+            "umbrella":
+                rain_guard_timer = 12.0
+            "golden":
+                if GameSave.unlock_pet("caramelo"):
+                    _show_feedback("SKIN LIBERADA", "Cachorro Caramelo entrou no time", GOLD, "reward")
+    GameSave.add_coins(value)
+    _spawn_3d_burst(pos + Vector3(0, 1.0, 0), GOLD, 8)
+
+func _hit_player(kind: String) -> void:
+    if dash_timer > 0.0:
+        return
+    GameSave.record_event("hit_" + kind)
+    if shield_hits > 0:
+        shield_hits -= 1
+        _show_feedback("ESCUDO!", "Impacto absorvido", CYAN, "hit")
+        _spawn_3d_burst(player_root.position + Vector3(0, 1.0, 0), CYAN, 14)
+        return
+    hearts -= 1
+    no_damage = false
+    camera_shake = 0.55
+    flash_alpha = 0.18
+    var heart_label: String = "1 coração" if hearts == 1 else "%d corações" % hearts
+    var sound := "shout" if kind == "motorcycle" else "impact_heavy"
+    _show_feedback("AI!", heart_label + " restante", RED, sound)
+    _spawn_3d_burst(player_root.position + Vector3(0, 1.0, 0), RED, 18)
+    if kind == "dog":
+        GameSave.data["dog_hits"] = int(GameSave.data.get("dog_hits", 0)) + 1
+        if int(GameSave.data["dog_hits"]) >= 10:
+            GameSave.award_achievement("dog")
+        GameSave.save()
+
+func _change_lane(direction: int) -> void:
+    if screen != 2 or run_mode != "playing":
+        return
+    var old_lane: int = player_lane
+    player_lane = clampi(player_lane + direction, ROAD_LANE, SIDEWALK_RIGHT)
+    if old_lane != player_lane:
+        lane_change_velocity = float(direction) * 1.0
+        GameSave.record_event("lane_change")
+        _show_feedback("FAIXA %s" % ["RUA", "CALÇADA", "CALÇADA"][player_lane], "Leitura perfeita", BLUE, "whoosh")
+
+func _jump() -> void:
+    if screen != 2 or run_mode != "playing" or jump_timer > 0.0 or slide_timer > 0.0:
+        return
+    if CHARACTER_DATA.canonical_id(GameSave.equipped_character()) == "julia":
+        jump_duration = 1.15
+    else:
+        jump_duration = 0.9
+    jump_timer = jump_duration
+    GameSave.record_event("jump")
+    _show_feedback("PULO!", "Rota aérea", CYAN, "jump")
+    _spawn_3d_burst(player_root.position + Vector3(0, 0.1, 0), CYAN, 7)
+
+func _slide() -> void:
+    if screen != 2 or run_mode != "playing" or jump_timer > 0.0:
+        return
+    slide_timer = 0.72
+    GameSave.record_event("slide")
+    _show_feedback("DESLIZE!", "Passou por baixo", VIOLET, "slide")
+
+func _dash() -> void:
+    if screen != 2 or run_mode != "playing" or dash_cooldown > 0.0:
+        return
+    dash_timer = 0.42
+    dash_cooldown = 3.2
+    GameSave.record_event("dash")
+    camera_shake = 0.18
+    _show_feedback("DASH!", "Invencível por um instante", YELLOW, "whoosh")
+    _spawn_3d_burst(player_root.position + Vector3(0, 1.0, 0), YELLOW, 18)
+
+func _catch_bus() -> void:
+    if run_mode == "at_stop":
+        _finish_run(true)
+
+func _finish_run(success: bool, game_over := false) -> void:
+    if screen != 2:
+        return
+    var date_key := Time.get_date_string_from_system()
+    GameSave.record_daily_progress(date_key, int(distance), collected_coins, success and no_damage)
+    GameSave.record_weekly_progress(GameSave.weekly_key(), int(distance), collected_coins, success and no_damage)
+    if endless_mode:
+        GameSave.record_endless_result(success, elapsed, int(distance))
+        if success:
+            var old_best: int = int(GameSave.data.get("endless_best", 0))
+            var is_record: bool = int(distance) > old_best
+            if is_record:
+                GameSave.data["endless_best"] = int(distance)
+            var distance_bonus: int = mini(33, int(distance / 30.0))
+            var first_score_reward: int = 20 + distance_bonus + mini(15, collected_coins)
+            # Endless replay tem valor, mas não pode virar uma impressora de moedas.
+            var reward: int = first_score_reward + (25 if is_record else 0)
+            if not is_record:
+                reward = mini(reward, BALANCE.replay_reward + distance_bonus)
+            GameSave.add_coins(reward)
+            var xp_reward := 40 + int(distance / 12.0) if is_record else BALANCE.xp_replay
+            GameSave.add_xp(xp_reward)
+            result = {
+                "success": true,
+                "endless": true,
+                "reward": reward,
+                "time": elapsed,
+                "coins": collected_coins,
+                "record": is_record,
+                "distance": int(distance),
+                "xp": xp_reward
+            }
+            _show_feedback("ENDLESS CONCLUÍDO!", "%dm • +R$ %d de bônus" % [int(distance), reward], VIOLET, "streak")
+        else:
+            result = {
+                "success": false,
+                "endless": true,
+                "reward": 0,
+                "time": elapsed,
+                "coins": collected_coins,
+                "record": false,
+                "game_over": game_over,
+                "distance": int(distance),
+                "xp": 0
+            }
+            _show_feedback("MAIS UM!", "Seu melhor corre ainda está aí", RED, "impact_heavy")
+        GameSave.flush()
+        run_mode = "results"
+        screen = 3
+        return
+    GameSave.record_phase_result(success, phase_index, elapsed, int(distance))
+    if success:
+        # A regra das estrelas é explícita: terminar, não sofrer dano e cumprir
+        # a meta de moedas. Tempo serve para recorde, não para esconder a regra.
+        var stars := 1
+        if no_damage:
+            stars += 1
+        if collected_coins >= int(phase["coin_target"]):
+            stars += 1
+        var previous_stars := GameSave.phase_stars(phase_index)
+        var previous_time: float = GameSave.best_time(phase_index)
+        var record: bool = previous_time <= 0.0 or elapsed < previous_time
+        var record_info: Dictionary = GameSave.record_phase(phase_index, stars, elapsed)
+        var first_clear: bool = bool(record_info.get("first_clear", false))
+        var new_stars: int = int(record_info.get("new_stars", 0))
+        var base_reward: int = BALANCE.first_clear_reward if first_clear else BALANCE.replay_reward
+        var level_reward: int = phase_index * BALANCE.phase_reward_per_level if first_clear else 0
+        var star_reward: int = stars * BALANCE.star_reward if first_clear else new_stars * BALANCE.star_upgrade_reward
+        var perfect_reward: int = BALANCE.perfect_run_bonus if no_damage and first_clear else 0
+        var reward: int = base_reward + level_reward + star_reward + perfect_reward
+        var xp_reward: int = (BALANCE.xp_first_clear + phase_index * BALANCE.xp_per_level) if first_clear else BALANCE.xp_replay + new_stars * 5
+        GameSave.add_coins(reward)
+        GameSave.add_xp(xp_reward)
+        if phase_index == 8 and no_damage:
+            GameSave.award_achievement("enchente")
+        if no_damage:
+            GameSave.award_badge("sem_arranhao")
+        if phase_index == BALANCE.chapter_unlock_phase:
+            GameSave.award_achievement("busao")
+            GameSave.award_badge("capitulo1")
+        if phase_index == BALANCE.phase_count - 1:
+            GameSave.award_achievement("busao50")
+            GameSave.award_badge("maratonista")
+            GameSave.data["endless_unlocked"] = true
+        result = {
+            "success": true,
+            "stars": stars,
+            "previous_stars": previous_stars,
+            "new_stars": new_stars,
+            "first_clear": first_clear,
+            "reward": reward,
+            "bonus_reward": reward,
+            "reward_breakdown": {
+                "base": base_reward,
+                "level": level_reward,
+                "stars": star_reward,
+                "perfect": perfect_reward
+            },
+            "time": elapsed,
+            "coins": collected_coins,
+            "record": record,
+            "xp": xp_reward
+        }
+        _show_feedback("PEGUEI O BUSÃO!", "%d estrelas • +R$ %d de bônus" % [stars, reward], YELLOW, "streak")
+        _spawn_3d_burst(Vector3(player_x, 1.4, -8.0), YELLOW, 28)
+        if GameSave.owns("confete"):
+            _spawn_3d_burst(Vector3(player_x, 1.8, -8.0), RED, 10)
+            _spawn_3d_burst(Vector3(player_x, 1.8, -8.0), CYAN, 10)
+    else:
+        result = {
+            "success": false,
+            "stars": 0,
+            "reward": 0,
+            "time": elapsed,
+            "coins": collected_coins,
+            "game_over": game_over,
+            "record": false,
+            "xp": 0
+        }
+        _show_feedback("O BUSÃO FOI EMBORA", "Use as três faixas a seu favor", RED, "impact_heavy")
+    GameSave.flush()
+    run_mode = "results"
+    screen = 3
+
+func _reaction_for(kind: String) -> String:
+    var reactions: Dictionary = {
+        "car": "Carro no retrovisor!",
+        "bus_traffic": "Ônibus desviado no susto!",
+        "motorcycle": "Moto passou raspando!",
+        "truck": "Caminhão vencido no timing!",
+        "pothole": "Buraco ficou para trás!",
+        "old_lady": "A velha do celular nem viu!",
+        "hydrant": "Hidrante superado!",
+        "payphone": "Orelhão desconectado!",
+        "dog": "Caramelo deixado para trás!",
+        "bicycle": "Bicicleta sem freio!",
+        "cone": "Obra vencida!",
+        "vendor": "Camelô abriu passagem!",
+        "bench": "Banco de praça não segura o Zé!"
+    }
+    return str(reactions.get(kind, "Boa, Zé!"))
+
+func _update_player(dt: float) -> void:
+    if player_root == null:
+        return
+    var previous_x: float = player_x
+    player_x = lerpf(player_x, LANE_X[player_lane], minf(1.0, dt * 13.0))
+    lane_change_velocity = lerpf(lane_change_velocity, (player_x - previous_x) * 8.0, minf(1.0, dt * 8.0))
+    player_root.position.x = player_x
+    var jump_progress: float = 1.0 - jump_timer / maxf(jump_duration, 0.01)
+    var jump_height: float = sin(jump_progress * PI) * 2.05 if jump_timer > 0.0 else 0.0
+    var is_running: bool = screen == 2 and run_mode == "playing"
+    var is_crouching: bool = slide_timer > 0.0
+    var bob: float = sin(run_phase * 1.6) * 0.045 if is_running and not is_crouching else 0.0
+    player_visual.position.y = jump_height + bob - (0.16 if is_crouching else 0.0)
+    # The authored crouch clip handles the silhouette. A small root compression
+    # preserves the arcade read without flattening the imported skeleton.
+    var squash: float = 0.94 if is_crouching else 1.0
+    player_visual.scale = Vector3(1.02 if is_crouching else 1.0, squash, 1.02 if is_crouching else 1.0)
+    var shadow := player_visual.get_node_or_null("RunnerShadow") as Node3D
+    if shadow:
+        shadow.position.y = 0.025 - player_visual.position.y
+        var shadow_factor: float = 1.0 - clampf(jump_height * 0.12, 0.0, 0.24)
+        shadow.scale = Vector3.ONE * shadow_factor
+    if player_visual.has_method("set_motion"):
+        player_visual.call("set_motion", run_phase, is_running, is_crouching, jump_height, lane_change_velocity, motion_speed)
+    var lane_lean: float = clampf(lane_change_velocity * 0.08, -0.20, 0.20)
+    var target_lean: float = lane_lean + (0.055 if is_running else 0.0)
+    player_visual.rotation.z = lerpf(player_visual.rotation.z, target_lean, minf(1.0, dt * 9.0))
+    player_visual.rotation.x = lerpf(player_visual.rotation.x, -0.035 if is_running else 0.0, minf(1.0, dt * 7.0))
+
+func _update_camera(dt: float) -> void:
+    if camera == null:
+        return
+    var reduced_motion := bool(GameSave.data.get("reduced_motion", false))
+    var shake_offset := Vector3.ZERO
+    if not reduced_motion and camera_shake > 0.0:
+        shake_offset = Vector3(fx_rng.randf_range(-camera_shake, camera_shake), fx_rng.randf_range(-camera_shake, camera_shake), 0.0)
+        camera_shake = maxf(0.0, camera_shake - dt * 6.0)
+    elif reduced_motion:
+        camera_shake = 0.0
+    var camera_bob: float = sin(run_phase * 1.6) * 0.035 if not reduced_motion and screen == 2 and run_mode == "playing" else 0.0
+    var target := Vector3(player_x * 0.18, 1.15 + player_visual.position.y * 0.16, -14.0)
+    var desired := Vector3(player_x * 0.15, 4.85 + camera_bob, 9.4 + sin(run_phase * 0.8) * 0.04) + shake_offset
+    camera.position = camera.position.lerp(desired, minf(1.0, dt * 5.0))
+    var desired_fov: float = 64.0 if reduced_motion else 64.0 + clampf(motion_speed * 0.34, 0.0, 5.0) + (4.0 if dash_timer > 0.0 else 0.0)
+    camera.fov = lerpf(camera.fov, desired_fov, minf(1.0, dt * 4.0))
+    camera.look_at(target, Vector3.UP)
+
+func _apply_scenario_atmosphere() -> void:
+    if environment == null or sky_material == null:
+        return
+    var sky_horizon: Color = scenario.get("sky_horizon", Color("#f5c477"))
+    var sky_top: Color = scenario.get("sky_top", Color("#72bed5"))
+    var chapter: int = int(scenario.get("chapter_index", 0))
+    var weather: String = str(scenario.get("weather", "sol"))
+    var sky_energy: float = 0.82 + clampf(float(9 - chapter) * 0.025, 0.0, 0.22)
+    if weather in ["letreiros acesos", "sinos ao entardecer", "luzes da madrugada"]:
+        sky_energy *= 0.78
+    if weather in ["fim de tarde", "sinos ao entardecer", "letreiros acesos", "brisa da praia"]:
+        sky_material.panorama = TEXTURE_SKY_SUNSET
+    elif weather in ["nublado quente"]:
+        sky_material.panorama = TEXTURE_SKY_CLOUDY
+    else:
+        sky_material.panorama = TEXTURE_SKY_PANORAMA
+    sky_material.energy_multiplier = sky_energy
+    sky_material.filter = true
+    environment.environment.background_energy_multiplier = sky_energy
+    environment.environment.ambient_light_color = scenario.get("ambient", Color("#b8d8e4"))
+    environment.environment.ambient_light_energy = 0.58 if chapter >= 7 else 0.78
+    environment.environment.fog_light_color = sky_horizon.lerp(sky_top, 0.26)
+    environment.environment.fog_light_energy = 0.34 + float(chapter % 3) * 0.04
+    environment.environment.fog_density = 0.0045 if weather in ["manhã clara", "sol confortável"] else 0.007
+    environment.environment.fog_sky_affect = 0.18 + float(chapter % 4) * 0.025
+    if sun:
+        sun.light_color = scenario.get("sun", Color("#ffe0a3"))
+        sun.light_energy = 0.92 if chapter >= 7 else 1.18
+        sun.rotation_degrees = Vector3(-42.0 - chapter * 1.8, -28.0 + chapter * 4.0, 0.0)
+
+func _update_sky_motion(dt: float) -> void:
+    if sky_material == null or scenario.is_empty():
+        return
+    var shimmer: float = (sin(pulse * 0.065) + 1.0) * 0.5
+    var base_energy: float = 0.82 + shimmer * 0.045
+    if screen == 2:
+        base_energy += 0.04
+    sky_material.energy_multiplier = lerpf(sky_material.energy_multiplier, base_energy, dt * 0.35)
+    if environment and environment.environment:
+        environment.environment.background_energy_multiplier = sky_material.energy_multiplier
+    if sun:
+        sun.rotation_degrees.y += sin(pulse * 0.035) * dt * 0.8
+        sun.light_energy = lerpf(sun.light_energy, (0.98 + shimmer * 0.20) if screen == 2 else 1.0, dt * 0.5)
+
+func _clear_sky_fx() -> void:
+    if sky_fx_root == null:
+        return
+    for child in sky_fx_root.get_children():
+        child.free()
+    sky_fx_nodes.clear()
+
+func _rebuild_sky_fx() -> void:
+    if sky_fx_root == null:
+        return
+    _clear_sky_fx()
+    var kinds: Array = scenario.get("aerial", ["pombo"])
+    var count: int = int(scenario.get("aerial_count", 3))
+    for i in count:
+        var kind: String = str(kinds[i % maxi(1, kinds.size())])
+        var node := Node3D.new()
+        node.name = "Aerial_%s_%02d" % [kind, i]
+        node.position = Vector3(-12.0 + float((i * 19) % 25), 7.0 + float(i % 3) * 2.2, -35.0 - float(i) * 24.0)
+        sky_fx_root.add_child(node)
+        _build_aerial(node, kind)
+        sky_fx_nodes.append({
+            "node": node,
+            "kind": kind,
+            "speed": 1.0 + float(i % 3) * 0.55 + float(scenario.get("chapter_index", 0)) * 0.04,
+            "phase": float(i) * 1.8,
+            "drift": 0.15 + float(i % 2) * 0.12
+        })
+
+func _build_aerial(parent: Node3D, kind: String) -> void:
+    var dark := _material(Color("#283242"), 0.0, 0.92)
+    var pale := _material(Color("#f1f0de"), 0.0, 0.82)
+    var sky_blue := _material(Color("#78cbd8"), 0.0, 0.54)
+    var drone_color := _material(Color("#59657b"), 0.15, 0.42)
+    match kind:
+        "aviao":
+            _box(parent, Vector3(0.18, 0.18, 1.7), Vector3.ZERO, pale, "PlaneBody")
+            var left_wing := _box(parent, Vector3(1.35, 0.05, 0.34), Vector3(0.0, 0.0, -0.12), pale, "PlaneWing")
+            left_wing.rotation.y = 0.12
+            _box(parent, Vector3(0.42, 0.34, 0.22), Vector3(0.0, 0.18, 0.68), sky_blue, "PlaneTail")
+        "drone":
+            _box(parent, Vector3(0.52, 0.10, 0.38), Vector3.ZERO, drone_color, "DroneBody")
+            for side in [-1.0, 1.0]:
+                _box(parent, Vector3(0.78, 0.04, 0.06), Vector3(side * 0.40, 0.08, 0.0), drone_color, "DroneArm")
+                _cylinder(parent, 0.09, 0.09, 0.035, Vector3(side * 0.72, 0.13, 0.0), pale, "DroneRotor")
+        "gaivota":
+            var left_gull := _box(parent, Vector3(0.72, 0.035, 0.10), Vector3(-0.34, 0.0, 0.0), pale, "GullWing")
+            var right_gull := _box(parent, Vector3(0.72, 0.035, 0.10), Vector3(0.34, 0.0, 0.0), pale, "GullWing")
+            left_gull.rotation.z = -0.18
+            right_gull.rotation.z = 0.18
+            _sphere(parent, 0.08, Vector3(0.0, 0.0, -0.03), pale, "GullBody")
+        "urubu":
+            var left_vulture := _box(parent, Vector3(0.82, 0.05, 0.13), Vector3(-0.38, 0.0, 0.0), dark, "VultureWing")
+            var right_vulture := _box(parent, Vector3(0.82, 0.05, 0.13), Vector3(0.38, 0.0, 0.0), dark, "VultureWing")
+            left_vulture.rotation.z = -0.26
+            right_vulture.rotation.z = 0.26
+            _sphere(parent, 0.10, Vector3(0.0, 0.0, -0.03), dark, "VultureBody")
+        _:
+            _sphere(parent, 0.10, Vector3(0.0, 0.0, 0.0), dark, "BirdBody")
+            var left_bird := _box(parent, Vector3(0.42, 0.035, 0.08), Vector3(-0.24, 0.0, 0.0), dark, "BirdWing")
+            var right_bird := _box(parent, Vector3(0.42, 0.035, 0.08), Vector3(0.24, 0.0, 0.0), dark, "BirdWing")
+            left_bird.rotation.z = -0.22
+            right_bird.rotation.z = 0.22
+
+func _update_sky_fx(dt: float) -> void:
+    for item in sky_fx_nodes:
+        var node: Node3D = item["node"]
+        var speed: float = float(item["speed"])
+        var phase_offset: float = float(item["phase"])
+        node.position.z += speed * dt
+        node.position.x += sin(pulse * 0.35 + phase_offset) * float(item["drift"]) * dt
+        node.position.y += sin(pulse * 0.55 + phase_offset) * 0.012
+        node.rotation.y += dt * 0.035
+        if str(item["kind"]) in ["pombo", "passaro", "gaivota", "urubu"]:
+            node.rotation.z = sin(pulse * 2.0 + phase_offset) * 0.14
+        if node.position.z > 28.0:
+            node.position.z = -112.0 - fx_rng.randf_range(0.0, 30.0)
+            node.position.x = fx_rng.randf_range(-13.0, 13.0)
+
+func _clear_ambient_fx() -> void:
+    if ambient_fx_root == null:
+        return
+    for child in ambient_fx_root.get_children():
+        child.free()
+    ambient_fx_nodes.clear()
+
+func _rebuild_ambient_fx() -> void:
+    if ambient_fx_root == null:
+        return
+    _clear_ambient_fx()
+    var weather: String = str(scenario.get("weather", "sol"))
+    var color: Color = _scenario_color("accent", GOLD)
+    var count: int = 10 if weather in ["poeira dourada", "nublado quente"] else 6
+    if weather == "luzes da madrugada":
+        count = 12
+    var material := _material(Color(color, 0.28), 0.0, 0.9)
+    material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    material.emission_enabled = true
+    material.emission = color
+    material.emission_energy_multiplier = 0.45
+    for i in count:
+        var node := MeshInstance3D.new()
+        node.name = "AmbientParticle_%02d" % i
+        var mesh := SphereMesh.new()
+        mesh.radius = 0.025 if weather != "luzes da madrugada" else 0.045
+        mesh.height = mesh.radius * 2.0
+        mesh.radial_segments = 6
+        mesh.rings = 3
+        node.mesh = mesh
+        node.material_override = material
+        node.position = Vector3(fx_rng.randf_range(-4.8, 4.8), fx_rng.randf_range(0.35, 3.8), fx_rng.randf_range(-22.0, 18.0))
+        ambient_fx_root.add_child(node)
+        ambient_fx_nodes.append({
+            "node": node,
+            "speed": 0.22 + fx_rng.randf_range(0.0, 0.42),
+            "phase": fx_rng.randf_range(0.0, TAU)
+        })
+
+func _update_ambient_fx(dt: float) -> void:
+    for item in ambient_fx_nodes:
+        var node: Node3D = item["node"]
+        var phase_offset: float = float(item["phase"])
+        node.position.z += float(item["speed"]) * dt
+        node.position.x += sin(pulse * 0.45 + phase_offset) * dt * 0.05
+        node.position.y += cos(pulse * 0.65 + phase_offset) * dt * 0.018
+        if node.position.z > 22.0:
+            node.position.z = -24.0
+            node.position.x = fx_rng.randf_range(-4.8, 4.8)
+
+func _show_feedback(title: String, detail: String, color: Color, sound: String) -> void:
+    feedback_title = title
+    feedback_detail = detail
+    feedback_color = color
+    feedback_timer = 1.05
+    if not bool(GameSave.data.get("reduced_motion", false)):
+        flash_alpha = maxf(flash_alpha, 0.055)
+    if sound != "":
+        AudioManager.play_sfx(sound)
+    if hud:
+        hud.call("show_feedback", title, detail, color)
+
+func _update_feedback(dt: float) -> void:
+    feedback_timer = maxf(0.0, feedback_timer - dt)
+    flash_alpha = maxf(0.0, flash_alpha - dt * 2.8)
+    if hud:
+        hud.call("set_feedback_time", feedback_timer, flash_alpha)
+
+func _spawn_3d_burst(pos: Vector3, color: Color, amount: int) -> void:
+    if bool(GameSave.data.get("reduced_motion", false)):
+        return
+    var material := _material(color, 0.0, 0.34)
+    material.emission_enabled = true
+    material.emission = color
+    material.emission_energy_multiplier = 2.3
+    var mesh := SphereMesh.new()
+    mesh.radius = 0.07
+    mesh.height = 0.14
+    mesh.material = material
+    for i in amount:
+        var node := MeshInstance3D.new()
+        node.mesh = mesh
+        node.position = pos
+        fx_root.add_child(node)
+        fx_nodes.append({
+            "node": node,
+            "velocity": Vector3(fx_rng.randf_range(-2.5, 2.5), fx_rng.randf_range(1.0, 4.2), fx_rng.randf_range(-2.0, 1.0)),
+            "life": fx_rng.randf_range(0.35, 0.75)
+        })
+
+func _update_fx(dt: float) -> void:
+    for fx in fx_nodes:
+        var node: Node3D = fx["node"]
+        fx["life"] = float(fx["life"]) - dt
+        fx["velocity"] = Vector3(fx["velocity"]) + Vector3(0.0, -6.0, 0.0) * dt
+        node.position += Vector3(fx["velocity"]) * dt
+        var life: float = float(fx["life"])
+        node.scale = Vector3.ONE * clampf(life * 2.0, 0.05, 1.0)
+    var alive: Array[Dictionary] = []
+    for fx in fx_nodes:
+        if float(fx["life"]) > 0.0:
+            alive.append(fx)
+        else:
+            var node: Node3D = fx["node"]
+            node.queue_free()
+    fx_nodes = alive
+
+func _build_track() -> void:
+    var total_length: float = run_total + WORLD_LENGTH_MARGIN
+    var center_z: float = -(run_total - 10.0) * 0.5
+    var road_color: Color = _scenario_color("road", Color("#303a4b"))
+    var sidewalk_color: Color = _scenario_color("sidewalk", Color("#9b9b8b"))
+    var curb_color: Color = _scenario_color("curb", Color("#e9c45b"))
+    var divider_color: Color = _scenario_color("divider", Color("#d47a5f"))
+    var tile_color: Color = _scenario_color("tile", Color("#777c76"))
+    var accent: Color = _scenario_color("accent", YELLOW)
+    var street_surface: String = "dirt" if str(scenario.get("street_surface", "asphalt")) == "dirt" else ("cobble" if str(scenario.get("street_surface", "asphalt")) == "cobble" else "asphalt")
+    _box(decor_root, Vector3(3.35, 0.18, total_length), Vector3(-3.25, -0.16, center_z), _material(road_color, 0.0, 0.96, street_surface), "Street")
+    _box(decor_root, Vector3(3.05, 0.18, total_length), Vector3(0.0, -0.16, center_z), _material(sidewalk_color, 0.0, 0.94, "sidewalk"), "SidewalkCenter")
+    _box(decor_root, Vector3(3.05, 0.18, total_length), Vector3(3.25, -0.16, center_z), _material(sidewalk_color.lightened(0.08), 0.0, 0.94, "sidewalk"), "SidewalkRight")
+    _box(decor_root, Vector3(0.18, 0.28, total_length), Vector3(-1.63, -0.02, center_z), _material(curb_color, 0.0, 0.78, "concrete"), "Curb")
+    _box(decor_root, Vector3(0.12, 0.22, total_length), Vector3(1.62, -0.03, center_z), _material(divider_color, 0.0, 0.82, "paint"), "SidewalkDivider")
+    for i in int(total_length / 9.0):
+        var tile_z: float = -float(i) * 9.0 + 4.0
+        _box(decor_root, Vector3(2.9, 0.025, 0.035), Vector3(0.0, -0.03, tile_z), _material(tile_color, 0.0, 1.0, "sidewalk"), "TileLine")
+        _box(decor_root, Vector3(2.9, 0.025, 0.035), Vector3(3.25, -0.03, tile_z), _material(tile_color, 0.0, 1.0, "sidewalk"), "TileLine")
+    for i in int(total_length / 18.0):
+        var stripe_z: float = -float(i) * 18.0 - 3.0
+        _box(decor_root, Vector3(0.10, 0.025, 5.0), Vector3(-1.95, -0.02, stripe_z), _material(curb_color.lightened(0.20), 0.0, 0.85), "RoadEdge")
+        if str(scenario.get("street_surface", "asphalt")) == "dirt":
+            _box(decor_root, Vector3(2.65, 0.02, 0.06), Vector3(-3.25, 0.01, stripe_z), _material(Color("#b77b50"), 0.0, 1.0, "dirt"), "DirtTrack")
+    for i in int(total_length / 14.0):
+        var surface_z: float = -float(i) * 14.0 - 6.0
+        if i % 3 == 0:
+            _build_asphalt_patch(Vector3(-3.25, -0.055, surface_z), 0.72 + float(i % 2) * 0.24)
+        if i % 7 == 2:
+            _build_manhole(Vector3(-3.25, -0.045, surface_z - 3.2))
+    for i in int(total_length / 28.0):
+        var decor_z: float = -float(i) * 28.0 - 10.0
+        _build_scenario_slice(decor_z, i)
+        if i % 2 == 0:
+            _build_lamp(Vector3(-1.0, 0.0, decor_z - 4.0), accent)
+    _create_bus_stop(run_total)
+
+func _build_asphalt_patch(pos: Vector3, size: float) -> void:
+    var patch := _material(Color("#242c35"), 0.0, 0.98, "asphalt")
+    var mesh := _cylinder(decor_root, size, size * 0.82, 0.018, pos, patch, "AsphaltRepair")
+    mesh.scale = Vector3(1.0, 1.0, 0.58)
+    var seam := _material(Color("#4b4f4f"), 0.0, 1.0, "asphalt")
+    _cylinder(decor_root, size * 0.78, size * 0.68, 0.012, pos + Vector3(0.0, 0.012, 0.0), seam, "RepairSeam")
+
+func _build_manhole(pos: Vector3) -> void:
+    var iron := _material(Color("#4f5960"), 0.55, 0.58, "metal")
+    _cylinder(decor_root, 0.42, 0.42, 0.025, pos, iron, "ManholeFrame")
+    var inner := _material(Color("#252e36"), 0.45, 0.76, "metal")
+    _cylinder(decor_root, 0.34, 0.34, 0.032, pos + Vector3(0.0, 0.018, 0.0), inner, "ManholeCover")
+    for angle in [0.0, PI / 2.0, PI / 4.0, -PI / 4.0]:
+        var groove := _box(decor_root, Vector3(0.48, 0.012, 0.025), pos + Vector3(0.0, 0.038, 0.0), _material(Color("#748087"), 0.4, 0.52, "metal"), "ManholeGroove")
+        groove.rotation.y = angle
+
+func _scenario_color(key: String, fallback: Color) -> Color:
+    var value = scenario.get(key, fallback)
+    return value if value is Color else fallback
+
+func _build_scenario_slice(z: float, index: int) -> void:
+    var style: String = str(scenario.get("building_style", "house"))
+    match style:
+        "favela":
+            _build_favela_slice(z, index)
+        "house":
+            _build_residential_slice(z, index)
+        "center":
+            _build_center_slice(z, index)
+        "humble":
+            _build_humble_slice(z, index)
+        "condo":
+            _build_condo_slice(z, index)
+        "military":
+            _build_military_slice(z, index)
+        "religious":
+            _build_religious_slice(z, index)
+        "commercial":
+            _build_commercial_slice(z, index)
+        "tourist":
+            _build_tourist_slice(z, index)
+        "terminal":
+            _build_terminal_slice(z, index)
+        _:
+            _build_residential_slice(z, index)
+
+func _build_favela_slice(z: float, index: int) -> void:
+    _build_house_facade(Vector3(-6.1, 0.0, z), index, true)
+    _build_house_facade(Vector3(6.2, 0.0, z - 9.0), index + 2, true)
+    _build_house_facade(Vector3(-5.7, 1.25, z - 5.0), index + 3, false)
+    if index % 2 == 0:
+        _build_water_tank(Vector3(-5.1, 0.0, z - 3.0), 2.9)
+        _build_clothesline(Vector3(5.0, 0.0, z - 3.0))
+    _build_tree(Vector3(5.1, 0.0, z - 7.0), 0.58)
+
+func _build_residential_slice(z: float, index: int) -> void:
+    _build_house_facade(Vector3(-6.0, 0.0, z), index, false)
+    _build_house_facade(Vector3(6.4, 0.0, z - 11.0), index + 1, false)
+    _build_gate(Vector3(-4.65, 0.0, z - 2.0), _scenario_color("accent", CYAN))
+    _build_tree(Vector3(5.0, 0.0, z - 4.0), 0.88)
+    if index % 3 == 0:
+        _build_decor_car(Vector3(5.0, 0.0, z - 13.0), _scenario_color("accent", CYAN))
+
+func _build_center_slice(z: float, index: int) -> void:
+    _build_profile_building(Vector3(-6.1, 0.0, z), index, 7.5, 2.8)
+    _build_profile_building(Vector3(6.2, 0.0, z - 12.0), index + 3, 8.5, 3.1)
+    _build_shopfront(Vector3(-4.55, 0.0, z - 2.0), index, _scenario_color("accent", YELLOW))
+    _build_shopfront(Vector3(4.65, 0.0, z - 14.0), index + 1, _scenario_color("accent", YELLOW))
+
+func _build_humble_slice(z: float, index: int) -> void:
+    _build_house_facade(Vector3(-6.0, 0.0, z), index, false)
+    if index % 2 == 0:
+        _build_construction(Vector3(6.0, 0.0, z - 8.0), index)
+    else:
+        _build_shopfront(Vector3(6.1, 0.0, z - 8.0), index, _scenario_color("accent", RED))
+    _build_utility_wire(Vector3(-4.8, 0.0, z - 4.0), Vector3(5.2, 0.0, z - 14.0))
+
+func _build_condo_slice(z: float, index: int) -> void:
+    _build_profile_building(Vector3(-6.1, 0.0, z), index, 8.5, 3.2)
+    _build_gate(Vector3(-4.45, 0.0, z - 2.2), _scenario_color("accent", CYAN))
+    _build_house_facade(Vector3(6.0, 0.0, z - 10.0), index + 2, false)
+    _build_tree(Vector3(4.85, 0.0, z - 3.0), 1.0)
+    _build_tree(Vector3(-4.8, 0.0, z - 13.0), 0.74)
+
+func _build_military_slice(z: float, index: int) -> void:
+    _build_profile_building(Vector3(-6.2, 0.0, z), index, 5.0, 3.7)
+    _build_guard_post(Vector3(5.4, 0.0, z - 8.0), index)
+    _build_flag(Vector3(-4.45, 0.0, z - 5.0), _scenario_color("accent", YELLOW))
+    _build_tree(Vector3(6.0, 0.0, z - 2.0), 1.12)
+
+func _build_religious_slice(z: float, index: int) -> void:
+    if index % 3 == 0:
+        _build_church(Vector3(-6.0, 0.0, z), index)
+    else:
+        _build_house_facade(Vector3(-6.0, 0.0, z), index, false)
+    _build_profile_building(Vector3(6.1, 0.0, z - 10.0), index + 1, 4.8, 2.7)
+    _build_flags(Vector3(4.8, 0.0, z - 3.0), _scenario_color("accent", VIOLET))
+
+func _build_commercial_slice(z: float, index: int) -> void:
+    _build_shopfront(Vector3(-6.0, 0.0, z), index, _scenario_color("accent", RED))
+    _build_shopfront(Vector3(6.1, 0.0, z - 11.0), index + 1, _scenario_color("accent", CYAN))
+    if index % 2 == 0:
+        _build_market_stall(Vector3(-4.65, 0.0, z - 9.0), index)
+    _build_profile_building(Vector3(5.8, 0.0, z - 4.0), index + 4, 6.0, 2.6)
+
+func _build_tourist_slice(z: float, index: int) -> void:
+    _build_colonial_facade(Vector3(-6.0, 0.0, z), index)
+    _build_tourist_kiosk(Vector3(5.5, 0.0, z - 8.0), index)
+    _build_palm(Vector3(-4.7, 0.0, z - 13.0), 1.0)
+    _build_palm(Vector3(6.1, 0.0, z - 3.0), 0.86)
+
+func _build_terminal_slice(z: float, index: int) -> void:
+    _build_profile_building(Vector3(-6.2, 0.0, z), index, 10.0, 3.8)
+    _build_terminal_facade(Vector3(5.9, 0.0, z - 10.0), index)
+    _build_billboard(Vector3(-4.75, 0.0, z - 7.0), _scenario_color("accent", CYAN))
+    if index % 2 == 0:
+        _build_lamp(Vector3(5.0, 0.0, z - 3.0), _scenario_color("accent", CYAN))
+
+func _build_house_facade(pos: Vector3, index: int, stacked: bool) -> void:
+    var base: Color = _scenario_color("building", Color("#b86d54"))
+    var alt: Color = _scenario_color("building_alt", Color("#d29d63"))
+    var roof: Color = _scenario_color("roof", Color("#5d4444"))
+    var width: float = 2.4 + float(index % 2) * 0.35
+    var height: float = 2.4 + float(index % 3) * 0.25
+    var wall_surface: String = "brick" if stacked else "stucco"
+    _box(decor_root, Vector3(width, height, 3.1), pos + Vector3(0.0, height * 0.5, 0.0), _material(base if index % 2 == 0 else alt, 0.0, 0.86, wall_surface), "HouseFacade")
+    _box(decor_root, Vector3(width + 0.14, 0.16, 3.28), pos + Vector3(0.0, height + 0.10, 0.0), _material(roof, 0.0, 0.88, "wood"), "HouseRoof")
+    _box(decor_root, Vector3(0.62, 0.82, 0.06), pos + Vector3(0.0, 0.54, -1.58), _material(Color("#4d3d43"), 0.0, 0.52, "wood"), "HouseDoor")
+    for side in [-1.0, 1.0]:
+        _box(decor_root, Vector3(0.46, 0.38, 0.05), pos + Vector3(side * 0.62, 1.18, -1.59), _material(Color("#8bc4c0"), 0.0, 0.34, "glass"), "HouseWindow")
+    if stacked:
+        _box(decor_root, Vector3(0.92, 0.12, 0.10), pos + Vector3(0.0, height * 0.6, -1.65), _material(_scenario_color("accent", YELLOW), 0.0, 0.54), "HouseAwning")
+
+func _build_profile_building(pos: Vector3, index: int, height: float, width: float) -> void:
+    var material := _material(_scenario_color("building", Color("#38506b")).lerp(_scenario_color("building_alt", Color("#76566d")), float(index % 3) * 0.25), 0.0, 0.88, "stucco")
+    _box(decor_root, Vector3(width, height, 3.8), pos + Vector3(0.0, height * 0.5, 0.0), material, "ProfileBuilding")
+    for row in 4:
+        var window_color: Color = _scenario_color("accent", YELLOW) if (row + index) % 3 == 0 else Color("#7fc1c8")
+        _box(decor_root, Vector3(0.34, 0.46, 0.04), pos + Vector3(-width * 0.25, 1.0 + row * 0.86, -1.94), _material(window_color, 0.0, 0.34, "glass"), "ProfileWindow")
+        _box(decor_root, Vector3(0.34, 0.46, 0.04), pos + Vector3(width * 0.25, 1.0 + row * 0.86, -1.94), _material(window_color, 0.0, 0.34, "glass"), "ProfileWindow")
+    _box(decor_root, Vector3(width * 0.72, 0.08, 0.06), pos + Vector3(0.0, height - 0.24, -1.98), _material(_scenario_color("accent", YELLOW), 0.0, 0.48, "metal"), "ProfileCrown")
+
+func _build_shopfront(pos: Vector3, index: int, accent: Color) -> void:
+    _box(decor_root, Vector3(2.5, 2.45, 3.0), pos + Vector3(0.0, 1.22, 0.0), _material(_scenario_color("building", Color("#527c98")), 0.0, 0.82, "stucco"), "ShopBody")
+    _box(decor_root, Vector3(2.15, 0.92, 0.05), pos + Vector3(0.0, 0.88, -1.54), _material(Color("#75c8cb"), 0.0, 0.28, "glass"), "ShopWindow")
+    _box(decor_root, Vector3(2.7, 0.16, 0.72), pos + Vector3(0.0, 2.34, -0.04), _material(accent, 0.0, 0.56, "fabric"), "ShopAwning")
+    _box(decor_root, Vector3(1.65, 0.28, 0.08), pos + Vector3(0.0, 2.72, -1.47), _material(accent.lightened(0.18), 0.0, 0.38, "paint"), "ShopSign")
+    if index % 2 == 0:
+        _box(decor_root, Vector3(0.40, 0.70, 0.44), pos + Vector3(0.0, 0.42, -1.62), _material(Color("#744d3d"), 0.0, 0.74), "ShopDoor")
+
+func _build_construction(pos: Vector3, index: int) -> void:
+    var orange := _material(Color("#e7793f"), 0.0, 0.62, "metal")
+    _box(decor_root, Vector3(2.8, 1.7, 2.9), pos + Vector3(0.0, 0.85, 0.0), _material(Color("#a95142"), 0.0, 0.92, "brick"), "ConstructionBrick")
+    for side in [-1.0, 1.0]:
+        _cylinder(decor_root, 0.035, 0.035, 3.4, pos + Vector3(side * 1.2, 1.7, -1.58), orange, "ScaffoldPole")
+        _box(decor_root, Vector3(2.55, 0.06, 0.06), pos + Vector3(0.0, 2.9, -1.58), orange, "ScaffoldBar")
+    _box(decor_root, Vector3(2.9, 0.72, 0.05), pos + Vector3(0.0, 2.5, -1.62), _material(Color("#ffd45f"), 0.0, 0.76, "fabric"), "ConstructionNet")
+    if index % 2 == 0:
+        _cone(decor_root, 0.28, 0.65, pos + Vector3(1.6, 0.34, -1.0), orange, "ConstructionCone")
+
+func _build_guard_post(pos: Vector3, _index: int) -> void:
+    _box(decor_root, Vector3(1.9, 1.9, 1.8), pos + Vector3(0.0, 0.95, 0.0), _material(_scenario_color("building_alt", Color("#b9a770")), 0.0, 0.74, "stucco"), "GuardPost")
+    _box(decor_root, Vector3(1.3, 0.46, 0.05), pos + Vector3(0.0, 1.3, -0.94), _material(Color("#263d4b"), 0.0, 0.34, "glass"), "GuardWindow")
+    _box(decor_root, Vector3(2.1, 0.10, 2.0), pos + Vector3(0.0, 2.0, 0.0), _material(_scenario_color("accent", YELLOW), 0.0, 0.72, "metal"), "GuardRoof")
+    _build_flag(pos + Vector3(0.75, 0.0, 0.0), _scenario_color("accent", YELLOW))
+
+func _build_church(pos: Vector3, _index: int) -> void:
+    var wall := _material(_scenario_color("building", Color("#d8a46d")), 0.0, 0.84, "stucco")
+    _box(decor_root, Vector3(2.9, 4.0, 3.6), pos + Vector3(0.0, 2.0, 0.0), wall, "ChurchBody")
+    _box(decor_root, Vector3(1.1, 5.6, 1.0), pos + Vector3(-1.0, 2.8, 0.0), wall, "ChurchTower")
+    _cone(decor_root, 0.72, 1.05, pos + Vector3(-1.0, 6.1, 0.0), _material(_scenario_color("roof", Color("#6c4f55")), 0.0, 0.84), "ChurchRoof")
+    _box(decor_root, Vector3(0.72, 1.24, 0.05), pos + Vector3(0.0, 0.72, -1.84), _material(Color("#684a58"), 0.0, 0.66), "ChurchDoor")
+    _box(decor_root, Vector3(0.25, 0.92, 0.05), pos + Vector3(-1.0, 6.9, -0.05), _material(_scenario_color("accent", VIOLET), 0.0, 0.42), "ChurchCross")
+
+func _build_tourist_kiosk(pos: Vector3, _index: int) -> void:
+    _cylinder(decor_root, 0.72, 0.82, 1.55, pos + Vector3(0.0, 0.78, 0.0), _material(_scenario_color("building_alt", Color("#72b1ad")), 0.0, 0.74, "stucco"), "Kiosk")
+    _cone(decor_root, 1.05, 0.52, pos + Vector3(0.0, 1.82, 0.0), _material(_scenario_color("accent", CYAN), 0.0, 0.62, "fabric"), "KioskRoof")
+    _box(decor_root, Vector3(0.72, 0.22, 0.05), pos + Vector3(0.0, 0.98, -0.8), _material(Color("#f5e6bc"), 0.0, 0.45, "wood"), "KioskCounter")
+
+func _build_terminal_facade(pos: Vector3, _index: int) -> void:
+    _box(decor_root, Vector3(3.2, 3.2, 2.8), pos + Vector3(0.0, 1.6, 0.0), _material(_scenario_color("building", Color("#344b70")), 0.0, 0.68, "metal"), "TerminalFacade")
+    _box(decor_root, Vector3(2.9, 0.95, 0.05), pos + Vector3(0.0, 1.35, -1.46), _material(Color("#7ed3d0"), 0.0, 0.25, "glass"), "TerminalGlass")
+    _box(decor_root, Vector3(3.5, 0.12, 0.72), pos + Vector3(0.0, 3.25, 0.0), _material(_scenario_color("accent", CYAN), 0.0, 0.42, "metal"), "TerminalRoof")
+
+func _build_market_stall(pos: Vector3, _index: int) -> void:
+    _box(decor_root, Vector3(1.5, 1.1, 1.0), pos + Vector3(0.0, 0.56, 0.0), _material(Color("#d88c43"), 0.0, 0.76, "wood"), "MarketCart")
+    _box(decor_root, Vector3(1.75, 0.10, 1.15), pos + Vector3(0.0, 1.34, 0.0), _material(_scenario_color("accent", RED), 0.0, 0.62, "fabric"), "MarketAwning")
+    _sphere(decor_root, 0.23, pos + Vector3(0.0, 1.52, -0.08), _material(Color("#b8785a"), 0.0, 0.78), "MarketSeller")
+
+func _build_colonial_facade(pos: Vector3, index: int) -> void:
+    _build_house_facade(pos, index, false)
+    _box(decor_root, Vector3(2.55, 0.09, 0.08), pos + Vector3(0.0, 2.1, -1.64), _material(_scenario_color("accent", CYAN), 0.0, 0.45, "paint"), "ColonialTrim")
+
+func _build_palm(pos: Vector3, object_scale: float) -> void:
+    _cylinder(decor_root, 0.10 * object_scale, 0.15 * object_scale, 2.7 * object_scale, pos + Vector3(0.0, 1.35 * object_scale, 0.0), _material(Color("#805338"), 0.0, 0.9), "PalmTrunk")
+    var leaf := _material(Color("#3eaa75"), 0.0, 0.84, "leaves")
+    for i in 5:
+        var branch := _box(decor_root, Vector3(0.08, 0.06, 1.0 * object_scale), pos + Vector3(0.0, 2.75 * object_scale, 0.0), leaf, "PalmLeaf")
+        branch.rotation.y = float(i) * TAU / 5.0
+        branch.rotation.x = -0.28
+
+func _build_water_tank(pos: Vector3, height: float) -> void:
+    _cylinder(decor_root, 0.55, 0.55, 0.85, pos + Vector3(0.0, height, 0.0), _material(Color("#4d78a1"), 0.0, 0.62, "metal"), "WaterTank")
+    _cylinder(decor_root, 0.08, 0.08, height - 0.35, pos + Vector3(-0.35, (height - 0.35) * 0.5, 0.0), _material(Color("#76533e"), 0.0, 0.92, "metal"), "TankLeg")
+    _cylinder(decor_root, 0.08, 0.08, height - 0.35, pos + Vector3(0.35, (height - 0.35) * 0.5, 0.0), _material(Color("#76533e"), 0.0, 0.92, "metal"), "TankLeg")
+
+func _build_clothesline(pos: Vector3) -> void:
+    _cylinder(decor_root, 0.035, 0.035, 2.1, pos + Vector3(-0.9, 1.05, 0.0), _material(Color("#594a43"), 0.0, 0.9, "wood"), "ClothesPole")
+    _cylinder(decor_root, 0.035, 0.035, 2.1, pos + Vector3(0.9, 1.05, 0.0), _material(Color("#594a43"), 0.0, 0.9, "wood"), "ClothesPole")
+    _box(decor_root, Vector3(1.9, 0.025, 0.025), pos + Vector3(0.0, 1.85, 0.0), _material(Color("#a5a19a"), 0.0, 0.95, "metal"), "ClothesLine")
+    for i in 4:
+        _box(decor_root, Vector3(0.30, 0.38, 0.04), pos + Vector3(-0.63 + i * 0.42, 1.62, -0.02), _material([Color("#e56d63"), Color("#5d9bd1"), Color("#e5c44f"), Color("#82c99d")][i], 0.0, 0.8, "fabric"), "Clothes")
+
+func _build_gate(pos: Vector3, color: Color) -> void:
+    var metal := _material(color, 0.35, 0.45, "metal")
+    _box(decor_root, Vector3(1.8, 1.7, 0.08), pos + Vector3(0.0, 0.85, 0.0), metal, "Gate")
+    for i in 4:
+        _box(decor_root, Vector3(0.035, 1.5, 0.10), pos + Vector3(-0.68 + i * 0.45, 0.78, -0.05), metal, "GateBar")
+
+func _build_decor_car(pos: Vector3, _color: Color) -> void:
+    var parent := Node3D.new()
+    parent.name = "ParkedCar"
+    parent.position = pos
+    decor_root.add_child(parent)
+    var tire := _material(Color("#202c3c"), 0.15, 0.38, "rubber")
+    var chrome := _material(Color("#aebdc0"), 0.72, 0.24, "metal")
+    var glass := _material(Color("#71bcc7"), 0.0, 0.25, "glass")
+    var lamp := _material(Color("#fff4c9"), 0.0, 0.18, "glass")
+    lamp.emission_enabled = true
+    lamp.emission = Color("#fff1b0")
+    lamp.emission_energy_multiplier = 1.4
+    var tail := _material(Color("#cc3942"), 0.0, 0.28, "glass")
+    _build_brazilian_car(parent, int(abs(pos.z)) % 3, tire, chrome, glass, lamp, tail)
+
+func _build_utility_wire(start: Vector3, finish: Vector3) -> void:
+    var midpoint: Vector3 = (start + finish) * 0.5 + Vector3(0.0, 2.9, 0.0)
+    var length: float = start.distance_to(finish)
+    var wire := _box(decor_root, Vector3(0.025, 0.025, length), midpoint, _material(Color("#282d35"), 0.1, 0.7), "UtilityWire")
+    wire.look_at(finish + Vector3(0.0, 2.9, 0.0), Vector3.UP)
+
+func _build_flag(pos: Vector3, color: Color) -> void:
+    _cylinder(decor_root, 0.025, 0.025, 2.7, pos + Vector3(0.0, 1.35, 0.0), _material(Color("#d2d0c2"), 0.0, 0.68, "metal"), "FlagPole")
+    _box(decor_root, Vector3(0.72, 0.38, 0.035), pos + Vector3(0.34, 2.38, 0.0), _material(color, 0.0, 0.64, "fabric"), "Flag")
+
+func _build_flags(pos: Vector3, color: Color) -> void:
+    _build_flag(pos, color)
+    _build_flag(pos + Vector3(0.9, 0.0, -0.6), color.lightened(0.14))
+
+func _build_billboard(pos: Vector3, color: Color) -> void:
+    _cylinder(decor_root, 0.04, 0.04, 3.8, pos + Vector3(0.0, 1.9, 0.0), _material(Color("#39404d"), 0.15, 0.5, "metal"), "BillboardPole")
+    _box(decor_root, Vector3(2.25, 1.15, 0.08), pos + Vector3(0.0, 3.65, 0.0), _material(color, 0.0, 0.38, "paint"), "Billboard")
+
+func _build_building(pos: Vector3, index: int, accent: Color) -> void:
+    var height: float = 3.6 + float((index * 17) % 5)
+    var width: float = 2.3 + float(index % 3) * 0.45
+    var colors: Array[Color] = [Color("#38506b"), Color("#76566d"), Color("#496b68"), Color("#5c536f")]
+    var material := _material(colors[index % colors.size()], 0.0, 0.88, "stucco")
+    _box(decor_root, Vector3(width, height, 3.8), pos + Vector3(0.0, height * 0.5, 0.0), material, "Building")
+    for row in 3:
+        var window_mat := _material(Color("#e9c66c") if (row + index) % 2 == 0 else Color("#78b8c5"), 0.0, 0.35, "glass")
+        _box(decor_root, Vector3(0.32, 0.42, 0.04), pos + Vector3(-width * 0.25, 1.0 + row * 0.82, -1.94), window_mat, "Window")
+        _box(decor_root, Vector3(0.32, 0.42, 0.04), pos + Vector3(width * 0.25, 1.0 + row * 0.82, -1.94), window_mat, "Window")
+    _box(decor_root, Vector3(width * 0.7, 0.05, 0.05), pos + Vector3(0.0, height - 0.22, -1.98), _material(accent, 0.0, 0.55), "BuildingAccent")
+
+func _build_lamp(pos: Vector3, accent: Color) -> void:
+    _cylinder(decor_root, 0.035, 0.035, 3.2, pos + Vector3(0.0, 1.6, 0.0), _material(Color("#3c4654"), 0.35, 0.4, "metal"), "LampPole")
+    var lamp_material := _material(accent.lightened(0.20), 0.0, 0.22, "glass")
+    lamp_material.emission_enabled = true
+    lamp_material.emission = accent.lightened(0.20)
+    lamp_material.emission_energy_multiplier = 1.5
+    _sphere(decor_root, 0.12, pos + Vector3(0.0, 3.24, 0.0), lamp_material, "LampGlow")
+    _box(decor_root, Vector3(0.65, 0.06, 0.06), pos + Vector3(0.27, 3.18, 0.0), _material(Color("#3c4654"), 0.35, 0.4, "metal"), "LampArm")
+
+func _build_tree(pos: Vector3, object_scale: float) -> void:
+    _cylinder(decor_root, 0.12 * object_scale, 0.16 * object_scale, 1.7 * object_scale, pos + Vector3(0.0, 0.85 * object_scale, 0.0), _material(Color("#67452f"), 0.0, 0.95, "wood"), "TreeTrunk")
+    var foliage := _material(Color("#3b9b69"), 0.0, 0.86, "leaves")
+    _sphere(decor_root, 0.62 * object_scale, pos + Vector3(-0.28, 1.65 * object_scale, 0.0), foliage, "TreeLeaf")
+    _sphere(decor_root, 0.75 * object_scale, pos + Vector3(0.28, 1.82 * object_scale, 0.0), foliage, "TreeLeaf")
+    _sphere(decor_root, 0.5 * object_scale, pos + Vector3(0.0, 2.2 * object_scale, 0.0), foliage, "TreeLeaf")
+
+func _create_bus_stop(total: float) -> void:
+    bus_stop_node = Node3D.new()
+    bus_stop_node.name = "BusStop"
+    bus_stop_node.position = Vector3(3.25, 0.0, -total - 14.0)
+    decor_root.add_child(bus_stop_node)
+    var stop_accent: Color = _scenario_color("accent", Color("#e8c45b"))
+    if GameSave.owns("placa"):
+        stop_accent = Color("#63c8ed")
+    _box(bus_stop_node, Vector3(2.5, 0.12, 0.12), Vector3(0.0, 2.95, 0.0), _material(stop_accent, 0.0, 0.7), "StopRoof")
+    _box(bus_stop_node, Vector3(0.08, 3.0, 0.08), Vector3(-1.05, 1.45, 0.0), _material(Color("#c8d4d1"), 0.0, 0.55), "StopPole")
+    _box(bus_stop_node, Vector3(1.65, 1.05, 0.08), Vector3(0.0, 1.25, 0.08), _material(Color("#5b7790"), 0.0, 0.48), "StopGlass")
+    _box(bus_stop_node, Vector3(1.55, 0.15, 0.45), Vector3(0.0, 0.55, 0.10), _material(Color("#8d5b3f"), 0.0, 0.75), "StopBench")
+    _box(bus_stop_node, Vector3(0.45, 0.62, 0.08), Vector3(-1.05, 2.65, -0.08), _material(stop_accent.lightened(0.16), 0.0, 0.6), "StopSign")
+    bus_node = Node3D.new()
+    bus_node.name = "YellowBus"
+    bus_node.position = Vector3(-1.1, 0.9, 2.2)
+    bus_stop_node.add_child(bus_node)
+    _build_bus_mesh(bus_node)
+    bus_node.visible = false
+    bus_stop_node.visible = false
+
+func _build_bus_mesh(parent: Node3D) -> void:
+    var yellow := _material(Color("#f4bf3d"), 0.08, 0.48, "vehicle_paint")
+    var glass := _material(Color("#6cc4cc"), 0.0, 0.28, "glass")
+    var red := _material(Color("#ed634c"), 0.0, 0.62, "paint")
+    var tire := _material(Color("#202b3a"), 0.05, 0.55, "rubber")
+    var chrome := _material(Color("#c3c8bf"), 0.72, 0.24, "metal")
+    var lamp := _material(Color("#fff2ba"), 0.0, 0.18, "glass")
+    lamp.emission_enabled = true
+    lamp.emission = Color("#ffe9a0")
+    lamp.emission_energy_multiplier = 1.6
+    _box(parent, Vector3(2.9, 1.55, 4.2), Vector3(0.0, 0.0, 0.0), yellow, "BusBody")
+    _box(parent, Vector3(2.5, 0.58, 0.05), Vector3(0.0, 0.35, -2.12), glass, "BusWindshield")
+    _box(parent, Vector3(2.5, 0.55, 0.05), Vector3(0.0, 0.34, 2.12), glass, "BusRearGlass")
+    _box(parent, Vector3(0.05, 0.54, 3.55), Vector3(-1.47, 0.35, 0.0), glass, "BusSideWindows")
+    _box(parent, Vector3(0.05, 0.54, 3.55), Vector3(1.47, 0.35, 0.0), glass, "BusSideWindows")
+    _box(parent, Vector3(0.74, 0.85, 0.06), Vector3(-0.72, -0.05, -2.15), chrome, "BusDoor")
+    _box(parent, Vector3(2.9, 0.18, 4.2), Vector3(0.0, -0.45, 0.0), red, "BusStripe")
+    _box(parent, Vector3(2.98, 0.10, 0.12), Vector3(0.0, -0.65, -2.15), chrome, "BusBumper")
+    _box(parent, Vector3(0.42, 0.22, 0.05), Vector3(-0.80, -0.18, -2.17), lamp, "BusHeadlight")
+    _box(parent, Vector3(0.42, 0.22, 0.05), Vector3(0.80, -0.18, -2.17), lamp, "BusHeadlight")
+    for wheel_x in [-1.05, 1.05]:
+        var front := _cylinder(parent, 0.38, 0.38, 0.24, Vector3(wheel_x, -0.88, -1.1), tire, "BusWheel")
+        var rear := _cylinder(parent, 0.38, 0.38, 0.24, Vector3(wheel_x, -0.88, 1.1), tire, "BusWheel")
+        front.rotation.z = PI / 2.0
+        rear.rotation.z = PI / 2.0
+
+func _build_brazilian_car(parent: Node3D, variant: int, dark: Material, chrome: Material, glass: Material, white_light: Material, tail_light: Material) -> void:
+    var paint_colors: Array[Color] = [Color("#c83f45"), Color("#e6e7e1"), Color("#2d6d9b")]
+    var paint := _material(paint_colors[variant], 0.24, 0.30, "vehicle_paint")
+    var black_paint := _material(Color("#18202a"), 0.08, 0.38, "vehicle_paint")
+    var plate := _material(Color("#e9edf0"), 0.05, 0.34, "metal")
+    var accent := _material(Color("#315067"), 0.18, 0.34, "metal")
+    var body_length: float = 3.10 if variant != 1 else 3.42
+    var wheel_z: float = 1.02 if variant == 0 else 1.14
+    var cabin_length: float = 1.32 if variant != 2 else 1.05
+    var cabin_z: float = 0.22 if variant == 0 else (0.02 if variant == 1 else -0.38)
+    _box(parent, Vector3(2.24, 0.48, body_length), Vector3(0.0, 0.48, 0.05), paint, "CarLowerBody")
+    _box(parent, Vector3(1.98, 0.20, 0.76), Vector3(0.0, 0.79, -body_length * 0.32), paint, "CarHood")
+    _box(parent, Vector3(1.65 if variant != 2 else 1.74, 0.58 if variant != 2 else 0.82, cabin_length), Vector3(0.0, 0.98 if variant != 2 else 1.08, cabin_z), paint, "CarCabinShell")
+    _box(parent, Vector3(1.42 if variant != 2 else 1.52, 0.34 if variant != 2 else 0.47, 0.055), Vector3(0.0, 1.03 if variant != 2 else 1.16, cabin_z - cabin_length * 0.50), glass, "CarWindshield")
+    _box(parent, Vector3(1.42 if variant != 2 else 1.52, 0.30 if variant != 2 else 0.40, 0.055), Vector3(0.0, 1.03 if variant != 2 else 1.16, cabin_z + cabin_length * 0.50), glass, "CarRearGlass")
+    var side_window_size: Vector3 = Vector3(0.055, 0.30 if variant != 2 else 0.42, cabin_length * 0.80)
+    _box(parent, side_window_size, Vector3(-0.84 if variant != 2 else -0.88, 1.03 if variant != 2 else 1.16, cabin_z), glass, "CarSideGlass")
+    _box(parent, side_window_size, Vector3(0.84 if variant != 2 else 0.88, 1.03 if variant != 2 else 1.16, cabin_z), glass, "CarSideGlass")
+    _box(parent, Vector3(2.30, 0.10, 0.13), Vector3(0.0, 0.25, -body_length * 0.5), chrome, "CarFrontBumper")
+    _box(parent, Vector3(2.30, 0.10, 0.13), Vector3(0.0, 0.25, body_length * 0.5), chrome, "CarRearBumper")
+    _box(parent, Vector3(0.34, 0.15, 0.05), Vector3(-0.68, 0.66, -body_length * 0.51), white_light, "CarHeadlight")
+    _box(parent, Vector3(0.34, 0.15, 0.05), Vector3(0.68, 0.66, -body_length * 0.51), white_light, "CarHeadlight")
+    _box(parent, Vector3(0.28, 0.13, 0.05), Vector3(-0.72, 0.57, body_length * 0.51), tail_light, "CarTaillight")
+    _box(parent, Vector3(0.28, 0.13, 0.05), Vector3(0.72, 0.57, body_length * 0.51), tail_light, "CarTaillight")
+    _box(parent, Vector3(0.52, 0.14, 0.035), Vector3(0.0, 0.43, -body_length * 0.515), plate, "CarFrontPlate")
+    _box(parent, Vector3(0.52, 0.14, 0.035), Vector3(0.0, 0.43, body_length * 0.515), plate, "CarRearPlate")
+    for side in [-1.0, 1.0]:
+        _box(parent, Vector3(0.08, 0.06, 0.36), Vector3(side * 1.12, 0.90, cabin_z - 0.34), accent, "CarMirror")
+        _box(parent, Vector3(0.04, 0.04, 0.20), Vector3(side * 1.13, 0.82, -0.05), chrome, "CarDoorHandle")
+    _wheels(parent, dark, 1.02, wheel_z)
+    for x in [-1.02, 1.02]:
+        for z in [-wheel_z, wheel_z]:
+            var hub := _cylinder(parent, 0.13, 0.13, 0.20, Vector3(x, 0.18, z), chrome, "WheelHub")
+            hub.rotation.z = PI / 2.0
+    match variant:
+        0:
+            _box(parent, Vector3(1.34, 0.08, 0.12), Vector3(0.0, 1.45, body_length * 0.42), black_paint, "HatchSpoiler")
+            _box(parent, Vector3(1.55, 0.07, 0.06), Vector3(0.0, 0.43, 0.0), black_paint, "HatchGrille")
+        1:
+            _box(parent, Vector3(1.82, 0.18, 0.55), Vector3(0.0, 0.70, body_length * 0.34), paint, "SedanTrunk")
+            _box(parent, Vector3(1.52, 0.07, 0.06), Vector3(0.0, 0.43, -body_length * 0.51), black_paint, "SedanGrille")
+        _:
+            _box(parent, Vector3(2.02, 0.12, 1.64), Vector3(0.0, 1.18, 0.60), paint, "UtilityCargo")
+            _box(parent, Vector3(1.88, 0.07, 0.06), Vector3(0.0, 0.48, -body_length * 0.51), black_paint, "UtilityGrille")
+            _cylinder(parent, 0.035, 0.035, 1.40, Vector3(-0.82, 1.74, 0.50), chrome, "UtilityRoofRack")
+            _cylinder(parent, 0.035, 0.035, 1.40, Vector3(0.82, 1.74, 0.50), chrome, "UtilityRoofRack")
+
+func _build_road_obstacle(parent: Node3D, kind: String) -> void:
+    var body := _material(Color("#d9584e"), 0.05, 0.48, "paint")
+    var dark := _material(Color("#202c3c"), 0.15, 0.38, "rubber")
+    var chrome := _material(Color("#aebdc0"), 0.72, 0.24, "metal")
+    var glass := _material(Color("#71bcc7"), 0.0, 0.25, "glass")
+    var white_light := _material(Color("#fff4c9"), 0.0, 0.18, "glass")
+    white_light.emission_enabled = true
+    white_light.emission = Color("#fff1b0")
+    white_light.emission_energy_multiplier = 1.6
+    var tail_light := _material(Color("#cc3942"), 0.0, 0.28, "glass")
+    match kind:
+        "car":
+            _build_brazilian_car(parent, abs(parent.name.hash()) % 3, dark, chrome, glass, white_light, tail_light)
+        "bus_traffic":
+            var bus_body := _material(Color("#e7b73d"), 0.08, 0.50, "vehicle_paint")
+            _box(parent, Vector3(2.52, 1.55, 4.35), Vector3(0.0, 0.90, 0.0), bus_body, "TrafficBusBody")
+            _box(parent, Vector3(2.34, 0.12, 4.12), Vector3(0.0, 1.72, 0.0), chrome, "TrafficBusRoof")
+            _box(parent, Vector3(2.16, 0.68, 0.055), Vector3(0.0, 1.18, -2.19), glass, "TrafficBusWindshield")
+            _box(parent, Vector3(2.16, 0.62, 0.055), Vector3(0.0, 1.16, 2.19), glass, "TrafficBusRearGlass")
+            _box(parent, Vector3(0.055, 0.62, 3.72), Vector3(-1.27, 1.18, 0.0), glass, "TrafficBusSideGlass")
+            _box(parent, Vector3(0.055, 0.62, 3.72), Vector3(1.27, 1.18, 0.0), glass, "TrafficBusSideGlass")
+            _box(parent, Vector3(2.58, 0.16, 4.38), Vector3(0.0, 0.28, 0.0), _material(Color("#d44c43"), 0.0, 0.54, "paint"), "TrafficBusStripe")
+            _box(parent, Vector3(0.48, 0.28, 0.05), Vector3(-0.72, 0.69, -2.21), white_light, "TrafficBusHeadlight")
+            _box(parent, Vector3(0.48, 0.28, 0.05), Vector3(0.72, 0.69, -2.21), white_light, "TrafficBusHeadlight")
+            _box(parent, Vector3(2.6, 0.12, 0.10), Vector3(0.0, 0.20, -2.22), chrome, "TrafficBusBumper")
+            _wheels(parent, dark, 1.10, 1.45)
+        "motorcycle":
+            var moto_front := _cylinder(parent, 0.33, 0.33, 0.18, Vector3(-0.48, 0.32, -0.65), dark, "WheelMotoFront")
+            var moto_rear := _cylinder(parent, 0.33, 0.33, 0.18, Vector3(-0.48, 0.32, 0.65), dark, "WheelMotoRear")
+            moto_front.rotation.z = PI / 2.0
+            moto_rear.rotation.z = PI / 2.0
+            var frame := _material(Color("#252f3b"), 0.72, 0.34, "metal")
+            _box(parent, Vector3(0.10, 0.48, 1.16), Vector3(-0.48, 0.65, 0.0), frame, "MotoFrame")
+            var tank := _sphere(parent, 0.30, Vector3(-0.48, 0.86, -0.12), _material(Color("#39bda9"), 0.18, 0.30, "vehicle_paint"), "MotoTank")
+            tank.scale = Vector3(0.72, 0.62, 1.35)
+            _box(parent, Vector3(0.26, 0.12, 0.52), Vector3(-0.48, 0.72, 0.43), _material(Color("#141b25"), 0.0, 0.6, "rubber"), "MotoSeat")
+            _box(parent, Vector3(0.72, 0.06, 0.06), Vector3(-0.48, 1.24, -0.62), frame, "MotoHandlebar")
+            _sphere(parent, 0.12, Vector3(-0.48, 1.14, -0.69), white_light, "MotoHeadlight")
+            _capsule(parent, 0.19, 0.55, Vector3(-0.48, 1.30, 0.05), _material(Color("#1d3546"), 0.0, 0.64, "fabric"), "MotoRiderBody")
+            _sphere(parent, 0.22, Vector3(-0.48, 1.76, 0.05), _material(Color("#1f2934"), 0.0, 0.45, "paint"), "MotoHelmet")
+            _cylinder(parent, 0.055, 0.055, 0.92, Vector3(-0.48, 0.48, 0.30), chrome, "MotoExhaust")
+        "truck":
+            var truck_body := _material(Color("#d65f42"), 0.08, 0.48, "vehicle_paint")
+            _box(parent, Vector3(2.55, 1.72, 2.10), Vector3(0.0, 1.02, 0.68), truck_body, "TruckCargo")
+            _box(parent, Vector3(2.52, 1.46, 1.25), Vector3(0.0, 0.84, -1.02), truck_body, "TruckCab")
+            _box(parent, Vector3(2.12, 0.64, 0.055), Vector3(0.0, 1.40, -1.66), glass, "TruckWindshield")
+            _box(parent, Vector3(2.25, 0.15, 0.08), Vector3(0.0, 0.28, -1.68), chrome, "TruckBumper")
+            _box(parent, Vector3(0.34, 0.22, 0.05), Vector3(-0.70, 0.72, -1.70), white_light, "TruckHeadlight")
+            _box(parent, Vector3(0.34, 0.22, 0.05), Vector3(0.70, 0.72, -1.70), white_light, "TruckHeadlight")
+            _box(parent, Vector3(2.22, 0.07, 0.05), Vector3(0.0, 1.60, 1.76), _material(Color("#f4c94e"), 0.0, 0.55, "paint"), "TruckReflectiveStrip")
+            _wheels(parent, dark, 1.08, 1.15)
+        "pothole":
+            _cylinder(parent, 0.84, 0.84, 0.035, Vector3(0.0, 0.04, 0.0), _material(Color("#101723"), 0.0, 1.0, "asphalt"), "Pothole")
+            _cylinder(parent, 0.58, 0.58, 0.045, Vector3(0.0, 0.068, 0.0), _material(Color("#283243"), 0.0, 1.0, "dirt"), "PotholeInner")
+            for i in 7:
+                var angle: float = float(i) * TAU / 7.0
+                _box(parent, Vector3(0.20, 0.035, 0.07), Vector3(cos(angle) * 0.82, 0.075, sin(angle) * 0.82), _material(Color("#59616a"), 0.0, 0.95, "asphalt"), "BrokenAsphalt")
+        _:
+            _box(parent, Vector3(2.0, 0.8, 2.0), Vector3(0.0, 0.5, 0.0), body, "RoadHazard")
+
+func _build_pedestrian_obstacle(parent: Node3D, profile_id: String, role: String, avatar_scale: float) -> Node3D:
+    var pedestrian := WORLD_CHARACTER_SCRIPT.new() as Node3D
+    pedestrian.name = "Pedestrian3D_%s" % role
+    pedestrian.set("profile_id", profile_id)
+    pedestrian.set("role", role)
+    pedestrian.set("avatar_scale", avatar_scale)
+    parent.add_child(pedestrian)
+    return pedestrian
+
+func _build_animal_obstacle(parent: Node3D, species: String) -> Node3D:
+    var animal := WORLD_ANIMAL_SCRIPT.new() as Node3D
+    animal.name = "Animal3D_%s" % species
+    animal.set("species", species)
+    parent.add_child(animal)
+    return animal
+
+func _build_sidewalk_obstacle(parent: Node3D, kind: String) -> void:
+    var dark := _material(Color("#29354d"), 0.0, 0.72, "fabric")
+    var red := _material(Color("#e94f5a"), 0.0, 0.66, "paint")
+    var chrome := _material(Color("#aebdc0"), 0.72, 0.24, "metal")
+    match kind:
+        "old_lady":
+            _build_pedestrian_obstacle(parent, "maria", "old_lady", 0.80)
+        "hydrant":
+            var hydrant_red := _material(Color("#d95750"), 0.0, 0.62, "metal")
+            _cylinder(parent, 0.28, 0.34, 0.64, Vector3(0.0, 0.40, 0.0), hydrant_red, "HydrantBody")
+            _cylinder(parent, 0.22, 0.28, 0.22, Vector3(0.0, 0.82, 0.0), hydrant_red, "HydrantNeck")
+            _sphere(parent, 0.31, Vector3(0.0, 1.00, 0.0), hydrant_red, "HydrantDome")
+            for side in [-1.0, 1.0]:
+                var nozzle := _cylinder(parent, 0.12, 0.16, 0.20, Vector3(side * 0.29, 0.60, 0.0), hydrant_red, "HydrantNozzle")
+                nozzle.rotation.z = PI / 2.0
+                _cylinder(parent, 0.055, 0.07, 0.04, Vector3(side * 0.41, 0.60, 0.0), _material(Color("#f0a345"), 0.35, 0.42, "metal"), "HydrantCap")
+            _cylinder(parent, 0.055, 0.055, 0.70, Vector3(0.0, 0.61, 0.0), _material(Color("#f0a345"), 0.35, 0.42, "metal"), "HydrantHandle")
+        "payphone":
+            var phone_body := _material(Color("#2d9ca4"), 0.0, 0.52, "metal")
+            _box(parent, Vector3(0.55, 1.72, 0.42), Vector3(0.0, 0.91, 0.0), phone_body, "PayphoneBody")
+            _box(parent, Vector3(0.68, 0.10, 0.48), Vector3(0.0, 1.82, 0.0), phone_body, "PayphoneHood")
+            _box(parent, Vector3(0.38, 0.40, 0.04), Vector3(0.0, 1.32, -0.23), _material(Color("#d9e8df"), 0.0, 0.4, "glass"), "PayphonePanel")
+            _box(parent, Vector3(0.08, 0.24, 0.10), Vector3(-0.22, 1.37, -0.28), _material(Color("#f0bd4a"), 0.0, 0.34, "metal"), "PayphoneCoinSlot")
+            _box(parent, Vector3(0.14, 0.48, 0.11), Vector3(0.28, 1.48, -0.18), _material(Color("#182331"), 0.0, 0.5, "rubber"), "PayphoneHandset")
+            _box(parent, Vector3(0.75, 0.08, 0.08), Vector3(0.0, 0.08, 0.0), phone_body, "PayphoneBase")
+        "dog":
+            _build_animal_obstacle(parent, "caramelo")
+        "bicycle":
+            var bike_tire := _material(Color("#29354d"), 0.15, 0.72, "rubber")
+            var bike_front := _cylinder(parent, 0.38, 0.38, 0.09, Vector3(-0.48, 0.45, 0.0), bike_tire, "BikeWheelFront")
+            var bike_rear := _cylinder(parent, 0.38, 0.38, 0.09, Vector3(0.48, 0.45, 0.0), bike_tire, "BikeWheelRear")
+            bike_front.rotation.x = PI / 2.0
+            bike_rear.rotation.x = PI / 2.0
+            var bike_frame := _material(Color("#e94f5a"), 0.0, 0.66, "metal")
+            _box(parent, Vector3(0.10, 0.62, 0.10), Vector3(0.0, 0.72, 0.0), bike_frame, "BikeFrame")
+            _box(parent, Vector3(0.76, 0.07, 0.07), Vector3(0.0, 0.82, 0.0), bike_frame, "BikeBar")
+            _box(parent, Vector3(0.38, 0.08, 0.07), Vector3(0.02, 1.08, 0.0), dark, "BikeSeat")
+            _box(parent, Vector3(0.10, 0.48, 0.10), Vector3(-0.43, 0.80, 0.0), bike_frame, "BikeFork")
+            _box(parent, Vector3(0.55, 0.05, 0.05), Vector3(-0.48, 1.08, 0.0), chrome, "BikeHandlebar")
+            _cylinder(parent, 0.10, 0.10, 0.05, Vector3(0.0, 0.60, 0.0), chrome, "BikePedal")
+        "cone":
+            var cone_orange := _material(Color("#f0783f"), 0.0, 0.68, "rubber")
+            var cone_white := _material(Color("#f4e6c5"), 0.0, 0.72, "rubber")
+            _box(parent, Vector3(0.98, 0.12, 0.58), Vector3(0.0, 0.08, 0.0), cone_orange, "ConeBase")
+            _cone(parent, 0.40, 0.92, Vector3(0.0, 0.54, 0.0), cone_orange, "TrafficCone")
+            _cylinder(parent, 0.29, 0.33, 0.11, Vector3(0.0, 0.62, 0.0), cone_white, "ConeReflectiveBand")
+            _cylinder(parent, 0.18, 0.22, 0.10, Vector3(0.0, 0.90, 0.0), cone_white, "ConeReflectiveTip")
+        "vendor":
+            var cart_wood := _material(Color("#e2a846"), 0.0, 0.72, "wood")
+            var awning := _material(Color("#e94f5a"), 0.0, 0.66, "fabric")
+            _box(parent, Vector3(1.45, 1.0, 0.9), Vector3(0.0, 0.58, 0.0), cart_wood, "VendorCart")
+            _box(parent, Vector3(1.60, 0.08, 0.90), Vector3(0.0, 1.17, 0.0), _material(Color("#f2c35b"), 0.0, 0.66, "wood"), "VendorCounter")
+            _box(parent, Vector3(1.74, 0.10, 1.08), Vector3(0.0, 1.40, 0.0), awning, "VendorAwning")
+            _cylinder(parent, 0.18, 0.18, 0.10, Vector3(-0.50, 0.12, 0.52), dark, "VendorWheel")
+            _cylinder(parent, 0.18, 0.18, 0.10, Vector3(0.50, 0.12, 0.52), dark, "VendorWheel")
+            _cylinder(parent, 0.06, 0.06, 1.05, Vector3(-0.64, 1.55, 0.0), chrome, "VendorPole")
+            _cylinder(parent, 0.06, 0.06, 1.05, Vector3(0.64, 1.55, 0.0), chrome, "VendorPole")
+            var vendor_character := _build_pedestrian_obstacle(parent, "ze", "vendor", 0.78)
+            vendor_character.position = Vector3(0.0, 0.0, -0.18)
+        "bench":
+            var bench_wood := _material(Color("#9a633d"), 0.0, 0.8, "wood")
+            var bench_metal := _material(Color("#3e4d59"), 0.55, 0.52, "metal")
+            _box(parent, Vector3(1.5, 0.15, 0.42), Vector3(0.0, 0.72, 0.0), bench_wood, "BenchSeat")
+            _box(parent, Vector3(1.5, 0.8, 0.12), Vector3(0.0, 1.10, 0.17), _material(Color("#aa7045"), 0.0, 0.8, "wood"), "BenchBack")
+            for side in [-0.56, 0.56]:
+                _box(parent, Vector3(0.10, 0.75, 0.12), Vector3(side, 0.37, 0.0), bench_metal, "BenchLeg")
+                _box(parent, Vector3(0.18, 0.34, 0.10), Vector3(side, 0.86, 0.04), bench_metal, "BenchArm")
+        _:
+            _box(parent, Vector3(1.2, 0.8, 0.8), Vector3(0.0, 0.45, 0.0), red, "SidewalkHazard")
+
+func _build_collectible(parent: Node3D, kind: String) -> void:
+    parent.position.y = 1.25
+    var colors: Dictionary = {
+        "coin": GOLD, "coffee": Color("#b87d55"), "bread": Color("#f2b04c"),
+        "pastel": Color("#e99b52"), "sugarcane": Color("#68cf83"), "pass": Color("#d8f0a2"),
+        "golden": Color("#fff0a0"), "coxinha": Color("#e5a143"), "guarana": Color("#e85d68"),
+        "pix": CYAN, "umbrella": BLUE
+    }
+    var color: Color = colors.get(kind, GOLD)
+    var mat := _material(color, 0.12 if kind in ["coin", "golden"] else 0.0, 0.28, "metal" if kind in ["coin", "golden"] else "paint")
+    mat.emission_enabled = true
+    mat.emission = color
+    mat.emission_energy_multiplier = 1.8
+    match kind:
+        "coin", "golden":
+            var coin := _cylinder(parent, 0.18 if kind == "coin" else 0.24, 0.18 if kind == "coin" else 0.24, 0.07, Vector3.ZERO, mat, "Coin")
+            coin.rotation.x = PI / 2.0
+            _cylinder(parent, 0.11 if kind == "coin" else 0.16, 0.11 if kind == "coin" else 0.16, 0.012, Vector3(0.0, 0.0, -0.04), _material(Color("#fff5ba"), 0.15, 0.22, "metal"), "CoinInset")
+        "coffee":
+            _cylinder(parent, 0.18, 0.15, 0.30, Vector3(0.0, 0.0, 0.0), mat, "CoffeeCup")
+            _cylinder(parent, 0.14, 0.14, 0.018, Vector3(0.0, 0.16, 0.0), _material(Color("#33231f"), 0.0, 0.72, "paint"), "CoffeeSurface")
+            var coffee_handle := _torus(parent, 0.10, 0.035, Vector3(0.18, 0.02, 0.0), _material(Color("#f3d8a0"), 0.0, 0.54, "paint"), "CoffeeHandle")
+            coffee_handle.rotation.x = PI / 2.0
+        "bread":
+            var bread := _sphere(parent, 0.25, Vector3.ZERO, mat, "PaoDeQueijo")
+            bread.scale = Vector3(1.35, 0.72, 0.90)
+            _box(parent, Vector3(0.025, 0.16, 0.28), Vector3(-0.04, 0.20, -0.03), _material(Color("#fff0bd"), 0.0, 0.8, "paint"), "BreadScore")
+        "pastel":
+            var pastel := _sphere(parent, 0.27, Vector3.ZERO, mat, "Pastel")
+            pastel.scale = Vector3(1.30, 0.55, 0.82)
+            _cylinder(parent, 0.08, 0.08, 0.28, Vector3(0.0, 0.08, 0.0), _material(Color("#fff2b7"), 0.0, 0.72, "paint"), "PastelCrimp")
+        "sugarcane":
+            for side in [-1.0, 0.0, 1.0]:
+                _cylinder(parent, 0.055, 0.07, 0.48, Vector3(side * 0.09, 0.0, 0.0), mat, "SugarcaneStem")
+            _sphere(parent, 0.12, Vector3(0.0, 0.27, 0.0), _material(Color("#95dc70"), 0.0, 0.72, "leaves"), "SugarcaneLeaf")
+        "pass":
+            _box(parent, Vector3(0.46, 0.28, 0.06), Vector3.ZERO, mat, "TransportPass")
+            _box(parent, Vector3(0.32, 0.035, 0.012), Vector3(0.0, 0.0, -0.04), _material(Color("#2f7da5"), 0.0, 0.42, "paint"), "PassStripe")
+        "coxinha":
+            _cone(parent, 0.24, 0.42, Vector3(0.0, 0.0, 0.0), mat, "Coxinha")
+            var coxinha_top := _sphere(parent, 0.09, Vector3(0.0, 0.21, 0.0), _material(Color("#f5c368"), 0.0, 0.72, "paint"), "CoxinhaTop")
+            coxinha_top.scale = Vector3(1.25, 0.55, 1.25)
+        "guarana":
+            _cylinder(parent, 0.11, 0.14, 0.40, Vector3(0.0, 0.0, 0.0), mat, "GuaranaBottle")
+            _cylinder(parent, 0.05, 0.05, 0.12, Vector3(0.0, 0.26, 0.0), _material(Color("#e4e8d6"), 0.0, 0.32, "metal"), "GuaranaCap")
+            _box(parent, Vector3(0.18, 0.12, 0.015), Vector3(0.0, 0.0, -0.14), _material(Color("#fff1b0"), 0.0, 0.56, "paint"), "GuaranaLabel")
+        "pix":
+            _box(parent, Vector3(0.38, 0.58, 0.06), Vector3(0.0, 0.0, 0.0), mat, "PixPhone")
+            _box(parent, Vector3(0.26, 0.34, 0.015), Vector3(0.0, 0.02, -0.04), _material(Color("#102e43"), 0.0, 0.26, "glass"), "PixScreen")
+        "umbrella":
+            _cylinder(parent, 0.025, 0.025, 0.60, Vector3(0.0, -0.10, 0.0), _material(Color("#303e52"), 0.55, 0.45, "metal"), "UmbrellaStem")
+            var canopy := _sphere(parent, 0.30, Vector3(0.0, 0.18, 0.0), mat, "UmbrellaCanopy")
+            canopy.scale = Vector3(1.28, 0.38, 1.28)
+        _:
+            _sphere(parent, 0.22, Vector3.ZERO, mat, "Bonus")
+    var glow_material := _material(Color(color, 0.10), 0.0, 0.8, "glass")
+    glow_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    _sphere(parent, 0.36, Vector3.ZERO, glow_material, "Glow")
+
+func _wheels(parent: Node3D, material: Material, x_offset: float, z_offset: float) -> void:
+    for x in [-x_offset, x_offset]:
+        var front := _cylinder(parent, 0.30, 0.30, 0.18, Vector3(x, 0.18, -z_offset), material, "Wheel")
+        var rear := _cylinder(parent, 0.30, 0.30, 0.18, Vector3(x, 0.18, z_offset), material, "Wheel")
+        front.rotation.z = PI / 2.0
+        rear.rotation.z = PI / 2.0
+
+func _box(parent: Node3D, size: Vector3, pos: Vector3, material: Material, node_name: String) -> MeshInstance3D:
+    var node := MeshInstance3D.new()
+    node.name = node_name
+    var key := "box:%0.3f:%0.3f:%0.3f" % [size.x, size.y, size.z]
+    var mesh := primitive_mesh_cache.get(key) as BoxMesh
+    if mesh == null:
+        mesh = BoxMesh.new()
+        mesh.size = size
+        primitive_mesh_cache[key] = mesh
+    node.mesh = mesh
+    node.material_override = material
+    node.position = pos
+    if parent == decor_root:
+        node.visibility_range_end = 96.0
+    parent.add_child(node)
+    return node
+
+func _sphere(parent: Node3D, radius: float, pos: Vector3, material: Material, node_name: String) -> MeshInstance3D:
+    var node := MeshInstance3D.new()
+    node.name = node_name
+    var key := "sphere:%0.3f" % radius
+    var mesh := primitive_mesh_cache.get(key) as SphereMesh
+    if mesh == null:
+        mesh = SphereMesh.new()
+        mesh.radius = radius
+        mesh.height = radius * 2.0
+        mesh.radial_segments = 20
+        mesh.rings = 14
+        primitive_mesh_cache[key] = mesh
+    node.mesh = mesh
+    node.material_override = material
+    node.position = pos
+    if parent == decor_root:
+        node.visibility_range_end = 96.0
+    parent.add_child(node)
+    return node
+
+func _capsule(parent: Node3D, radius: float, height: float, pos: Vector3, material: Material, node_name: String) -> MeshInstance3D:
+    var node := MeshInstance3D.new()
+    node.name = node_name
+    var key := "capsule:%0.3f:%0.3f" % [radius, height]
+    var mesh := primitive_mesh_cache.get(key) as CapsuleMesh
+    if mesh == null:
+        mesh = CapsuleMesh.new()
+        mesh.radius = radius
+        mesh.height = height
+        mesh.radial_segments = 16
+        mesh.rings = 8
+        primitive_mesh_cache[key] = mesh
+    node.mesh = mesh
+    node.material_override = material
+    node.position = pos
+    if parent == decor_root:
+        node.visibility_range_end = 96.0
+    parent.add_child(node)
+    return node
+
+func _cylinder(parent: Node3D, top_radius: float, bottom_radius: float, height: float, pos: Vector3, material: Material, node_name: String) -> MeshInstance3D:
+    var node := MeshInstance3D.new()
+    node.name = node_name
+    var key := "cylinder:%0.3f:%0.3f:%0.3f" % [top_radius, bottom_radius, height]
+    var mesh := primitive_mesh_cache.get(key) as CylinderMesh
+    if mesh == null:
+        mesh = CylinderMesh.new()
+        mesh.top_radius = top_radius
+        mesh.bottom_radius = bottom_radius
+        mesh.height = height
+        mesh.radial_segments = 16
+        primitive_mesh_cache[key] = mesh
+    node.mesh = mesh
+    node.material_override = material
+    node.position = pos
+    if parent == decor_root:
+        node.visibility_range_end = 96.0
+    parent.add_child(node)
+    return node
+
+func _cone(parent: Node3D, radius: float, height: float, pos: Vector3, material: Material, node_name: String) -> MeshInstance3D:
+    return _cylinder(parent, 0.03, radius, height, pos, material, node_name)
+
+func _torus(parent: Node3D, inner_radius: float, outer_radius: float, pos: Vector3, material: Material, node_name: String) -> MeshInstance3D:
+    var node := MeshInstance3D.new()
+    node.name = node_name
+    var key := "torus:%0.3f:%0.3f" % [inner_radius, outer_radius]
+    var mesh := primitive_mesh_cache.get(key) as TorusMesh
+    if mesh == null:
+        mesh = TorusMesh.new()
+        mesh.inner_radius = inner_radius
+        mesh.outer_radius = outer_radius
+        mesh.rings = 16
+        mesh.ring_segments = 8
+        primitive_mesh_cache[key] = mesh
+    node.mesh = mesh
+    node.material_override = material
+    node.position = pos
+    if parent == decor_root:
+        node.visibility_range_end = 96.0
+    parent.add_child(node)
+    return node
+
+func _ellipse_mesh(parent: Node3D, pos: Vector3, object_scale: Vector3, material: Material, node_name: String) -> MeshInstance3D:
+    var node := _sphere(parent, 1.0, pos, material, node_name)
+    node.scale = object_scale
+    return node
+
+func _material(color: Color, metallic: float, roughness: float, surface: String = "paint") -> StandardMaterial3D:
+    var material := StandardMaterial3D.new()
+    var base_color: Color = color
+    if surface == "asphalt":
+        base_color = color.lerp(Color.WHITE, 0.52)
+    elif surface in ["sidewalk", "cobble"]:
+        base_color = color.lerp(Color.WHITE, 0.22)
+    elif surface == "denim":
+        base_color = color.lerp(Color.WHITE, 0.18)
+    elif surface == "vehicle_paint":
+        base_color = color.lerp(Color.WHITE, 0.26)
+    material.albedo_color = Color(base_color, 0.78) if surface == "glass" else base_color
+    material.metallic = maxf(metallic, 0.42) if surface == "metal" else metallic
+    material.roughness = roughness
+    material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+    if surface == "glass":
+        material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+        material.refraction_enabled = true
+        material.refraction_scale = 0.06
+    elif surface == "skin":
+        material.subsurf_scatter_enabled = true
+        material.subsurf_scatter_skin_mode = true
+        material.subsurf_scatter_strength = 0.12
+        material.rim_enabled = true
+        material.rim = 0.08
+        material.rim_tint = 0.72
+    elif surface == "hair":
+        material.anisotropy_enabled = true
+        material.anisotropy = 0.24
+        material.rim_enabled = true
+        material.rim = 0.16
+        material.rim_tint = 0.72
+    var texture: Texture2D = _texture_for_surface(surface)
+    material.albedo_texture = texture
+    material.uv1_scale = _texture_scale(surface)
+    if surface in ["asphalt", "dirt", "sidewalk", "cobble"]:
+        material.uv1_triplanar = true
+        material.uv1_world_triplanar = true
+        material.uv1_triplanar_sharpness = 3.0
+    var normal: Texture2D = _normal_for_surface(surface)
+    if normal != null:
+        material.normal_enabled = true
+        material.normal_texture = normal
+        material.normal_scale = 0.32 if surface == "asphalt" else 0.42
+    if surface in ["asphalt", "sidewalk", "cobble"]:
+        material.roughness = maxf(material.roughness, 0.82)
+    return material
+
+func _texture_for_surface(surface: String) -> Texture2D:
+    match surface:
+        "asphalt":
+            return TEXTURE_ASPHALT_REAL
+        "dirt":
+            return TEXTURE_DIRT
+        "sidewalk":
+            return TEXTURE_SIDEWALK_REAL
+        "concrete":
+            return TEXTURE_STUCCO
+        "cobble":
+            return TEXTURE_SIDEWALK_REAL
+        "brick":
+            return TEXTURE_BRICK
+        "stucco":
+            return TEXTURE_STUCCO
+        "metal":
+            return TEXTURE_METAL
+        "glass":
+            return TEXTURE_GLASS
+        "fabric":
+            return TEXTURE_FABRIC
+        "denim":
+            return TEXTURE_DENIM_REAL
+        "vehicle_paint":
+            return TEXTURE_CAR_PAINT_REAL
+        "skin":
+            return TEXTURE_SKIN
+        "hair":
+            return TEXTURE_HAIR_REAL
+        "leaves":
+            return TEXTURE_LEAVES
+        "wood":
+            return TEXTURE_WOOD
+        "rubber":
+            return TEXTURE_RUBBER
+        _:
+            return TEXTURE_PAINT
+
+func _normal_for_surface(surface: String) -> Texture2D:
+    match surface:
+        "asphalt":
+            return TEXTURE_ASPHALT_NORMAL
+        "sidewalk", "cobble":
+            return TEXTURE_SIDEWALK_NORMAL
+        _:
+            return null
+
+func _texture_scale(surface: String) -> Vector3:
+    match surface:
+        "skin":
+            return Vector3(1.5, 1.5, 1.5)
+        "fabric", "denim", "vehicle_paint", "metal", "glass":
+            return Vector3(2.0, 2.0, 2.0)
+        "hair":
+            return Vector3(3.0, 3.0, 3.0)
+        "asphalt":
+            return Vector3(5.0, 5.0, 5.0)
+        "sidewalk", "cobble":
+            return Vector3(3.0, 3.0, 3.0)
+        "dirt":
+            return Vector3(4.0, 4.0, 4.0)
+        _:
+            return Vector3(2.5, 2.5, 2.5)
+
+func _sync_hud() -> void:
+    if hud == null:
+        return
+    var cards: Array[Dictionary] = []
+    if screen == 1:
+        var first_phase: int = map_page * 10
+        for local_index in 10:
+            var absolute_index := first_phase + local_index
+            var phase_data: Dictionary = PhaseData.get_phase(absolute_index)
+            cards.append({
+                "index": absolute_index,
+                "name": str(phase_data["name"]),
+                "location": str(phase_data["location"]),
+                "scenario": SCENARIO_DATA.chapter_name(absolute_index),
+                "accent": phase_data["accent"],
+                "difficulty": int(phase_data["difficulty"]),
+                "stars": GameSave.phase_stars(absolute_index),
+                "unlocked": GameSave.is_phase_unlocked(absolute_index)
+            })
+    var characters: Array[Dictionary] = []
+    var equipped_character: String = CHARACTER_DATA.canonical_id(GameSave.equipped_character())
+    for character in CHARACTER_DATA.all():
+        var character_card: Dictionary = character.duplicate(true)
+        character_card["owned"] = GameSave.owns(str(character.get("id", "")))
+        character_card["equipped"] = str(character.get("id", "")) == equipped_character
+        characters.append(character_card)
+    var items: Array[Dictionary] = SHOP_DATA.item_catalog()
+    for item in items:
+        item["owned"] = GameSave.owns(str(item.get("id", "")))
+    var achievement_catalog: Array[Dictionary] = [
+        {"id": "busao", "name": "Peguei o busão!", "description": "Conclua o capítulo 1", "kind": "achievement"},
+        {"id": "enchente", "name": "Chuva sem susto", "description": "Passe a fase 9 sem dano", "kind": "achievement"},
+        {"id": "dog", "name": "Cachorro caramelo", "description": "Aguente 10 encontros", "kind": "achievement"},
+        {"id": "busao50", "name": "Brasil sem freio", "description": "Conclua as 50 fases", "kind": "achievement"},
+        {"id": "capitulo1", "name": "Primeiro terminal", "description": "Badge de capítulo", "kind": "badge"},
+        {"id": "combo15", "name": "Combo de respeito", "description": "Chegue ao combo 15", "kind": "badge"},
+        {"id": "sem_arranhao", "name": "Sem arranhão", "description": "Conclua sem sofrer dano", "kind": "badge"},
+        {"id": "maratonista", "name": "Maratonista", "description": "Liberte o Endless", "kind": "badge"}
+    ]
+    for achievement in achievement_catalog:
+        var id := str(achievement["id"])
+        achievement["unlocked"] = GameSave.has_achievement(id) or id in GameSave.data.get("badges", [])
+    var date_key := Time.get_date_string_from_system()
+    var week_key := GameSave.weekly_key()
+    var daily_progress: Dictionary = GameSave.daily_progress(date_key)
+    var weekly_progress: Dictionary = GameSave.weekly_progress(week_key)
+    var next_unlock_stars := 0
+    if not GameSave.is_phase_unlocked(BALANCE.chapter_unlock_phase):
+        next_unlock_stars = BALANCE.unlock_chapter_stars
+    elif not GameSave.is_phase_unlocked(BALANCE.endless_unlock_phase):
+        next_unlock_stars = BALANCE.unlock_endless_stars
+    var state: Dictionary = {
+        "screen": screen,
+        "coins": GameSave.coins(),
+        "xp": GameSave.xp(),
+        "xp_level": GameSave.xp_level(),
+        "xp_into_level": GameSave.xp_into_level(),
+        "xp_to_next_level": GameSave.xp_to_next_level(),
+        "stars": GameSave.total_stars(),
+        "streak": int(GameSave.data.get("daily_streak", 0)),
+        "retention_flags": GameSave.retention_flags(),
+        "reduced_motion": bool(GameSave.data.get("reduced_motion", false)),
+        "high_contrast": bool(GameSave.data.get("high_contrast", false)),
+        "phase_index": phase_index,
+        "phase_name": str(phase.get("name", "Corre")),
+        "location": str(phase.get("location", "Brasil")),
+        "phase_accent": phase.get("accent", YELLOW),
+        "distance": distance,
+        "run_total": run_total,
+        "hearts": hearts,
+        "max_hearts": max_hearts,
+        "combo": combo,
+        "coins_run": collected_coins,
+        "dash_cooldown": dash_cooldown,
+        "run_mode": run_mode,
+        "stop_wait": stop_wait,
+        "stop_wait_total": stop_wait_total,
+        "endless": endless_mode,
+        "map_page": map_page,
+        "cards": cards,
+        "result": result,
+        "shop_tab": shop_tab,
+        "daily_progress": daily_progress,
+        "daily_completed": GameSave.get_daily_completed(),
+        "daily_targets": {"meters": BALANCE.daily_distance_target, "coins": BALANCE.daily_coin_target},
+        "weekly_progress": weekly_progress,
+        "weekly_claimed": GameSave.weekly_claimed(week_key),
+        "weekly_key": week_key,
+        "weekly_target": BALANCE.weekly_distance_target,
+        "next_unlock_stars": next_unlock_stars,
+        "achievement_catalog": achievement_catalog,
+        "items": items,
+        "feedback_title": feedback_title,
+        "feedback_detail": feedback_detail,
+        "feedback_color": feedback_color,
+        "tutorial_hint": tutorial_hint,
+        "first_session_hint_distance": BALANCE.first_session_hint_distance,
+        "scenario_label": str(scenario.get("label", "Brasil")),
+        "scenario_chapter": str(scenario.get("chapter", "Rua brasileira")),
+        "scenario_weather": str(scenario.get("weather", "sol")),
+        "characters": characters,
+        "equipped_character": equipped_character
+    }
+    hud.call("set_state", state)
+
+func _handle_key(event: InputEventKey) -> void:
+    if event.keycode == KEY_ESCAPE:
+        if screen == 2:
+            run_mode = "playing" if run_mode != "playing" else "paused"
+            _show_feedback("PAUSA" if run_mode == "paused" else "VAMOS!", "Leia as três faixas", YELLOW if run_mode == "paused" else GREEN, "click")
+        elif screen != 0:
+            screen = 0
+            _show_feedback("MENU", "Escolha o próximo corre", BLUE, "ui_back")
+        return
+    if event.keycode == KEY_M:
+        AudioManager.toggle_mute()
+        _show_feedback("SOM DESLIGADO" if AudioManager.muted else "SOM LIGADO", "Você escolhe o feedback", BLUE, "ui_confirm")
+        return
+    if screen == 2:
+        if event.is_action_pressed("move_left") or event.keycode == KEY_LEFT:
+            _change_lane(-1)
+        elif event.is_action_pressed("move_right") or event.keycode == KEY_RIGHT:
+            _change_lane(1)
+        elif event.is_action_pressed("jump") or event.keycode == KEY_UP or event.keycode == KEY_W or event.keycode == KEY_SPACE:
+            _jump()
+        elif event.is_action_pressed("slide") or event.keycode == KEY_DOWN or event.keycode == KEY_S:
+            _slide()
+        elif event.is_action_pressed("dash") or event.keycode == KEY_X:
+            _dash()
+        elif event.keycode == KEY_ENTER and run_mode == "at_stop":
+            _catch_bus()
+    elif event.keycode == KEY_ENTER or event.keycode == KEY_SPACE:
+        if screen == 0:
+            _start_run(0)
+        elif screen == 1:
+            _start_run(selected_phase)
+        elif screen == 3:
+            _start_run(phase_index)
+
+func _input(event: InputEvent) -> void:
+    if event is InputEventKey and event.pressed and not event.echo:
+        _handle_key(event)
+        return
+    if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+        if event.pressed:
+            pointer_active = true
+            touch_start = event.position
+            touch_started_at = Time.get_ticks_msec()
+        elif pointer_active:
+            pointer_active = false
+            _handle_pointer_release(event.position, Time.get_ticks_msec() - touch_started_at)
+        return
+    if event is InputEventScreenTouch:
+        if event.pressed:
+            pointer_active = true
+            touch_start = event.position
+            touch_started_at = Time.get_ticks_msec()
+        elif pointer_active:
+            pointer_active = false
+            _handle_pointer_release(event.position, Time.get_ticks_msec() - touch_started_at)
+
+func _handle_pointer_release(pos: Vector2, duration_ms: int) -> void:
+    var delta := pos - touch_start
+    if screen == 2 and run_mode == "playing" and delta.length() > 42.0:
+        if absf(delta.x) > absf(delta.y):
+            _change_lane(1 if delta.x > 0.0 else -1)
+        elif delta.y < 0.0:
+            _jump()
+        else:
+            _slide()
+        return
+    if screen == 2 and run_mode == "playing" and duration_ms < 360 and delta.length() < 35.0 and not Rect2(620, 36, 72, 58).has_point(pos):
+        _dash()
+        return
+    _handle_tap(pos)
+
+func _handle_tap(pos: Vector2) -> void:
+    if screen == 0:
+        if Rect2(510, 132, 156, 46).has_point(pos):
+            AudioManager.toggle_mute()
+            _show_feedback("SOM DESLIGADO" if AudioManager.muted else "SOM LIGADO", "Você escolhe o feedback", BLUE, "ui_confirm")
+        elif Rect2(420, 190, 118, 38).has_point(pos):
+            var reduced_motion := not bool(GameSave.data.get("reduced_motion", false))
+            GameSave.set_preference("reduced_motion", reduced_motion)
+            _show_feedback("MOVIMENTO REDUZIDO" if reduced_motion else "MOVIMENTO COMPLETO", "Dash e câmera respeitam sua escolha", CYAN, "ui_confirm")
+        elif Rect2(544, 190, 122, 38).has_point(pos):
+            var high_contrast := not bool(GameSave.data.get("high_contrast", false))
+            GameSave.set_preference("high_contrast", high_contrast)
+            _show_feedback("ALTO CONTRASTE" if high_contrast else "CONTRASTE PADRÃO", "Leitura sem depender só de cor", YELLOW, "ui_confirm")
+        elif Rect2(70, 564, 580, 104).has_point(pos):
+            _start_run(0)
+        elif Rect2(70, 700, 275, 82).has_point(pos):
+            screen = 1
+            _show_feedback("MAPA ABERTO", "Escolha seu próximo corre", BLUE, "ui_confirm")
+        elif Rect2(375, 700, 275, 82).has_point(pos):
+            screen = 4
+            _show_feedback("LOJA DO PONTO", "Seu estilo, suas regras", RED, "ui_confirm")
+        elif Rect2(70, 808, 275, 82).has_point(pos):
+            screen = 5
+            _show_feedback("CONQUISTAS", "Cada corre deixa uma história", VIOLET, "ui_confirm")
+        elif Rect2(375, 808, 275, 82).has_point(pos):
+            screen = 6
+            _show_feedback("DESAFIOS", "Recompensas esperando", GREEN, "ui_confirm")
+        elif Rect2(70, 930, 580, 80).has_point(pos):
+            screen = 7
+            previous_screen = 0
+            _show_feedback("GUIA RÁPIDO", "Aprenda. Corra. Pegue o busão.", YELLOW, "ui_confirm")
+    elif screen == 1:
+        if Rect2(25, 1080, 155, 72).has_point(pos):
+            screen = 0
+            _show_feedback("MENU", "O ponto continua te esperando", BLUE, "ui_back")
+        elif Rect2(190, 1080, 155, 72).has_point(pos):
+            map_page = maxi(0, map_page - 1)
+            _show_feedback("CAPÍTULO ANTERIOR", "Revisitando o corre", BLUE, "whoosh")
+        elif Rect2(355, 1080, 155, 72).has_point(pos):
+            map_page = mini(4, map_page + 1)
+            _show_feedback("NOVO CAPÍTULO", "Mais caos, mais recompensa", GOLD, "whoosh")
+        elif GameSave.data.get("endless_unlocked", false) and Rect2(520, 1080, 175, 72).has_point(pos):
+            _start_endless()
+        else:
+            var hit: int = _phase_at_position(pos)
+            if hit >= 0:
+                _start_run(hit)
+    elif screen == 2:
+        if Rect2(620, 36, 72, 58).has_point(pos):
+            run_mode = "playing" if run_mode == "paused" else "paused"
+            _show_feedback("PAUSA" if run_mode == "paused" else "VAMOS!", "Controle seu ritmo", YELLOW if run_mode == "paused" else GREEN, "click")
+        elif run_mode == "paused" and Rect2(80, 590, 560, 90).has_point(pos):
+            run_mode = "playing"
+            _show_feedback("VAMOS!", "O próximo obstáculo é seu", GREEN, "ui_confirm")
+        elif run_mode == "at_stop" and Rect2(70, 800, 580, 110).has_point(pos):
+            _catch_bus()
+    elif screen == 3:
+        if Rect2(55, 880, 290, 88).has_point(pos):
+            screen = 1
+            _show_feedback("MAPA", "Escolha o próximo capítulo", BLUE, "ui_back")
+        elif Rect2(375, 880, 290, 88).has_point(pos):
+            if result.get("success", false) and result.get("endless", false):
+                _start_endless()
+            else:
+                _start_run(phase_index)
+        elif Rect2(55, 1000, 610, 72).has_point(pos) or Rect2(55, 1090, 610, 72).has_point(pos):
+            screen = 0
+            _show_feedback("ATÉ A PRÓXIMA", "O busão sempre volta", BLUE, "ui_back")
+    elif screen == 4:
+        if Rect2(45, 1135, 630, 70).has_point(pos):
+            screen = 0
+            _show_feedback("DE VOLTA", "Seu estilo ficou salvo", BLUE, "ui_back")
+        elif Rect2(30, 150, 660, 80).has_point(pos):
+            shop_tab = 0 if pos.x < 360.0 else 1
+            _show_feedback("CATÁLOGO ATUALIZADO", "Toque para equipar", RED, "ui_confirm")
+        else:
+            _shop_tap(pos)
+    elif screen == 6:
+        if Rect2(45, 1110, 630, 70).has_point(pos):
+            screen = 0
+            _show_feedback("DE VOLTA", "Seu progresso está seguro", BLUE, "ui_back")
+        else:
+            _claim_daily(_daily_at_position(pos))
+    elif screen == 5 or screen == 7:
+        if Rect2(45, 1110, 630, 70).has_point(pos):
+            screen = previous_screen if previous_screen not in [5, 7] else 0
+            _show_feedback("DE VOLTA", "Seu progresso está seguro", BLUE, "ui_back")
+
+func _phase_at_position(pos: Vector2) -> int:
+    var origin_y: float = 160.0
+    var first_phase: int = map_page * 10
+    for local_index in 10:
+        var col: int = local_index % 2
+        var row: int = int(float(local_index) / 2.0)
+        var rect := Rect2(25.0 + col * 340.0, origin_y + row * 170.0, 330.0, 140.0)
+        if rect.has_point(pos):
+            return first_phase + local_index
+    return -1
+
+func _daily_at_position(pos: Vector2) -> int:
+    for i in 3:
+        if Rect2(35, 200 + i * 190, 650, 145).has_point(pos):
+            return i
+    if Rect2(35, 800, 650, 145).has_point(pos):
+        return -2
+    return -1
+
+func _shop_tap(pos: Vector2) -> void:
+    var chars: Array[Dictionary] = CHARACTER_DATA.all()
+    var items: Array[Dictionary] = SHOP_DATA.item_catalog()
+    if shop_tab == 0:
+        for i in chars.size():
+            var col: int = i % 2
+            var row: int = int(float(i) / 2.0)
+            var rect := Rect2(25 + col * 340, 250 + row * 145, 330, 126)
+            if rect.has_point(pos):
+                var id: String = str(chars[i].get("id", "ze"))
+                var price: int = int(chars[i].get("price", 0))
+                if GameSave.owns(id):
+                    GameSave.equip_character(id)
+                    _rebuild_player_visual(id)
+                    _show_feedback("EQUIPADO!", str(chars[i].get("name", id)), RED, "ui_confirm")
+                elif GameSave.unlock(id, price):
+                    GameSave.equip_character(id)
+                    _rebuild_player_visual(id)
+                    _show_feedback("DESBLOQUEADO!", str(chars[i].get("name", id)), GOLD, "reward")
+                else:
+                    _show_feedback("FALTAM MOEDAS", "Continue correndo", RED, "ui_back")
+                return
+    else:
+        for i in items.size():
+            var col: int = i % 2
+            var row: int = int(float(i) / 2.0)
+            var rect := Rect2(30 + col * 345, 250 + row * 175, 315, 150)
+            if rect.has_point(pos):
+                var id: String = str(items[i].get("id", ""))
+                var price: int = int(items[i].get("price", SHOP_DATA.price_for(id)))
+                var cosmetic := bool(items[i].get("cosmetic", false))
+                if GameSave.owns(id):
+                    _show_feedback("JÁ ADQUIRIDO", "cosmético • sem vantagem" if cosmetic else "efeito aplicado na próxima corrida", MUTED, "ui_back")
+                elif GameSave.unlock(id, price):
+                    _show_feedback("ITEM ADQUIRIDO!", id.to_upper(), GOLD, "reward")
+                else:
+                    _show_feedback("FALTAM MOEDAS", "Junte mais R$", RED, "ui_back")
+                return
+
+func _claim_daily(index: int) -> void:
+    if index == -2:
+        var current_week := GameSave.weekly_key()
+        if GameSave.weekly_claimed(current_week):
+            _show_feedback("JÁ RESGATADO", "O marco volta na próxima semana", MUTED, "ui_back")
+            return
+        var weekly := GameSave.weekly_progress(current_week)
+        if int(weekly.get("meters", 0)) < BALANCE.weekly_distance_target:
+            _show_feedback("MARCO SEMANAL", "%dm restantes" % maxi(0, BALANCE.weekly_distance_target - int(weekly.get("meters", 0))), RED, "ui_back")
+            return
+        GameSave.set_weekly_claimed(current_week, BALANCE.weekly_reward)
+        _show_feedback("MARCO COMPLETO!", "+R$ %d • semana garantida" % BALANCE.weekly_reward, GOLD, "reward")
+        return
+    if index < 0:
+        return
+    var key := Time.get_date_string_from_system()
+    var completed: Array = GameSave.get_daily_completed()
+    if str(GameSave.data.get("daily_date", "")) != key:
+        completed = []
+    if index in completed:
+        _show_feedback("JÁ RESGATADO", "Volte amanhã", MUTED, "ui_back")
+        return
+    var progress: Dictionary = GameSave.daily_progress(key)
+    var is_ready := (index == 0 and int(progress.get("meters", 0)) >= BALANCE.daily_distance_target) or (index == 1 and int(progress.get("coins", 0)) >= BALANCE.daily_coin_target) or (index == 2 and bool(progress.get("clean", false)))
+    if not is_ready:
+        _show_feedback("QUASE LÁ!", "Complete a missão primeiro", RED, "ui_back")
+        return
+    completed.append(index)
+    var reward: int = BALANCE.daily_base_reward + index * BALANCE.daily_step_reward
+    GameSave.set_daily_completed(completed, key, reward)
+    _show_feedback("RECOMPENSA!", "+R$ %d • objetivo claro" % reward, GOLD, "reward")
+
+# -----------------------------------------------------------------------------
+# Materials and primitive meshes
+# -----------------------------------------------------------------------------
