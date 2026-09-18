@@ -259,3 +259,9 @@ assinatura antiga): nada encontrado.
 4. Medir 60 FPS em celular médio; reduzir sombras, segmentos de meshes ou partículas se necessário.
 5. Exportar AAB assinado com keystore fora do repositório e validar em internal testing do Play Console.
 6. Só então considerar a migração 3D pronta para publicação.
+
+## Lote 4 — texturas de props (2026-09-18)
+
+- `tools/generate_textures.py` ganhou 7 famílias PBR (albedo+normal+roughness, 1024², tileable, semente fixa): `folhagem_realista` (tufos com profundidade), `madeira_realista` (veios verticais por smear toroidal + nós com anéis), `metal_pintado_realista` (riscos por caminhada aleatória, lascas expondo metal, pó), `concreto_realista` (motas, poros, manchas e juntas de fôrma), `terra_realista` (grão fino + pedrinhas), `tecido_realista` (trama over/under com brilho diagonal) e `borracha_realista` (grão e desgaste).
+- `game_3d.gd`: dispatch de superfícies aponta para os novos mapas (`dirt`, `concrete`+`stucco` unificados, `metal`, `fabric`, `leaves`, `wood`, `rubber`); nova superfície **`chrome`** (sem albedo de pintura, flakes sutis, metallic ≥ 0.85) assumida pelos 4 materiais de cromo (carro decorativo, ônibus e obstáculos de rua); escalas de textura e `normal_scale` calibradas por superfície; 8 consts de SVGs flat removidos após confirmação de zero referências (`terra_vermelha`, `reboco_colorido`, `parede_tijolo`, `metal_pintado`, `tecido_urbano`, `folhagem_brasil`, `madeira_brasil`, `borracha` — os que `world_animal.gd` usa seguem no disco, pois o script dos animais tem preloads próprios).
+- PRE-FLIGHT ampliado para exigir as 21 texturas novas; gdparse, checker estático, balance e rig audit verdes.

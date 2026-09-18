@@ -402,6 +402,13 @@ def check_assets() -> None:
         "fachada_tijolo.png", "fachada_tijolo_normal.png", "fachada_tijolo_roughness.png",
         "parede_tijolo_realista.png", "parede_tijolo_realista_normal.png", "parede_tijolo_realista_roughness.png",
         "pintura_carro_normal.png",
+        "folhagem_realista.png", "folhagem_realista_normal.png", "folhagem_realista_roughness.png",
+        "madeira_realista.png", "madeira_realista_normal.png", "madeira_realista_roughness.png",
+        "metal_pintado_realista.png", "metal_pintado_realista_normal.png", "metal_pintado_realista_roughness.png",
+        "concreto_realista.png", "concreto_realista_normal.png", "concreto_realista_roughness.png",
+        "terra_realista.png", "terra_realista_normal.png", "terra_realista_roughness.png",
+        "tecido_realista.png", "tecido_realista_normal.png", "tecido_realista_roughness.png",
+        "borracha_realista.png", "borracha_realista_normal.png", "borracha_realista_roughness.png",
     }
     for tool in ("tools/generate_textures.py", "assets/vehicles/README.md"):
         if not (ROOT / tool).is_file():

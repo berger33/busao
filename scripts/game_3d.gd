@@ -20,7 +20,6 @@ const TEXTURE_ASPHALT = preload("res://assets/textures/asfalto_brasil.svg")
 const TEXTURE_ASPHALT_REAL = preload("res://assets/textures/asfalto_realista.png")
 const TEXTURE_ASPHALT_NORMAL = preload("res://assets/textures/asfalto_normal.png")
 const TEXTURE_ASPHALT_ROUGH = preload("res://assets/textures/asfalto_roughness.png")
-const TEXTURE_DIRT = preload("res://assets/textures/terra_vermelha.svg")
 const TEXTURE_SIDEWALK = preload("res://assets/textures/calcada_portuguesa.svg")
 const TEXTURE_SIDEWALK_REAL = preload("res://assets/textures/calcada_realista.png")
 const TEXTURE_SIDEWALK_NORMAL = preload("res://assets/textures/calcada_normal.png")
@@ -42,16 +41,30 @@ const TEXTURE_SKY_CLOUDY = preload("res://assets/textures/ceu_nublado.png")
 const TEXTURE_HAIR_REAL = preload("res://assets/textures/cabelo_realista.png")
 const TEXTURE_DENIM_REAL = preload("res://assets/textures/jeans_realista.png")
 const TEXTURE_CAR_PAINT_REAL = preload("res://assets/textures/pintura_carro_realista.png")
-const TEXTURE_BRICK = preload("res://assets/textures/parede_tijolo.svg")
-const TEXTURE_STUCCO = preload("res://assets/textures/reboco_colorido.svg")
-const TEXTURE_METAL = preload("res://assets/textures/metal_pintado.svg")
 const TEXTURE_GLASS = preload("res://assets/textures/vidro_azul.svg")
-const TEXTURE_FABRIC = preload("res://assets/textures/tecido_urbano.svg")
 const TEXTURE_SKIN = preload("res://assets/textures/pele_suave.svg")
-const TEXTURE_LEAVES = preload("res://assets/textures/folhagem_brasil.svg")
-const TEXTURE_WOOD = preload("res://assets/textures/madeira_brasil.svg")
-const TEXTURE_RUBBER = preload("res://assets/textures/borracha.svg")
 const TEXTURE_PAINT = preload("res://assets/textures/pintura_micro.svg")
+const TEXTURE_DIRT_REAL = preload("res://assets/textures/terra_realista.png")
+const TEXTURE_DIRT_REAL_N = preload("res://assets/textures/terra_realista_normal.png")
+const TEXTURE_DIRT_REAL_R = preload("res://assets/textures/terra_realista_roughness.png")
+const TEXTURE_CONCRETE_REAL = preload("res://assets/textures/concreto_realista.png")
+const TEXTURE_CONCRETE_REAL_N = preload("res://assets/textures/concreto_realista_normal.png")
+const TEXTURE_CONCRETE_REAL_R = preload("res://assets/textures/concreto_realista_roughness.png")
+const TEXTURE_METAL_REAL = preload("res://assets/textures/metal_pintado_realista.png")
+const TEXTURE_METAL_REAL_N = preload("res://assets/textures/metal_pintado_realista_normal.png")
+const TEXTURE_METAL_REAL_R = preload("res://assets/textures/metal_pintado_realista_roughness.png")
+const TEXTURE_FABRIC_REAL = preload("res://assets/textures/tecido_realista.png")
+const TEXTURE_FABRIC_REAL_N = preload("res://assets/textures/tecido_realista_normal.png")
+const TEXTURE_FABRIC_REAL_R = preload("res://assets/textures/tecido_realista_roughness.png")
+const TEXTURE_LEAVES_REAL = preload("res://assets/textures/folhagem_realista.png")
+const TEXTURE_LEAVES_REAL_N = preload("res://assets/textures/folhagem_realista_normal.png")
+const TEXTURE_LEAVES_REAL_R = preload("res://assets/textures/folhagem_realista_roughness.png")
+const TEXTURE_WOOD_REAL = preload("res://assets/textures/madeira_realista.png")
+const TEXTURE_WOOD_REAL_N = preload("res://assets/textures/madeira_realista_normal.png")
+const TEXTURE_WOOD_REAL_R = preload("res://assets/textures/madeira_realista_roughness.png")
+const TEXTURE_RUBBER_REAL = preload("res://assets/textures/borracha_realista.png")
+const TEXTURE_RUBBER_REAL_N = preload("res://assets/textures/borracha_realista_normal.png")
+const TEXTURE_RUBBER_REAL_R = preload("res://assets/textures/borracha_realista_roughness.png")
 const LANE_X: Array[float] = [-3.25, 0.0, 3.25]
 const ROAD_LANE := 0
 const SIDEWALK_CENTER := 1
@@ -1688,7 +1701,7 @@ func _build_decor_car(pos: Vector3, _color: Color) -> void:
         _fit_model(parked_glb, GLB_FIT["carro"].x, GLB_FIT["carro"].y)
         return
     var tire := _material(Color("#202c3c"), 0.15, 0.38, "rubber")
-    var chrome := _material(Color("#aebdc0"), 0.72, 0.24, "metal")
+    var chrome := _material(Color("#aebdc0"), 0.72, 0.24, "chrome")
     var glass := _material(Color("#71bcc7"), 0.0, 0.25, "glass")
     var lamp := _material(Color("#fff4c9"), 0.0, 0.18, "glass")
     lamp.emission_enabled = true
@@ -1765,7 +1778,7 @@ func _build_bus_mesh(parent: Node3D) -> void:
     var glass := _material(Color("#6cc4cc"), 0.0, 0.28, "glass")
     var red := _material(Color("#ed634c"), 0.0, 0.62, "paint")
     var tire := _material(Color("#202b3a"), 0.05, 0.55, "rubber")
-    var chrome := _material(Color("#c3c8bf"), 0.72, 0.24, "metal")
+    var chrome := _material(Color("#c3c8bf"), 0.72, 0.24, "chrome")
     var lamp := _material(Color("#fff2ba"), 0.0, 0.18, "glass")
     lamp.emission_enabled = true
     lamp.emission = Color("#ffe9a0")
@@ -1911,7 +1924,7 @@ func _build_road_obstacle(parent: Node3D, kind: String) -> void:
             return
     var body := _material(Color("#d9584e"), 0.05, 0.48, "paint")
     var dark := _material(Color("#202c3c"), 0.15, 0.38, "rubber")
-    var chrome := _material(Color("#aebdc0"), 0.72, 0.24, "metal")
+    var chrome := _material(Color("#aebdc0"), 0.72, 0.24, "chrome")
     var glass := _material(Color("#71bcc7"), 0.0, 0.25, "glass")
     var white_light := _material(Color("#fff4c9"), 0.0, 0.18, "glass")
     white_light.emission_enabled = true
@@ -1987,7 +2000,7 @@ func _build_animal_obstacle(parent: Node3D, species: String) -> Node3D:
 func _build_sidewalk_obstacle(parent: Node3D, kind: String) -> void:
     var dark := _material(Color("#29354d"), 0.0, 0.72, "fabric")
     var red := _material(Color("#e94f5a"), 0.0, 0.66, "paint")
-    var chrome := _material(Color("#aebdc0"), 0.72, 0.24, "metal")
+    var chrome := _material(Color("#aebdc0"), 0.72, 0.24, "chrome")
     match kind:
         "old_lady":
             # A velhinha alterna entre a Vovó Zilda (lote 2) e a Maria do
@@ -2243,7 +2256,7 @@ func _material(color: Color, metallic: float, roughness: float, surface: String 
     elif surface == "vehicle_paint":
         base_color = color.lerp(Color.WHITE, 0.26)
     material.albedo_color = Color(base_color, 0.78) if surface == "glass" else base_color
-    material.metallic = maxf(metallic, 0.42) if surface == "metal" else metallic
+    material.metallic = maxf(metallic, 0.42) if surface == "metal" else (maxf(metallic, 0.85) if surface == "chrome" else metallic)
     material.roughness = roughness
     material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
     if surface == "glass":
@@ -2279,6 +2292,16 @@ func _material(color: Color, metallic: float, roughness: float, surface: String 
             material.normal_scale = 0.85
         elif surface == "vehicle_paint":
             material.normal_scale = 0.25
+        elif surface == "chrome":
+            material.normal_scale = 0.15
+        elif surface in ["leaves", "fabric"]:
+            material.normal_scale = 0.6
+        elif surface in ["wood", "concrete", "stucco"]:
+            material.normal_scale = 0.55
+        elif surface in ["metal", "dirt"]:
+            material.normal_scale = 0.45
+        elif surface == "rubber":
+            material.normal_scale = 0.3
     var rough_map: Texture2D = _roughness_for_surface(surface)
     if rough_map != null:
         material.roughness_texture = rough_map
@@ -2292,23 +2315,25 @@ func _texture_for_surface(surface: String) -> Texture2D:
         "asphalt":
             return TEXTURE_ASPHALT_REAL
         "dirt":
-            return TEXTURE_DIRT
+            return TEXTURE_DIRT_REAL
         "sidewalk":
             return TEXTURE_SIDEWALK_REAL
         "concrete":
-            return TEXTURE_STUCCO
+            return TEXTURE_CONCRETE_REAL
         "cobble":
             return TEXTURE_SIDEWALK_REAL
         "brick":
-            return TEXTURE_BRICK
+            return TEXTURE_BRICK_WALL
         "stucco":
-            return TEXTURE_STUCCO
+            return TEXTURE_CONCRETE_REAL
         "metal":
-            return TEXTURE_METAL
+            return TEXTURE_METAL_REAL
+        "chrome":
+            return null
         "glass":
             return TEXTURE_GLASS
         "fabric":
-            return TEXTURE_FABRIC
+            return TEXTURE_FABRIC_REAL
         "denim":
             return TEXTURE_DENIM_REAL
         "vehicle_paint":
@@ -2318,11 +2343,11 @@ func _texture_for_surface(surface: String) -> Texture2D:
         "hair":
             return TEXTURE_HAIR_REAL
         "leaves":
-            return TEXTURE_LEAVES
+            return TEXTURE_LEAVES_REAL
         "wood":
-            return TEXTURE_WOOD
+            return TEXTURE_WOOD_REAL
         "rubber":
-            return TEXTURE_RUBBER
+            return TEXTURE_RUBBER_REAL
         _:
             return TEXTURE_PAINT
 
@@ -2340,6 +2365,22 @@ func _normal_for_surface(surface: String) -> Texture2D:
             return TEXTURE_BRICK_WALL_N
         "vehicle_paint":
             return TEXTURE_CAR_PAINT_NORMAL
+        "chrome":
+            return TEXTURE_CAR_PAINT_NORMAL
+        "leaves":
+            return TEXTURE_LEAVES_REAL_N
+        "wood":
+            return TEXTURE_WOOD_REAL_N
+        "metal":
+            return TEXTURE_METAL_REAL_N
+        "concrete", "stucco":
+            return TEXTURE_CONCRETE_REAL_N
+        "dirt":
+            return TEXTURE_DIRT_REAL_N
+        "fabric":
+            return TEXTURE_FABRIC_REAL_N
+        "rubber":
+            return TEXTURE_RUBBER_REAL_N
         _:
             return null
 
@@ -2355,6 +2396,20 @@ func _roughness_for_surface(surface: String) -> Texture2D:
             return TEXTURE_FACADE_BRICK_R
         "brick_wall":
             return TEXTURE_BRICK_WALL_R
+        "leaves":
+            return TEXTURE_LEAVES_REAL_R
+        "wood":
+            return TEXTURE_WOOD_REAL_R
+        "metal":
+            return TEXTURE_METAL_REAL_R
+        "concrete", "stucco":
+            return TEXTURE_CONCRETE_REAL_R
+        "dirt":
+            return TEXTURE_DIRT_REAL_R
+        "fabric":
+            return TEXTURE_FABRIC_REAL_R
+        "rubber":
+            return TEXTURE_RUBBER_REAL_R
         _:
             return null
 
@@ -2362,7 +2417,7 @@ func _texture_scale(surface: String) -> Vector3:
     match surface:
         "skin":
             return Vector3(1.5, 1.5, 1.5)
-        "fabric", "denim", "vehicle_paint", "metal", "glass":
+        "fabric", "denim", "vehicle_paint", "metal", "chrome", "glass":
             return Vector3(2.0, 2.0, 2.0)
         "hair":
             return Vector3(3.0, 3.0, 3.0)
@@ -2372,6 +2427,14 @@ func _texture_scale(surface: String) -> Vector3:
             return Vector3(3.0, 3.0, 3.0)
         "dirt":
             return Vector3(4.0, 4.0, 4.0)
+        "leaves":
+            return Vector3(2.5, 2.5, 2.5)
+        "wood":
+            return Vector3(1.5, 1.5, 1.5)
+        "concrete", "stucco":
+            return Vector3(2.0, 2.0, 2.0)
+        "rubber":
+            return Vector3(3.0, 3.0, 3.0)
         "facade_plaster", "facade_brick":
             return Vector3.ONE
         "brick_wall":

@@ -99,6 +99,14 @@ de sucesso. As lacunas estão na camada de plataforma (seção 3), não no desig
 9. **Veículos presos ao procedural** → pipeline drop-in de GLB CC0
    (`assets/vehicles/README.md`) com auto-escala, assentamento no chão e fallback
    transparente (Quaternius/Poly Haven/Kenney, todos comerciais).
+10. **Lote B — props com cor lisa** → todas as superfícies de adereço agora têm
+    albedo+normal+roughness: folhagem de copa com profundidade entre tufos,
+    madeira com veios e nós, metal pintado com riscos/lascas (postes, grades,
+    telhados, caixas d'água, andaimes), concreto com poros/juntas de fôrma
+    (meio-fio, platibandas, guaritas), terra vermelha granular com pedrinhas
+    (capítulos de favela), tecido tramado (toldos e varais) e borracha granulada
+    (pneus). Novo acabamento **cromo** (sem textura de pintura) para para-choques,
+    calotas e racks; "stucco" e "concreto" unificados no concreto PBR.
 
 ## 5. Inconsistências conhecidas — pendentes (próximos lotes)
 

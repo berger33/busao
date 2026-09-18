@@ -340,6 +340,190 @@ def gen_denim(rng: np.random.Generator) -> None:
 
 
 # ----------------------------------------------------------------------------
+# Folhagem (copa de arvore)
+# ----------------------------------------------------------------------------
+
+def gen_leaves(rng: np.random.Generator) -> None:
+    clump = fbm(48, 3, rng)
+    leaf = fbm(256, 2, rng)
+    gap = clump < 0.34
+    g_dark = np.array([0.13, 0.34, 0.12])
+    g_lit = np.array([0.33, 0.57, 0.19])
+    t = np.clip(clump * 0.6 + leaf * 0.5 - 0.05, 0, 1)
+    albedo = g_dark[None, None, :] * (1 - t[..., None]) + g_lit[None, None, :] * t[..., None]
+    albedo = np.where(gap[..., None], albedo * 0.35, albedo)
+    height = clump * 0.55 + leaf * 0.45
+    height = np.where(gap, height * 0.3, height)
+    rough = 0.52 + 0.30 * (1.0 - leaf)
+    save(albedo * 255.0, "folhagem_realista.png")
+    save(height_to_normal(height, 1.0), "folhagem_realista_normal.png")
+    save(rough_to_gray(rough), "folhagem_realista_roughness.png")
+
+
+# ----------------------------------------------------------------------------
+# Madeira (veios verticais + nos)
+# ----------------------------------------------------------------------------
+
+def gen_wood(rng: np.random.Generator) -> None:
+    src = fbm(24, 2, rng)
+    smear = np.zeros((SIZE, SIZE))
+    for k in range(16):
+        smear += np.roll(src, k * (SIZE // 16), axis=0)
+    smear /= 16.0
+    # estica o contraste dos veios (a media do smear achata a variacao)
+    smear = np.clip((smear - smear.mean()) * 3.2 + 0.5, 0.0, 1.0)
+    fine = fbm(128, 2, rng)
+    grain = np.clip(smear * 0.75 + fine * 0.35, 0.0, 1.0)
+    yy, xx = np.mgrid[0:SIZE, 0:SIZE]
+    knots = np.zeros((SIZE, SIZE))
+    for _ in range(3):
+        kx = float(rng.integers(120, SIZE - 120))
+        ky = float(rng.integers(120, SIZE - 120))
+        dx = np.minimum(np.abs(xx - kx), SIZE - np.abs(xx - kx))
+        dy = np.minimum(np.abs(yy - ky), SIZE - np.abs(yy - ky))
+        d = np.sqrt(dx * dx + dy * dy) * (1.6 + rng.random() * 0.6)
+        rings = 0.5 + 0.5 * np.sin(d * 1.4)
+        knots = np.maximum(knots, np.where(d < 90.0, rings * np.exp(-d / 60.0), 0.0))
+    grain = np.clip(grain - knots * 0.55, 0, 1)
+    base = np.array([0.46, 0.30, 0.17])
+    shade = 0.55 + 0.90 * grain
+    albedo = base[None, None, :] * shade[..., None]
+    albedo = np.where((knots > 0.15)[..., None], albedo * 0.75, albedo)
+    height = 0.5 + (grain - 0.5) * 0.5 - knots * 0.2
+    rough = 0.72 + 0.18 * (1.0 - grain)
+    save(albedo * 255.0, "madeira_realista.png")
+    save(height_to_normal(height, 0.6), "madeira_realista_normal.png")
+    save(rough_to_gray(rough), "madeira_realista_roughness.png")
+
+
+# ----------------------------------------------------------------------------
+# Metal pintado (riscos, lascas e po)
+# ----------------------------------------------------------------------------
+
+def gen_painted_metal(rng: np.random.Generator) -> None:
+    wear = fbm(16, 3, rng)
+    albedo = np.full((SIZE, SIZE, 3), 0.84)
+    rough = 0.38 + 0.10 * wear
+    height = np.full((SIZE, SIZE), 0.5)
+    for _ in range(46):  # riscos finos de uso
+        x = float(rng.integers(0, SIZE))
+        y = float(rng.integers(0, SIZE))
+        ang = rng.random() * math.tau
+        for _step in range(60):
+            ang += (rng.random() - 0.5) * 0.4
+            x = (x + math.cos(ang) * 2.0) % SIZE
+            y = (y + math.sin(ang) * 2.0) % SIZE
+            xi, yi = int(x) % SIZE, int(y) % SIZE
+            albedo[yi, xi] = 0.70
+            rough[yi, xi] = 0.55
+            height[yi, xi] = 0.46
+    yy, xx = np.mgrid[0:SIZE, 0:SIZE]
+    for _ in range(26):  # lascas expondo o metal
+        cx = float(rng.integers(0, SIZE))
+        cy = float(rng.integers(0, SIZE))
+        r = 2.0 + rng.random() * 5.0
+        dx = np.minimum(np.abs(xx - cx), SIZE - np.abs(xx - cx))
+        dy = np.minimum(np.abs(yy - cy), SIZE - np.abs(yy - cy))
+        chip = (dx * dx + dy * dy) < r * r
+        albedo = np.where(chip[..., None], np.array([0.42, 0.44, 0.47])[None, None, :], albedo)
+        rough = np.where(chip, 0.72, rough)
+        height = np.where(chip, 0.36, height)
+    albedo = albedo * (0.95 + 0.08 * wear)[..., None]
+    save(albedo * 255.0, "metal_pintado_realista.png")
+    save(height_to_normal(height, 0.5), "metal_pintado_realista_normal.png")
+    save(rough_to_gray(rough), "metal_pintado_realista_roughness.png")
+
+
+# ----------------------------------------------------------------------------
+# Concreto (motas, poros, manchas e juntas de forma)
+# ----------------------------------------------------------------------------
+
+def gen_concrete(rng: np.random.Generator) -> None:
+    mottle = fbm(16, 3, rng)
+    fine = fbm(96, 2, rng)
+    stain = fbm(6, 2, rng)
+    base = 0.60 + 0.14 * mottle + 0.06 * fine - 0.10 * np.clip(stain - 0.6, 0, 1)
+    speck = rng.random((SIZE, SIZE))
+    base = np.where(speck > 0.9955, base - 0.22, base)
+    yy, xx = np.mgrid[0:SIZE, 0:SIZE]
+    seam = (yy % 256) < 2
+    base = np.where(seam, base * 0.9, base)
+    albedo = np.stack([base, base * 0.995, base * 0.985], axis=-1)
+    height = 0.5 + (mottle - 0.5) * 0.25 + (fine - 0.5) * 0.2
+    height = np.where(speck > 0.9955, height - 0.25, height)
+    height = np.where(seam, height - 0.15, height)
+    rough = 0.87 + 0.07 * fine - 0.05 * (stain - 0.5)
+    save(albedo * 255.0, "concreto_realista.png")
+    save(height_to_normal(height, 0.7), "concreto_realista_normal.png")
+    save(rough_to_gray(rough), "concreto_realista_roughness.png")
+
+
+# ----------------------------------------------------------------------------
+# Terra vermelha (granular + pedrinhas)
+# ----------------------------------------------------------------------------
+
+def gen_dirt(rng: np.random.Generator) -> None:
+    grain = fbm(192, 3, rng)
+    patch = fbm(8, 2, rng)
+    base = np.array([0.52, 0.30, 0.17])
+    shade = 0.65 + 0.60 * grain + 0.18 * (patch - 0.5)
+    albedo = base[None, None, :] * shade[..., None]
+    yy, xx = np.mgrid[0:SIZE, 0:SIZE]
+    height = 0.45 + grain * 0.4 + (patch - 0.5) * 0.2
+    rough = np.full((SIZE, SIZE), 0.95)
+    for _ in range(260):
+        cx = float(rng.integers(0, SIZE))
+        cy = float(rng.integers(0, SIZE))
+        r = 1.5 + rng.random() * 3.5
+        dx = np.minimum(np.abs(xx - cx), SIZE - np.abs(xx - cx))
+        dy = np.minimum(np.abs(yy - cy), SIZE - np.abs(yy - cy))
+        peb = (dx * dx + dy * dy) < r * r
+        stone = np.array([0.62, 0.50, 0.38]) if rng.random() < 0.7 else np.array([0.55, 0.55, 0.55])
+        albedo = np.where(peb[..., None], stone[None, None, :] * (0.85 + 0.3 * rng.random()), albedo)
+        height = np.where(peb, height + 0.3, height)
+        rough = np.where(peb, 0.80, rough)
+    save(albedo * 255.0, "terra_realista.png")
+    save(height_to_normal(height, 1.1), "terra_realista_normal.png")
+    save(rough_to_gray(rough), "terra_realista_roughness.png")
+
+
+# ----------------------------------------------------------------------------
+# Tecido tramado (toldos e roupas de varal)
+# ----------------------------------------------------------------------------
+
+def gen_fabric(rng: np.random.Generator) -> None:
+    block = 8
+    yy, xx = np.mgrid[0:SIZE, 0:SIZE]
+    over = (((xx // block) + (yy // block)) % 2) == 0
+    fine = fbm(128, 2, rng)
+    base = np.where(over, 0.88, 0.78) + 0.08 * (fine - 0.5)
+    diag = ((xx + yy) % (block * 2)) < 3
+    base = np.where(diag & over, base + 0.05, base)
+    albedo = np.stack([base, base * 0.995, base * 0.99], axis=-1)
+    height = np.where(over, 0.62, 0.42) + fine * 0.08
+    rough = 0.84 + 0.10 * (1.0 - fine)
+    save(albedo * 255.0, "tecido_realista.png")
+    save(height_to_normal(height, 0.9), "tecido_realista_normal.png")
+    save(rough_to_gray(rough), "tecido_realista_roughness.png")
+
+
+# ----------------------------------------------------------------------------
+# Borracha (pneus)
+# ----------------------------------------------------------------------------
+
+def gen_rubber(rng: np.random.Generator) -> None:
+    grain = fbm(160, 2, rng)
+    wear = fbm(24, 2, rng)
+    base = 0.09 + 0.05 * grain + 0.03 * wear
+    albedo = np.stack([base, base, base * 1.05], axis=-1)
+    height = 0.5 + (grain - 0.5) * 0.4
+    rough = 0.62 + 0.14 * (1.0 - grain) + 0.06 * wear
+    save(albedo * 255.0, "borracha_realista.png")
+    save(height_to_normal(height, 0.45), "borracha_realista_normal.png")
+    save(rough_to_gray(rough), "borracha_realista_roughness.png")
+
+
+# ----------------------------------------------------------------------------
 # Ceus equiretangulares (2048 x 1024)
 # ----------------------------------------------------------------------------
 
@@ -458,6 +642,13 @@ def main() -> None:
     gen_car_paint(np.random.default_rng(MASTER_SEED + 6))
     gen_hair(np.random.default_rng(MASTER_SEED + 7))
     gen_denim(np.random.default_rng(MASTER_SEED + 8))
+    gen_leaves(np.random.default_rng(MASTER_SEED + 9))
+    gen_wood(np.random.default_rng(MASTER_SEED + 12))
+    gen_painted_metal(np.random.default_rng(MASTER_SEED + 13))
+    gen_concrete(np.random.default_rng(MASTER_SEED + 14))
+    gen_dirt(np.random.default_rng(MASTER_SEED + 15))
+    gen_fabric(np.random.default_rng(MASTER_SEED + 16))
+    gen_rubber(np.random.default_rng(MASTER_SEED + 17))
     for kind in ["tropical", "entardecer", "nublado"]:
         gen_sky(kind, np.random.default_rng(MASTER_SEED + 20 + ["tropical", "entardecer", "nublado"].index(kind)))
     print("OK: texturas regeneradas.")
