@@ -184,6 +184,24 @@ func _ready() -> void:
     _sync_hud()
 
 func _notification(what: int) -> void:
+    if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+        if screen == 2:
+            if run_mode == "playing":
+                run_mode = "paused"
+                _show_feedback("PAUSA", "Toque voltar novamente para sair", CYAN, "ui_back")
+            elif run_mode == "paused":
+                GameSave.record_event("run_abandoned")
+                GameSave.flush()
+                _clear_course()
+                screen = 1
+                run_mode = "playing"
+                _show_feedback("CORRIDA ENCERRADA", "Seu progresso já está seguro", BLUE, "ui_back")
+            elif run_mode == "at_stop":
+                _catch_bus()
+        elif screen != 0:
+            screen = 0
+            _show_feedback("MENU", "Escolha o próximo corre", BLUE, "ui_back")
+        return
     if what in [NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT]:
         if screen == 2 and run_mode == "playing":
             run_mode = "paused"
@@ -2419,8 +2437,9 @@ func _shop_tap(pos: Vector2) -> void:
             if rect.has_point(pos):
                 var id: String = str(items[i].get("id", ""))
                 var price: int = int(items[i].get("price", SHOP_DATA.price_for(id)))
+                var cosmetic := bool(items[i].get("cosmetic", false))
                 if GameSave.owns(id):
-                    _show_feedback("JÁ ADQUIRIDO", "Efeito aplicado na próxima corrida", MUTED, "ui_back")
+                    _show_feedback("JÁ ADQUIRIDO", "cosmético • sem vantagem" if cosmetic else "efeito aplicado na próxima corrida", MUTED, "ui_back")
                 elif GameSave.unlock(id, price):
                     _show_feedback("ITEM ADQUIRIDO!", id.to_upper(), GOLD, "reward")
                 else:

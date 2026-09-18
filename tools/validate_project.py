@@ -314,11 +314,21 @@ def check_balance_and_persistence() -> None:
     if values and not (values.get("first_wait_seconds", 0) >= values.get("final_wait_seconds", 0) > 0):
         fail("balance wait curve is invalid")
     save = (ROOT / "scripts/save_data.gd").read_text(encoding="utf-8")
-    for token in ("SAVE_SCHEMA_VERSION := 3", "BACKUP_PATH", "TEMP_PATH", "DirAccess.rename_absolute", "_sanitize_data", "record_phase_attempt", "record_weekly_progress", "record_event", "retention_flags"):
+    shop_data = (ROOT / "scripts/shop_data.gd").read_text(encoding="utf-8")
+    for token in ("SAVE_SCHEMA_VERSION := 3", "BACKUP_PATH", "TEMP_PATH", "DirAccess.rename_absolute", "_sanitize_data", "record_phase_attempt", "record_weekly_progress", "record_event", "retention_flags", "func set_daily_completed(values: Array, date_key: String, _requested_reward: int = 0) -> bool", "authoritative_reward", "weekly_claimed(key)", "weekly_distance_target", "add_coins(int(BALANCE.weekly_reward))"):
         if token not in save:
             fail(f"save layer missing resilience token: {token}")
+    shop_ids = re.findall(r'\"id\": \"([^\"]+)\"', shop_data)
+    if shop_ids != ["tenis", "mochila", "fone", "cafe", "confete", "placa"]:
+        fail(f"shop catalog IDs are not authoritative/ordered: {shop_ids}")
+    if shop_data.count('"cosmetic": true') != 2:
+        fail("shop catalog must mark exactly two no-advantage cosmetics")
+    legacy = (ROOT / "scripts/game.gd").read_text(encoding="utf-8")
+    for stale_token in ("water_gun", "REVIVER • ANÚNCIO", "integrar Ads", "Anúncio simulado"):
+        if stale_token in legacy:
+            fail(f"legacy reference contains stale product token: {stale_token}")
     game_3d = (ROOT / "scripts/game_3d.gd").read_text(encoding="utf-8")
-    for token in ("_phase_speed_for", "_phase_wait_for", "record_phase_result", "reward_breakdown", "first_clear", "_update_tutorial_hint", "primitive_mesh_cache", "reduced_motion"):
+    for token in ("_phase_speed_for", "_phase_wait_for", "record_phase_result", "reward_breakdown", "first_clear", "_update_tutorial_hint", "primitive_mesh_cache", "reduced_motion", "NOTIFICATION_WM_GO_BACK_REQUEST", "run_abandoned"):
         if token not in game_3d:
             fail(f"3D progression missing token: {token}")
 

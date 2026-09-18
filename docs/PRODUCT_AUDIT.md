@@ -15,6 +15,7 @@ Este documento registra as decisões implementadas nesta revisão e o que ainda 
 6. **Loja sem aleatoriedade.** Personagens e itens são compras únicas com preço mostrado. O HUD distingue disponível, adquirido e equipado; efeitos aplicáveis são ativados na próxima corrida.
 7. **Retenção com consentimento e controle.** A sequência de retorno é um bônus opcional, não bloqueia conteúdo nem zera metas; movimento reduzido, alto contraste, áudio desligado e pausa automática deixam o jogador no controle.
 8. **A economia tem uma fonte autoritativa.** `scripts/shop_data.gd` guarda preços; `GameSave.unlock()` ignora valores enviados pela tela e valida o catálogo antes de gastar moedas.
+9. **Claims são idempotentes e canônicos.** O save calcula os valores diário/semanal a partir de `game_balance.tres`, rejeita claim repetido ou prematuro e grava marca, recompensa e métricas no mesmo flush.
 
 ## Curva atual de gameplay
 

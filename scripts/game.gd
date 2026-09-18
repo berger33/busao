@@ -33,7 +33,7 @@ const OBSTACLE_NAMES := {
     "motoboy": "MOTOBOY", "vendor": "CAMELÔ", "pigeon": "POMBO", "bus": "ÔNIBUS",
     "capybara": "CAPIVARA", "horse": "CAVALO", "truck": "CAMINHÃO", "fridge": "GELADEIRA",
     "scooter": "PATINETE", "drone": "DRONE", "turnstile": "CATRACA", "traffic": "SEMÁFORO",
-    "cart": "CARRINHO", "water_gun": "GUERRA D’ÁGUA", "luggage": "MALA", "wall": "PAREDE", "ramp": "RAMPA"
+    "cart": "CARRINHO", "luggage": "MALA", "wall": "PAREDE", "ramp": "RAMPA"
 }
 const COLLECTIBLE_NAMES := {
     "coin": "R$ 0,25", "coffee": "CAFÉ", "bread": "PÃO DE QUEIJO", "pastel": "PASTEL",
@@ -366,13 +366,13 @@ func _start_run(index: int) -> void:
     speed_boost_timer = 0.0
     magnet_timer = 0.0
     shield_hits = 0
-    var equipped := GameSave.equipped_character()
+    var equipped := str({"chefe": "carlos", "caramelo": "julia"}.get(GameSave.equipped_character(), GameSave.equipped_character()))
     if equipped == "motoboy":
         speed_boost_timer = 9999.0
     elif equipped == "maria":
         shield_hits = 1
-    elif equipped == "chefe":
-        coin_multiplier = 2
+    elif equipped == "carlos":
+        shield_hits = 1
     elif equipped == "influencer":
         magnet_timer = 9999.0
     if GameSave.owns("mochila"):
@@ -475,11 +475,11 @@ func _build_course() -> void:
     if phase_index >= 20:
         var expansion_sets: Array = [
             ["drone", "pix", "scooter", "traffic", "luggage"],
-            ["cart", "water_gun", "dog", "turnstile", "drone"],
+            ["cart", "umbrella", "dog", "turnstile", "drone"],
             ["scooter", "cart", "traffic", "luggage", "dog"],
-            ["drone", "truck", "capybara", "water_gun", "scooter"],
+            ["drone", "truck", "capybara", "umbrella", "scooter"],
             ["turnstile", "traffic", "luggage", "truck", "dog"],
-            ["drone", "cart", "traffic", "water_gun", "truck"]
+            ["drone", "cart", "traffic", "umbrella", "truck"]
         ]
         forced = expansion_sets[mini(5, int((phase_index - 20) / 5))]
     for j in forced.size():
@@ -514,7 +514,6 @@ func _hazard_pool() -> Array:
     if phase_index >= 25: base.append("cart")
     if phase_index >= 27: base.append("turnstile")
     if phase_index >= 29: base.append("luggage")
-    if phase_index >= 31: base.append("water_gun")
     return base
 
 func _bonus_kind_for_phase() -> String:
@@ -653,8 +652,6 @@ func _resolve_entity(entity: Dictionary) -> void:
             safe = slide_timer > 0.0 or dash_timer > 0.0
         elif kind == "traffic":
             safe = jump_timer > 0.0 or dash_timer > 0.0
-        elif kind == "water_gun":
-            safe = slide_timer > 0.0 or dash_timer > 0.0 or rain_guard_timer > 0.0
         elif kind == "ramp":
             safe = true
         elif kind == "capybara":
@@ -687,7 +684,6 @@ func _funny_reaction(kind: String) -> String:
         "turnstile": "Catraca liberada no jeitinho!",
         "traffic": "Sinal amarelo: acelera!",
         "cart": "Carrinho sem dono!",
-        "water_gun": "Guerra d’água vencida!",
         "luggage": "Mala despachada!",
         "horse": "Êta, interior!",
         "truck": "Timing de cinema!",
@@ -845,7 +841,7 @@ func _revive_run() -> void:
     max_hearts = maxi(max_hearts, 1)
     invulnerability = 3.0
     result.clear()
-    _show_toast("REVIVE grátis! Anúncio simulado no modo offline.")
+    _show_toast("REVIVE offline: uma nova tentativa, sem anúncio e sem custo.")
 
 func _finish_run(success: bool, game_over := false) -> void:
     if screen != 2:
@@ -1153,11 +1149,11 @@ func _draw_results() -> void:
         _text_center(Vector2(360, 655), "Troque de pista antes do obstáculo", 20, WHITE)
         _text_center(Vector2(360, 688), "e guarde o dash para o caminhão.", 20, MUTED)
     _button(Rect2(55, 880, 290, 88), "MAPA", Color("#2c9dc1"), 24)
-    _button(Rect2(375, 880, 290, 88), ("TENTAR DE NOVO" if success else ("REVIVER • ANÚNCIO" if result.get("game_over", false) else "TENTAR DE NOVO")), Color("#e0a83c"), 18)
+    _button(Rect2(375, 880, 290, 88), ("TENTAR DE NOVO" if success else ("REVIVER OFFLINE" if result.get("game_over", false) else "TENTAR DE NOVO")), Color("#e0a83c"), 18)
     _button(Rect2(55, 1000, 610, 72), "MENU PRINCIPAL" if success else "TENTAR DE NOVO", Color("#293955"), 20)
     if not success:
         _button(Rect2(55, 1090, 610, 72), "MENU PRINCIPAL", Color("#293955"), 20)
-    _text_center(Vector2(360, 1200), "Dica: 3 estrelas exigem moedas + tempo recorde." if success else "O anúncio é um gancho local para integrar Ads no export Android.", 14, MUTED)
+    _text_center(Vector2(360, 1200), "Dica: 3 estrelas exigem moedas + tempo recorde." if success else "Sem anúncios interrompendo o corre: tente de novo quando quiser.", 14, MUTED)
 
 func _draw_shop() -> void:
     _draw_ui_background()
@@ -1167,11 +1163,11 @@ func _draw_shop() -> void:
     _button(Rect2(360, 150, 330, 70), "ITENS", Color("#d65b75" if shop_tab == 1 else "#263958"), 20)
     if shop_tab == 0:
         _draw_character_card(Rect2(30, 250, 660, 126), "ze", "Zé Atrasado", "o original", 0, Color("#e9525e"))
-        _draw_character_card(Rect2(30, 395, 660, 126), "maria", "Dona Maria", "bolsa = escudo", 180, Color("#a568d7"))
-        _draw_character_card(Rect2(30, 540, 660, 126), "motoboy", "Motoboy", "rápido, 1 vida", 260, Color("#4fc2b1"))
-        _draw_character_card(Rect2(30, 685, 660, 126), "caramelo", "Cachorro Caramelo", "meme + latido", 420, Color("#c9824c"))
-        _draw_character_card(Rect2(30, 830, 660, 126), "chefe", "Chefe", "buff de moedas", 320, Color("#5e7bc4"))
-        _draw_character_card(Rect2(30, 975, 660, 126), "influencer", "Influencer", "celular = ímã", 380, Color("#e56b98"))
+        _draw_character_card(Rect2(30, 395, 660, 126), "maria", "Maria do Bairro", "escudo de impacto", 180, Color("#a568d7"))
+        _draw_character_card(Rect2(30, 540, 660, 126), "motoboy", "Rafa Motoboy", "velocidade +22%", 260, Color("#4fc2b1"))
+        _draw_character_card(Rect2(30, 685, 660, 126), "julia", "Júlia Atleta", "pulo prolongado", 360, Color("#e9d459"))
+        _draw_character_card(Rect2(30, 830, 660, 126), "carlos", "Carlos da Obra", "escudo de impacto", 440, Color("#5e7bc4"))
+        _draw_character_card(Rect2(30, 975, 660, 126), "influencer", "Nina Creator", "ímã de moedas", 420, Color("#e56b98"))
     else:
         _draw_item_card(Rect2(30, 250, 315, 150), "tenis", "Tênis turbo", "velocidade +", 200, Color("#55d7c0"))
         _draw_item_card(Rect2(375, 250, 315, 150), "mochila", "Mochila", "escudo extra", 180, Color("#f4b84e"))
@@ -1204,7 +1200,7 @@ func _draw_item_card(rect: Rect2, id: String, title: String, subtitle: String, p
     _button(Rect2(rect.end.x - 126, rect.position.y + 42, 105, 52), "OK" if owned else "R$ %d" % price, color, 15)
 
 func _shop_tap(pos: Vector2) -> void:
-    var chars := [["ze", 0], ["maria", 180], ["motoboy", 260], ["caramelo", 420], ["chefe", 320], ["influencer", 380]]
+    var chars := [["ze", 0], ["maria", 180], ["motoboy", 260], ["julia", 360], ["carlos", 440], ["influencer", 420]]
     var items := [["tenis", 200], ["mochila", 180], ["fone", 220], ["cafe", 150], ["confete", 120], ["placa", 300]]
     if shop_tab == 0:
         for i in chars.size():
@@ -1844,12 +1840,12 @@ func _draw_obstacle(kind: String, pos: Vector2, scale: float) -> void:
             draw_circle(Vector2(x - 25 * s, y + 1 * s), 11 * s, Color("#252d3b"))
             draw_circle(Vector2(x + 30 * s, y + 1 * s), 11 * s, Color("#252d3b"))
             _text_center(Vector2(x, y - 82 * s), "OFERTA", int(9 * s + 3), YELLOW)
-        "water_gun":
-            draw_rect(Rect2(x - 45 * s, y - 56 * s, 75 * s, 22 * s), Color("#63cbe0"))
-            draw_rect(Rect2(x + 24 * s, y - 72 * s, 26 * s, 42 * s), Color("#ef6c68"))
-            for jet in 3:
-                draw_line(Vector2(x + 50 * s, y - 60 * s + jet * 9 * s), Vector2(x + 83 * s, y - 66 * s + jet * 13 * s), Color(0.65, 0.9, 1.0, 0.7), 3 * s)
-            _text_center(Vector2(x, y - 83 * s), "SPLASH", int(9 * s + 3), WHITE)
+        "umbrella":
+            draw_arc(Vector2(x, y - 45 * s), 45 * s, PI, TAU, 16, Color("#e85d62"), 8 * s)
+            draw_colored_polygon(PackedVector2Array([Vector2(x - 45 * s, y - 45 * s), Vector2(x, y - 72 * s), Vector2(x + 45 * s, y - 45 * s)]), Color("#e85d62"))
+            draw_line(Vector2(x, y - 45 * s), Vector2(x + 18 * s, y + 12 * s), Color("#e7d2ac"), 6 * s)
+            draw_arc(Vector2(x + 18 * s, y + 12 * s), 10 * s, 0.0, PI, 8, Color("#e7d2ac"), 5 * s)
+            _text_center(Vector2(x, y - 83 * s), "CHUVA", int(9 * s + 3), WHITE)
         "luggage":
             draw_rect(Rect2(x - 38 * s, y - 88 * s, 76 * s, 88 * s), Color("#8d6cc1"))
             draw_rect(Rect2(x - 20 * s, y - 105 * s, 40 * s, 20 * s), Color("#59647e"), false, 6 * s)
@@ -1943,10 +1939,10 @@ func _draw_runner(pos: Vector2, scale: float, mirrored: bool, character := "ze")
     match character:
         "maria": shirt = Color("#a86bd7")
         "motoboy": shirt = Color("#39bda9")
-        "caramelo":
+        "julia":
             skin = Color("#ac7049")
             shirt = Color("#c98a4d")
-        "chefe":
+        "carlos":
             shirt = Color("#5272ba")
             pants = Color("#20293b")
         "influencer": shirt = Color("#e45d99")
@@ -1969,8 +1965,8 @@ func _draw_runner(pos: Vector2, scale: float, mirrored: bool, character := "ze")
     draw_arc(pos + Vector2(0, -94 * scale * (1.0 if squish > 0.9 else 0.7)), 28 * scale, PI, TAU, 12, Color("#3a2831"), 11 * scale)
     draw_circle(pos + Vector2(10 * direction, -94 * scale), 3 * scale, Color("#222533"))
     draw_line(pos + Vector2(8 * direction, -82) * scale, pos + Vector2(19 * direction, -79) * scale, Color("#5c3038"), 3 * scale)
-    if character == "chefe":
-        _text_center(pos + Vector2(0, -138) * scale, "CHEFE", int(9 * scale + 3), WHITE)
+    if character in ["carlos", "chefe"]:
+        _text_center(pos + Vector2(0, -138) * scale, "CARLOS", int(9 * scale + 3), WHITE)
     elif character == "motoboy":
         draw_arc(pos + Vector2(0, -98) * scale, 31 * scale, PI, TAU, 12, Color("#ed4e45"), 8 * scale)
     elif character == "maria":
@@ -2033,4 +2029,4 @@ func _draw_global_particles() -> void:
         draw_line(confetti_pos, confetti_pos + Vector2(7, 0), Color(1, 1, 1, confetti_alpha * 0.35), 1.0)
 
 func _character_name(id: String) -> String:
-    return {"ze": "Zé Atrasado", "maria": "Dona Maria", "motoboy": "Motoboy", "caramelo": "Cachorro Caramelo", "chefe": "Chefe", "influencer": "Influencer"}.get(id, id)
+    return {"ze": "Zé Atrasado", "maria": "Maria do Bairro", "motoboy": "Rafa Motoboy", "julia": "Júlia Atleta", "caramelo": "Júlia Atleta", "carlos": "Carlos da Obra", "chefe": "Carlos da Obra", "influencer": "Nina Creator"}.get(id, id)

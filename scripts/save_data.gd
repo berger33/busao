@@ -183,10 +183,28 @@ func _sanitize_data() -> void:
     for key in ["badges", "inventory", "owned_items", "pet_skins", "achievements"]:
         var unique_values: Array = []
         for raw_value in data[key]:
-            var normalized_value := str(raw_value).strip_edges()
+            var normalized_value := str(raw_value).strip_edges().to_lower()
             if normalized_value != "" and normalized_value not in unique_values:
                 unique_values.append(normalized_value)
         data[key] = unique_values
+    var normalized_inventory: Array = []
+    for raw_inventory_id in data["inventory"]:
+        var inventory_id := SHOP_DATA.canonical_id(str(raw_inventory_id))
+        if SHOP_DATA.is_character(inventory_id) and inventory_id not in normalized_inventory:
+            normalized_inventory.append(inventory_id)
+    data["inventory"] = normalized_inventory
+    var normalized_owned_items: Array = []
+    for raw_owned_id in data["owned_items"]:
+        var owned_id := SHOP_DATA.canonical_id(str(raw_owned_id))
+        if SHOP_DATA.is_purchasable(owned_id) and owned_id not in normalized_owned_items:
+            normalized_owned_items.append(owned_id)
+    data["owned_items"] = normalized_owned_items
+    var normalized_pets: Array = []
+    for raw_pet_id in data["pet_skins"]:
+        var pet_id := str(raw_pet_id).strip_edges().to_lower()
+        if pet_id == "caramelo" and pet_id not in normalized_pets:
+            normalized_pets.append(pet_id)
+    data["pet_skins"] = normalized_pets
     if not (data.get("best_times", {}) is Dictionary):
         data["best_times"] = {}
     else:
@@ -236,17 +254,12 @@ func _sanitize_data() -> void:
         if event_name.length() > 0 and event_name.length() <= 40:
             normalized_events[event_name] = maxi(0, int(data["metrics"]["event_counts"][raw_event]))
     data["metrics"]["event_counts"] = normalized_events
-    var equipped := str(data.get("equipped_character", "ze"))
-    var aliases: Dictionary = {"chefe": "carlos", "caramelo": "julia", "nina": "influencer"}
-    if aliases.has(equipped):
-        equipped = str(aliases[equipped])
+    var equipped := SHOP_DATA.canonical_id(str(data.get("equipped_character", "ze")))
+    if not SHOP_DATA.is_character(equipped):
+        equipped = "ze"
     data["equipped_character"] = equipped
     if "ze" not in data["inventory"]:
         data["inventory"].append("ze")
-    var character_aliases: Dictionary = {"chefe": "carlos", "caramelo": "julia", "nina": "influencer"}
-    for legacy_id in character_aliases.keys():
-        if legacy_id in data["owned_items"] and character_aliases[legacy_id] not in data["owned_items"]:
-            data["owned_items"].append(character_aliases[legacy_id])
 
 func _request_save() -> void:
     dirty = true
@@ -378,7 +391,7 @@ func unlock(item: String, _requested_price: int = -1) -> bool:
 
 func unlock_pet(id: String) -> bool:
     var canonical := str(id).strip_edges().to_lower()
-    if canonical == "":
+    if canonical not in ["caramelo"]:
         return false
     if canonical in data.get("pet_skins", []):
         return false
@@ -417,21 +430,37 @@ func get_daily_completed(date_key: String = "") -> Array:
     var completed: Array = data.get("daily_completed", [])
     return completed.duplicate()
 
-func set_daily_completed(values: Array, date_key: String, reward: int = 0) -> void:
+func set_daily_completed(values: Array, date_key: String, _requested_reward: int = 0) -> bool:
+    if date_key.strip_edges() == "":
+        return false
     var sanitized_values: Array = []
     for value in values:
         var mission_id := int(value)
         if mission_id >= 0 and mission_id <= 2 and mission_id not in sanitized_values:
             sanitized_values.append(mission_id)
+    var previous_values: Array = get_daily_completed(date_key)
+    for previous_id in previous_values:
+        if previous_id not in sanitized_values:
+            sanitized_values.append(previous_id)
+    var added_count := 0
+    var authoritative_reward := 0
+    for mission_id in sanitized_values:
+        if mission_id not in previous_values:
+            added_count += 1
+            authoritative_reward += int(BALANCE.daily_base_reward) + mission_id * int(BALANCE.daily_step_reward)
+    if added_count <= 0:
+        return false
     data["daily_date"] = date_key
     data["daily_completed"] = sanitized_values
-    data["metrics"]["daily_claims"] = int(data["metrics"].get("daily_claims", 0)) + 1
-    record_event("daily_claim")
-    if reward > 0:
-        add_coins(reward)
+    data["metrics"]["daily_claims"] = int(data["metrics"].get("daily_claims", 0)) + added_count
+    record_event("daily_claim", added_count)
+    if authoritative_reward > 0:
+        add_coins(authoritative_reward)
     # Marca e recompensa entram no mesmo payload para não existir uma janela
-    # de crash em que a missão fica resgatada, mas o prêmio não chega.
+    # de crash em que a missão fica resgatada, mas o prêmio não chega. O valor
+    # enviado pela HUD é ignorado: a economia canônica vive neste autoload.
     flush()
+    return true
 
 func daily_progress(date_key: String) -> Dictionary:
     if str(data.get("daily_date", "")) != date_key:
@@ -484,13 +513,20 @@ func record_weekly_progress(key: String, meters: int, coins_collected: int, clea
 func weekly_claimed(key: String) -> bool:
     return str(data.get("weekly_key", "")) == key and bool(data.get("weekly_claimed", false))
 
-func set_weekly_claimed(key: String, reward: int = 0) -> void:
+func set_weekly_claimed(key: String, _requested_reward: int = 0) -> bool:
+    if key.strip_edges() == "" or weekly_claimed(key):
+        return false
+    var progress := weekly_progress(key)
+    if int(progress.get("meters", 0)) < int(BALANCE.weekly_distance_target):
+        return false
     data["weekly_key"] = key
     data["weekly_claimed"] = true
     record_event("weekly_claim")
-    if reward > 0:
-        add_coins(reward)
+    add_coins(int(BALANCE.weekly_reward))
+    # A marca e seu prêmio têm origem no mesmo payload; o valor vindo da HUD
+    # é ignorado para não abrir uma segunda fonte de economia.
     flush()
+    return true
 
 func register_login() -> int:
     var today := _local_day_number()
