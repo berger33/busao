@@ -245,6 +245,19 @@ static func _multimesh(mesh: Mesh, mat: Material, xforms: Array, pai: Node3D, no
 ## Geometria da secao transversal (layout "rua_esquerda"):
 ##   x < 0: pista de rolamento | guia | x > 0: calcada (deck de corrida +
 ##   faixa lateral de props). Todas as bordas saem do spec — nada fixo aqui.
+
+
+static func _marca(no: Node3D, superficie: String, colisor: String = "estatico") -> void:
+	no.set_meta("superficie", superficie)
+	no.set_meta("colisor", colisor)
+
+
+static func _xform(pos: Vector3, escala: Vector3 = Vector3.ONE, giro_y: float = 0.0) -> Transform3D:
+	var b := Basis.from_euler(Vector3(0.0, giro_y, 0.0))
+	b = b.scaled(escala)
+	return Transform3D(b, pos)
+
+
 ## Gerador deterministico do quarteirao: mesma semente do spec, mesmo leiaute.
 static func _rng(spec: Dictionary, indice: int) -> RandomNumberGenerator:
 	var rng := RandomNumberGenerator.new()
