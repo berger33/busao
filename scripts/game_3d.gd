@@ -24,6 +24,7 @@ const TEXTURE_SKY_SUNSET = preload("res://assets/textures/ceu_entardecer.png")
 const TEXTURE_SKY_CLOUDY = preload("res://assets/textures/ceu_nublado.png")
 const TEXTURE_HAIR_REAL = preload("res://assets/textures/cabelo_realista.png")
 const TEXTURE_DENIM_REAL = preload("res://assets/textures/jeans_realista.png")
+const TEXTURE_CAR_PAINT_REAL = preload("res://assets/textures/pintura_carro_realista.png")
 const TEXTURE_BRICK = preload("res://assets/textures/parede_tijolo.svg")
 const TEXTURE_STUCCO = preload("res://assets/textures/reboco_colorido.svg")
 const TEXTURE_METAL = preload("res://assets/textures/metal_pintado.svg")
@@ -1564,12 +1565,14 @@ func _build_decor_car(pos: Vector3, color: Color) -> void:
     parent.position = pos
     decor_root.add_child(parent)
     var tire := _material(Color("#202c3c"), 0.15, 0.38, "rubber")
-    _box(parent, Vector3(1.7, 0.55, 2.2), Vector3(0.0, 0.42, 0.0), _material(color, 0.1, 0.5, "paint"), "ParkedBody")
-    _box(parent, Vector3(1.25, 0.34, 0.78), Vector3(0.0, 0.82, -0.1), _material(Color("#8ac5cb"), 0.0, 0.28, "glass"), "ParkedGlass")
-    _box(parent, Vector3(1.76, 0.08, 0.10), Vector3(0.0, 0.24, -1.12), _material(Color("#bac5c4"), 0.72, 0.3, "metal"), "ParkedBumper")
-    _box(parent, Vector3(0.22, 0.12, 0.04), Vector3(-0.54, 0.50, -1.13), _material(Color("#fff3c7"), 0.0, 0.2, "glass"), "ParkedLight")
-    _box(parent, Vector3(0.22, 0.12, 0.04), Vector3(0.54, 0.50, -1.13), _material(Color("#fff3c7"), 0.0, 0.2, "glass"), "ParkedLight")
-    _wheels(parent, tire, 0.78, 0.72)
+    var chrome := _material(Color("#aebdc0"), 0.72, 0.24, "metal")
+    var glass := _material(Color("#71bcc7"), 0.0, 0.25, "glass")
+    var lamp := _material(Color("#fff4c9"), 0.0, 0.18, "glass")
+    lamp.emission_enabled = true
+    lamp.emission = Color("#fff1b0")
+    lamp.emission_energy_multiplier = 1.4
+    var tail := _material(Color("#cc3942"), 0.0, 0.28, "glass")
+    _build_brazilian_car(parent, int(abs(pos.z)) % 3, tire, chrome, glass, lamp, tail)
 
 func _build_utility_wire(start: Vector3, finish: Vector3) -> void:
     var midpoint: Vector3 = (start + finish) * 0.5 + Vector3(0.0, 2.9, 0.0)
@@ -1637,7 +1640,7 @@ func _create_bus_stop(total: float) -> void:
     bus_stop_node.visible = false
 
 func _build_bus_mesh(parent: Node3D) -> void:
-    var yellow := _material(Color("#f4bf3d"), 0.0, 0.62, "paint")
+    var yellow := _material(Color("#f4bf3d"), 0.08, 0.48, "vehicle_paint")
     var glass := _material(Color("#6cc4cc"), 0.0, 0.28, "glass")
     var red := _material(Color("#ed634c"), 0.0, 0.62, "paint")
     var tire := _material(Color("#202b3a"), 0.05, 0.55, "rubber")
@@ -1662,6 +1665,53 @@ func _build_bus_mesh(parent: Node3D) -> void:
         front.rotation.z = PI / 2.0
         rear.rotation.z = PI / 2.0
 
+func _build_brazilian_car(parent: Node3D, variant: int, dark: Material, chrome: Material, glass: Material, white_light: Material, tail_light: Material) -> void:
+    var paint_colors: Array[Color] = [Color("#c83f45"), Color("#e6e7e1"), Color("#2d6d9b")]
+    var paint := _material(paint_colors[variant], 0.24, 0.30, "vehicle_paint")
+    var black_paint := _material(Color("#18202a"), 0.08, 0.38, "vehicle_paint")
+    var plate := _material(Color("#e9edf0"), 0.05, 0.34, "metal")
+    var accent := _material(Color("#315067"), 0.18, 0.34, "metal")
+    var body_length: float = 3.10 if variant != 1 else 3.42
+    var wheel_z: float = 1.02 if variant == 0 else 1.14
+    var cabin_length: float = 1.32 if variant != 2 else 1.05
+    var cabin_z: float = 0.22 if variant == 0 else (0.02 if variant == 1 else -0.38)
+    _box(parent, Vector3(2.24, 0.48, body_length), Vector3(0.0, 0.48, 0.05), paint, "CarLowerBody")
+    _box(parent, Vector3(1.98, 0.20, 0.76), Vector3(0.0, 0.79, -body_length * 0.32), paint, "CarHood")
+    _box(parent, Vector3(1.65 if variant != 2 else 1.74, 0.58 if variant != 2 else 0.82, cabin_length), Vector3(0.0, 0.98 if variant != 2 else 1.08, cabin_z), paint, "CarCabinShell")
+    _box(parent, Vector3(1.42 if variant != 2 else 1.52, 0.34 if variant != 2 else 0.47, 0.055), Vector3(0.0, 1.03 if variant != 2 else 1.16, cabin_z - cabin_length * 0.50), glass, "CarWindshield")
+    _box(parent, Vector3(1.42 if variant != 2 else 1.52, 0.30 if variant != 2 else 0.40, 0.055), Vector3(0.0, 1.03 if variant != 2 else 1.16, cabin_z + cabin_length * 0.50), glass, "CarRearGlass")
+    var side_window_size: Vector3 = Vector3(0.055, 0.30 if variant != 2 else 0.42, cabin_length * 0.80)
+    _box(parent, side_window_size, Vector3(-0.84 if variant != 2 else -0.88, 1.03 if variant != 2 else 1.16, cabin_z), glass, "CarSideGlass")
+    _box(parent, side_window_size, Vector3(0.84 if variant != 2 else 0.88, 1.03 if variant != 2 else 1.16, cabin_z), glass, "CarSideGlass")
+    _box(parent, Vector3(2.30, 0.10, 0.13), Vector3(0.0, 0.25, -body_length * 0.5), chrome, "CarFrontBumper")
+    _box(parent, Vector3(2.30, 0.10, 0.13), Vector3(0.0, 0.25, body_length * 0.5), chrome, "CarRearBumper")
+    _box(parent, Vector3(0.34, 0.15, 0.05), Vector3(-0.68, 0.66, -body_length * 0.51), white_light, "CarHeadlight")
+    _box(parent, Vector3(0.34, 0.15, 0.05), Vector3(0.68, 0.66, -body_length * 0.51), white_light, "CarHeadlight")
+    _box(parent, Vector3(0.28, 0.13, 0.05), Vector3(-0.72, 0.57, body_length * 0.51), tail_light, "CarTaillight")
+    _box(parent, Vector3(0.28, 0.13, 0.05), Vector3(0.72, 0.57, body_length * 0.51), tail_light, "CarTaillight")
+    _box(parent, Vector3(0.52, 0.14, 0.035), Vector3(0.0, 0.43, -body_length * 0.515), plate, "CarFrontPlate")
+    _box(parent, Vector3(0.52, 0.14, 0.035), Vector3(0.0, 0.43, body_length * 0.515), plate, "CarRearPlate")
+    for side in [-1.0, 1.0]:
+        _box(parent, Vector3(0.08, 0.06, 0.36), Vector3(side * 1.12, 0.90, cabin_z - 0.34), accent, "CarMirror")
+        _box(parent, Vector3(0.04, 0.04, 0.20), Vector3(side * 1.13, 0.82, -0.05), chrome, "CarDoorHandle")
+    _wheels(parent, dark, 1.02, wheel_z)
+    for x in [-1.02, 1.02]:
+        for z in [-wheel_z, wheel_z]:
+            var hub := _cylinder(parent, 0.13, 0.13, 0.20, Vector3(x, 0.18, z), chrome, "WheelHub")
+            hub.rotation.z = PI / 2.0
+    match variant:
+        0:
+            _box(parent, Vector3(1.34, 0.08, 0.12), Vector3(0.0, 1.45, body_length * 0.42), black_paint, "HatchSpoiler")
+            _box(parent, Vector3(1.55, 0.07, 0.06), Vector3(0.0, 0.43, 0.0), black_paint, "HatchGrille")
+        1:
+            _box(parent, Vector3(1.82, 0.18, 0.55), Vector3(0.0, 0.70, body_length * 0.34), paint, "SedanTrunk")
+            _box(parent, Vector3(1.52, 0.07, 0.06), Vector3(0.0, 0.43, -body_length * 0.51), black_paint, "SedanGrille")
+        _:
+            _box(parent, Vector3(2.02, 0.12, 1.64), Vector3(0.0, 1.18, 0.60), paint, "UtilityCargo")
+            _box(parent, Vector3(1.88, 0.07, 0.06), Vector3(0.0, 0.48, -body_length * 0.51), black_paint, "UtilityGrille")
+            _cylinder(parent, 0.035, 0.035, 1.40, Vector3(-0.82, 1.74, 0.50), chrome, "UtilityRoofRack")
+            _cylinder(parent, 0.035, 0.035, 1.40, Vector3(0.82, 1.74, 0.50), chrome, "UtilityRoofRack")
+
 func _build_road_obstacle(parent: Node3D, kind: String) -> void:
     var body := _material(Color("#d9584e"), 0.05, 0.48, "paint")
     var dark := _material(Color("#202c3c"), 0.15, 0.38, "rubber")
@@ -1674,22 +1724,9 @@ func _build_road_obstacle(parent: Node3D, kind: String) -> void:
     var tail_light := _material(Color("#cc3942"), 0.0, 0.28, "glass")
     match kind:
         "car":
-            _box(parent, Vector3(2.22, 0.48, 2.95), Vector3(0.0, 0.46, 0.05), body, "CarLowerBody")
-            _box(parent, Vector3(1.94, 0.22, 0.82), Vector3(0.0, 0.78, -0.92), body, "CarHood")
-            _box(parent, Vector3(1.56, 0.50, 1.35), Vector3(0.0, 0.94, 0.30), body, "CarRoof")
-            _box(parent, Vector3(1.38, 0.34, 0.055), Vector3(0.0, 1.00, -0.39), glass, "CarWindshield")
-            _box(parent, Vector3(1.38, 0.30, 0.055), Vector3(0.0, 1.00, 0.99), glass, "CarRearGlass")
-            _box(parent, Vector3(0.06, 0.26, 1.08), Vector3(-0.80, 1.0, 0.30), glass, "CarSideGlass")
-            _box(parent, Vector3(0.06, 0.26, 1.08), Vector3(0.80, 1.0, 0.30), glass, "CarSideGlass")
-            _box(parent, Vector3(2.28, 0.10, 0.12), Vector3(0.0, 0.25, -1.50), chrome, "CarFrontBumper")
-            _box(parent, Vector3(2.28, 0.10, 0.12), Vector3(0.0, 0.25, 1.50), chrome, "CarRearBumper")
-            _box(parent, Vector3(0.34, 0.15, 0.05), Vector3(-0.68, 0.66, -1.51), white_light, "CarHeadlight")
-            _box(parent, Vector3(0.34, 0.15, 0.05), Vector3(0.68, 0.66, -1.51), white_light, "CarHeadlight")
-            _box(parent, Vector3(0.28, 0.13, 0.05), Vector3(-0.72, 0.57, 1.51), tail_light, "CarTaillight")
-            _box(parent, Vector3(0.28, 0.13, 0.05), Vector3(0.72, 0.57, 1.51), tail_light, "CarTaillight")
-            _wheels(parent, dark, 1.02, 1.02)
+            _build_brazilian_car(parent, abs(parent.name.hash()) % 3, dark, chrome, glass, white_light, tail_light)
         "bus_traffic":
-            var bus_body := _material(Color("#e7b73d"), 0.0, 0.62, "paint")
+            var bus_body := _material(Color("#e7b73d"), 0.08, 0.50, "vehicle_paint")
             _box(parent, Vector3(2.52, 1.55, 4.35), Vector3(0.0, 0.90, 0.0), bus_body, "TrafficBusBody")
             _box(parent, Vector3(2.34, 0.12, 4.12), Vector3(0.0, 1.72, 0.0), chrome, "TrafficBusRoof")
             _box(parent, Vector3(2.16, 0.68, 0.055), Vector3(0.0, 1.18, -2.19), glass, "TrafficBusWindshield")
@@ -1708,7 +1745,7 @@ func _build_road_obstacle(parent: Node3D, kind: String) -> void:
             moto_rear.rotation.z = PI / 2.0
             var frame := _material(Color("#252f3b"), 0.72, 0.34, "metal")
             _box(parent, Vector3(0.10, 0.48, 1.16), Vector3(-0.48, 0.65, 0.0), frame, "MotoFrame")
-            var tank := _sphere(parent, 0.30, Vector3(-0.48, 0.86, -0.12), _material(Color("#39bda9"), 0.18, 0.35, "paint"), "MotoTank")
+            var tank := _sphere(parent, 0.30, Vector3(-0.48, 0.86, -0.12), _material(Color("#39bda9"), 0.18, 0.30, "vehicle_paint"), "MotoTank")
             tank.scale = Vector3(0.72, 0.62, 1.35)
             _box(parent, Vector3(0.26, 0.12, 0.52), Vector3(-0.48, 0.72, 0.43), _material(Color("#141b25"), 0.0, 0.6, "rubber"), "MotoSeat")
             _box(parent, Vector3(0.72, 0.06, 0.06), Vector3(-0.48, 1.24, -0.62), frame, "MotoHandlebar")
@@ -1717,7 +1754,7 @@ func _build_road_obstacle(parent: Node3D, kind: String) -> void:
             _sphere(parent, 0.22, Vector3(-0.48, 1.76, 0.05), _material(Color("#1f2934"), 0.0, 0.45, "paint"), "MotoHelmet")
             _cylinder(parent, 0.055, 0.055, 0.92, Vector3(-0.48, 0.48, 0.30), chrome, "MotoExhaust")
         "truck":
-            var truck_body := _material(Color("#d65f42"), 0.0, 0.54, "paint")
+            var truck_body := _material(Color("#d65f42"), 0.08, 0.48, "vehicle_paint")
             _box(parent, Vector3(2.55, 1.72, 2.10), Vector3(0.0, 1.02, 0.68), truck_body, "TruckCargo")
             _box(parent, Vector3(2.52, 1.46, 1.25), Vector3(0.0, 0.84, -1.02), truck_body, "TruckCab")
             _box(parent, Vector3(2.12, 0.64, 0.055), Vector3(0.0, 1.40, -1.66), glass, "TruckWindshield")
@@ -1979,6 +2016,8 @@ func _material(color: Color, metallic: float, roughness: float, surface: String 
         base_color = color.lerp(Color.WHITE, 0.22)
     elif surface == "denim":
         base_color = color.lerp(Color.WHITE, 0.18)
+    elif surface == "vehicle_paint":
+        base_color = color.lerp(Color.WHITE, 0.26)
     material.albedo_color = Color(base_color, 0.78) if surface == "glass" else base_color
     material.metallic = maxf(metallic, 0.42) if surface == "metal" else metallic
     material.roughness = roughness
@@ -2040,6 +2079,8 @@ func _texture_for_surface(surface: String) -> Texture2D:
             return TEXTURE_FABRIC
         "denim":
             return TEXTURE_DENIM_REAL
+        "vehicle_paint":
+            return TEXTURE_CAR_PAINT_REAL
         "skin":
             return TEXTURE_SKIN
         "hair":
@@ -2066,7 +2107,7 @@ func _texture_scale(surface: String) -> Vector3:
     match surface:
         "skin":
             return Vector3(1.5, 1.5, 1.5)
-        "fabric", "denim", "metal", "glass":
+        "fabric", "denim", "vehicle_paint", "metal", "glass":
             return Vector3(2.0, 2.0, 2.0)
         "hair":
             return Vector3(3.0, 3.0, 3.0)

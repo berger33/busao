@@ -10,7 +10,7 @@ Um runner mobile-first **totalmente 3D** em **Godot 4.x**, inspirado na leitura 
 - Progressão visual em dez capítulos de cinco fases: favela de terra, rua de bairro, centro, bairro humilde, classe média, vila militar, largo religioso, avenida comercial, orla turística e terminal final. Casas, lojas, obras, igrejas, guaritas, quiosques e skyline mudam junto com a fase.
 - O cenário realmente desliza sob o corredor: pista, fachadas, obstáculos, ponto e decorações percorrem o eixo `-Z` com aceleração visual, passos sincronizados, balanço de câmera, inclinação do personagem e FOV progressivo.
 - Céu com paleta por capítulo, sol animado, urubus, pombos, passarinhos, drones, aviões e gaivotas em rotas coerentes com o lugar.
-- Três faixas caminháveis e semanticamente separadas: **esquerda = rua**, com carros, ônibus, motos, buracos, caminhões e variações de trânsito; **centro/direita = calçadas**, com velha usando celular, hidrante, orelhão, cachorro caramelo, bicicleta, cone, camelô, banco e objetos urbanos.
+- Três faixas caminháveis e semanticamente separadas: **esquerda = rua**, com carros populares brasileiros, ônibus, motos, buracos, caminhões e variações de trânsito; **centro/direita = calçadas**, com pedestre usando celular, hidrante, orelhão brasileiro, cachorro caramelo, bicicleta, cone laranja de obra com faixas refletivas, carrinho de camelô, banco e objetos urbanos detalhados.
 - A rua recebe intencionalmente maior densidade de obstáculos que as calçadas. O HUD reforça a leitura com “RUA”/“CALÇADA”, tutorial de rota e feedback audiovisual de desvio.
 - 3 corações (1 nas Telas 20 e 50), colisões, invulnerabilidade do dash, game over e chegada com contagem regressiva no ponto.
 - Coletáveis 3D: R$ 0,25, café, pão de queijo, pastel, caldo de cana, vale-transporte, bilhete dourado, coxinha, guaraná, PIX Turbo e guarda-chuva.
@@ -26,6 +26,7 @@ Um runner mobile-first **totalmente 3D** em **Godot 4.x**, inspirado na leitura 
 - **Texturização completa:** o asfalto e a calçada usam imagens raster realistas de alta definição, mapas normais e mapeamento triplanar; terra, paralelepípedo, tijolo, reboco, metal, vidro, tecido, pele, madeira, borracha e folhagem usam materiais SVG leves com roughness, metallic e emissive accents coerentes.
 - **Céu e profundidade:** panorama tropical com nuvens, fog/aerial perspective, tonemapping, glow sutil, sombras e iluminação direcional por capítulo; as variações de clima ajustam energia, névoa e cor ambiente sem perder a leitura 3D.
 - **Personagem e tráfego:** corredor humanoide montado com cápsulas, juntas de cotovelo/joelho, mãos, olhos, íris, cabelo com fibras, pele com subsurface scattering, jeans, roupa e acessórios 3D; pivôs de pernas e braços executam passada alternada, salto e agachamento. O avatar Creator usa top preto texturizado, shorts jeans, botas altas, brincos e detalhes metálicos inspirados na referência enviada, sem copiar uma pessoa real. Carros, ônibus, motos e caminhões avançam no eixo da rua com velocidade própria e rodas animadas.
+- **Veículos brasileiros:** os carros de trânsito usam três silhuetas de compactos populares brasileiros — hatch urbano, sedã compacto e utilitário/van — sem logotipos, com pintura metálica, placa, faróis, lanternas, retrovisores, maçanetas, grade, rodas e variantes de cor. O ônibus amarelo, moto de entrega e caminhão também recebem assemblies detalhados e materiais automotivos.
 - **Polimento audiovisual 3D:** materiais por ambiente, câmera tremida, HUD sobreposto com barra de progresso, textos de feedback, partículas 3D e microanimações pensadas para 60 FPS sem assets pesados.
 - Ícone vetorial original em `assets/art/icon.svg`.
 
@@ -46,7 +47,7 @@ scripts/audio_manager.gd    Mixagem SFX/trilha, cache e pool de canais
 resources/game_balance.tres Balanceamento documentado como recurso Godot
 assets/art/icon.svg         Ícone original
 assets/textures/*.svg       Texturas procedurais e mapas normais leves para superfícies, roupas, personagens e props
-assets/textures/*.png       Asfalto, calçada, panoramas de céu, fibras de cabelo e jeans realistas
+assets/textures/*.png       Asfalto, calçada, panoramas de céu, fibras de cabelo, jeans e pintura automotiva realistas
 assets/audio/*.wav           SFX e músicas procedurais originais
 tools/generate_audio.py    Gerador reproduzível dos WAVs
 tools/validate_project.py  Preflight de catálogo, caminhos e assets

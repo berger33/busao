@@ -86,6 +86,7 @@ def check_3d_entrypoint() -> None:
         'TEXTURE_SKY_CLOUDY',
         'TEXTURE_HAIR_REAL',
         'TEXTURE_DENIM_REAL',
+        'TEXTURE_CAR_PAINT_REAL',
         'TEXTURE_ASPHALT_REAL',
         'TEXTURE_SIDEWALK_REAL',
         'material.albedo_texture = texture',
@@ -94,6 +95,9 @@ def check_3d_entrypoint() -> None:
         '_traffic_speed_for(kind, entities.size())',
         'LeftLegPivotElbow',
         'TorusMesh.new()',
+        '_build_brazilian_car(parent, abs(parent.name.hash()) % 3',
+        'TrafficCone',
+        'DogMuzzle',
         'course_root.position.z = distance',
         '_update_sky_fx(dt)',
     )
@@ -117,7 +121,7 @@ def check_assets() -> None:
             fail(f"{svg.relative_to(ROOT)}: {exc}")
     required_textures = {
         "asfalto_realista.png", "calcada_realista.png", "ceu_tropical.png",
-        "ceu_entardecer.png", "ceu_nublado.png", "cabelo_realista.png", "jeans_realista.png"
+        "ceu_entardecer.png", "ceu_nublado.png", "cabelo_realista.png", "jeans_realista.png", "pintura_carro_realista.png"
     }
     available_textures = {path.name for path in (ROOT / "assets/textures").glob("*.png")}
     for name in sorted(required_textures - available_textures):

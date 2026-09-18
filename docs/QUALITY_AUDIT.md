@@ -12,10 +12,10 @@ Data da varredura: 17/09/2026.
 - **Densidade:** `_build_course()` usa intervalos menores para a rua que para as calçadas. A rua recebe carros, ônibus, motos, buracos e caminhões; as calçadas recebem velha usando celular, hidrante, orelhão, cachorro, bicicleta, cone, camelô e banco.
 - **Catálogo:** 50 fases, incluindo 30 telas da expansão, continuam em `scripts/phase_data.gd` e são consumidas pelo runner 3D.
 - **Progressão:** `GameSave`, loja, personagens, desafios diários, conquistas, moedas, estrelas, Endless e streak continuam conectados ao HUD 3D.
-- **Assets:** SVGs do ícone, superfícies e mapas normais, PNGs de asfalto/calçada e três panoramas de céu (dia, entardecer e nublado), além de WAVs legíveis; os meshes 3D recebem materiais gerados em GDScript, sem download em runtime.
+- **Assets:** SVGs do ícone, superfícies e mapas normais, PNGs de asfalto/calçada, três panoramas de céu (dia, entardecer e nublado), fibras de cabelo, jeans e pintura automotiva, além de WAVs legíveis; os meshes 3D recebem materiais gerados em GDScript, sem download em runtime.
 - **Céu e atmosfera:** `PanoramaSkyMaterial` usa panorama tropical com nuvens; fog/aerial perspective, tonemapping, glow sutil, iluminação e energia variam por capítulo, com vida aérea contextual: pombo, urubu, passarinho, drone, avião e gaivota.
 - **Personagens:** catálogo procedural com 10 humanos brasileiros, cinco masculinos e cinco femininos; torso, cabeça, braços, pernas, mãos, rosto, cabelo com fibras, pele com subsurface scattering, jeans e acessórios são meshes 3D texturizados, com juntas de cotovelo/joelho e pivôs de passada, salto e agachamento. O estilo visual é compartilhado por todo o catálogo; o avatar Creator acrescenta top, shorts, botas, brincos e detalhes metálicos.
-- **Tráfego:** carros, ônibus, motos e caminhões são assemblies 3D detalhados com cabine, vidros, faróis, lanternas, para-choques, rodas orientadas e velocidade própria no eixo da rua.
+- **Tráfego:** carros, ônibus, motos e caminhões são assemblies 3D detalhados com cabine, vidros, faróis, lanternas, para-choques, placas, retrovisores, maçanetas, rodas orientadas e velocidade própria no eixo da rua. Os carros variam entre hatch compacto, sedã compacto e utilitário/van inspirados na frota popular brasileira, sem logotipos.
 - **Preflight reproduzível:** `python3 tools/validate_project.py` passou após a migração.
 - **Parser auxiliar:** `gdparse scripts/game_3d.gd` e `gdparse scripts/hud_3d.gd` passaram; isso não substitui a importação pelo editor Godot.
 - **Godot editor:** não está instalado neste ambiente; o parser/editor headless, a renderização efetiva e a exportação Android ainda precisam ser executados em uma máquina com Godot 4.x e SDK Android.
@@ -30,8 +30,9 @@ Data da varredura: 17/09/2026.
 6. A movimentação do mundo foi ligada à distância da corrida: a câmera permanece em terceira pessoa enquanto `course_root` avança sob o personagem, evitando a sensação de personagem deslizando em um fundo parado.
 7. Os 10 personagens foram catalogados em `scripts/character_data.gd` e o menu de loja passou a mostrar seus estilos, gênero de apresentação, preço, descrição e estado equipado.
 8. Os meshes recebem texturas raster realistas para asfalto/calçada, mapas normais e mapeamento triplanar; as demais superfícies usam materiais SVG específicos para terra, tijolo, reboco, metal, vidro, tecido, pele, madeira, borracha e folhas.
-9. O personagem usa pivôs de membros, cotovelos/joelhos, rosto, cabelo e materiais de pele, fibra e jeans; a passada, o salto e o agachamento mudam a pose. Os meshes de tráfego possuem detalhes 3D reconhecíveis: cabine, faróis, vidros, para-choques, guidão, carga, rodas e acessórios.
-10. O preflight confirmou caminhos `res://`, ausência de funções duplicadas, balanceamento de catálogo, 50 fases, SVG e metadados dos WAVs:
+9. O personagem usa pivôs de membros, cotovelos/joelhos, rosto, cabelo e materiais de pele, fibra e jeans; a passada, o salto e o agachamento mudam a pose.
+10. Os meshes de tráfego possuem detalhes 3D reconhecíveis: silhuetas de hatch, sedã e utilitário populares, cabine, faróis, vidros, placas, retrovisores, para-choques, guidão, carga, rodas e acessórios. O cone de obra é laranja com base e faixas refletivas; o cachorro possui focinho, orelhas, quatro pernas e cauda.
+11. O preflight confirmou caminhos `res://`, ausência de funções duplicadas, balanceamento de catálogo, 50 fases, SVG e metadados dos WAVs:
 
    ```text
    PRE-FLIGHT OK: paths, scripts, 50-phase catalog, SVG/PNG textures, WAV and feedback audio assets
@@ -61,7 +62,8 @@ Data da varredura: 17/09/2026.
 - [x] Dez personagens humanoides 3D, cinco masculinos e cinco femininos, com rosto, pele, cabelo, jeans/tecidos, juntas de cotovelo/joelho, acessórios, passada, salto e agachamento.
 - [x] Texturização realista do chão com PNGs e mapas normais, além de prédios, lojas, construções, veículos, obstáculos, personagens e vegetação.
 - [x] Carros, ônibus, motos e caminhões avançando na rua com velocidades próprias e rodas animadas.
-- [x] Obstáculos urbanos detalhados em assemblies 3D reconhecíveis, em vez de um único bloco geométrico.
+- [x] Obstáculos urbanos brasileiros detalhados em assemblies 3D reconhecíveis: cone laranja refletivo, cachorro caramelo, hidrante, orelhão, bicicleta, camelô, banco e pedestre.
+- [x] Carros com três silhuetas inspiradas em compactos populares brasileiros, pintura automotiva, placas, faróis, rodas, retrovisores e detalhes de carroceria.
 - [x] 50 fases, save, progressão, loja, personagens, desafios, áudio e feedback conectados.
 - [ ] Parser/importação real no Godot 4.x.
 - [ ] APK Android e teste em aparelho real.
