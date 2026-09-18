@@ -267,7 +267,7 @@ const PROFILES: Array[Dictionary] = [
 ]
 
 static func get_profile(index: int) -> Dictionary:
-    var chapter: int = clampi(int(index / 5), 0, PROFILES.size() - 1)
+    var chapter: int = clampi(int(float(index) / 5.0), 0, PROFILES.size() - 1)
     var profile: Dictionary = PROFILES[chapter].duplicate(true)
     profile["chapter_index"] = chapter
     profile["phase_index"] = index
