@@ -18,11 +18,23 @@ const WORLD_CHARACTER_SCRIPT = preload("res://scripts/world_character.gd")
 const WORLD_ANIMAL_SCRIPT = preload("res://scripts/world_animal.gd")
 const TEXTURE_ASPHALT = preload("res://assets/textures/asfalto_brasil.svg")
 const TEXTURE_ASPHALT_REAL = preload("res://assets/textures/asfalto_realista.png")
-const TEXTURE_ASPHALT_NORMAL = preload("res://assets/textures/asfalto_normal.svg")
+const TEXTURE_ASPHALT_NORMAL = preload("res://assets/textures/asfalto_normal.png")
+const TEXTURE_ASPHALT_ROUGH = preload("res://assets/textures/asfalto_roughness.png")
 const TEXTURE_DIRT = preload("res://assets/textures/terra_vermelha.svg")
 const TEXTURE_SIDEWALK = preload("res://assets/textures/calcada_portuguesa.svg")
 const TEXTURE_SIDEWALK_REAL = preload("res://assets/textures/calcada_realista.png")
-const TEXTURE_SIDEWALK_NORMAL = preload("res://assets/textures/calcada_normal.svg")
+const TEXTURE_SIDEWALK_NORMAL = preload("res://assets/textures/calcada_normal.png")
+const TEXTURE_SIDEWALK_ROUGH = preload("res://assets/textures/calcada_roughness.png")
+const TEXTURE_FACADE_PLASTER = preload("res://assets/textures/fachada_reboco.png")
+const TEXTURE_FACADE_PLASTER_N = preload("res://assets/textures/fachada_reboco_normal.png")
+const TEXTURE_FACADE_PLASTER_R = preload("res://assets/textures/fachada_reboco_roughness.png")
+const TEXTURE_FACADE_BRICK = preload("res://assets/textures/fachada_tijolo.png")
+const TEXTURE_FACADE_BRICK_N = preload("res://assets/textures/fachada_tijolo_normal.png")
+const TEXTURE_FACADE_BRICK_R = preload("res://assets/textures/fachada_tijolo_roughness.png")
+const TEXTURE_BRICK_WALL = preload("res://assets/textures/parede_tijolo_realista.png")
+const TEXTURE_BRICK_WALL_N = preload("res://assets/textures/parede_tijolo_realista_normal.png")
+const TEXTURE_BRICK_WALL_R = preload("res://assets/textures/parede_tijolo_realista_roughness.png")
+const TEXTURE_CAR_PAINT_NORMAL = preload("res://assets/textures/pintura_carro_normal.png")
 const TEXTURE_COBBLE = preload("res://assets/textures/cobblestone.svg")
 const TEXTURE_SKY_PANORAMA = preload("res://assets/textures/ceu_tropical.png")
 const TEXTURE_SKY_SUNSET = preload("res://assets/textures/ceu_entardecer.png")
@@ -304,17 +316,18 @@ func _setup_world() -> void:
     environment.environment.ambient_light_color = Color("#b8d8e4")
     environment.environment.ambient_light_energy = 0.72
     environment.environment.background_energy_multiplier = 0.92
-    environment.environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+    environment.environment.tonemap_mode = Environment.TONE_MAPPER_ACES
+    environment.environment.tonemap_exposure = 1.06
     environment.environment.glow_enabled = true
     environment.environment.glow_intensity = 0.42
     environment.environment.glow_bloom = 0.08
     environment.environment.glow_hdr_threshold = 1.15
     environment.environment.fog_enabled = true
     environment.environment.fog_light_color = Color("#b9cbd0")
-    environment.environment.fog_light_energy = 0.42
-    environment.environment.fog_density = 0.006
-    environment.environment.fog_aerial_perspective = 0.42
-    environment.environment.fog_sky_affect = 0.20
+    environment.environment.fog_light_energy = 0.46
+    environment.environment.fog_density = 0.0072
+    environment.environment.fog_aerial_perspective = 0.5
+    environment.environment.fog_sky_affect = 0.22
     sky = Sky.new()
     sky_material = PanoramaSkyMaterial.new()
     sky_material.panorama = TEXTURE_SKY_PANORAMA
@@ -1556,26 +1569,39 @@ func _build_house_facade(pos: Vector3, index: int, stacked: bool) -> void:
     var roof: Color = _scenario_color("roof", Color("#5d4444"))
     var width: float = 2.4 + float(index % 2) * 0.35
     var height: float = 2.4 + float(index % 3) * 0.25
-    var wall_surface: String = "brick" if stacked else "stucco"
-    _box(decor_root, Vector3(width, height, 3.1), pos + Vector3(0.0, height * 0.5, 0.0), _material(base if index % 2 == 0 else alt, 0.0, 0.86, wall_surface), "HouseFacade")
-    _box(decor_root, Vector3(width + 0.14, 0.16, 3.28), pos + Vector3(0.0, height + 0.10, 0.0), _material(roof, 0.0, 0.88, "wood"), "HouseRoof")
-    _box(decor_root, Vector3(0.62, 0.82, 0.06), pos + Vector3(0.0, 0.54, -1.58), _material(Color("#4d3d43"), 0.0, 0.52, "wood"), "HouseDoor")
-    for side in [-1.0, 1.0]:
-        _box(decor_root, Vector3(0.46, 0.38, 0.05), pos + Vector3(side * 0.62, 1.18, -1.59), _material(Color("#8bc4c0"), 0.0, 0.34, "glass"), "HouseWindow")
+    var depth: float = 3.1
+    var surface: String = "facade_brick" if stacked else "facade_plaster"
+    var tint: Color = Color("#ffffff") if stacked else (base if index % 2 == 0 else alt)
+    var wall := _material(tint, 0.0, 1.0, surface)
+    # casa baixa: mostra apenas o terreo da textura (1 andar de 3 m, 2 janelas inteiras)
+    wall.uv1_scale = Vector3(width / 6.0, height / 3.0, depth / 6.0)
+    wall.uv1_offset = Vector3(0.075, 0.75, 0.0)
+    _box(decor_root, Vector3(width, height, depth), pos + Vector3(0.0, height * 0.5, 0.0), wall, "HouseFacade")
+    _box(decor_root, Vector3(width + 0.14, 0.16, depth + 0.18), pos + Vector3(0.0, height + 0.10, 0.0), _material(roof, 0.0, 0.88, "wood"), "HouseRoof")
+    _box(decor_root, Vector3(0.62, 0.82, 0.06), pos + Vector3(0.0, 0.54, -depth * 0.5 - 0.04), _material(Color("#4d3d43"), 0.0, 0.52, "wood"), "HouseDoor")
     if stacked:
-        _box(decor_root, Vector3(0.92, 0.12, 0.10), pos + Vector3(0.0, height * 0.6, -1.65), _material(_scenario_color("accent", YELLOW), 0.0, 0.54), "HouseAwning")
+        _box(decor_root, Vector3(0.92, 0.12, 0.10), pos + Vector3(0.0, height * 0.6, -depth * 0.5 - 0.09), _material(_scenario_color("accent", YELLOW), 0.0, 0.54), "HouseAwning")
 
 func _build_profile_building(pos: Vector3, index: int, height: float, width: float) -> void:
-    var material := _material(_scenario_color("building", Color("#38506b")).lerp(_scenario_color("building_alt", Color("#76566d")), float(index % 3) * 0.25), 0.0, 0.88, "stucco")
+    var brick: bool = index % 2 == 1
+    var tint: Color = Color("#ffffff") if brick else _scenario_color("building", Color("#8fa3b8")).lerp(Color.WHITE, 0.35)
+    var material := _material(tint, 0.0, 1.0, "facade_brick" if brick else "facade_plaster")
+    # tile de fachada = 4 janelas (6 m) x 4 andares (12 m)
+    material.uv1_scale = Vector3(width / 6.0, height / 12.0, 3.8 / 6.0)
     _box(decor_root, Vector3(width, height, 3.8), pos + Vector3(0.0, height * 0.5, 0.0), material, "ProfileBuilding")
-    for row in 4:
-        var window_color: Color = _scenario_color("accent", YELLOW) if (row + index) % 3 == 0 else Color("#7fc1c8")
-        _box(decor_root, Vector3(0.34, 0.46, 0.04), pos + Vector3(-width * 0.25, 1.0 + row * 0.86, -1.94), _material(window_color, 0.0, 0.34, "glass"), "ProfileWindow")
-        _box(decor_root, Vector3(0.34, 0.46, 0.04), pos + Vector3(width * 0.25, 1.0 + row * 0.86, -1.94), _material(window_color, 0.0, 0.34, "glass"), "ProfileWindow")
     _box(decor_root, Vector3(width * 0.72, 0.08, 0.06), pos + Vector3(0.0, height - 0.24, -1.98), _material(_scenario_color("accent", YELLOW), 0.0, 0.48, "metal"), "ProfileCrown")
+    var concrete := _material(Color("#a8a49a"), 0.0, 0.9, "concrete")
+    _box(decor_root, Vector3(width + 0.14, 0.18, 4.0), pos + Vector3(0.0, height - 0.09, 0.0), concrete, "ProfileParapet")
+    if index % 2 == 0:
+        var ac := _material(Color("#d9d7d2"), 0.1, 0.6, "metal")
+        var ac_y: float = clampf(1.2 + float((index * 5) % 3) * 2.8, 2.0, height - 1.4)
+        _box(decor_root, Vector3(0.6, 0.4, 0.22), pos + Vector3(-width * 0.18, ac_y, -1.99), ac, "ProfileAC")
 
 func _build_shopfront(pos: Vector3, index: int, accent: Color) -> void:
-    _box(decor_root, Vector3(2.5, 2.45, 3.0), pos + Vector3(0.0, 1.22, 0.0), _material(_scenario_color("building", Color("#527c98")), 0.0, 0.82, "stucco"), "ShopBody")
+    var shop_wall := _material(_scenario_color("building", Color("#527c98")).lerp(Color.WHITE, 0.25), 0.0, 1.0, "facade_plaster")
+    shop_wall.uv1_scale = Vector3(2.5 / 6.0, 2.45 / 3.0, 3.0 / 6.0)
+    shop_wall.uv1_offset = Vector3(0.075, 0.75, 0.0)
+    _box(decor_root, Vector3(2.5, 2.45, 3.0), pos + Vector3(0.0, 1.22, 0.0), shop_wall, "ShopBody")
     _box(decor_root, Vector3(2.15, 0.92, 0.05), pos + Vector3(0.0, 0.88, -1.54), _material(Color("#75c8cb"), 0.0, 0.28, "glass"), "ShopWindow")
     _box(decor_root, Vector3(2.7, 0.16, 0.72), pos + Vector3(0.0, 2.34, -0.04), _material(accent, 0.0, 0.56, "fabric"), "ShopAwning")
     _box(decor_root, Vector3(1.65, 0.28, 0.08), pos + Vector3(0.0, 2.72, -1.47), _material(accent.lightened(0.18), 0.0, 0.38, "paint"), "ShopSign")
@@ -1584,7 +1610,7 @@ func _build_shopfront(pos: Vector3, index: int, accent: Color) -> void:
 
 func _build_construction(pos: Vector3, index: int) -> void:
     var orange := _material(Color("#e7793f"), 0.0, 0.62, "metal")
-    _box(decor_root, Vector3(2.8, 1.7, 2.9), pos + Vector3(0.0, 0.85, 0.0), _material(Color("#a95142"), 0.0, 0.92, "brick"), "ConstructionBrick")
+    _box(decor_root, Vector3(2.8, 1.7, 2.9), pos + Vector3(0.0, 0.85, 0.0), _material(Color("#d8cfc2"), 0.0, 0.95, "brick_wall"), "ConstructionBrick")
     for side in [-1.0, 1.0]:
         _cylinder(decor_root, 0.035, 0.035, 3.4, pos + Vector3(side * 1.2, 1.7, -1.58), orange, "ScaffoldPole")
         _box(decor_root, Vector3(2.55, 0.06, 0.06), pos + Vector3(0.0, 2.9, -1.58), orange, "ScaffoldBar")
@@ -1656,6 +1682,11 @@ func _build_decor_car(pos: Vector3, _color: Color) -> void:
     parent.name = "ParkedCar"
     parent.position = pos
     decor_root.add_child(parent)
+    var parked_glb := _optional_model("carro.glb")
+    if parked_glb != null:
+        parent.add_child(parked_glb)
+        _fit_model(parked_glb, GLB_FIT["carro"].x, GLB_FIT["carro"].y)
+        return
     var tire := _material(Color("#202c3c"), 0.15, 0.38, "rubber")
     var chrome := _material(Color("#aebdc0"), 0.72, 0.24, "metal")
     var glass := _material(Color("#71bcc7"), 0.0, 0.25, "glass")
@@ -1684,17 +1715,8 @@ func _build_billboard(pos: Vector3, color: Color) -> void:
     _cylinder(decor_root, 0.04, 0.04, 3.8, pos + Vector3(0.0, 1.9, 0.0), _material(Color("#39404d"), 0.15, 0.5, "metal"), "BillboardPole")
     _box(decor_root, Vector3(2.25, 1.15, 0.08), pos + Vector3(0.0, 3.65, 0.0), _material(color, 0.0, 0.38, "paint"), "Billboard")
 
-func _build_building(pos: Vector3, index: int, accent: Color) -> void:
-    var height: float = 3.6 + float((index * 17) % 5)
-    var width: float = 2.3 + float(index % 3) * 0.45
-    var colors: Array[Color] = [Color("#38506b"), Color("#76566d"), Color("#496b68"), Color("#5c536f")]
-    var material := _material(colors[index % colors.size()], 0.0, 0.88, "stucco")
-    _box(decor_root, Vector3(width, height, 3.8), pos + Vector3(0.0, height * 0.5, 0.0), material, "Building")
-    for row in 3:
-        var window_mat := _material(Color("#e9c66c") if (row + index) % 2 == 0 else Color("#78b8c5"), 0.0, 0.35, "glass")
-        _box(decor_root, Vector3(0.32, 0.42, 0.04), pos + Vector3(-width * 0.25, 1.0 + row * 0.82, -1.94), window_mat, "Window")
-        _box(decor_root, Vector3(0.32, 0.42, 0.04), pos + Vector3(width * 0.25, 1.0 + row * 0.82, -1.94), window_mat, "Window")
-    _box(decor_root, Vector3(width * 0.7, 0.05, 0.05), pos + Vector3(0.0, height - 0.22, -1.98), _material(accent, 0.0, 0.55), "BuildingAccent")
+func _build_building(pos: Vector3, index: int, _accent: Color) -> void:
+    _build_profile_building(pos, index + 4, 4.6 + float((index * 17) % 5) * 1.25, 2.3 + float(index % 3) * 0.45)
 
 func _build_lamp(pos: Vector3, accent: Color) -> void:
     _cylinder(decor_root, 0.035, 0.035, 3.2, pos + Vector3(0.0, 1.6, 0.0), _material(Color("#3c4654"), 0.35, 0.4, "metal"), "LampPole")
@@ -1734,6 +1756,11 @@ func _create_bus_stop(total: float) -> void:
     bus_stop_node.visible = false
 
 func _build_bus_mesh(parent: Node3D) -> void:
+    var bus_glb := _optional_model("onibus.glb")
+    if bus_glb != null:
+        parent.add_child(bus_glb)
+        _fit_model(bus_glb, GLB_FIT["onibus"].x, GLB_FIT["onibus"].y)
+        return
     var yellow := _material(Color("#f4bf3d"), 0.08, 0.48, "vehicle_paint")
     var glass := _material(Color("#6cc4cc"), 0.0, 0.28, "glass")
     var red := _material(Color("#ed634c"), 0.0, 0.62, "paint")
@@ -1753,6 +1780,12 @@ func _build_bus_mesh(parent: Node3D) -> void:
     _box(parent, Vector3(2.98, 0.10, 0.12), Vector3(0.0, -0.65, -2.15), chrome, "BusBumper")
     _box(parent, Vector3(0.42, 0.22, 0.05), Vector3(-0.80, -0.18, -2.17), lamp, "BusHeadlight")
     _box(parent, Vector3(0.42, 0.22, 0.05), Vector3(0.80, -0.18, -2.17), lamp, "BusHeadlight")
+    var destination := _material(Color("#2b2f36"), 0.0, 0.4, "glass")
+    destination.emission_enabled = true
+    destination.emission = Color("#ffd97a")
+    destination.emission_energy_multiplier = 1.3
+    _box(parent, Vector3(1.30, 0.24, 0.06), Vector3(0.0, 0.62, -2.16), destination, "BusDestination")
+    _box(parent, Vector3(1.30, 0.26, 1.90), Vector3(0.0, 0.92, 0.25), _material(Color("#e8e6df"), 0.1, 0.6, "metal"), "BusRoofAC")
     for wheel_x in [-1.05, 1.05]:
         var front := _cylinder(parent, 0.38, 0.38, 0.24, Vector3(wheel_x, -0.88, -1.1), tire, "BusWheel")
         var rear := _cylinder(parent, 0.38, 0.38, 0.24, Vector3(wheel_x, -0.88, 1.1), tire, "BusWheel")
@@ -1806,7 +1839,76 @@ func _build_brazilian_car(parent: Node3D, variant: int, dark: Material, chrome: 
             _cylinder(parent, 0.035, 0.035, 1.40, Vector3(-0.82, 1.74, 0.50), chrome, "UtilityRoofRack")
             _cylinder(parent, 0.035, 0.035, 1.40, Vector3(0.82, 1.74, 0.50), chrome, "UtilityRoofRack")
 
+const GLB_FIT := {
+    "car": Vector2(4.4, 1.55),
+    "motorcycle": Vector2(2.1, 1.15),
+    "truck": Vector2(6.4, 2.7),
+    "bus_traffic": Vector2(7.4, 3.0),
+    "onibus": Vector2(8.2, 3.0),
+    "carro": Vector2(4.4, 1.55),
+}
+var _glb_cache: Dictionary = {}
+
+func _optional_model(file: String) -> Node3D:
+    # Drop-in opcional: se existir um modelo GLB em assets/vehicles/<file>,
+    # ele substitui o veiculo procedural (assets CC0, ver assets/vehicles/README.md).
+    if not _glb_cache.has(file):
+        var packed: PackedScene = null
+        var path := "res://assets/vehicles/" + file
+        if ResourceLoader.exists(path):
+            packed = load(path) as PackedScene
+        _glb_cache[file] = packed
+    var cached: PackedScene = _glb_cache[file]
+    if cached == null:
+        return null
+    var node := cached.instantiate() as Node3D
+    if node == null:
+        push_warning("Falha ao instanciar modelo de veiculo: " + file)
+        return null
+    return node
+
+func _model_bounds(root: Node3D) -> AABB:
+    var bounds := AABB()
+    var found := false
+    var stack: Array[Node] = [root]
+    while not stack.is_empty():
+        var current: Node = stack.pop_back()
+        stack.append_array(current.get_children())
+        if current is MeshInstance3D:
+            var mesh_node: MeshInstance3D = current
+            var compose := mesh_node.transform
+            var walker: Node = mesh_node.get_parent()
+            while walker != null and walker != root:
+                if walker is Node3D:
+                    compose = (walker as Node3D).transform * compose
+                walker = walker.get_parent()
+            var aabb := mesh_node.get_aabb().abs()
+            for endpoint_i in 8:
+                var world_point: Vector3 = compose * aabb.get_endpoint(endpoint_i)
+                if found:
+                    bounds = bounds.expand(world_point)
+                else:
+                    bounds = AABB(world_point, Vector3.ZERO)
+                    found = true
+    return bounds
+
+func _fit_model(node: Node3D, target_length: float, target_height: float) -> void:
+    var bounds := _model_bounds(node)
+    if not bounds.has_volume():
+        return
+    var fit := minf(target_length / maxf(bounds.size.z, 0.001), target_height / maxf(bounds.size.y, 0.001))
+    node.scale = Vector3.ONE * fit
+    # assenta o modelo no chao e centraliza o comprimento no node pai
+    var offset := Vector3(-bounds.position.x, -bounds.position.y, -bounds.position.z - bounds.size.z * 0.5) * fit
+    node.position += offset
+
 func _build_road_obstacle(parent: Node3D, kind: String) -> void:
+    if GLB_FIT.has(kind):
+        var replacement := _optional_model(kind + ".glb")
+        if replacement != null:
+            parent.add_child(replacement)
+            _fit_model(replacement, GLB_FIT[kind].x, GLB_FIT[kind].y)
+            return
     var body := _material(Color("#d9584e"), 0.05, 0.48, "paint")
     var dark := _material(Color("#202c3c"), 0.15, 0.38, "rubber")
     var chrome := _material(Color("#aebdc0"), 0.72, 0.24, "metal")
@@ -2173,7 +2275,15 @@ func _material(color: Color, metallic: float, roughness: float, surface: String 
         material.normal_enabled = true
         material.normal_texture = normal
         material.normal_scale = 0.32 if surface == "asphalt" else 0.42
-    if surface in ["asphalt", "sidewalk", "cobble"]:
+        if surface.begins_with("facade_") or surface == "brick_wall":
+            material.normal_scale = 0.85
+        elif surface == "vehicle_paint":
+            material.normal_scale = 0.25
+    var rough_map: Texture2D = _roughness_for_surface(surface)
+    if rough_map != null:
+        material.roughness_texture = rough_map
+        material.roughness = 1.0
+    elif surface in ["asphalt", "sidewalk", "cobble"]:
         material.roughness = maxf(material.roughness, 0.82)
     return material
 
@@ -2222,6 +2332,29 @@ func _normal_for_surface(surface: String) -> Texture2D:
             return TEXTURE_ASPHALT_NORMAL
         "sidewalk", "cobble":
             return TEXTURE_SIDEWALK_NORMAL
+        "facade_plaster":
+            return TEXTURE_FACADE_PLASTER_N
+        "facade_brick":
+            return TEXTURE_FACADE_BRICK_N
+        "brick_wall":
+            return TEXTURE_BRICK_WALL_N
+        "vehicle_paint":
+            return TEXTURE_CAR_PAINT_NORMAL
+        _:
+            return null
+
+func _roughness_for_surface(surface: String) -> Texture2D:
+    match surface:
+        "asphalt":
+            return TEXTURE_ASPHALT_ROUGH
+        "sidewalk", "cobble":
+            return TEXTURE_SIDEWALK_ROUGH
+        "facade_plaster":
+            return TEXTURE_FACADE_PLASTER_R
+        "facade_brick":
+            return TEXTURE_FACADE_BRICK_R
+        "brick_wall":
+            return TEXTURE_BRICK_WALL_R
         _:
             return null
 
@@ -2239,6 +2372,10 @@ func _texture_scale(surface: String) -> Vector3:
             return Vector3(3.0, 3.0, 3.0)
         "dirt":
             return Vector3(4.0, 4.0, 4.0)
+        "facade_plaster", "facade_brick":
+            return Vector3.ONE
+        "brick_wall":
+            return Vector3(2.0, 1.0, 1.0)
         _:
             return Vector3(2.5, 2.5, 2.5)
 

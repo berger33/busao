@@ -396,8 +396,16 @@ def check_assets() -> None:
             fail(f"{svg.relative_to(ROOT)}: {exc}")
     required_textures = {
         "asfalto_realista.png", "calcada_realista.png", "ceu_tropical.png",
-        "ceu_entardecer.png", "ceu_nublado.png", "cabelo_realista.png", "jeans_realista.png", "pintura_carro_realista.png"
+        "ceu_entardecer.png", "ceu_nublado.png", "cabelo_realista.png", "jeans_realista.png", "pintura_carro_realista.png",
+        "asfalto_normal.png", "asfalto_roughness.png", "calcada_normal.png", "calcada_roughness.png",
+        "fachada_reboco.png", "fachada_reboco_normal.png", "fachada_reboco_roughness.png",
+        "fachada_tijolo.png", "fachada_tijolo_normal.png", "fachada_tijolo_roughness.png",
+        "parede_tijolo_realista.png", "parede_tijolo_realista_normal.png", "parede_tijolo_realista_roughness.png",
+        "pintura_carro_normal.png",
     }
+    for tool in ("tools/generate_textures.py", "assets/vehicles/README.md"):
+        if not (ROOT / tool).is_file():
+            fail(f"missing file: {tool}")
     available_textures = {path.name for path in (ROOT / "assets/textures").glob("*.png")}
     for name in sorted(required_textures - available_textures):
         fail(f"missing raster texture: assets/textures/{name}")

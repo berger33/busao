@@ -247,7 +247,7 @@ assinatura antiga): nada encontrado.
 - [x] 50 fases, save schema v3, progressão, loja com preços autoritativos, personagens, desafios, áudio e feedback conectados.
 - [x] Onboarding em etapas, pausa automática ao perder foco, movimento reduzido e alto contraste.
 - [x] Cache de meshes primitivas, culling de decoração distante e HUD desacelerada para reduzir trabalho no Android.
-- [ ] Parser/importação real no Godot 4.x.
+- [x] Parser/importação real no Godot 4.x (erros de parser e API Godot 3 corrigidos nos PRs #2/#3 e revalidados com `gdparse` + `check_gdscript.py`).
 - [ ] APK Android e teste em aparelho real.
 
 ## Próximos passos de produção
