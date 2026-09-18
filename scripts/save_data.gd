@@ -484,7 +484,7 @@ func record_daily_progress(date_key: String, meters: int, coins_collected: int, 
 
 func weekly_key() -> String:
     var day_number := _local_day_number()
-    return str(int(day_number / 7))
+    return str(int(float(day_number) / 7.0))
 
 func weekly_progress(key: String) -> Dictionary:
     if str(data.get("weekly_key", "")) != key:
@@ -634,5 +634,15 @@ func award_badge(id: String) -> bool:
     return true
 
 func _local_day_number() -> int:
+    # Usa apenas a data local (com a hora zerada): a chave semanal vira à
+    # meia-noite local, igual às chaves diárias de Time.get_date_string_from_system().
     var local_date: Dictionary = Time.get_datetime_dict_from_system(false)
-    return int(Time.get_unix_time_from_datetime_dict(local_date, false) / 86400.0)
+    var date_only: Dictionary = {
+        "year": int(local_date["year"]),
+        "month": int(local_date["month"]),
+        "day": int(local_date["day"]),
+        "hour": 0,
+        "minute": 0,
+        "second": 0,
+    }
+    return int(Time.get_unix_time_from_datetime_dict(date_only) / 86400.0)

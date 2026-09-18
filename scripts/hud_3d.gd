@@ -112,7 +112,7 @@ func _draw_map() -> void:
     for local_index in cards.size():
         var card: Dictionary = cards[local_index]
         var col: int = local_index % 2
-        var row: int = int(local_index / 2)
+        var row: int = int(float(local_index) / 2.0)
         var rect := Rect2(25.0 + col * 340.0, 160.0 + row * 170.0, 330.0, 140.0)
         var unlocked: bool = bool(card.get("unlocked", false))
         var accent: Color = card.get("accent", BLUE)
@@ -252,14 +252,14 @@ func _draw_shop() -> void:
         var characters: Array = state.get("characters", [])
         for i in characters.size():
             var col: int = i % 2
-            var row: int = int(i / 2)
+            var row: int = int(float(i) / 2.0)
             var rect := Rect2(25.0 + col * 340.0, 250.0 + row * 145.0, 330.0, 126.0)
             _character_card(rect, characters[i])
     else:
         var items: Array = state.get("items", [])
         for i in items.size():
             var col: int = i % 2
-            var row: int = int(i / 2)
+            var row: int = int(float(i) / 2.0)
             var rect := Rect2(30.0 + col * 345.0, 250.0 + row * 175.0, 315.0, 150.0)
             _item_card(rect, items[i])
     _button(Rect2(45, 1135, 630, 70), "VOLTAR", Color("#293955"), 22)

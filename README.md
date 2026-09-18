@@ -60,6 +60,7 @@ assets/audio/*.wav           SFX e músicas procedurais originais
 tools/generate_audio.py    Gerador reproduzível dos WAVs
 tools/validate_project.py  Preflight de catálogo, caminhos, economia e assets
 tools/audit_balance.py     Simulação determinística de curva, metas e densidade
+tools/check_gdscript.py    Análise estática GDScript (erros de parser do Godot 4)
 docs/QUALITY_AUDIT.md      Auditoria e roadmap de qualidade visual/técnica
 docs/PRODUCT_AUDIT.md      Auditoria de produto, economia, retenção e métricas
 CREDITS.md                 Créditos e licenças
@@ -95,7 +96,7 @@ O catálogo continua oferecendo dez identidades e progressão de loja, mas a rep
 
 O projeto não precisa de plugins, fontes, conexão de internet, banco de dados ou assets baixados. O save é criado automaticamente em `user://`; para reiniciar o progresso, apague `corre_pro_ponto.json`, `corre_pro_ponto.bak.json` e `corre_pro_ponto.tmp.json` na pasta de dados do usuário do Godot.
 
-Antes de abrir um PR de balanceamento, rode `python3 tools/validate_project.py` e `python3 tools/audit_balance.py`. O primeiro valida contratos e integridade estrutural; o segundo confirma que as metas de moedas são alcançáveis e que a rua permanece mais densa que as calçadas. Ambos são barreiras rápidas, não substitutos para playtest.
+Antes de abrir um PR, rode `python3 tools/validate_project.py`, `python3 tools/audit_balance.py` e `python3 tools/check_gdscript.py`. O primeiro valida contratos e integridade estrutural; o segundo confirma que as metas de moedas são alcançáveis e que a rua permanece mais densa que as calçadas; o terceiro reproduz, sem precisar do editor, os erros que impedem o projeto de abrir (identificador não declarado, variável duplicada, argumentos a mais e divisão inteira) — para checar também as assinaturas da API do engine, rode `python3 tools/check_gdscript.py --godot-doc /caminho/para/doc/classes`. Os três são barreiras rápidas, não substitutos para playtest.
 
 ## Android 8.0+
 

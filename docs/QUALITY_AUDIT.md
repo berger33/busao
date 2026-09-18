@@ -40,9 +40,37 @@ Data da varredura: 18/09/2026.
    PRE-FLIGHT OK: paths, scripts, 50-phase catalog, 13-obstacle 3D contract, SVG/PNG textures, WAV and feedback audio assets
    ```
 
+## Correção dos erros de abertura no Godot (18/09/2026)
+
+Os erros reportados ao abrir o projeto no editor foram reproduzidos, corrigidos e
+verificados com `tools/check_gdscript.py` (análise estática que replica as regras
+de `gdscript_parser.cpp`/`gdscript_analyzer.cpp` do Godot 4.7.2, lidas do código
+fonte da mesma versão):
+
+- `scripts/game_3d.gd` — `_build_sidewalk_obstacle()` usava o material `chrome`
+  (bicicleta e carrinho de camelô) sem declarar a variável: o script não
+  compilava. Declaração adicionada.
+- `scripts/game_3d.gd` — `var chapter` era redeclarado dentro de `if sun:` em
+  `_apply_scenario_atmosphere()`; a variável externa já estava no escopo. A
+  redeclaração foi removida.
+- `scripts/save_data.gd` — `Time.get_unix_time_from_datetime_dict()` recebia dois
+  argumentos (a API aceita apenas o dicionário). O número do dia local agora usa
+  somente a data local com a hora zerada, para que a virada semanal coincida com
+  a virada diária de `Time.get_date_string_from_system()`.
+- Divisões inteiras (`INTEGER_DIVISION`) eliminadas em `game.gd`, `game_3d.gd`,
+  `hud_3d.gd`, `phase_data.gd`, `runner_character.gd`, `save_data.gd` e
+  `scenario_data.gd`, mantendo o truncamento exato do operador `/` do engine
+  (`OperatorEvaluatorDivNZ<int64_t>`).
+- Parâmetros não usados (`UNUSED_PARAMETER`) renomeados com o prefixo `_`, a
+  convenção do Godot.
+
+Resultado atual: `python3 tools/check_gdscript.py` → 0 problema(s),
+`python3 tools/validate_project.py` → PRE-FLIGHT OK e
+`python3 tools/audit_balance.py` → curva consistente.
+
 ## Limitações conhecidas / validação ainda obrigatória
 
-- Não há binário Godot 4.x disponível no sandbox para executar `godot --headless --editor --quit --path .`; portanto, a confirmação final de parser, importação GLTF/GLB, retarget da AnimationLibrary, APIs 3D e warnings do editor está pendente.
+- Não há binário Godot 4.x disponível no sandbox para executar `godot --headless --editor --quit --path .`; a checagem possível aqui é estática (`tools/check_gdscript.py`, que reproduz as classes de erro do analisador) e a confirmação final de importação GLTF/GLB, retarget da AnimationLibrary, renderização e warnings restantes precisa ser feita em uma máquina com Godot 4.x.
 - Ainda é necessário fazer uma exportação APK debug, instalar em Android 8.0 ou superior e medir FPS, memória, aquecimento e consumo em um aparelho médio.
 - O runner trata `NOTIFICATION_WM_GO_BACK_REQUEST`: primeiro Voltar pausa a corrida, o segundo encerra sem perda de save e Voltar no ponto embarca; ainda é necessário testar safe areas, notch, áudio interrompido por chamada/notificação e gestos em telas com diferentes densidades.
 - O pacote usa `GL Compatibility` para manter o alvo Android amplo. A contagem de meshes, sombras e partículas deve ser medida em aparelho real antes da publicação.

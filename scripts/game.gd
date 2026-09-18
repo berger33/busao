@@ -317,7 +317,7 @@ func _phase_at_position(pos: Vector2) -> int:
     var first_phase := map_page * 10
     for local_index in 10:
         var col := local_index % 2
-        var row := int(local_index / 2)
+        var row := int(float(local_index) / 2.0)
         var rect := Rect2(25.0 + col * 340.0, origin_y + row * 170.0, 330.0, 140.0)
         if rect.has_point(pos):
             return first_phase + local_index
@@ -331,7 +331,7 @@ func _daily_at_position(pos: Vector2) -> int:
 
 func _start_run(index: int) -> void:
     index = clampi(index, 0, 49)
-    map_page = int(index / 10)
+    map_page = int(float(index) / 10.0)
     endless_mode = false
     if not GameSave.is_phase_unlocked(index):
         _show_toast("Essa tela ainda está fechada. Mais estrelas!")
@@ -481,7 +481,7 @@ func _build_course() -> void:
             ["turnstile", "traffic", "luggage", "truck", "dog"],
             ["drone", "cart", "traffic", "umbrella", "truck"]
         ]
-        forced = expansion_sets[mini(5, int((phase_index - 20) / 5))]
+        forced = expansion_sets[mini(5, int(float(phase_index - 20) / 5.0))]
     for j in forced.size():
         var forced_z := 68.0 + j * maxf(15.0, (total - 105.0) / maxf(1.0, float(forced.size())))
         entities.append({"kind": str(forced[j]), "lane": (j + phase_index) % 3, "z": forced_z, "passed": false, "resolved": false})
@@ -1079,7 +1079,7 @@ func _draw_map() -> void:
     for local_index in 10:
         var i := first_phase + local_index
         var col := local_index % 2
-        var row := int(local_index / 2)
+        var row := int(float(local_index) / 2.0)
         var rect := Rect2(25.0 + col * 340.0, origin_y + row * 170.0, 330.0, 140.0)
         var unlocked := GameSave.is_phase_unlocked(i)
         var p := PhaseData.get_phase(i)
@@ -1223,7 +1223,7 @@ func _shop_tap(pos: Vector2) -> void:
     else:
         for i in items.size():
             var col := i % 2
-            var row := int(i / 2)
+            var row := int(float(i) / 2.0)
             var rect := Rect2(30 + col * 345, 250 + row * 175, 315, 150)
             if rect.has_point(pos):
                 var id: String = items[i][0]

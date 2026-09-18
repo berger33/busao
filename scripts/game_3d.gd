@@ -383,7 +383,7 @@ func _start_run(index: int) -> void:
         return
     selected_phase = clamped_index
     phase_index = clamped_index
-    map_page = int(clamped_index / 10)
+    map_page = int(float(clamped_index) / 10.0)
     endless_mode = false
     phase = PhaseData.get_phase(phase_index)
     scenario = SCENARIO_DATA.get_profile(phase_index)
@@ -566,7 +566,7 @@ func _spawn_forced_gags(total: float) -> void:
             ["truck", "car", "dog", "umbrella", "motorcycle"],
             ["bus_traffic", "pothole", "vendor", "truck", "dog"],
             ["car", "payphone", "motorcycle", "hydrant", "truck"]
-        ][mini(5, int((phase_index - 20) / 5))]
+        ][mini(5, int(float(phase_index - 20) / 5.0))]
     for i in forced.size():
         var forced_distance: float = 72.0 + float(i) * maxf(16.0, (total - 110.0) / maxf(1.0, float(forced.size())))
         var forced_lane: int = ROAD_LANE if str(forced[i]) in ROAD_OBSTACLES else (SIDEWALK_CENTER + (i % 2))
@@ -1080,7 +1080,6 @@ func _apply_scenario_atmosphere() -> void:
     environment.environment.fog_density = 0.0045 if weather in ["manhã clara", "sol confortável"] else 0.007
     environment.environment.fog_sky_affect = 0.18 + float(chapter % 4) * 0.025
     if sun:
-        var chapter: int = int(scenario.get("chapter_index", 0))
         sun.light_color = scenario.get("sun", Color("#ffe0a3"))
         sun.light_energy = 0.92 if chapter >= 7 else 1.18
         sun.rotation_degrees = Vector3(-42.0 - chapter * 1.8, -28.0 + chapter * 4.0, 0.0)
@@ -1481,13 +1480,13 @@ func _build_construction(pos: Vector3, index: int) -> void:
     if index % 2 == 0:
         _cone(decor_root, 0.28, 0.65, pos + Vector3(1.6, 0.34, -1.0), orange, "ConstructionCone")
 
-func _build_guard_post(pos: Vector3, index: int) -> void:
+func _build_guard_post(pos: Vector3, _index: int) -> void:
     _box(decor_root, Vector3(1.9, 1.9, 1.8), pos + Vector3(0.0, 0.95, 0.0), _material(_scenario_color("building_alt", Color("#b9a770")), 0.0, 0.74, "stucco"), "GuardPost")
     _box(decor_root, Vector3(1.3, 0.46, 0.05), pos + Vector3(0.0, 1.3, -0.94), _material(Color("#263d4b"), 0.0, 0.34, "glass"), "GuardWindow")
     _box(decor_root, Vector3(2.1, 0.10, 2.0), pos + Vector3(0.0, 2.0, 0.0), _material(_scenario_color("accent", YELLOW), 0.0, 0.72, "metal"), "GuardRoof")
     _build_flag(pos + Vector3(0.75, 0.0, 0.0), _scenario_color("accent", YELLOW))
 
-func _build_church(pos: Vector3, index: int) -> void:
+func _build_church(pos: Vector3, _index: int) -> void:
     var wall := _material(_scenario_color("building", Color("#d8a46d")), 0.0, 0.84, "stucco")
     _box(decor_root, Vector3(2.9, 4.0, 3.6), pos + Vector3(0.0, 2.0, 0.0), wall, "ChurchBody")
     _box(decor_root, Vector3(1.1, 5.6, 1.0), pos + Vector3(-1.0, 2.8, 0.0), wall, "ChurchTower")
@@ -1495,17 +1494,17 @@ func _build_church(pos: Vector3, index: int) -> void:
     _box(decor_root, Vector3(0.72, 1.24, 0.05), pos + Vector3(0.0, 0.72, -1.84), _material(Color("#684a58"), 0.0, 0.66), "ChurchDoor")
     _box(decor_root, Vector3(0.25, 0.92, 0.05), pos + Vector3(-1.0, 6.9, -0.05), _material(_scenario_color("accent", VIOLET), 0.0, 0.42), "ChurchCross")
 
-func _build_tourist_kiosk(pos: Vector3, index: int) -> void:
+func _build_tourist_kiosk(pos: Vector3, _index: int) -> void:
     _cylinder(decor_root, 0.72, 0.82, 1.55, pos + Vector3(0.0, 0.78, 0.0), _material(_scenario_color("building_alt", Color("#72b1ad")), 0.0, 0.74, "stucco"), "Kiosk")
     _cone(decor_root, 1.05, 0.52, pos + Vector3(0.0, 1.82, 0.0), _material(_scenario_color("accent", CYAN), 0.0, 0.62, "fabric"), "KioskRoof")
     _box(decor_root, Vector3(0.72, 0.22, 0.05), pos + Vector3(0.0, 0.98, -0.8), _material(Color("#f5e6bc"), 0.0, 0.45, "wood"), "KioskCounter")
 
-func _build_terminal_facade(pos: Vector3, index: int) -> void:
+func _build_terminal_facade(pos: Vector3, _index: int) -> void:
     _box(decor_root, Vector3(3.2, 3.2, 2.8), pos + Vector3(0.0, 1.6, 0.0), _material(_scenario_color("building", Color("#344b70")), 0.0, 0.68, "metal"), "TerminalFacade")
     _box(decor_root, Vector3(2.9, 0.95, 0.05), pos + Vector3(0.0, 1.35, -1.46), _material(Color("#7ed3d0"), 0.0, 0.25, "glass"), "TerminalGlass")
     _box(decor_root, Vector3(3.5, 0.12, 0.72), pos + Vector3(0.0, 3.25, 0.0), _material(_scenario_color("accent", CYAN), 0.0, 0.42, "metal"), "TerminalRoof")
 
-func _build_market_stall(pos: Vector3, index: int) -> void:
+func _build_market_stall(pos: Vector3, _index: int) -> void:
     _box(decor_root, Vector3(1.5, 1.1, 1.0), pos + Vector3(0.0, 0.56, 0.0), _material(Color("#d88c43"), 0.0, 0.76, "wood"), "MarketCart")
     _box(decor_root, Vector3(1.75, 0.10, 1.15), pos + Vector3(0.0, 1.34, 0.0), _material(_scenario_color("accent", RED), 0.0, 0.62, "fabric"), "MarketAwning")
     _sphere(decor_root, 0.23, pos + Vector3(0.0, 1.52, -0.08), _material(Color("#b8785a"), 0.0, 0.78), "MarketSeller")
@@ -1540,7 +1539,7 @@ func _build_gate(pos: Vector3, color: Color) -> void:
     for i in 4:
         _box(decor_root, Vector3(0.035, 1.5, 0.10), pos + Vector3(-0.68 + i * 0.45, 0.78, -0.05), metal, "GateBar")
 
-func _build_decor_car(pos: Vector3, color: Color) -> void:
+func _build_decor_car(pos: Vector3, _color: Color) -> void:
     var parent := Node3D.new()
     parent.name = "ParkedCar"
     parent.position = pos
@@ -1774,6 +1773,7 @@ func _build_animal_obstacle(parent: Node3D, species: String) -> Node3D:
 func _build_sidewalk_obstacle(parent: Node3D, kind: String) -> void:
     var dark := _material(Color("#29354d"), 0.0, 0.72, "fabric")
     var red := _material(Color("#e94f5a"), 0.0, 0.66, "paint")
+    var chrome := _material(Color("#aebdc0"), 0.72, 0.24, "metal")
     match kind:
         "old_lady":
             _build_pedestrian_obstacle(parent, "maria", "old_lady", 0.80)
@@ -2393,7 +2393,7 @@ func _phase_at_position(pos: Vector2) -> int:
     var first_phase: int = map_page * 10
     for local_index in 10:
         var col: int = local_index % 2
-        var row: int = int(local_index / 2)
+        var row: int = int(float(local_index) / 2.0)
         var rect := Rect2(25.0 + col * 340.0, origin_y + row * 170.0, 330.0, 140.0)
         if rect.has_point(pos):
             return first_phase + local_index
@@ -2413,7 +2413,7 @@ func _shop_tap(pos: Vector2) -> void:
     if shop_tab == 0:
         for i in chars.size():
             var col: int = i % 2
-            var row: int = int(i / 2)
+            var row: int = int(float(i) / 2.0)
             var rect := Rect2(25 + col * 340, 250 + row * 145, 330, 126)
             if rect.has_point(pos):
                 var id: String = str(chars[i].get("id", "ze"))
@@ -2432,7 +2432,7 @@ func _shop_tap(pos: Vector2) -> void:
     else:
         for i in items.size():
             var col: int = i % 2
-            var row: int = int(i / 2)
+            var row: int = int(float(i) / 2.0)
             var rect := Rect2(30 + col * 345, 250 + row * 175, 315, 150)
             if rect.has_point(pos):
                 var id: String = str(items[i].get("id", ""))

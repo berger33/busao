@@ -223,7 +223,7 @@ func _split_regions(body_mesh: MeshInstance3D) -> Dictionary:
         var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
         if vertices.is_empty() or bones.is_empty() or weights.is_empty() or indices.is_empty():
             continue
-        var influences: int = int(bones.size() / vertices.size())
+        var influences: int = int(float(bones.size()) / float(vertices.size()))
         var region_indices: Dictionary = {}
         for triangle in range(0, indices.size(), 3):
             var votes: Dictionary = {}
@@ -408,7 +408,9 @@ func _attach_creator_details(profile: Dictionary) -> void:
             sequin_mesh.radial_segments = 12
             sequin_mesh.rings = 6
             var sequin := _creator_mesh(torso_attachment, "CreatorSequin_%02d" % index, sequin_mesh, metal_material)
-            sequin.position = Vector3(-0.16 + float(index % 3) * 0.16, 0.10 + float(index / 3) * 0.07, -0.245)
+            var column := index % 3
+            var row := int(float(index) / 3.0)
+            sequin.position = Vector3(-0.16 + float(column) * 0.16, 0.10 + float(row) * 0.07, -0.245)
             sequin.scale = Vector3(1.0, 0.55, 0.42)
 
     var pelvis_attachment := _bone_attachment("pelvis", "CreatorPelvisAttachment")

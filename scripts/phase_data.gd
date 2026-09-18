@@ -92,7 +92,7 @@ const EXTRA_SPECIALS := [
 static func get_phase(index: int) -> Dictionary:
     var i: int = clampi(index, 0, PHASE_COUNT - 1)
     var extra_index := i - NAMES.size()
-    var t: Dictionary = THEMES[i] if i < THEMES.size() else EXTRA_THEMES[int(extra_index / 5) % EXTRA_THEMES.size()]
+    var t: Dictionary = THEMES[i] if i < THEMES.size() else EXTRA_THEMES[int(float(extra_index) / 5.0) % EXTRA_THEMES.size()]
     var phase_name: String = NAMES[i] if i < NAMES.size() else EXTRA_NAMES[extra_index]
     var location: String = LOCATIONS[i] if i < LOCATIONS.size() else EXTRA_LOCATIONS[extra_index]
     var special: String = SPECIALS[i] if i < SPECIALS.size() else EXTRA_SPECIALS[extra_index]
@@ -137,7 +137,7 @@ static func get_phase(index: int) -> Dictionary:
         # A meta de moedas fica em cerca de 70–78% das moedas da pista:
         # exige leitura e rota, mas nunca depende de uma coleta perfeita.
         "coin_target": 4 + int(round(float(i) * 0.85)),
-        "music_group": int(i / 5) % 4
+        "music_group": int(float(i) / 5.0) % 4
     }
 
 static func all_phases() -> Array[Dictionary]:
