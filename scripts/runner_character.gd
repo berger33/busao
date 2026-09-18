@@ -7,6 +7,10 @@ extends Node3D
 ## só existem no fallback de diagnóstico caso o importador do GLTF falhe.
 
 const CHARACTER_DATA = preload("res://scripts/character_data.gd")
+const TEXTURE_CREATOR_TOP = preload("res://assets/textures/tecido_urbano.svg")
+const TEXTURE_CREATOR_DENIM = preload("res://assets/textures/jeans_realista.png")
+const TEXTURE_CREATOR_METAL = preload("res://assets/textures/metal_pintado.svg")
+const TEXTURE_CREATOR_RUBBER = preload("res://assets/textures/borracha.svg")
 
 const MODEL_ROOT := "res://assets/characters/quaternius"
 const BASE_ROOT := MODEL_ROOT + "/base"
@@ -104,6 +108,7 @@ func set_character(next_id: String) -> void:
     _attach_outfit(gender)
     _apply_skin_tint(profile.get("skin", Color.WHITE))
     _apply_profile_palette(profile)
+    _attach_creator_details(profile)
     _setup_animation_library()
     _configure_mesh_shadows(model_root)
     primary_asset_loaded = true
@@ -251,7 +256,10 @@ func _split_regions(body_mesh: MeshInstance3D) -> Dictionary:
     return output
 
 func _attach_outfit(body_gender: String) -> void:
-    for path_variant in OUTFIT_PATHS.get(body_gender, []):
+    var outfit_paths: Array = OUTFIT_PATHS.get(body_gender, [])
+    if character_id == "influencer":
+        outfit_paths = [PARTS_ROOT + "/%s_Peasant_Feet.gltf" % ("Female" if body_gender == "F" else "Male")]
+    for path_variant in outfit_paths:
         var outfit_scene := load(str(path_variant)) as PackedScene
         if outfit_scene == null:
             push_warning("Roupa humana não importada: %s" % path_variant)
@@ -362,6 +370,130 @@ func _apply_profile_palette(profile: Dictionary) -> void:
             var material := source_material.duplicate() as BaseMaterial3D
             material.albedo_color = tint
             mesh.set_surface_override_material(surface_index, material)
+
+func _attach_creator_details(profile: Dictionary) -> void:
+    if character_id != "influencer" or skeleton == null:
+        return
+    var shirt_color: Color = profile.get("shirt", Color("#171824"))
+    var denim_color: Color = profile.get("pants", Color("#4f7897"))
+    var shoe_color: Color = profile.get("shoes", Color("#171a26"))
+    var accent_color: Color = profile.get("accent", Color("#d7b9e9"))
+    var top_material := _creator_material(TEXTURE_CREATOR_TOP, shirt_color, 0.48)
+    var denim_material := _creator_material(TEXTURE_CREATOR_DENIM, denim_color.lightened(0.10), 0.70)
+    var metal_material := _creator_material(TEXTURE_CREATOR_METAL, accent_color, 0.18, 0.82)
+    var boot_material := _creator_material(TEXTURE_CREATOR_RUBBER, shoe_color, 0.34)
+    var tattoo_material := StandardMaterial3D.new()
+    tattoo_material.albedo_color = Color("#21152f")
+    tattoo_material.roughness = 0.58
+
+    var torso_attachment := _bone_attachment("spine_02", "CreatorTorsoAttachment")
+    if torso_attachment:
+        var top_mesh := CylinderMesh.new()
+        top_mesh.top_radius = 0.27
+        top_mesh.bottom_radius = 0.33
+        top_mesh.height = 0.25
+        top_mesh.radial_segments = 32
+        var top := _creator_mesh(torso_attachment, "CreatorTexturedTop", top_mesh, top_material)
+        top.position = Vector3(0.0, -0.02, 0.0)
+        top.scale = Vector3(1.0, 1.0, 0.72)
+        for index in 6:
+            var sequin_mesh := SphereMesh.new()
+            sequin_mesh.radius = 0.018
+            sequin_mesh.height = 0.036
+            sequin_mesh.radial_segments = 12
+            sequin_mesh.rings = 6
+            var sequin := _creator_mesh(torso_attachment, "CreatorSequin_%02d" % index, sequin_mesh, metal_material)
+            sequin.position = Vector3(-0.16 + float(index % 3) * 0.16, 0.10 + float(index / 3) * 0.07, -0.245)
+            sequin.scale = Vector3(1.0, 0.55, 0.42)
+
+    var pelvis_attachment := _bone_attachment("pelvis", "CreatorPelvisAttachment")
+    if pelvis_attachment:
+        var shorts_mesh := CylinderMesh.new()
+        shorts_mesh.top_radius = 0.30
+        shorts_mesh.bottom_radius = 0.34
+        shorts_mesh.height = 0.22
+        shorts_mesh.radial_segments = 32
+        var shorts := _creator_mesh(pelvis_attachment, "CreatorDenimShorts", shorts_mesh, denim_material)
+        shorts.position = Vector3(0.0, -0.015, 0.0)
+        shorts.scale = Vector3(1.0, 1.0, 0.70)
+
+    for side in [-1.0, 1.0]:
+        var foot_attachment := _bone_attachment("foot_l" if side < 0.0 else "foot_r", "CreatorBootAttachment_%s" % ("L" if side < 0.0 else "R"))
+        if foot_attachment:
+            var cuff_mesh := CylinderMesh.new()
+            cuff_mesh.top_radius = 0.105
+            cuff_mesh.bottom_radius = 0.13
+            cuff_mesh.height = 0.17
+            cuff_mesh.radial_segments = 24
+            var cuff := _creator_mesh(foot_attachment, "CreatorBootCuff", cuff_mesh, boot_material)
+            cuff.position = Vector3(0.0, -0.055, 0.0)
+
+    var right_hand := _bone_attachment("hand_r", "CreatorPhoneAttachment")
+    if right_hand:
+        var phone_mesh := BoxMesh.new()
+        phone_mesh.size = Vector3(0.105, 0.20, 0.025)
+        var phone := _creator_mesh(right_hand, "CreatorPhone", phone_mesh, metal_material)
+        phone.position = Vector3(0.07, 0.11, -0.055)
+        phone.rotation_degrees = Vector3(12.0, 0.0, -10.0)
+
+    for side in [-1.0, 1.0]:
+        var arm_bone := "lowerarm_l" if side < 0.0 else "lowerarm_r"
+        var bracelet_attachment := _bone_attachment(arm_bone, "CreatorBraceletAttachment_%s" % ("L" if side < 0.0 else "R"))
+        if bracelet_attachment:
+            var bracelet_mesh := TorusMesh.new()
+            bracelet_mesh.inner_radius = 0.075
+            bracelet_mesh.outer_radius = 0.018
+            bracelet_mesh.rings = 24
+            bracelet_mesh.ring_segments = 10
+            var bracelet := _creator_mesh(bracelet_attachment, "CreatorBracelet", bracelet_mesh, metal_material)
+            bracelet.position = Vector3(0.0, 0.10, 0.0)
+
+    var tattoo_attachment := _bone_attachment("lowerarm_r", "CreatorTattooAttachment")
+    if tattoo_attachment:
+        var tattoo_mesh := BoxMesh.new()
+        tattoo_mesh.size = Vector3(0.13, 0.10, 0.012)
+        var tattoo := _creator_mesh(tattoo_attachment, "CreatorTattoo", tattoo_mesh, tattoo_material)
+        tattoo.position = Vector3(0.0, 0.16, -0.065)
+
+    var head_attachment := _bone_attachment("Head", "CreatorHeadDetails")
+    if head_attachment:
+        for side in [-1.0, 1.0]:
+            var earring_mesh := TorusMesh.new()
+            earring_mesh.inner_radius = 0.045
+            earring_mesh.outer_radius = 0.014
+            earring_mesh.rings = 20
+            earring_mesh.ring_segments = 8
+            var earring := _creator_mesh(head_attachment, "CreatorEarring", earring_mesh, metal_material)
+            earring.position = Vector3(side * 0.19, 0.015, 0.085)
+            earring.rotation_degrees = Vector3(90.0, 0.0, 0.0)
+
+func _bone_attachment(bone_name: String, node_name: String) -> BoneAttachment3D:
+    if skeleton == null or not bone_indices.has(bone_name):
+        return null
+    var attachment := BoneAttachment3D.new()
+    attachment.name = node_name
+    attachment.bone_name = bone_name
+    skeleton.add_child(attachment)
+    return attachment
+
+func _creator_mesh(parent: Node3D, node_name: String, mesh: Mesh, material: Material) -> MeshInstance3D:
+    var instance := MeshInstance3D.new()
+    instance.name = node_name
+    instance.mesh = mesh
+    instance.material_override = material
+    instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+    instance.receive_shadow = true
+    parent.add_child(instance)
+    return instance
+
+func _creator_material(texture: Texture2D, color: Color, roughness: float, metallic: float = 0.0) -> StandardMaterial3D:
+    var material := StandardMaterial3D.new()
+    material.albedo_color = color
+    material.albedo_texture = texture
+    material.roughness = roughness
+    material.metallic = metallic
+    material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+    return material
 
 func _setup_animation_library() -> void:
     animation_player = AnimationPlayer.new()
