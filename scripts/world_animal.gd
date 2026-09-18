@@ -20,7 +20,7 @@ const TEXTURE_FEATHER_N = preload("res://assets/textures/pena_realista_normal.pn
 const TEXTURE_FEATHER_R = preload("res://assets/textures/pena_realista_roughness.png")
 
 const BIRD_PROFILES: Dictionary = {
-    "pombo": {"body": Color("#8d95a5"), "wing": Color("#6f7889"), "beak": Color("#454b5e"), "size": 0.9, "span": 0.42, "flap": 7.6, "legs": Color("#c56b4a")},
+    "pombo": {"body": Color("#8d95a5"), "wing": Color("#6f7889"), "beak": Color("#454b5e"), "size": 0.9, "span": 0.42, "flap": 7.6, "legs": Color("#c56b4a"), "glb_comprimento": 0.26, "glb_altura": 0.21},
     "passaro": {"body": Color("#7c6a4b"), "wing": Color("#5d4f39"), "beak": Color("#3a352d"), "size": 0.62, "span": 0.34, "flap": 10.5, "legs": Color("#8a6a4a")},
     "gaivota": {"body": Color("#f2efe2"), "wing": Color("#d9d4c4"), "beak": Color("#e8a13c"), "size": 1.0, "span": 0.60, "flap": 5.4, "legs": Color("#e8a13c")},
     "urubu": {"body": Color("#36322f"), "wing": Color("#211e1c"), "beak": Color("#9aa0a8"), "size": 1.15, "span": 0.76, "flap": 3.6, "legs": Color("#6b6f75")},
@@ -68,7 +68,8 @@ func _ready() -> void:
     if species == "caramelo":
         _build_caramelo()
     elif BIRD_PROFILES.has(species):
-        _build_bird()
+        if not _build_animal_glb(species):
+            _build_bird()
     elif species == "capivara":
         _build_capivara()
     elif species == "cavalo":
@@ -84,6 +85,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
     motion_time += delta
+    # glb_player (AnimationPlayer do drop-in) avanca sozinho no loop da cena.
     if pose_hold > 0.0:
         pose_hold -= delta
         if pose_hold <= 0.0:
@@ -483,8 +485,82 @@ func _build_caramelo() -> void:
     var tail_tip := _ellipsoid(body_root, Vector3(-0.80, 1.16, 0.0), Vector3(0.075, 0.10, 0.075), fur, "DogTailTip")
     tail_tip.rotation.z = -0.5
 
+## Modelo GLB drop-in (assets/characters/animais/<species>.glb): escala pela
+## convencao da especie, assenta no chao e toca o clip de caminhada em loop.
+## Retorna true se o modelo foi usado (builders proceduais sao pulados).
+func _build_animal_glb(p_species: String) -> bool:
+    var caminho := "res://assets/characters/animais/%s.glb" % p_species
+    if not ResourceLoader.exists(caminho):
+        return false
+    var empacotado: PackedScene = load(caminho) as PackedScene
+    if empacotado == null:
+        return false
+    var modelo := empacotado.instantiate()
+    if modelo == null:
+        return false
+    var perfil: Dictionary = BIRD_PROFILES.get(p_species, {})
+    var comp := float(perfil.get("glb_comprimento", 0.24))
+    var alt := float(perfil.get("glb_altura", 0.20))
+    modelo.rotation.y = PI / 2.0   # GLBs chegam olhando +Z; convensao da entidade e +X
+    add_child(modelo)
+    _fit_glb(modelo, comp, alt)
+    _animar_glb(modelo)
+    return true
+
+## Escala pelo bbox real do modelo e assenta o menor z no chao local.
+func _fit_glb(modelo: Node3D, comp_alvo: float, alt_alvo: float) -> void:
+    var aabb := AABB()
+    var primeiro := true
+    var pilha: Array[Node] = [modelo]
+    while not pilha.is_empty():
+        var no: Node = pilha.pop_back()
+        if no is MeshInstance3D:
+            var mi := no as MeshInstance3D
+            var local := mi.transform * mi.get_aabb()
+            if primeiro:
+                aabb = local
+                primeiro = false
+            else:
+                aabb = aabb.merge(local)
+        for filho in no.get_children():
+            pilha.append(filho)
+    if primeiro or not aabb.has_volume():
+        return
+    var fator := minf(comp_alvo / maxf(aabb.size.z, 0.001), alt_alvo / maxf(aabb.size.y, 0.001))
+    modelo.scale = Vector3.ONE * fator
+    modelo.position -= Vector3(aabb.get_center().x, aabb.position.y, aabb.get_center().z) * fator
+
+## Toca clip "walk"/"trot" (ou o primeiro) em loop; guarda refs para o _process.
+func _animar_glb(modelo: Node3D) -> void:
+    var player := _achar_player(modelo)
+    if player == null or player.get_animation_list().is_empty():
+        return
+    var escolhido := ""
+    for nome in player.get_animation_list():
+        var baixo := nome.to_lower()
+        if baixo.contains("walk") or baixo.contains("trot"):
+            escolhido = nome
+            break
+    if escolhido == "":
+        escolhido = player.get_animation_list()[0]
+    var anim := player.get_animation(escolhido)
+    if anim != null:
+        anim.loop_mode = Animation.LOOP_LINEAR
+    player.play(escolhido)
+
+func _achar_player(no: Node) -> AnimationPlayer:
+    if no is AnimationPlayer:
+        return no as AnimationPlayer
+    for filho in no.get_children():
+        var achado := _achar_player(filho)
+        if achado != null:
+            return achado
+    return null
+
 func _build_bird() -> void:
     var profile: Dictionary = BIRD_PROFILES.get(species, BIRD_PROFILES["pombo"])
+    var size: float = float(profile.get("size", 0.9))
+    var span: float = float(profile.get("span", 0.42))
     body_root = Node3D.new()
     body_root.name = "Bird3D"
     add_child(body_root)

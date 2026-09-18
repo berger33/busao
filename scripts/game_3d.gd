@@ -2203,7 +2203,9 @@ func _build_sidewalk_obstacle(parent: Node3D, kind: String) -> void:
                 var meio := (a + b) * 0.5
                 var comprimento := a.distance_to(b)
                 var tubo_no := _box(movimento, Vector3(0.05, comprimento, 0.05), meio, bike_frame, "BikeTubo")
-                tubo_no.look_at_from_position(meio, b, Vector3(0, 0, 1))
+                # orienta o eixo Y local do tubo ao longo de a->b (look_at exige
+                # no na arvore e alvo global; basis evita os dois problemas)
+                tubo_no.basis = Basis(Quaternion(Vector3(0, 1, 0), (b - a).normalized()))
             _box(movimento, Vector3(0.52, 0.05, 0.05), Vector3(0.0, 1.06, -0.44), chrome, "BikeGuidao")
             _box(movimento, Vector3(0.05, 0.12, 0.05), Vector3(0.0, 0.99, -0.42), chrome, "BikeMesa")
             _box(movimento, Vector3(0.10, 0.06, 0.34), Vector3(0.0, 1.06, 0.22), dark, "BikeSelim")
