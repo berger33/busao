@@ -73,12 +73,16 @@ var runner_shadow: MeshInstance3D
 var current_clip := ""
 var using_external_animation := false
 var primary_asset_loaded := false
+var use_animation_library := true
 var motion_clock := 0.0
 var bone_indices: Dictionary = {}
 var rest_rotations: Dictionary = {}
 
 func _ready() -> void:
     set_character(character_id)
+
+func set_world_mode(enabled: bool) -> void:
+    use_animation_library = not enabled
 
 func set_character(next_id: String) -> void:
     character_id = CHARACTER_DATA.canonical_id(next_id)
@@ -109,7 +113,8 @@ func set_character(next_id: String) -> void:
     _apply_skin_tint(profile.get("skin", Color.WHITE))
     _apply_profile_palette(profile)
     _attach_creator_details(profile)
-    _setup_animation_library()
+    if use_animation_library:
+        _setup_animation_library()
     _configure_mesh_shadows(model_root)
     primary_asset_loaded = true
 

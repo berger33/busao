@@ -11,7 +11,10 @@ extends Node3D
 const BALANCE = preload("res://resources/game_balance.tres")
 const SCENARIO_DATA = preload("res://scripts/scenario_data.gd")
 const CHARACTER_DATA = preload("res://scripts/character_data.gd")
+const OBSTACLE_DATA = preload("res://scripts/obstacle_data.gd")
 const RUNNER_CHARACTER_SCRIPT = preload("res://scripts/runner_character.gd")
+const WORLD_CHARACTER_SCRIPT = preload("res://scripts/world_character.gd")
+const WORLD_ANIMAL_SCRIPT = preload("res://scripts/world_animal.gd")
 const TEXTURE_ASPHALT = preload("res://assets/textures/asfalto_brasil.svg")
 const TEXTURE_ASPHALT_REAL = preload("res://assets/textures/asfalto_realista.png")
 const TEXTURE_ASPHALT_NORMAL = preload("res://assets/textures/asfalto_normal.svg")
@@ -162,6 +165,7 @@ func _ready() -> void:
     GameSave.register_login()
     _setup_world()
     _setup_hud()
+    _validate_obstacle_catalog()
     phase = PhaseData.get_phase(0)
     scenario = SCENARIO_DATA.get_profile(0)
     _apply_scenario_atmosphere()
@@ -184,6 +188,22 @@ func _process(delta: float) -> void:
     _update_player(dt)
     _update_camera(dt)
     _sync_hud()
+
+func _validate_obstacle_catalog() -> void:
+    for item in OBSTACLE_DATA.all():
+        var obstacle_id := str(item.get("id", ""))
+        var space := str(item.get("space", ""))
+        var known_space := false
+        if space == "road":
+            known_space = obstacle_id in ROAD_OBSTACLES
+        else:
+            known_space = obstacle_id in SIDEWALK_OBSTACLES
+        if not known_space:
+            push_error("ObstacleData sem rota espacial: %s" % obstacle_id)
+        if str(item.get("builder", "")) == "_build_pedestrian_obstacle" and obstacle_id not in ["old_lady", "vendor"]:
+            push_error("ObstacleData pedestre sem adapter humano: %s" % obstacle_id)
+        if str(item.get("builder", "")) == "_build_animal_obstacle" and obstacle_id != "dog":
+            push_error("ObstacleData animal sem adapter: %s" % obstacle_id)
 
 func _setup_world() -> void:
     world_root = Node3D.new()
@@ -438,6 +458,16 @@ func _build_course() -> void:
         coin_index += 1
     _spawn_forced_gags(total)
     _create_bus_stop(total)
+    call_deferred("_audit_world_geometry")
+
+func _audit_world_geometry() -> void:
+    for pair in [["decor", decor_root], ["entities", entity_root], ["course", course_root]]:
+        var label: String = str(pair[0])
+        var root: Node3D = pair[1]
+        if root == null:
+            continue
+        if root.find_children("*", "MeshInstance3D", true, false).is_empty():
+            push_warning("3D asset contract: raiz %s sem MeshInstance3D" % label)
 
 func _spawn_forced_gags(total: float) -> void:
     var forced: Array[String] = []
@@ -502,6 +532,21 @@ func _spawn_entity(kind: String, lane: int, entity_distance: float, collectible:
         "collectible": collectible,
         "traffic_speed": traffic_speed
     })
+    call_deferred("_audit_3d_entity", node, kind, collectible)
+
+func _audit_3d_entity(node: Node3D, kind: String, collectible: bool) -> void:
+    if not is_instance_valid(node):
+        return
+    var meshes := node.find_children("*", "MeshInstance3D", true, false)
+    if meshes.is_empty():
+        push_warning("3D asset contract: %s não criou MeshInstance3D" % kind)
+        return
+    if collectible:
+        return
+    if kind in ["old_lady", "vendor"] and node.find_child("HumanPedestrian3D", true, false) == null:
+        push_warning("3D asset contract: %s não contém personagem humano skinned" % kind)
+    if kind == "dog" and node.find_child("Animal3D_caramelo", true, false) == null:
+        push_warning("3D asset contract: cachorro sem Animal3D_caramelo")
 
 func _traffic_speed_for(kind: String, seed_index: int) -> float:
     var base: float = {
@@ -604,6 +649,10 @@ func _resolve_entity(entity: Dictionary) -> void:
         safe = jump_timer > 0.0 or slide_timer > 0.0 or dash_timer > 0.0
     if kind == "dog":
         dog_chase_timer = 10.0
+        var dog_entity_node: Node3D = entity["node"]
+        var dog_node := dog_entity_node.get_node_or_null("Animal3D_caramelo") as Node3D
+        if dog_node and dog_node.has_method("set_running"):
+            dog_node.call("set_running", true)
         _show_feedback("CARAMELO!", "10 segundos na sua cola", RED, "bark")
     if safe:
         _show_feedback("DESVIO LIMPO", _reaction_for(kind), GOLD, "reward")
@@ -1518,24 +1567,28 @@ func _build_road_obstacle(parent: Node3D, kind: String) -> void:
         _:
             _box(parent, Vector3(2.0, 0.8, 2.0), Vector3(0.0, 0.5, 0.0), body, "RoadHazard")
 
+func _build_pedestrian_obstacle(parent: Node3D, profile_id: String, role: String, avatar_scale: float) -> Node3D:
+    var pedestrian := WORLD_CHARACTER_SCRIPT.new() as Node3D
+    pedestrian.name = "Pedestrian3D_%s" % role
+    pedestrian.set("profile_id", profile_id)
+    pedestrian.set("role", role)
+    pedestrian.set("avatar_scale", avatar_scale)
+    parent.add_child(pedestrian)
+    return pedestrian
+
+func _build_animal_obstacle(parent: Node3D, species: String) -> Node3D:
+    var animal := WORLD_ANIMAL_SCRIPT.new() as Node3D
+    animal.name = "Animal3D_%s" % species
+    animal.set("species", species)
+    parent.add_child(animal)
+    return animal
+
 func _build_sidewalk_obstacle(parent: Node3D, kind: String) -> void:
-    var skin := _material(Color("#d8946d"), 0.0, 0.78, "skin")
     var dark := _material(Color("#29354d"), 0.0, 0.72, "fabric")
     var red := _material(Color("#e94f5a"), 0.0, 0.66, "paint")
     match kind:
         "old_lady":
-            var lady_dress := _material(Color("#a86bd7"), 0.0, 0.7, "fabric")
-            _capsule(parent, 0.40, 0.96, Vector3(0.0, 0.78, 0.0), lady_dress, "OldLadyBody")
-            _sphere(parent, 0.31, Vector3(0.0, 1.62, 0.0), skin, "OldLadyHead")
-            _sphere(parent, 0.34, Vector3(0.0, 1.78, 0.04), _material(Color("#d9d6d1"), 0.0, 0.9, "paint"), "OldLadyHair")
-            _capsule(parent, 0.09, 0.55, Vector3(-0.43, 1.03, 0.0), skin, "OldLadyArm")
-            _capsule(parent, 0.09, 0.55, Vector3(0.43, 1.03, -0.08), skin, "OldLadyArm")
-            _box(parent, Vector3(0.17, 0.26, 0.045), Vector3(0.43, 1.25, -0.30), _material(Color("#171f2c"), 0.0, 0.35, "glass"), "CellphoneScreen")
-            _box(parent, Vector3(0.22, 0.32, 0.06), Vector3(0.43, 1.24, -0.27), dark, "CellphoneCase")
-            _capsule(parent, 0.10, 0.66, Vector3(-0.19, 0.29, 0.0), _material(Color("#392c52"), 0.0, 0.72, "fabric"), "LadyLeg")
-            _capsule(parent, 0.10, 0.66, Vector3(0.19, 0.29, 0.0), _material(Color("#392c52"), 0.0, 0.72, "fabric"), "LadyLeg")
-            _box(parent, Vector3(0.22, 0.10, 0.35), Vector3(-0.19, -0.04, -0.07), dark, "LadyShoe")
-            _box(parent, Vector3(0.22, 0.10, 0.35), Vector3(0.19, -0.04, -0.07), dark, "LadyShoe")
+            _build_pedestrian_obstacle(parent, "maria", "old_lady", 0.80)
         "hydrant":
             var hydrant_red := _material(Color("#d95750"), 0.0, 0.62, "metal")
             _cylinder(parent, 0.28, 0.34, 0.64, Vector3(0.0, 0.40, 0.0), hydrant_red, "HydrantBody")
@@ -1555,19 +1608,7 @@ func _build_sidewalk_obstacle(parent: Node3D, kind: String) -> void:
             _box(parent, Vector3(0.14, 0.48, 0.11), Vector3(0.28, 1.48, -0.18), _material(Color("#182331"), 0.0, 0.5, "rubber"), "PayphoneHandset")
             _box(parent, Vector3(0.75, 0.08, 0.08), Vector3(0.0, 0.08, 0.0), phone_body, "PayphoneBase")
         "dog":
-            var dog_fur := _material(Color("#b8794d"), 0.0, 0.82, "skin")
-            var dog_face := _material(Color("#c28656"), 0.0, 0.82, "skin")
-            _ellipse_mesh(parent, Vector3(0.0, 0.56, 0.0), Vector3(0.72, 0.43, 0.50), dog_fur, "DogBody")
-            _sphere(parent, 0.31, Vector3(0.50, 0.88, -0.08), dog_face, "DogHead")
-            _sphere(parent, 0.15, Vector3(0.77, 0.82, -0.22), dog_face, "DogMuzzle")
-            _sphere(parent, 0.08, Vector3(0.87, 0.84, -0.29), dark, "DogNose")
-            for side in [-1.0, 1.0]:
-                var ear := _sphere(parent, 0.16, Vector3(0.44 + side * 0.18, 1.05, 0.0), dog_fur, "DogEar")
-                ear.scale = Vector3(0.70, 1.25, 0.52)
-                _capsule(parent, 0.075, 0.42, Vector3(side * 0.38, 0.26, -0.18), dog_fur, "DogLeg")
-                _capsule(parent, 0.075, 0.42, Vector3(side * 0.38, 0.26, 0.20), dog_fur, "DogLeg")
-            var tail := _capsule(parent, 0.065, 0.50, Vector3(-0.68, 0.85, 0.16), dog_fur, "DogTail")
-            tail.rotation.x = -0.72
+            _build_animal_obstacle(parent, "caramelo")
         "bicycle":
             var bike_tire := _material(Color("#29354d"), 0.15, 0.72, "rubber")
             var bike_front := _cylinder(parent, 0.38, 0.38, 0.09, Vector3(-0.48, 0.45, 0.0), bike_tire, "BikeWheelFront")
@@ -1598,9 +1639,8 @@ func _build_sidewalk_obstacle(parent: Node3D, kind: String) -> void:
             _cylinder(parent, 0.18, 0.18, 0.10, Vector3(0.50, 0.12, 0.52), dark, "VendorWheel")
             _cylinder(parent, 0.06, 0.06, 1.05, Vector3(-0.64, 1.55, 0.0), chrome, "VendorPole")
             _cylinder(parent, 0.06, 0.06, 1.05, Vector3(0.64, 1.55, 0.0), chrome, "VendorPole")
-            _sphere(parent, 0.25, Vector3(0.0, 1.72, -0.10), skin, "VendorHead")
-            _capsule(parent, 0.24, 0.56, Vector3(0.0, 1.20, -0.10), _material(Color("#2d9c76"), 0.0, 0.72, "fabric"), "VendorBody")
-            _box(parent, Vector3(0.34, 0.32, 0.05), Vector3(0.0, 1.16, -0.40), _material(Color("#ffffff"), 0.0, 0.54, "paint"), "VendorApron")
+            var vendor_character := _build_pedestrian_obstacle(parent, "ze", "vendor", 0.78)
+            vendor_character.position = Vector3(0.0, 0.0, -0.18)
         "bench":
             var bench_wood := _material(Color("#9a633d"), 0.0, 0.8, "wood")
             var bench_metal := _material(Color("#3e4d59"), 0.55, 0.52, "metal")
