@@ -69,7 +69,7 @@ de sucesso. As lacunas estão na camada de plataforma (seção 3), não no desig
 ### P1 — esperados pelo padrão do gênero
 - Conquistas/leaderboard **Google Play Games** (hoje são locais) + cloud save.
 - Localização `en-US` (strings hoje hardcoded pt-BR; estrutura já centralizada nas telas).
-- Tela de loading/splash dedicada e transição suave entre capítulos.
+- ~~Tela de loading/splash dedicada~~ ✅ feita no Lote D (splash de boot + loading com dicas).
 - "Reviver" assistindo anúncio (padrão do gênero, liga retenção à monetização).
 - Segunda moeda (premium) — a economia atual já é auditável para isso.
 
@@ -116,6 +116,15 @@ de sucesso. As lacunas estão na camada de plataforma (seção 3), não no desig
     figurino Creator (top em tecido tramado, jeans com sarja em relevo, metal e
     borracha) — todos agora com albedo+normal+roughness em
     `world_animal.gd`/`runner_character.gd`.
+12. **Lote D — splash e loading** → splash screen de boot dedicada
+    (`assets/art/splash.png`, gerada por `tools/generate_splash.py`, ônibus
+    amarelo com letreiro, faixa de pedestre e título; configurada no
+    `project.godot` com `boot_splash/fullsize`); tela de loading entre menu e
+    corrida com ônibus animado, barra de progresso suavizada em estágios reais
+    de construção do mundo (visual → atmosfera → limpeza → pista) e **Dica do
+    Ponto** rotativa com 10 dicas reais de gameplay; tempo mínimo de 0,62 s para
+    não piscar; `run_mode = "loading"` impede que a corrida comece atrás do
+    overlay; ESC e toques de pausa ignorados durante o carregamento.
 
 ## 5. Inconsistências conhecidas — pendentes (próximos lotes)
 

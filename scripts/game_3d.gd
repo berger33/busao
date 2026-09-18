@@ -149,6 +149,22 @@ var stop_wait_total := 0.0
 var wall_run_count := 0
 var dog_chase_timer := 0.0
 var tutorial_hint := ""
+var loading_active := false
+var loading_progress := 0.0
+var loading_title := ""
+var loading_tip := ""
+const LOADING_TIPS := [
+    "O DASH atravessa obstáculos sem tomar dano",
+    "Nilo e Enfermeira Clara começam com 4 corações",
+    "A Motorista Cida segura o ônibus por +2 segundos",
+    "Beto recarrega o dash quase duas vezes mais rápido",
+    "A rua rende mais moedas — e mais obstáculos",
+    "Café, pão de queijo e pastel valem moedas extras",
+    "Jogue todo dia para manter seu 🔥 streak",
+    "A Tela 50 libera o modo ENDLESS",
+    "O ENDLESS guarda seu recorde de 1000 m",
+    "W ou Espaço pula, S desliza, X dá dash",
+]
 var tutorial_stage := -1
 var result: Dictionary = {}
 var pulse := 0.0
@@ -414,6 +430,8 @@ func _rebuild_player_visual(character_id: String) -> void:
         player_visual.call("set_character", CHARACTER_DATA.canonical_id(character_id))
 
 func _start_run(index: int) -> void:
+    if loading_active:
+        return
     var clamped_index: int = clampi(index, 0, BALANCE.phase_count - 1)
     if not GameSave.is_phase_unlocked(clamped_index):
         _show_feedback("TELA BLOQUEADA", "Junte estrelas para liberar", RED, "ui_back")
@@ -424,12 +442,22 @@ func _start_run(index: int) -> void:
     endless_mode = false
     phase = PhaseData.get_phase(phase_index)
     scenario = SCENARIO_DATA.get_profile(phase_index)
+    screen = 2
+    loading_active = true
+    loading_title = str(phase["name"])
+    loading_tip = LOADING_TIPS[randi() % LOADING_TIPS.size()]
+    loading_progress = 0.08
+    _sync_hud()
+    await get_tree().process_frame
+    await get_tree().process_frame
+    loading_progress = 0.35
+    _sync_hud()
     _rebuild_player_visual(GameSave.equipped_character())
     _apply_scenario_atmosphere()
     _rebuild_sky_fx()
-    screen = 2
+    await get_tree().process_frame
     previous_screen = 1
-    run_mode = "playing"
+    run_mode = "loading"
     distance = 0.0
     elapsed = 0.0
     run_total = float(phase["distance"])
@@ -518,8 +546,21 @@ func _start_run(index: int) -> void:
         magnet_timer = 9999.0
     if GameSave.owns("cafe"):
         slow_motion_timer = 2.0
+    loading_progress = 0.6
+    _sync_hud()
     _clear_course()
+    await get_tree().process_frame
+    loading_progress = 0.9
+    _sync_hud()
     _build_course()
+    loading_progress = 1.0
+    _sync_hud()
+    var loading_started := Time.get_ticks_msec()
+    while Time.get_ticks_msec() - loading_started < 620:
+        await get_tree().process_frame
+    loading_active = false
+    run_mode = "playing"
+    _sync_hud()
     tutorial_hint = ""
     AudioManager.play_music(int(phase["music_group"]))
     _show_feedback("FAIXAS: RUA + CALÇADAS", str(phase["name"]), phase["accent"], "ui_confirm")
@@ -528,7 +569,7 @@ func _start_endless() -> void:
     if not GameSave.data.get("endless_unlocked", false):
         _show_feedback("ENDLESS BLOQUEADO", "Termine a Tela 50", RED, "ui_back")
         return
-    _start_run(BALANCE.endless_unlock_phase)
+    await _start_run(BALANCE.endless_unlock_phase)
     endless_mode = true
     run_total = 1000.0
     phase["name"] = "ENDLESS"
@@ -2553,13 +2594,17 @@ func _sync_hud() -> void:
         "scenario_chapter": str(scenario.get("chapter", "Rua brasileira")),
         "scenario_weather": str(scenario.get("weather", "sol")),
         "characters": characters,
-        "equipped_character": equipped_character
+        "equipped_character": equipped_character,
+        "loading_active": loading_active,
+        "loading_progress": loading_progress,
+        "loading_title": loading_title,
+        "loading_tip": loading_tip
     }
     hud.call("set_state", state)
 
 func _handle_key(event: InputEventKey) -> void:
     if event.keycode == KEY_ESCAPE:
-        if screen == 2:
+        if screen == 2 and not loading_active:
             run_mode = "playing" if run_mode != "playing" else "paused"
             _show_feedback("PAUSA" if run_mode == "paused" else "VAMOS!", "Leia as três faixas", YELLOW if run_mode == "paused" else GREEN, "click")
         elif screen != 0:

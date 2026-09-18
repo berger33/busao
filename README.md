@@ -16,6 +16,7 @@ Um runner mobile-first **totalmente 3D** em **Godot 4.x**, inspirado na leitura 
 - 3 corações (1 nas Telas 20 e 50), colisões, invulnerabilidade do dash, game over e chegada com contagem regressiva no ponto.
 - Coletáveis 3D: R$ 0,25, café, pão de queijo, pastel, caldo de cana, vale-transporte, bilhete dourado, coxinha, guaraná, PIX Turbo e guarda-chuva.
 - Estrelas por fase, mapa paginado em 5 capítulos, Tela 20 liberada com 45 estrelas e Tela 50 com 120 estrelas.
+- **Splash e tela de loading**: boot com arte dedicada do ônibus (`assets/art/splash.png`) e, entre o menu e a corrida, um loading com barra de progresso por estágio real de construção do mundo e dicas rotativas de gameplay ("Dica do Ponto").
 - **Endless** liberado ao concluir a Tela 50, com corrida de 1000 m, XP, combo e recorde local persistido.
 - Sequência diária: login consecutivo, bônus de R$ 100 a cada 7 dias e badges de coleção; a sequência é informativa e não bloqueia fases.
 - Loja com **20 perfis humanos brasileiros** (10 masculinos e 10 femininos, em dois lotes de criação): o asset skinned compartilhado recebe corpo, pele, cabelo, paletas de roupa e acessórios presos ao esqueleto diferentes por perfil, enquanto preços, descrições e habilidades ficam persistidos localmente. A grade de personagens tem rolagem por arraste.

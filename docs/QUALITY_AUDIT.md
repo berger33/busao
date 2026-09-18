@@ -274,3 +274,12 @@ assinatura antiga): nada encontrado.
 - `runner_character.gd`: figurino Creator (top tecido, jeans, metal, borracha) com normal+roughness por textura no `_creator_material`.
 - PRE-FLIGHT ampliado para exigir os 11 mapas novos; gdparse e checker estático verdes.
 - Correção de documentação: a seção 5 do `PLAYSTORE_AUDIT.md` não havia persistido a atualização do Lote B (props); refeita e conferida no diff.
+
+
+## Lote 6 — splash screen e tela de loading (2026-09-18)
+
+- `tools/generate_splash.py`: splash de boot 1080×1920 determinística (gradiente da identidade, ônibus amarelo com letreiro/parabrisa/farol, sombra, faixa de pedestre, título com sombra; DejaVu Bold com fallbacks de fonte por plataforma).
+- `project.godot`: `boot_splash/bg_color` (#08152f), `image`, `show_image` e `fullsize` — splash aparece no desktop e no Android (no Android 12+ o sistema já mostra o ícone adaptativo antes).
+- `_start_run` virou coroutine com estágios reais de progresso (0,08 → 0,35 visual/atmosfera → 0,6 limpeza → 0,9 pista → 1,0), `await get_tree().process_frame` entre blocos pesados para o overlay pintar antes do trabalho, tempo mínimo de 0,62 s e guarda contra duplo clique; `_start_endless` aguarda a corrida-base (preserva `run_total`/flags de endless aplicadas após a conclusão); `run_mode = "loading"` durante o carregamento com `_update_run`/ESC/touch de pausa ignorados.
+- HUD: overlay `_draw_loading()` cobre qualquer tela (ônibus animado com bob respeitando movimento reduzido, barra com suavização exponencial no `_process`, painel "DICA DO PONTO"); estado via `_sync_hud` (`loading_active/progress/title/tip`).
+- PRE-FLIGHT passou a exigir `assets/art/splash.png`, `tools/generate_splash.py`, tokens `boot_splash` no `project.godot` e tokens de loading nos scripts; gdparse (com `_start_run` assíncrono), checker, balance e rig verdes.

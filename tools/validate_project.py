@@ -103,6 +103,7 @@ def check_3d_entrypoint() -> None:
         if f'== "{batch2_id}"' not in game_3d:
             fail(f"3D runner missing gameplay effect wiring for: {batch2_id}")
     required_tokens = (
+        "_draw_loading", "loading_active", "LOADING_TIPS",
         'const LANE_X: Array[float] = [-3.25, 0.0, 3.25]',
         'const ROAD_OBSTACLES',
         'const SIDEWALK_OBSTACLES',
@@ -414,7 +415,11 @@ def check_assets() -> None:
         "pena_realista.png", "pena_realista_normal.png", "pena_realista_roughness.png",
         "jeans_realista_normal.png", "jeans_realista_roughness.png",
     }
-    for tool in ("tools/generate_textures.py", "assets/vehicles/README.md"):
+    godot_cfg = (ROOT / "project.godot").read_text(encoding="utf-8")
+    for splash_token in ('boot_splash/image="res://assets/art/splash.png"', "boot_splash/fullsize=true"):
+        if splash_token not in godot_cfg:
+            fail(f"project.godot missing splash token: {splash_token}")
+    for tool in ("tools/generate_textures.py", "tools/generate_splash.py", "assets/vehicles/README.md", "assets/art/splash.png"):
         if not (ROOT / tool).is_file():
             fail(f"missing file: {tool}")
     available_textures = {path.name for path in (ROOT / "assets/textures").glob("*.png")}

@@ -23,6 +23,7 @@ var feedback_color := YELLOW
 var feedback_time := 0.0
 var feedback_flash := 0.0
 var pulse := 0.0
+var loading_display := 0.0
 
 func _ready() -> void:
     set_process(true)
@@ -33,6 +34,8 @@ func _process(delta: float) -> void:
     pulse += delta
     feedback_time = maxf(0.0, feedback_time - delta)
     feedback_flash = maxf(0.0, feedback_flash - delta * 2.8)
+    var loading_target := float(state.get("loading_progress", 0.0))
+    loading_display += (loading_target - loading_display) * clampf(delta * 6.0, 0.0, 1.0)
     queue_redraw()
 
 func set_state(next_state: Dictionary) -> void:
@@ -63,6 +66,7 @@ func _draw() -> void:
         5: _draw_achievements()
         6: _draw_daily()
         7: _draw_how_to()
+    _draw_loading()
     _draw_feedback()
 
 func _draw_menu() -> void:
@@ -477,3 +481,38 @@ func _text(pos: Vector2, value: String, font_size: int, color: Color) -> void:
 func _text_center(pos: Vector2, value: String, font_size: int, color: Color) -> void:
     var width: float = maxf(100.0, float(value.length() * font_size) * 0.72)
     draw_string(ThemeDB.fallback_font, Vector2(pos.x - width / 2.0, pos.y), value, HORIZONTAL_ALIGNMENT_CENTER, width, font_size, color)
+
+
+func _draw_loading() -> void:
+    if not bool(state.get("loading_active", false)):
+        return
+    _draw_gradient(Color("#08152f"), Color("#173c5a"))
+    var center := Vector2(360.0, 600.0)
+    var bob := 0.0 if bool(state.get("reduced_motion", false)) else sin(pulse * 3.2) * 10.0
+    _draw_loading_bus(center + Vector2(0.0, bob))
+    _text_center(Vector2(360.0, 290.0), "CORRE PRO PONTO", 42, YELLOW)
+    _text_center(Vector2(360.0, 790.0), str(state.get("loading_title", "CARREGANDO")), 26, WHITE)
+    _text_center(Vector2(360.0, 828.0), "preparando a rua…", 17, MUTED)
+    var bar := Rect2(160.0, 890.0, 440.0, 16.0)
+    _panel(Rect2(bar.position - Vector2(8.0, 8.0), bar.size + Vector2(16.0, 16.0)), PANEL, 12.0)
+    _panel(bar, Color("#0d1a33"), 8.0)
+    var fill := Rect2(bar.position, Vector2(maxf(12.0, bar.size.x * clampf(loading_display, 0.04, 1.0)), bar.size.y))
+    _panel(fill, YELLOW, 8.0)
+    var tip := str(state.get("loading_tip", ""))
+    if tip != "":
+        _panel(Rect2(80.0, 1020.0, 560.0, 110.0), PANEL, 16.0)
+        _text_center(Vector2(360.0, 1058.0), "DICA DO PONTO", 16, CYAN)
+        _text_center(Vector2(360.0, 1094.0), tip, 19, WHITE)
+
+func _draw_loading_bus(pos: Vector2) -> void:
+    var body := Rect2(pos.x - 150.0, pos.y - 70.0, 300.0, 128.0)
+    draw_rect(body, Color("#f4bf3d"))
+    draw_rect(Rect2(body.position + Vector2(64.0, 14.0), Vector2(172.0, 20.0)), Color("#2b2f36"))
+    draw_rect(Rect2(body.position + Vector2(12.0, 42.0), Vector2(276.0, 32.0)), Color("#6cc4cc"))
+    draw_rect(Rect2(body.position + Vector2(20.0, 48.0), Vector2(64.0, 22.0)), Color("#eef7f4"))
+    draw_rect(Rect2(body.position + Vector2(0.0, 96.0), Vector2(300.0, 16.0)), Color("#ed634c"))
+    draw_rect(Rect2(body.position + Vector2(6.0, 60.0), Vector2(22.0, 16.0)), Color("#fff2ba"))
+    draw_circle(pos + Vector2(-84.0, 62.0), 26.0, Color("#202b3a"))
+    draw_circle(pos + Vector2(84.0, 62.0), 26.0, Color("#202b3a"))
+    draw_circle(pos + Vector2(-84.0, 62.0), 11.0, Color("#c3c8bf"))
+    draw_circle(pos + Vector2(84.0, 62.0), 11.0, Color("#c3c8bf"))
