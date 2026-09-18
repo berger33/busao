@@ -12,11 +12,13 @@
     "quarteiroes_visiveis": 5
   },
   "faixas": {
-    "piso_central_m": 4.4,
+    "layout": "rua_esquerda",
+    "piso_central_m": 6.0,
+    "piso_borda_esq_m": 1.35,
     "guia_largura_m": 0.35,
     "guia_altura_m": 0.15,
-    "pista_m": 8.0,
-    "calcada_lateral_m": 3.0,
+    "pista_m": 6.6,
+    "calcada_lateral_m": 2.5,
     "linha_amarela_modo": "junto_guia",
     "linha_amarela_largura_m": 0.12,
     "linha_amarela_afastamento_m": 0.3,

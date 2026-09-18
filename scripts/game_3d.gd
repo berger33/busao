@@ -693,6 +693,20 @@ func _spawn_entity(kind: String, lane: int, entity_distance: float, collectible:
     else:
         _build_sidewalk_obstacle(node, kind)
     var traffic_speed: float = _traffic_speed_for(kind, entities.size()) if lane == ROAD_LANE and not collectible else 0.0
+    # Comportamento por tipo: nada de espantalho parado. A velhinha caminha
+    # de frente para o corredor, o caramelo corre (e late de verdade no
+    # world_animal), o vendedor fica no seu ponto conversando com a rua.
+    var mobility := 0.0
+    if not collectible and lane != ROAD_LANE:
+        if kind == "old_lady":
+            mobility = 0.55
+            node.rotation.y = PI
+        elif kind == "dog":
+            mobility = 1.8
+            node.rotation.y = PI
+            var cachorro := node.get_node_or_null("Animal3D_caramelo")
+            if cachorro != null and cachorro.has_method("set_running"):
+                cachorro.call("set_running", true)
     entities.append({
         "node": node,
         "kind": kind,
@@ -700,7 +714,8 @@ func _spawn_entity(kind: String, lane: int, entity_distance: float, collectible:
         "distance": entity_distance,
         "passed": false,
         "collectible": collectible,
-        "traffic_speed": traffic_speed
+        "traffic_speed": traffic_speed,
+        "mobility": mobility
     })
     call_deferred("_audit_3d_entity", node, kind, collectible)
 
@@ -808,6 +823,11 @@ func _update_run(dt: float) -> void:
             # mais rápido, os veículos se aproximam naturalmente pela rua.
             node.position.z -= traffic_speed * dt
             _animate_traffic(node, traffic_speed, dt)
+        var mobility: float = float(entity.get("mobility", 0.0))
+        if mobility > 0.0:
+            # pedestres/animais andam na direção do corredor (+Z local); a
+            # colisão abaixo usa a posição real do nó, então nada mais muda.
+            node.position.z += mobility * dt
         var entity_z: float = node.position.z + distance
         if entity_z >= 0.6:
             entity["passed"] = true
@@ -1966,6 +1986,8 @@ func _build_road_obstacle(parent: Node3D, kind: String) -> void:
         if replacement != null:
             parent.add_child(replacement)
             _fit_model(replacement, GLB_FIT[kind].x, GLB_FIT[kind].y)
+            if kind == "motorcycle":
+                _build_motoqueiro(parent, Vector3(0.0, 0.58, 0.05))
             return
     var body := _material(Color("#d9584e"), 0.05, 0.48, "paint")
     var dark := _material(Color("#202c3c"), 0.15, 0.38, "rubber")
@@ -2004,8 +2026,7 @@ func _build_road_obstacle(parent: Node3D, kind: String) -> void:
             _box(parent, Vector3(0.26, 0.12, 0.52), Vector3(-0.48, 0.72, 0.43), _material(Color("#141b25"), 0.0, 0.6, "rubber"), "MotoSeat")
             _box(parent, Vector3(0.72, 0.06, 0.06), Vector3(-0.48, 1.24, -0.62), frame, "MotoHandlebar")
             _sphere(parent, 0.12, Vector3(-0.48, 1.14, -0.69), white_light, "MotoHeadlight")
-            _capsule(parent, 0.19, 0.55, Vector3(-0.48, 1.30, 0.05), _material(Color("#1d3546"), 0.0, 0.64, "fabric"), "MotoRiderBody")
-            _sphere(parent, 0.22, Vector3(-0.48, 1.76, 0.05), _material(Color("#1f2934"), 0.0, 0.45, "paint"), "MotoHelmet")
+            _build_motoqueiro(parent, Vector3(-0.48, 0.72, 0.10))
             _cylinder(parent, 0.055, 0.055, 0.92, Vector3(-0.48, 0.48, 0.30), chrome, "MotoExhaust")
         "truck":
             var truck_body := _material(Color("#d65f42"), 0.08, 0.48, "vehicle_paint")
@@ -2025,6 +2046,19 @@ func _build_road_obstacle(parent: Node3D, kind: String) -> void:
                 _box(parent, Vector3(0.20, 0.035, 0.07), Vector3(cos(angle) * 0.82, 0.075, sin(angle) * 0.82), _material(Color("#59616a"), 0.0, 0.95, "asphalt"), "BrokenAsphalt")
         _:
             _box(parent, Vector3(2.0, 0.8, 2.0), Vector3(0.0, 0.5, 0.0), body, "RoadHazard")
+
+func _build_motoqueiro(parent: Node3D, assento: Vector3) -> void:
+    # Motoqueiro de verdade: o mesmo humanoide skinned do corredor (Quaternius,
+    # CC0), sentado na moto com o clip Driving_Loop da Universal Animation
+    # Library. Se a biblioteca nao carregar, o NPC cai no modo idle sem T-pose.
+    var rider := WORLD_CHARACTER_SCRIPT.new() as Node3D
+    rider.name = "Motoqueiro3D"
+    rider.set("profile_id", "carlos")
+    rider.set("role", "motoqueiro")
+    rider.set("avatar_scale", 0.72)
+    rider.position = assento
+    parent.add_child(rider)
+
 
 func _build_pedestrian_obstacle(parent: Node3D, profile_id: String, role: String, avatar_scale: float) -> Node3D:
     var pedestrian := WORLD_CHARACTER_SCRIPT.new() as Node3D

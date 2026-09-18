@@ -242,37 +242,33 @@ static func _multimesh(mesh: Mesh, mat: Material, xforms: Array, pai: Node3D, no
 	return no
 
 
-## Fim da calcada lateral (borda de fora), calculado a partir do spec.
+## Geometria da secao transversal (layout "rua_esquerda"):
+##   x < 0: pista de rolamento | guia | x > 0: calcada (deck de corrida +
+##   faixa lateral de props). Todas as bordas saem do spec — nada fixo aqui.
+## Gerador deterministico do quarteirao: mesma semente do spec, mesmo leiaute.
+static func _rng(spec: Dictionary, indice: int) -> RandomNumberGenerator:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(spec.get("seed", 1)) * 7919 + indice * 104729
+	return rng
+
+
+static func _x_guia_esq(faixas: Dictionary) -> float:
+	return -float(faixas.get("piso_borda_esq_m", 1.35)) - float(faixas.get("guia_largura_m", 0.35))
+
+
+static func _x_rua_esq(faixas: Dictionary) -> float:
+	return _x_guia_esq(faixas) - float(faixas.get("pista_m", 6.6))
+
+
+static func _x_rua_centro(faixas: Dictionary) -> float:
+	return _x_guia_esq(faixas) - float(faixas.get("pista_m", 6.6)) * 0.5
+
+
+## Borda externa da faixa de props da calcada (lado direito do corredor).
 static func _x_calcada(faixas: Dictionary) -> float:
-	return float(faixas.get("piso_central_m", 4.4)) * 0.5 \
-			+ float(faixas.get("guia_largura_m", 0.35)) \
-			+ float(faixas.get("pista_m", 8.0)) \
-			+ float(faixas.get("guia_largura_m", 0.35)) \
-			+ float(faixas.get("calcada_lateral_m", 3.0))
+	return float(faixas.get("piso_borda_esq_m", 1.35)) + float(faixas.get("piso_central_m", 6.0)) + float(faixas.get("calcada_lateral_m", 2.5))
 
 
-static func _rng(spec: Dictionary, index: int) -> RandomNumberGenerator:
-	var r := RandomNumberGenerator.new()
-	r.seed = int(spec.get("seed", 1)) * 7919 + index * 104729
-	return r
-
-
-static func _xform(pos: Vector3, escala: Vector3 = Vector3.ONE, giro_y: float = 0.0) -> Transform3D:
-	var b := Basis.from_euler(Vector3(0.0, giro_y, 0.0))
-	b = b.scaled(escala)
-	return Transform3D(b, pos)
-
-
-static func _marca(no: Node3D, superficie: String, colisor: String = "estatico") -> void:
-	no.set_meta("superficie", superficie)
-	no.set_meta("colisor", colisor)
-
-
-# ---------------------------------------------------------------------------
-# Quarteirao
-# ---------------------------------------------------------------------------
-
-## Monta um quarteirao completo. base_z e o z local do inicio do trecho.
 static func build_chunk(spec: Dictionary, index: int, base_z: float = 0.0) -> Node3D:
 	var raiz := Node3D.new()
 	raiz.name = "Quarteirao%03d" % index
@@ -312,53 +308,44 @@ static func _contar(no: Node, contagem: Dictionary) -> void:
 		_contar(filho, contagem)
 
 
+
 static func _build_piso(spec: Dictionary, raiz: Node3D, comprimento: float, _visibilidade: float) -> void:
+	# Layout "rua_esquerda": deck de calcada no centro-direita (o corredor
+	# passa por ele), faixa de props alem do deck e guia unica junto da pista.
 	var f: Dictionary = spec.get("faixas", {})
-	var piso := float(f.get("piso_central_m", 4.4))
+	var piso := float(f.get("piso_central_m", 6.0))
+	var borda_esq := float(f.get("piso_borda_esq_m", 1.35))
 	var guia_l := float(f.get("guia_largura_m", 0.35))
-	var _guia_h := float(f.get("guia_altura_m", 0.15))
-	var calcada := float(f.get("calcada_lateral_m", 3.0))
-	var pista := float(f.get("pista_m", 8.0))
-	var x_guia := piso * 0.5
-	var x_pista := x_guia + guia_l
-	var x_calcada := x_pista + pista + guia_l
-
-	# base da faixa central (o piso de lajes entra em cima, em _build_lajes)
-	var base := _malha(_box(Vector3(piso, 0.35, comprimento)),
-			material(spec, "piso_central"), Vector3(0.0, -0.075, -comprimento * 0.5), raiz,
-			"FaixaCentral", false, 0.0)
-	_marca(base, "piso_central")
-	# guias (internas e externas) e calcadas laterais, espelhadas
-	for lado in [-1.0, 1.0]:
-		var gi := _malha(_box(Vector3(guia_l, 0.40, comprimento)),
-				material(spec, "guia"),
-				Vector3(lado * (x_guia + guia_l * 0.5), -0.05, -comprimento * 0.5), raiz,
-				"GuiaInterna%s" % ("D" if lado > 0.0 else "E"), true, 0.0)
-		_marca(gi, "guia")
-		var ge := _malha(_box(Vector3(guia_l, 0.40, comprimento)),
-				material(spec, "guia"),
-				Vector3(lado * (x_calcada - guia_l * 0.5), -0.05, -comprimento * 0.5), raiz,
-				"GuiaExterna%s" % ("D" if lado > 0.0 else "E"), true, 0.0)
-		_marca(ge, "guia")
-		var ca := _malha(_box(Vector3(calcada, 0.35, comprimento)),
-				material(spec, "calcada_lateral"),
-				Vector3(lado * (x_calcada + calcada * 0.5 - guia_l), -0.075, -comprimento * 0.5), raiz,
-				"Calcada%s" % ("D" if lado > 0.0 else "E"), false, 0.0)
-		_marca(ca, "calcada_lateral")
-
+	var guia_h := float(f.get("guia_altura_m", 0.15))
+	var calcada := float(f.get("calcada_lateral_m", 2.5))
+	var x_deck := borda_esq + piso * 0.5
+	# deck da calcada (as faixas central e direita do jogo caem aqui)
+	var deck := _malha(_box(Vector3(piso, 0.35, comprimento)),
+		material(spec, "piso_central"), Vector3(x_deck, -0.075, -comprimento * 0.5), raiz,
+		"CalcadaDeck", false, 0.0)
+	_marca(deck, "piso_central")
+	# faixa lateral da calcada (arvores, postes, bancos e esferas)
+	if calcada > 0.01:
+		var faixa_lat := _malha(_box(Vector3(calcada, 0.35, comprimento)),
+			material(spec, "calcada_lateral"),
+			Vector3(borda_esq + piso + calcada * 0.5, -0.075, -comprimento * 0.5), raiz,
+			"CalcadaFaixa", false, 0.0)
+		_marca(faixa_lat, "calcada_lateral")
+	# guia unica entre a rua e a calcada (o topo fica guia_h acima do asfalto)
+	var guia := _malha(_box(Vector3(guia_l, 0.40, comprimento)),
+		material(spec, "guia"),
+		Vector3(borda_esq + guia_l * 0.5, guia_h - 0.20, -comprimento * 0.5), raiz,
+		"Guia", true, 0.0)
+	_marca(guia, "guia")
 
 static func _build_pistas(spec: Dictionary, raiz: Node3D, comprimento: float, faixas: Dictionary) -> void:
-	var piso := float(faixas.get("piso_central_m", 4.4))
-	var guia_l := float(faixas.get("guia_largura_m", 0.35))
-	var pista := float(faixas.get("pista_m", 8.0))
-	var x_pista := piso * 0.5 + guia_l + pista * 0.5
-	for lado in [-1.0, 1.0]:
-		var no := _malha(_box(Vector3(pista, 0.40, comprimento)),
-				material(spec, "pista"),
-				Vector3(lado * x_pista, -0.20, -comprimento * 0.5), raiz,
-				"Pista%s" % ("D" if lado > 0.0 else "E"), false, 0.0)
-		_marca(no, "pista")
-
+	# a rua inteira fica do lado esquerdo do deck
+	var pista := float(faixas.get("pista_m", 6.6))
+	var no := _malha(_box(Vector3(pista, 0.40, comprimento)),
+		material(spec, "pista"),
+		Vector3(_x_rua_centro(faixas), -0.20, -comprimento * 0.5), raiz,
+		"PistaE", false, 0.0)
+	_marca(no, "pista")
 
 static func _build_linhas(spec: Dictionary, raiz: Node3D, comprimento: float, faixas: Dictionary) -> void:
 	if String(faixas.get("linha_amarela_modo", "junto_guia")) != "junto_guia":
@@ -366,45 +353,40 @@ static func _build_linhas(spec: Dictionary, raiz: Node3D, comprimento: float, fa
 	var largura := float(faixas.get("linha_amarela_largura_m", 0.12))
 	var afast := float(faixas.get("linha_amarela_afastamento_m", 0.30))
 	var entre := float(faixas.get("linha_amarela_entre_m", 0.20))
-	var piso := float(faixas.get("piso_central_m", 4.4))
+	var borda_esq := float(faixas.get("piso_borda_esq_m", 1.35))
 	var guia_l := float(faixas.get("guia_largura_m", 0.35))
-	var pista := float(faixas.get("pista_m", 8.0))
-	var x_int := piso * 0.5 + guia_l
-	var x_ext := x_int + pista
-	for lado in [-1.0, 1.0]:
-		var sufixo := "D" if lado > 0.0 else "E"
-		for par in range(2):
-			var x := 0.0
-			if lado > 0.0:
-				x = x_int + afast + largura * 0.5 + float(par) * (largura + entre)
-			else:
-				x = -(x_ext - afast - largura * 0.5 - float(par) * (largura + entre))
-			var nome := "LinhaAmarela%s%d" % [sufixo, par]
-			var no := _malha(_box(Vector3(largura, 0.01, comprimento)),
-					material(spec, "linha_amarela"),
-					Vector3(x, 0.006, -comprimento * 0.5), raiz, nome, false, 0.0)
-			_marca(no, "linha_amarela", "nenhum")
-
+	# linha dupla amarela colada na guia (a borda direita da rua)
+	var x_base := -borda_esq - guia_l
+	for par in range(2):
+		var x := x_base - afast - largura * 0.5 - float(par) * (largura + entre)
+		var nome := "LinhaAmarela%d" % par
+		var no := _malha(_box(Vector3(largura, 0.01, comprimento)),
+			material(spec, "linha_amarela"),
+			Vector3(x, 0.006, -comprimento * 0.5), raiz, nome, false, 0.0)
+		_marca(no, "linha_amarela", "nenhum")
 
 static func _build_lajes(spec: Dictionary, raiz: Node3D, rng: RandomNumberGenerator,
 		comprimento: float, faixas: Dictionary) -> void:
 	var lajes: Dictionary = spec.get("lajes", {})
 	var faixa: Array = lajes.get("tamanho_m", [0.55, 0.80])
 	var altura := float(lajes.get("altura_m", 0.05))
-	var piso := float(faixas.get("piso_central_m", 4.4))
+	var piso := float(faixas.get("piso_central_m", 6.0))
+	var borda_esq := float(faixas.get("piso_borda_esq_m", 1.35))
+	var inicio := -borda_esq
+	var fim := borda_esq + piso
 	var xforms: Array = []
-	var x := -piso * 0.5
+	var x := inicio
 	var coluna := 0
-	while x < piso * 0.5 - 0.05:
+	while x < fim - 0.05:
 		var largura := rng.randf_range(float(faixa[0]), float(faixa[1]))
-		largura = min(largura, piso * 0.5 - x)
+		largura = minf(largura, fim - x)
 		var z := 0.0
 		var deslocamento := float(lajes.get("junta_m", 0.014))
 		if coluna % 2 == 1:
 			z = -rng.randf_range(0.15, 0.45)
 		while z < comprimento - 0.05:
 			var prof := rng.randf_range(float(faixa[0]), float(faixa[1]))
-			prof = min(prof, comprimento - z)
+			prof = minf(prof, comprimento - z)
 			xforms.append(_xform(
 				Vector3(x + largura * 0.5, 0.10 + altura * 0.5, -(z + prof * 0.5)),
 				Vector3(largura - deslocamento, altura, prof - deslocamento)))
@@ -413,46 +395,49 @@ static func _build_lajes(spec: Dictionary, raiz: Node3D, rng: RandomNumberGenera
 		coluna += 1
 	_multimesh(_box(Vector3.ONE), material(spec, "piso_central"), xforms, raiz, "Lajes", false, 0.0)
 
-
 static func _build_mosaicos(spec: Dictionary, raiz: Node3D, rng: RandomNumberGenerator,
 		comprimento: float, faixas: Dictionary) -> void:
 	var lajes: Dictionary = spec.get("lajes", {})
 	var lado_m := float(lajes.get("mosaico_lado_m", 0.42))
 	var variacao := float(lajes.get("mosaico_variacao_m", 0.06))
 	var altura := float(lajes.get("altura_m", 0.05))
-	var calcada := float(faixas.get("calcada_lateral_m", 3.0))
-	var x_borda := _x_calcada(faixas)
+	var borda_esq := float(faixas.get("piso_borda_esq_m", 1.35))
+	var piso := float(faixas.get("piso_central_m", 6.0))
+	var calcada := float(faixas.get("calcada_lateral_m", 2.5))
+	var inicio := borda_esq + piso
+	var fim := inicio + calcada
 	var xforms: Array = []
-	for lado in [-1.0, 1.0]:
-		var z := 0.0
-		while z < comprimento - 0.05:
-			var z_lado := minf(lado_m + rng.randf_range(-variacao, variacao), comprimento - z)
-			var x := 0.0
-			while x < calcada - 0.05:
-				var x_lado := minf(lado_m + rng.randf_range(-variacao, variacao), calcada - x)
-				var x_abs := x_borda - calcada + x + x_lado * 0.5
-				xforms.append(_xform(
-					Vector3(lado * x_abs, 0.10 + altura * 0.5, -(z + z_lado * 0.5)),
-					Vector3(x_lado - 0.01, altura, z_lado - 0.01)))
-				x += x_lado + 0.01
-			z += z_lado + 0.01
+	var z := 0.0
+	while z < comprimento - 0.05:
+		var z_lado := minf(lado_m + rng.randf_range(-variacao, variacao), comprimento - z)
+		var x := inicio
+		while x < fim - 0.05:
+			var x_lado := minf(lado_m + rng.randf_range(-variacao, variacao), fim - x)
+			xforms.append(_xform(
+				Vector3(x + x_lado * 0.5, 0.10 + altura * 0.5, -(z + z_lado * 0.5)),
+				Vector3(x_lado - 0.01, altura, z_lado - 0.01)))
+			x += x_lado + 0.01
+		z += z_lado + 0.01
 	_multimesh(_box(Vector3.ONE), material(spec, "calcada_lateral"), xforms, raiz, "Mosaicos", false, 0.0)
-
 
 static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGenerator,
 		comprimento: float) -> void:
 	var p: Dictionary = spec.get("predios", {})
 	var pisos: Array = p.get("pisos", [2, 3])
-	var pe := float(p.get("pe_direito_m", 3.4))
-	var variacao := float(p.get("variacao_altura_m", 1.2))
+	var pe := float(p.get("pe_direito_m", 3.0))
+	var variacao := float(p.get("variacao_altura_m", 0.35))
 	var largura_lote: Array = p.get("largura_lote_m", [7.0, 12.0])
 	var recuo := float(p.get("recuo_calcada_m", 0.35))
 	var profundidade := float(p.get("profundidade_m", 9.0))
 	var telhado := float(p.get("telhado_altura_m", 0.35))
 	var janela: Dictionary = p.get("janela", {})
-	var x_frente := _x_calcada(spec.get("faixas", {})) + recuo
-	var x_centro := x_frente + profundidade * 0.5
+	var faixas: Dictionary = spec.get("faixas", {})
 	for lado in [-1.0, 1.0]:
+		# frente do lote: na borda externa da calcada (direita) ou no fim da
+		# rua (esquerda). x_frente/x_centro sao magnitudes a partir do centro.
+		var borda_mag := _x_calcada(faixas) if lado > 0.0 else absf(_x_rua_esq(faixas))
+		var x_frente := borda_mag + recuo
+		var x_centro := borda_mag + recuo + profundidade * 0.5
 		var z := 0.0
 		var lote := 0
 		while z < comprimento - 0.6:
@@ -471,14 +456,14 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
 			elif tipo == "obra":
 				chave = "fachada_reboco"
 			var frente := _malha(_box(Vector3(profundidade, altura, largura)),
-					material(spec, chave),
-					Vector3(lado * x_centro, altura * 0.5, -(z + largura * 0.5)), raiz,
-					"Predio%s%d" % [("D" if lado > 0.0 else "E"), lote], false)
+				material(spec, chave),
+				Vector3(lado * x_centro, altura * 0.5, -(z + largura * 0.5)), raiz,
+				"Predio%s%d" % [("D" if lado > 0.0 else "E"), lote], false)
 			_marca(frente, "fachada")
 			var teto := _malha(_box(Vector3(profundidade + 0.2, telhado, largura + 0.2)),
-					material(spec, "telhado"),
-					Vector3(lado * x_centro, altura + telhado * 0.5, -(z + largura * 0.5)), raiz,
-					"Telhado%s%d" % [("D" if lado > 0.0 else "E"), lote], false)
+				material(spec, "telhado"),
+				Vector3(lado * x_centro, altura + telhado * 0.5, -(z + largura * 0.5)), raiz,
+				"Telhado%s%d" % [("D" if lado > 0.0 else "E"), lote], false)
 			_marca(teto, "telhado")
 			if tipo != "obra":
 				_build_janelas(spec, raiz, rng, janela, lado, x_frente, z, largura, andares, pe, tipo, lote)
@@ -486,7 +471,6 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
 				_build_loja(spec, raiz, p, lado, x_frente, z, largura, lote)
 			z += largura
 			lote += 1
-
 
 static func _tipo_predio(p: Dictionary, rng: RandomNumberGenerator) -> String:
 	var pesos: Dictionary = p.get("tipo_pesos", {"tijolo": 1})
@@ -550,11 +534,18 @@ static func _build_arvores(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
 	var tronco_h := float(cfg.get("tronco_altura_m", 2.4))
 	var tronco_r := float(cfg.get("tronco_raio_m", 0.14))
 	var copa_r := float(cfg.get("copa_raio_m", 1.7))
-	var x := _x_calcada(spec.get("faixas", {})) - 1.5
+	var faixas: Dictionary = spec.get("faixas", {})
+	var borda_esq := float(faixas.get("piso_borda_esq_m", 1.35))
+	var piso := float(faixas.get("piso_central_m", 6.0))
+	var calcada := float(faixas.get("calcada_lateral_m", 2.5))
+	# direita: no meio da faixa de props; esquerda: alem do fim da rua
+	var x_dir := borda_esq + piso + calcada * 0.5
+	var x_esq := _x_rua_esq(faixas) - 1.2
 	var z := rng.randf_range(1.0, passo)
 	var lado := 1.0
 	while z < comprimento:
-		var base := Vector3(lado * x, 0.15, -z)
+		var x := x_dir if lado > 0.0 else x_esq
+		var base := Vector3(x, 0.15, -z)
 		var tronco := _malha(_cyl(tronco_r, tronco_h, 8), material(spec, "madeira"),
 				base + Vector3(0.0, tronco_h * 0.5, 0.0), raiz, "Tronco", true)
 		_marca(tronco, "arvore")
@@ -562,18 +553,19 @@ static func _build_arvores(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
 				base + Vector3(0.0, tronco_h + copa_r * 0.6, 0.0), raiz, "Copa", true)
 		_marca(copa, "folhagem")
 		var canteiro := _malha(_box(Vector3(1.1, 0.06, 1.1)), material(spec, "canteiro"),
-				Vector3(lado * x, 0.13, -z), raiz, "Canteiro", false)
+				Vector3(x, 0.13, -z), raiz, "Canteiro", false)
 		_marca(canteiro, "canteiro")
 		z += passo * rng.randf_range(0.85, 1.15)
 		lado = -lado
-
 
 static func _build_mobiliario(spec: Dictionary, raiz: Node3D, rng: RandomNumberGenerator,
 		comprimento: float, faixas: Dictionary, visibilidade: float) -> void:
 	var props: Dictionary = spec.get("props", {})
 	var guia_l := float(faixas.get("guia_largura_m", 0.35))
-	var piso := float(faixas.get("piso_central_m", 4.4))
-	var x_poste := piso * 0.5 + guia_l * 0.5
+	var borda_esq := float(faixas.get("piso_borda_esq_m", 1.35))
+	var piso := float(faixas.get("piso_central_m", 6.0))
+	var calcada := float(faixas.get("calcada_lateral_m", 2.5))
+	var x_poste := -(borda_esq + guia_l * 0.5)   # postes na guia, junto da pista
 	# postes: muitos, entao MultiMesh
 	var cfg_poste: Dictionary = props.get("poste", {})
 	var passo_poste := float(cfg_poste.get("espacamento_m", 2.2))
@@ -582,19 +574,19 @@ static func _build_mobiliario(spec: Dictionary, raiz: Node3D, rng: RandomNumberG
 	var xforms: Array = []
 	var z := 0.4
 	while z < comprimento:
-		for lado in [-1.0, 1.0]:
-			xforms.append(_xform(Vector3(lado * x_poste, 0.15 + altura_poste * 0.5, -z)))
+		xforms.append(_xform(Vector3(x_poste, 0.15 + altura_poste * 0.5, -z)))
 		z += passo_poste
 	_multimesh(_cyl(raio_poste, altura_poste, 8), material(spec, "estrutura_metalica"),
 			xforms, raiz, "Postes", true, visibilidade)
-	# esferas verdes do calcamento direito (o objeto brilhante da referencia)
+	# esferas verdes da faixa de props (o objeto brilhante da referencia)
 	var cfg_esfera: Dictionary = props.get("esfera_verde", {})
 	var quantas := int(cfg_esfera.get("por_quarteirao", 0))
+	var x_esfera := borda_esq + piso + calcada * 0.5
 	for i in range(quantas):
 		var zz := rng.randf_range(2.0, comprimento - 2.0)
 		var esfera := _malha(_sphere(float(cfg_esfera.get("raio_m", 0.35))),
 				material(spec, "esfera_verde"),
-				Vector3(_x_calcada(faixas) - 2.2, 0.15 + float(cfg_esfera.get("raio_m", 0.35)), -zz), raiz,
+				Vector3(x_esfera, 0.15 + float(cfg_esfera.get("raio_m", 0.35)), -zz), raiz,
 				"EsferaVerde%d" % i, true, visibilidade)
 		_marca(esfera, "prop")
 	_build_prop_linear(spec, raiz, rng, comprimento, props, "banco", "madeira", 0.45, visibilidade)
@@ -602,10 +594,9 @@ static func _build_mobiliario(spec: Dictionary, raiz: Node3D, rng: RandomNumberG
 	if rng.randf() < float(props.get("hidrante", {}).get("probabilidade", 0.0)):
 		var zz := rng.randf_range(3.0, comprimento - 3.0)
 		var hidrante := _malha(_cyl(0.12, 0.75, 8), material(spec, "estrutura_metalica"),
-				Vector3(-(_x_calcada(spec.get("faixas", {})) - 2.0), 0.15 + 0.375, -zz), raiz,
+				Vector3(_x_rua_esq(faixas) - 1.0, 0.15 + 0.375, -zz), raiz,
 				"Hidrante", true, visibilidade)
 		_marca(hidrante, "prop")
-
 
 static func _build_prop_linear(spec: Dictionary, raiz: Node3D, rng: RandomNumberGenerator,
 		comprimento: float, props: Dictionary, nome: String, material_chave: String,
@@ -614,16 +605,21 @@ static func _build_prop_linear(spec: Dictionary, raiz: Node3D, rng: RandomNumber
 	if cfg.is_empty():
 		return
 	var passo := float(cfg.get("espacamento_m", 999.0))
+	var faixas: Dictionary = spec.get("faixas", {})
+	var borda_esq := float(faixas.get("piso_borda_esq_m", 1.35))
+	var piso := float(faixas.get("piso_central_m", 6.0))
+	var calcada := float(faixas.get("calcada_lateral_m", 2.5))
+	var x_dir := borda_esq + piso + calcada * 0.5
+	var x_esq := _x_rua_esq(faixas) - 1.0
 	var z := rng.randf_range(2.0, passo)
 	while z < comprimento - 1.0:
 		var lado := 1.0 if rng.randf() < 0.5 else -1.0
-		var x_borda := BuildingKit._x_calcada(spec.get("faixas", {}))
+		var x := x_dir if lado > 0.0 else x_esq
 		var no := _malha(_box(Vector3(0.6, altura, 1.6)), material(spec, material_chave),
-				Vector3(lado * (x_borda - 1.6), 0.15 + altura * 0.5, -z), raiz, nome.capitalize(),
+				Vector3(x, 0.15 + altura * 0.5, -z), raiz, nome.capitalize(),
 				true, visibilidade)
 		_marca(no, "prop")
 		z += passo * rng.randf_range(0.9, 1.2)
-
 
 static func _build_folhas(spec: Dictionary, raiz: Node3D, rng: RandomNumberGenerator,
 		comprimento: float, visibilidade: float) -> void:
@@ -632,16 +628,18 @@ static func _build_folhas(spec: Dictionary, raiz: Node3D, rng: RandomNumberGener
 	if quantas <= 0:
 		return
 	var raio := float(cfg.get("raio_m", 0.05))
+	var faixas: Dictionary = spec.get("faixas", {})
+	var borda_esq := float(faixas.get("piso_borda_esq_m", 1.35))
+	var piso := float(faixas.get("piso_central_m", 6.0))
+	var calcada := float(faixas.get("calcada_lateral_m", 2.5))
 	var xforms: Array = []
 	for i in range(quantas):
-		var x := rng.randf_range(-2.1, 2.1)
+		var x := rng.randf_range(borda_esq - 0.6, borda_esq + piso + calcada - 0.6)
 		var z := rng.randf_range(0.5, comprimento - 0.5)
 		xforms.append(_xform(Vector3(x, 0.155, -z), Vector3.ONE, rng.randf_range(0.0, TAU)))
 	_multimesh(_box(Vector3(raio * 2.0, 0.006, raio * 2.0)), material(spec, "folhagem"),
 			xforms, raiz, "Folhas", false, visibilidade)
 
-
-# ---------------------------------------------------------------------------
 # Horizonte (skyline lavado pela nevoa)
 # ---------------------------------------------------------------------------
 

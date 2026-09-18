@@ -66,7 +66,8 @@ CORES_APROX = {
 
 # Faixas aceitas (medidas da referencia), com o motivo.
 FAIXAS = {
-    ("faixas", "piso_central_m"): (3.5, 6.0, "faixa de pedestres central larga o suficiente para correr"),
+    ("faixas", "piso_central_m"): (3.5, 6.0, "deck de calcada largo o suficiente para correr"),
+    ("faixas", "piso_borda_esq_m"): (0.6, 2.6, "meia-largura da calcada ate a guia (a rua fica a oeste)"),
     ("faixas", "guia_altura_m"): (0.08, 0.22, "altura da guia: degrau visivel, mas sem tropecar"),
     ("faixas", "guia_largura_m"): (0.20, 0.60, "largura da guia na referencia"),
     ("faixas", "pista_m"): (6.0, 12.0, "pista de rolamento"),
@@ -119,18 +120,29 @@ def auditar_spec(spec: dict, problemas: list, avisos: list) -> None:
             problemas.append(
                 f"spec: {secao}.{chave} = {valor} fora da faixa {faixa[0]}..{faixa[1]} ({faixa[2]})")
 
-    # corte transversal tem de fechar sem buraco e sem sobreposicao
+    # corte transversal (layout "rua_esquerda") tem de cobrir o jogo:
+    # a rua cobre o transito na faixa -3.25, a calcada cobre 0 e +3.25
     f = spec.get("faixas", {})
     piso = float(f.get("piso_central_m", 0))
+    borda = float(f.get("piso_borda_esq_m", 0))
     guia = float(f.get("guia_largura_m", 0))
     pista = float(f.get("pista_m", 0))
     calcada = float(f.get("calcada_lateral_m", 0))
     limite = float(f.get("limite_lateral_m", 0))
-    previsto = piso / 2 + guia + pista + guia + calcada
-    if abs(previsto - limite) > 0.5:
-        problemas.append(f"spec: limite lateral {limite} nao bate com a soma das faixas {previsto:.2f}")
-    if piso <= 0 or guia <= 0 or pista <= 0 or calcada <= 0:
+    x_rua_esq = -(borda + guia + pista)
+    x_rua_dir = -(borda + guia)
+    if piso <= 0 or borda <= 0 or guia <= 0 or pista <= 0 or calcada <= 0:
         problemas.append("spec: alguma faixa transversal zerada")
+    if x_rua_esq > -4.55 or x_rua_dir < -1.95:
+        problemas.append(f"spec: a rua [{x_rua_esq:.2f}, {x_rua_dir:.2f}] nao cobre o "
+                         "transito da faixa -3.25 do jogo")
+    if borda < 0.9:
+        problemas.append(f"spec: a calcada comeca em {-borda:.2f} e nao alcanca a faixa central (0)")
+    if borda + piso < 4.45:
+        problemas.append(f"spec: o deck termina em {borda + piso:.2f} e nao cobre a faixa direita (+3.25)")
+    previsto = max(abs(x_rua_esq), borda + piso + calcada) + 0.5
+    if limite < previsto:
+        problemas.append(f"spec: limite lateral {limite} menor que a cidade desenhada ({previsto:.2f})")
 
     lajes = spec.get("lajes", {})
     tam = lajes.get("tamanho_m", [0, 0])
@@ -210,17 +222,18 @@ def leiaute(spec: dict, indice: int) -> dict:
     q = spec["quarteirao"]
     comprimento = float(q["comprimento_m"]) + rng.uniform(-1, 1) * float(q.get("variacao_comprimento_m", 0.0))
     piso = float(f["piso_central_m"])
+    borda = float(f["piso_borda_esq_m"])
     guia = float(f["guia_largura_m"])
     pista = float(f["pista_m"])
     calcada = float(f["calcada_lateral_m"])
 
-    # lajes da faixa central
+    # lajes do deck de calcada
     lajes = []
     tam = spec["lajes"]["tamanho_m"]
-    x = -piso / 2
+    x = -borda
     coluna = 0
-    while x < piso / 2 - 0.05:
-        largura = min(rng.uniform(tam[0], tam[1]), piso / 2 - x)
+    while x < borda + piso - 0.05:
+        largura = min(rng.uniform(tam[0], tam[1]), borda + piso - x)
         z = -rng.uniform(0.15, 0.45) if coluna % 2 else 0.0
         while z < comprimento - 0.05:
             prof = min(rng.uniform(tam[0], tam[1]), comprimento - z)
@@ -281,6 +294,7 @@ def leiaute(spec: dict, indice: int) -> dict:
 def auditar_leiaute(spec: dict, problemas: list, avisos: list) -> dict:
     f = spec["faixas"]
     piso = float(f["piso_central_m"])
+    borda = float(f["piso_borda_esq_m"])
     guia = float(f["guia_largura_m"])
     calcada = float(f["calcada_lateral_m"])
     comprimento = float(spec["quarteirao"]["comprimento_m"])
@@ -291,8 +305,8 @@ def auditar_leiaute(spec: dict, problemas: list, avisos: list) -> dict:
         # o hash cobre o leiaute inteiro (nao so o resumo), para qualquer mudanca aparecer
         limites.append(r)
         # a faixa de corrida fica livre: nada de prop dentro dela
-        if r["x_min_laje"] < -piso / 2 - 0.01 or r["x_max_laje"] > piso / 2 + 0.01:
-            problemas.append(f"leiaute {indice}: lajes fora da faixa central ({r['x_min_laje']}..{r['x_max_laje']})")
+        if r["x_min_laje"] < -borda - 0.01 or r["x_max_laje"] > borda + piso + 0.01:
+            problemas.append(f"leiaute {indice}: lajes fora do deck de calcada ({r['x_min_laje']}..{r['x_max_laje']})")
         if r["lajes"] < 40:
             problemas.append(f"leiaute {indice}: poucas lajes ({r['lajes']}) para 28 m de faixa")
         # lotes fecham o quarteirao
@@ -302,10 +316,14 @@ def auditar_leiaute(spec: dict, problemas: list, avisos: list) -> dict:
                 problemas.append(f"leiaute {indice}: lado {lado} com lotes cobrindo "
                                  f"{largura_total:.1f} m de {comprimento:.1f} m")
             estreitos = 0
-            for _lado_lote, _z, largura, altura in [l for l in dados["lotes"] if l[0] == lado]:
-                if not (2.5 <= largura <= 15.0):
+            lotes_do_lado = [l for l in dados["lotes"] if l[0] == lado]
+            for _lado_lote, _z, largura, altura in lotes_do_lado:
+                # o ultimo lote existe para fechar o quarteirao (o kit permite
+                # que ele seja estreito, desde que nao vire um ﬁso)
+                fecha = _z + largura >= comprimento - 0.75
+                if not (2.5 <= largura <= 15.0) and not (fecha and largura >= 1.2):
                     problemas.append(f"leiaute {indice}: lote de {largura:.1f} m fora de 2.5..15 m")
-                if largura < 5.0:
+                if largura < 5.0 and not fecha:
                     estreitos += 1
                 if not (5.0 <= altura <= 12.0):
                     problemas.append(f"leiaute {indice}: predio de {altura:.1f} m fora de 5..12 m "
@@ -327,8 +345,8 @@ def auditar_leiaute(spec: dict, problemas: list, avisos: list) -> dict:
         if calcada < 1.5:
             problemas.append(f"leiaute {indice}: calcada de {calcada} m nao cabe arvore + props")
         # nada de prop na faixa de corrida
-        x_arvore = max(0.0, piso / 2 + guia + calcada / 2)
-        if x_arvore <= piso / 2:
+        x_arvore = borda + piso + calcada * 0.5
+        if x_arvore <= borda + piso - 0.5:
             problemas.append(f"leiaute {indice}: arvore cairia dentro da faixa de corrida")
     hash_leiaute = hashlib.sha1(json.dumps(limites, sort_keys=True).encode()).hexdigest()[:12]
     return {"limites": limites, "hash": hash_leiaute}
@@ -423,51 +441,46 @@ def desenhar(spec: dict, espelho: dict) -> bool:
         t = i / max(1, y_alto - topo)
         cor = tuple(int(cor_ceu_h[k] + (cor_ceu[k] - cor_ceu_h[k]) * t) for k in range(3))
         d.line([(px + 1, topo + i), (px + pw - 1, topo + i)], fill=cor)
-    # 2) asfalto
-    for lado in (-1, 1):
-        x0 = cx + lado * (piso / 2 + guia) * escala
-        x1 = cx + lado * (piso / 2 + guia + pista) * escala
-        d.rectangle([min(x0, x1), y_rua, max(x0, x1), y_rua + 20], fill=cor_pista)
-    # 3) faixa central elevada e guias
-    d.rectangle([cx - piso / 2 * escala, y_alto + 26, cx + piso / 2 * escala, y_rua],
+    borda = float(f["piso_borda_esq_m"])
+    # 2) asfalto: a rua inteira fica a oeste do deck
+    x_rua_dir = cx - (borda + guia) * escala
+    x_rua_esq = cx - (borda + guia + pista) * escala
+    d.rectangle([x_rua_esq, y_rua, x_rua_dir, y_rua + 20], fill=cor_pista)
+    # 3) deck de calcada elevado (o corredor passa aqui) e a guia
+    d.rectangle([cx - borda * escala, y_alto + 26, cx + (borda + piso) * escala, y_rua],
                 fill=cor_piso)
-    for lado in (-1, 1):
-        x0 = cx + lado * piso / 2 * escala
-        x1 = cx + lado * (piso / 2 + guia) * escala
-        d.rectangle([min(x0, x1), y_alto, max(x0, x1), y_rua + 20],
-                    fill=tuple(max(0, c - 30) for c in cor_piso))
-    # 4) calcadas laterais
-    for lado in (-1, 1):
-        x0 = cx + lado * (piso / 2 + guia + pista) * escala
-        x1 = cx + lado * limite * escala
-        d.rectangle([min(x0, x1), y_alto, max(x0, x1), y_rua + 20], fill=cor_calcada)
-    # 5) linhas amarelas junto das guias
-    for lado in (-1, 1):
-        for par in range(2):
-            xl = cx + lado * (piso / 2 + guia + float(f["linha_amarela_afastamento_m"]) +
-                              float(f["linha_amarela_largura_m"]) * (0.5 + 1.6 * par)) * escala
-            d.line([xl, y_rua + 2, xl, y_rua + 18], fill=(232, 200, 46), width=2)
+    d.rectangle([cx - (borda + guia) * escala, y_alto, cx - borda * escala, y_rua + 20],
+                fill=tuple(max(0, c - 30) for c in cor_piso))
+    # 4) faixa lateral de props da calcada
+    d.rectangle([cx + (borda + piso) * escala, y_alto,
+                 cx + (borda + piso + calcada) * escala, y_rua + 20], fill=cor_calcada)
+    # 5) linha dupla amarela junto da guia
+    for par in range(2):
+        xl = cx - (borda + guia + float(f["linha_amarela_afastamento_m"]) +
+                   float(f["linha_amarela_largura_m"]) * (0.5 + 1.6 * par)) * escala
+        d.line([xl, y_rua + 2, xl, y_rua + 18], fill=(232, 200, 46), width=2)
     # 7) predios (por ultimo, para aparecerem na frente do ceu)
-    for lado, cores in ((-1, CORES_APROX["tijolo"]), (1, CORES_APROX["reboco"])):
-        x0 = cx + lado * (limite + float(spec["predios"]["recuo_calcada_m"])) * escala
-        x1 = cx + lado * (limite + 7.0) * escala
-        for i, altura in enumerate((7.0, 10.2, 6.8)):
-            faixa_ini = min(x0, x1) + i * 4.0 * escala
-            faixa_fim = faixa_ini + 4.0 * escala
-            d.rectangle([faixa_ini, y_alto - altura * escala, faixa_fim, y_alto + 20], fill=cores)
-    # 6) arvores e postes
+    recuo_p = float(spec["predios"]["recuo_calcada_m"])
     for lado in (-1, 1):
-        xa = cx + lado * (piso / 2 + guia + pista + calcada * 0.45) * escala
+        x0 = (borda + piso + calcada + recuo_p) if lado > 0 else (borda + guia + pista + recuo_p)
+        cores = CORES_APROX["reboco"] if lado > 0 else CORES_APROX["tijolo"]
+        for i, altura in enumerate((7.0, 10.2, 6.8)):
+            ini = cx + lado * (x0 + i * 4.0) * escala
+            fim = cx + lado * (x0 + (i + 1) * 4.0) * escala
+            d.rectangle([min(ini, fim), y_alto - altura * escala, max(ini, fim), y_alto + 20], fill=cores)
+    # 6) arvores (faixa de props e alem da rua) e postes na guia
+    for xa in (cx + (borda + piso + calcada * 0.5) * escala,
+               cx - (borda + guia + pista + 1.2) * escala):
         d.line([xa, y_alto, xa, y_alto - 1.3 * escala], fill=(120, 88, 58), width=3)
         d.ellipse([xa - 1.05 * escala, y_alto - 3.1 * escala, xa + 1.05 * escala, y_alto - 1.1 * escala],
                   fill=CORES_APROX["folhagem"])
-        xp = cx + lado * (piso / 2 + guia * 0.5) * escala
-        d.rectangle([xp - 2, y_alto - 0.95 * escala, xp + 2, y_alto],
-                    fill=CORES_APROX["metal_zincado"])
+    xp = cx - (borda + guia * 0.5) * escala
+    d.rectangle([xp - 2, y_alto - 0.95 * escala, xp + 2, y_alto],
+                fill=CORES_APROX["metal_zincado"])
     # 8) rotulos
-    d.text((cx - 52, y_rua + 4), "faixa de corrida", font=f_peq, fill=(235, 232, 225))
-    d.text((px + 10, y_rua + 4), "pista", font=f_peq, fill=(190, 195, 205))
-    d.text((px + pw - 60, y_rua + 4), "pista", font=f_peq, fill=(190, 195, 205))
+    d.text((int(x_rua_esq) + 8, y_rua + 4), "pista", font=f_peq, fill=(190, 195, 205))
+    d.text((int(cx + (borda + piso * 0.45) * escala) - 52, y_rua + 4), "calcada (corre aqui)",
+           font=f_peq, fill=(235, 232, 225))
     d.text((px + 10, py + 34), "ceu da paleta 'manha_limpa'", font=f_peq, fill=(210, 214, 222))
 
     # ---- painel 2: planta de 2 quarteiroes ----
@@ -480,22 +493,19 @@ def desenhar(spec: dict, espelho: dict) -> bool:
         dados = leiaute(spec, q)
         zx = x_planta + q * (comprimento + 4) * escala2
         y_lat = py2 + 30
-        d.rectangle([zx, y_lat - 26, zx + comprimento * escala2, y_lat - 6], fill=cor_calcada)
         d.rectangle([zx, y_lat - 6, zx + comprimento * escala2, y_lat + 10], fill=cor_pista)
-        d.rectangle([zx, y_lat + 10, zx + comprimento * escala2, y_lat + 40], fill=cor_piso)
-        d.rectangle([zx, y_lat + 40, zx + comprimento * escala2, y_lat + 56], fill=cor_pista)
-        d.rectangle([zx, y_lat + 56, zx + comprimento * escala2, y_lat + 76], fill=cor_calcada)
+        d.rectangle([zx, y_lat + 10, zx + comprimento * escala2, y_lat + 52], fill=cor_piso)
+        d.rectangle([zx, y_lat + 52, zx + comprimento * escala2, y_lat + 76], fill=cor_calcada)
         for lado, zz, largura, altura in dados["lotes"]:
             y = y_lat + 76 if lado > 0 else y_lat - 40
             cor = CORES_APROX["tijolo"] if int(altura) % 2 else CORES_APROX["reboco"]
             d.rectangle([zx + zz * escala2, y, zx + (zz + largura) * escala2, y + 12], fill=cor)
         for lado, zz in dados["arvores"]:
-            y = y_lat + 30 if lado > 0 else y_lat
+            y = y_lat + 62 if lado > 0 else y_lat - 16
             d.ellipse([zx + zz * escala2 - 3, y - 3, zx + zz * escala2 + 3, y + 3],
                       fill=CORES_APROX["folhagem"])
         for zz in dados["postes"]:
-            d.point((zx + zz * escala2, y_lat + 22), fill=(235, 235, 235))
-            d.point((zx + zz * escala2, y_lat + 44), fill=(235, 235, 235))
+            d.point((zx + zz * escala2, y_lat + 13), fill=(235, 235, 235))
         d.text((zx + 4, y_lat + 82), f"q{q}: {dados['resumo']['lajes']} lajes, "
                                      f"{dados['resumo']['lotes']} lotes, {dados['resumo']['arvores']} arvores"
                                      f" | {dados['resumo']['impressao']}", font=f_peq, fill=(170, 176, 186))

@@ -386,11 +386,11 @@ func _reconstruir_pocas(trecho: int, trecho_m: float, kit: Dictionary) -> void:
 	var quantas := int(cfg.get("quantidade_por_trecho", 12))
 	var visiveis: int = maxi(1, int(cfg.get("trechos_a_vista", 3)))
 	var faixas: Dictionary = kit.get("faixas", {})
-	var piso := float(faixas.get("piso_central_m", 4.4))
-	var guia := float(faixas.get("guia_largura_m", 0.35))
-	var pista := float(faixas.get("pista_m", 8.0))
-	var calcada := float(faixas.get("calcada_lateral_m", 3.0))
+	var piso := float(faixas.get("piso_central_m", 6.0))
+	var borda_esq := float(faixas.get("piso_borda_esq_m", 1.35))
+	var pista := float(faixas.get("pista_m", 6.6))
 	var afast := float(cfg.get("afastamento_guia_m", 0.5))
+	var x_rua_dir := -borda_esq - float(faixas.get("guia_largura_m", 0.35))
 	var tam: Array = cfg.get("tamanho_m", [1.0, 1.0, 2.0, 1.0])
 	var altura := float(cfg.get("altura_do_piso_m", 0.006))
 	var mm: MultiMesh = _pocas.multimesh
@@ -403,13 +403,14 @@ func _reconstruir_pocas(trecho: int, trecho_m: float, kit: Dictionary) -> void:
 		rng.seed = int(spec.get("seed", 1)) * 97 + (trecho + passo + 100000) * 7919
 		for _n in range(quantas):
 			var no_piso := rng.randf() < 0.4
-			var lado := 1.0 if rng.randf() < 0.5 else -1.0
 			var x := 0.0
 			var y := _y_piso + 0.15 + altura
 			if no_piso:
-				x = rng.randf_range(-piso * 0.5 + 0.4, piso * 0.5 - 0.4)
+				# pocas rasas no deck da calcada (por onde o corredor passa)
+				x = rng.randf_range(-borda_esq + 0.4, -borda_esq + piso - 0.4)
 			else:
-				x = lado * (piso * 0.5 + guia + afast + rng.randf_range(0.2, pista - 0.6))
+				# pocas na pista, comecando coladas na guia
+				x = x_rua_dir - afast - rng.randf_range(0.2, pista - 0.6)
 				y = _y_piso + altura
 			var z := -((float(trecho) + float(passo)) * trecho_m) - rng.randf_range(0.5, trecho_m - 0.5)
 			var larg := rng.randf_range(float(tam[0]), float(tam[1]))

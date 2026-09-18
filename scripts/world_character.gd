@@ -15,6 +15,7 @@ var avatar_scale: float = 0.82
 var avatar: Node3D
 var idle_time := 0.0
 var phone_attachment: BoneAttachment3D
+var world_clip := ""
 
 func configure(next_profile: String, next_role: String, next_scale: float = 0.82) -> void:
     profile_id = next_profile
@@ -28,15 +29,31 @@ func _ready() -> void:
     avatar.call("set_world_mode", true)
     avatar.scale = Vector3.ONE * avatar_scale
     add_child(avatar)
+    # cada papel tem o seu clip da Universal Animation Library (CC0): a
+    # velhinha caminha, o vendedor conversa, o motoqueiro pilotA parado nao.
+    match role:
+        "old_lady":
+            world_clip = "Walk_Formal_Loop"
+        "vendor":
+            world_clip = "Idle_Talking_Loop"
+        "motoqueiro":
+            world_clip = "Driving_Loop"
+        _:
+            world_clip = "Idle_Loop"
     call_deferred("_attach_role_details")
 
 func _process(delta: float) -> void:
     if avatar == null:
         return
     idle_time += delta
-    var idle_bob := sin(idle_time * 2.0 + float(get_instance_id() % 17)) * 0.008
-    avatar.position.y = idle_bob
-    avatar.rotation.y = sin(idle_time * 0.72) * 0.012
+    if world_clip != "":
+        # animacao esqueletada de verdade (caminhar/conversar/pilotar); o
+        # play no mesmo clip e um no-op barato dentro do runner
+        avatar.call("play_world_clip", world_clip)
+    else:
+        var idle_bob := sin(idle_time * 2.0 + float(get_instance_id() % 17)) * 0.008
+        avatar.position.y = idle_bob
+        avatar.rotation.y = sin(idle_time * 0.72) * 0.012
     if phone_attachment:
         phone_attachment.rotation.z = sin(idle_time * 1.7) * 0.04
 

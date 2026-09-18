@@ -94,7 +94,9 @@ var skeleton: Skeleton3D
 var animation_player: AnimationPlayer
 var runner_shadow: MeshInstance3D
 var current_clip := ""
+var world_mode := false
 var using_external_animation := false
+static var _biblioteca_cache: AnimationLibrary = null
 var primary_asset_loaded := false
 var use_animation_library := true
 var motion_clock := 0.0
@@ -105,7 +107,18 @@ func _ready() -> void:
     set_character(character_id)
 
 func set_world_mode(enabled: bool) -> void:
-    use_animation_library = not enabled
+    # NPCs de mundo continuam COM a biblioteca de animacao (Idle/Walk/Driving
+    # da Universal Animation Library): sem isso eles viram espantalho em
+    # T-pose. O driver de corrida (set_motion) segue exclusivo do jogador,
+    # que nunca chama set_world_mode.
+    world_mode = enabled
+    use_animation_library = true
+
+
+func play_world_clip(clip: String, custom_speed := 1.0) -> void:
+    if animation_player != null:
+        animation_player.speed_scale = maxf(0.05, custom_speed)
+    _play_clip(clip)
 
 func set_character(next_id: String) -> void:
     character_id = CHARACTER_DATA.canonical_id(next_id)
@@ -811,6 +824,8 @@ func _library_drives_skeleton(library: AnimationLibrary) -> bool:
     return checked > 0 and float(matched) / float(checked) >= 0.5
 
 func _extract_animation_library_from_glb() -> AnimationLibrary:
+    if _biblioteca_cache != null:
+        return _biblioteca_cache
     var source_scene := load(ANIMATION_SOURCE_PATH) as PackedScene
     if source_scene == null:
         return null
@@ -825,6 +840,7 @@ func _extract_animation_library_from_glb() -> AnimationLibrary:
         if source_library != null and source_library.has_animation("Jump_Loop"):
             break
     source_root.free()
+    _biblioteca_cache = source_library
     return source_library
 
 func _find_animation_player(node: Node) -> AnimationPlayer:
