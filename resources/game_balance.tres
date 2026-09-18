@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="GameBalance" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/game_balance.gd" id="1_balance"]
+
+[resource]
+script = ExtResource("1_balance")
+resource_name = "Corre pro Ponto — balanceamento"
+version = 1
+base_speed = 5.0
+final_speed = 14.0
+first_wait_seconds = 10.0
+final_wait_seconds = 2.0
+unlock_final_stars = 45

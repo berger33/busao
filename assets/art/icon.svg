@@ -1,0 +1,11 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+<defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#102b4e"/><stop offset="1" stop-color="#f05a47"/></linearGradient><linearGradient id="bus" x2="0" y2="1"><stop stop-color="#ffd44d"/><stop offset="1" stop-color="#ef9d27"/></linearGradient></defs>
+<rect width="512" height="512" rx="112" fill="url(#sky)"/>
+<circle cx="392" cy="105" r="47" fill="#fff1ad" opacity=".9"/><path d="M0 382L122 299l72 52 88-105 230 164v102H0z" fill="#17364c" opacity=".9"/>
+<rect x="53" y="201" width="407" height="198" rx="38" fill="url(#bus)" stroke="#5a311f" stroke-width="12"/>
+<rect x="86" y="226" width="342" height="92" rx="15" fill="#8ad9de" stroke="#5a311f" stroke-width="9"/>
+<path d="M106 300h302" stroke="#fff1ad" stroke-width="12"/><circle cx="135" cy="405" r="36" fill="#1d2633" stroke="#f2d46e" stroke-width="12"/><circle cx="378" cy="405" r="36" fill="#1d2633" stroke="#f2d46e" stroke-width="12"/>
+<path d="M249 101c-23 0-42 19-42 42v48h86v-48c0-23-19-42-44-42z" fill="#e6a378" stroke="#492e36" stroke-width="9"/><path d="M207 142c3-39 22-58 48-58 21 0 42 16 45 52-24-12-61-10-93 6z" fill="#382632"/>
+<path d="M220 191h57l33 80-32 20-12-37-11 37-32-20z" fill="#e84f5b" stroke="#492e36" stroke-width="9"/><path d="M223 266l-40 61m91-61l39 61" stroke="#e6a378" stroke-width="17" stroke-linecap="round"/><path d="M231 295l-27 61m69-61l26 61" stroke="#292d43" stroke-width="18" stroke-linecap="round"/><path d="M193 356l-31 0m136 0h31" stroke="#e6a378" stroke-width="14" stroke-linecap="round"/>
+<text x="256" y="370" text-anchor="middle" font-family="sans-serif" font-size="31" font-weight="900" fill="#382632">PONTO</text>
+</svg>
