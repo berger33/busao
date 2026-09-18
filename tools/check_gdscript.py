@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Analise estatica de GDScript que reproduz o analisador do Godot 4.
 
 Existe porque nem toda maquina tem um binario Godot disponivel para rodar
@@ -11,10 +10,18 @@ Erros:
   TOO_MANY_ARGS    - argumentos demais em chamada de engine/script
   TOO_FEW_ARGS     - argumentos de menos
   UNKNOWN_METHOD   - metodo inexistente em receptor com tipo conhecido
+  UNKNOWN_MEMBER   - propriedade inexistente em receptor de tipo conhecido
+                     (ex.: `mesh.receive_shadow`, API do Godot 3)
   MISSING_RETURN   - funcao com tipo de retorno sem nenhum `return`
   ASSIGN_CONST     - atribuicao a constante
 Advertencias:
   INTEGER_DIVISION - divisao inteira (parte decimal descartada)
+
+Sobre UNKNOWN_MEMBER: atribuicao a propriedade inexistente sempre entra na
+lista (o Godot 4 quebra em tempo de execucao). Leitura de membro inexistente
+so entra quando o nome existia no Godot 3 e sumiu no 4 (mapa GODOT4_RENAMES),
+porque o proprio engine trata `evento.position` em `InputEvent` como acesso
+inseguro e nao como erro.
 
 Dependencias:
   pip install gdtoolkit
@@ -25,6 +32,7 @@ Uso:
   python3 tools/check_gdscript.py                     # projeto atual
   python3 tools/check_gdscript.py --godot-doc /caminho/doc/classes
 """
+
 from __future__ import annotations
 
 import re
@@ -533,9 +541,23 @@ class Analyzer:
             self.stmt(info, stmt, inner)
 
     def iter_type(self, info: ScriptInfo, node) -> str:
-        """`for i in 6:`, `for i in range(n):` and `for i in array.size():`."""
+        """`for i in 6:`, `for i in range(n):`, `for x in Array[T]()`."""
         while isinstance(node, Tree) and str(node.data) == "expr" and node.children:
             node = node.children[0]
+        # for x in vector: -> elementos do vetor
+        if isinstance(node, Tree) and str(node.data) == "standalone_call" and node.children:
+            callee = node.children[0]
+            if isinstance(callee, Token):
+                ret = info.ret_types.get(str(callee), "")
+                m = re.fullmatch(r"Array\[(\w+)\]", ret or "")
+                if m:
+                    return m.group(1)
+        # for x in [A.new(), B.new()]: -> tipo do primeiro elemento
+        if isinstance(node, Tree) and str(node.data) in ("array", "array_expr"):
+            for c in node.children:
+                t = self.infer(info, c, Scope(None))
+                if t:
+                    return t
         return "int" if self.is_intish(info, Scope(None), node) else ""
 
     def match_stmt(self, info: ScriptInfo, node: Tree, scope: Scope) -> None:
@@ -646,32 +668,32 @@ class Analyzer:
                 ret = info.ret_types.get(str(callee), "")
                 if ret:
                     return ret
-        # arithmetic on ints stays int (same inference Godot does)
-        if self.is_intish(info, scope, node):
-            return "int"
-        return ""
-        # var x := SomeClass.new()  /  var x := Constructor(...)
-        target = node
-        if target.data in ("expr", "standalone_call") and target.children:
-            if target.data == "standalone_call":
-                callee = target.children[0]
-                if isinstance(callee, Token):
-                    name = str(callee)
-                    if name in self.engine.classes:
-                        return name
-                    if name in self.by_cls:
-                        return str(name)
-                return ""
-            return self.infer(info, target.children[0], scope)
-        if target.data == "getattr_call":
-            attr = target.children[0]
-            toks = token_nodes(attr)
+        data = str(node.data)
+        # var x := SomeClass.new()  /  var x := SomeClass(...)  /  var x := proj_func()
+        if data == "standalone_call" and node.children:
+            callee = node.children[0]
+            if isinstance(callee, Token):
+                name = str(callee)
+                if name in self.engine.classes:
+                    return name
+                if self.script_of(info, name) is not None:
+                    return name
+        if data == "getattr_call" and node.children:
+            toks = token_nodes(node.children[0])
             if len(toks) >= 3 and str(toks[-1]) == "new":
                 owner = str(toks[0])
                 if owner in self.engine.classes:
                     return owner
-                if owner in self.by_cls:
+                if self.script_of(info, owner) is not None:
                     return owner
+        # x as T  /  x as T  em chamada com cast
+        if data == "actual_type_cast":
+            hint = next((t for t in token_nodes(node) if t.type == "TYPE_HINT"), None)
+            if hint is not None:
+                return str(hint)
+        # arithmetic on ints stays int (same inference Godot does)
+        if self.is_intish(info, scope, node):
+            return "int"
         return ""
 
     # -- expressions -------------------------------------------------------
@@ -693,17 +715,30 @@ class Analyzer:
             self.standalone_call(info, node, scope)
             return
         if data == "getattr":
+            self.check_property_read(info, node, scope)
             self.ref(info, node.children[0], scope)
             return
         if data == "mdr_expr":
             self.mdr_expr(info, node, scope)
             return
+        if data == "actual_type_cast":
+            for c in node.children:
+                self.expr_tree(info, c, scope)
+            return
         if data == "assnmnt_expr":
             target = node.children[0]
+            if isinstance(target, Tree) and str(target.data) == "getattr":
+                self.check_property_assignment(info, target, scope)
             if isinstance(target, Token) and target.type == "NAME" and str(target) in info.consts:
                 self.error(info.path, target, "ASSIGN_CONST",
                            f'Cannot assign a new value to the constant "{target}".')
-            self.ref(info, target, scope)
+            if isinstance(target, Tree) and str(target.data) == "getattr":
+                # alvo de atribuicao: membro ja checado acima; valida so o nome base
+                toks = token_nodes(target)
+                if toks:
+                    self.ref(info, toks[0], scope)
+            else:
+                self.ref(info, target, scope)
             for c in node.children[2:]:
                 self.value(info, c, scope)
             return
@@ -717,53 +752,67 @@ class Analyzer:
                 continue
             self.expr_tree(info, c, scope)
 
-    def owner_type(self, info: ScriptInfo, scope: Scope, attr: Tree) -> tuple[str, str]:
-        """Return (owner_label, owner_type) for the receiver of a call.
-
-        Resolves `a.b.c(...)` by walking documented member types. Returns an
-        empty type when the receiver cannot be resolved statically.
-        """
-        chain: list[str] = []
+    def attr_path(self, attr: Tree) -> tuple[str, list[str]]:
+        """`a.b.c` -> ("a", ["b", "c"]), tanto em no flat quanto aninhado."""
+        path: list[str] = []
         node = attr
-        while isinstance(node, Tree) and node.data == "getattr":
-            toks = token_nodes(node)
-            chain.append(str(toks[-1]))
+        while isinstance(node, Tree) and str(node.data) == "getattr":
+            direct = [str(t) for t in node.children if isinstance(t, Token) and t.type == "NAME"]
+            path = direct + path
             node = node.children[0]
         if not isinstance(node, Token) or node.type != "NAME":
-            return "", ""
-        base = str(node)
-        if base in ("self",):
-            return "", ""
-        ctype = scope.lookup(base) or info.members.get(base, "")
+            return "", []
+        if not path or path[0] != str(node):
+            path = [str(node)] + path
+        return path[0], path[1:]
+
+    def receiver_type(self, info: ScriptInfo, scope: Scope, attr: Tree) -> tuple[str, str, str]:
+        """(rotulo_do_receptor, tipo_do_receptor, membro_acessado) para `a.b.c`."""
+        base, hops = self.attr_path(attr)
+        if not base or not hops:
+            return "", "", ""
+        member = hops[-1]
+        receiver_hops = hops[:-1]
+        if base == "self":
+            ctype = ""
+        else:
+            ctype = scope.lookup(base) or info.members.get(base, "")
         if not ctype and base in self.engine.classes:
-            return base, base
-        if not ctype and base in info.consts:
-            target = self.script_of(info, base)
-            if target is not None:
-                return base, target.cls or target.path.stem
-        if not ctype and self.script_of(info, base) is not None:
-            target = self.script_of(info, base)
-            return base, target.cls or target.path.stem
-        owner_label = base
-        for name in reversed(chain):
+            ctype = base
+        label = base
+        if ctype and self.script_of(info, ctype) is not None:
+            ctype = self.script_of(info, ctype).cls or ctype
+        for name in receiver_hops:
             if ctype in self.engine.classes:
                 ntype = self.engine.member_type(ctype, name)
                 if not ntype:
-                    return owner_label, ""  # unknown property: don't guess
+                    return label, "", member
                 ctype = ntype
+            elif self.script_of(info, ctype) is not None:
+                target = self.script_of(info, ctype)
+                ctype = getattr(target, "member_types", {}).get(name, "")
+                if not ctype:
+                    return label, "", member
             else:
-                return owner_label, ""
-            owner_label = f"{owner_label}.{name}"
-        return owner_label, ctype
+                return label, "", member
+            label = f"{label}.{name}"
+        return label, ctype, member
+
+    def owner_type(self, info: ScriptInfo, scope: Scope, attr: Tree) -> tuple[str, str]:
+        label, ctype, _member = self.receiver_type(info, scope, attr)
+        return label, ctype
 
     def getattr_call(self, info: ScriptInfo, node: Tree, scope: Scope) -> None:
         attr = node.children[0]
         args = [c for c in node.children[1:]]
-        toks = token_nodes(attr)
-        if len(toks) >= 3:
+        if isinstance(attr, Tree) and str(attr.data) == "getattr":
+            owner_label, owner_type, method = self.receiver_type(info, scope, attr)
+            toks = token_nodes(attr)
             method_tok = toks[-1]
-            method = str(method_tok)
-            owner_label, owner_type = self.owner_type(info, scope, attr)
+            if not method or not isinstance(method_tok, Token):
+                for c in node.children:
+                    self.value(info, c, scope)
+                return
             base_tok = token_nodes(attr.children[0])[0] if isinstance(attr.children[0], Tree) else attr.children[0]
             if isinstance(base_tok, Token) and base_tok.type == "NAME":
                 self.ref(info, base_tok, scope)
@@ -947,6 +996,83 @@ class Analyzer:
         for stmt in body:
             self.stmt(info, stmt, inner)
 
+    def check_property_read(self, info: ScriptInfo, node: Tree, scope: Scope) -> None:
+        """Leitura `a.b`: o membro existe no tipo do receptor?"""
+        owner_label, owner_type, member = self.receiver_type(info, scope, node)
+        toks = token_nodes(node)
+        if not member or not owner_type or len(toks) < 3:
+            return
+        prop_tok = toks[-1]
+        if not isinstance(prop_tok, Token) or prop_tok.type != "NAME":
+            return
+        if member.startswith("_") or member in DYNAMIC_MEMBERS:
+            return
+        if owner_type in self.engine.classes:
+            if member not in GODOT4_RENAMES:
+                # leitura insegura em tipo de classe: o proprio Godot 4 so emite
+                # aviso (UNSAFE_PROPERTY_ACCESS), entao nao entra como problema.
+                return
+            if self.engine.has_member(owner_type, member):
+                return
+            if any(member in self.engine.consts.get(c, set()) for c in self.engine.chain(owner_type)):
+                return
+            if self.engine.find_method(owner_type, member) is not None:
+                return
+            hint = GODOT4_RENAMES.get(member, "")
+            extra = f' No Godot 4 use {hint}.' if hint else ""
+            self.error(info.path, prop_tok, "UNKNOWN_MEMBER",
+                       f'{owner_type} has no property "{member}".{extra}')
+            return
+        target_script = self.script_of(info, owner_type)
+        if target_script is None:
+            return
+        chain = [target_script] + self.base_chain(target_script)[0]
+        for script in chain:
+            if member in script.symbols:
+                return
+        engine_base = self.base_chain(target_script)[1]
+        if engine_base and (self.engine.has_member(engine_base, member)
+                            or self.engine.find_method(engine_base, member)
+                            or any(member in self.engine.consts.get(c, set()) for c in self.engine.chain(engine_base))):
+            return
+        self.error(info.path, prop_tok, "UNKNOWN_MEMBER",
+                   f'{target_script.path.name} has no property "{member}".')
+
+    def check_property_assignment(self, info: ScriptInfo, target: Tree, scope: Scope) -> None:
+        toks = token_nodes(target)
+        if len(toks) < 3:
+            return
+        owner_label, owner_type, prop = self.receiver_type(info, scope, target)
+        prop_tok = toks[-1]
+        if not prop or not isinstance(prop_tok, Token):
+            return
+        if not owner_type:
+            return
+        if owner_type in self.engine.classes:
+            if self.engine.has_member(owner_type, prop) or self.engine.find_method(owner_type, prop):
+                return
+            if prop.startswith("_") or prop in DYNAMIC_MEMBERS:
+                return
+            self.error(info.path, prop_tok, "UNKNOWN_MEMBER",
+                       f'{owner_type} has no property "{prop}".')
+            return
+        target_script = self.script_of(info, owner_type)
+        if target_script is None:
+            return
+        if prop in target_script.symbols:
+            return
+        parents, engine_base = self.base_chain(target_script)
+        for parent in parents:
+            if prop in parent.symbols:
+                return
+        if engine_base and (self.engine.has_member(engine_base, prop)
+                            or self.engine.find_method(engine_base, prop)):
+            return
+        if prop in DYNAMIC_MEMBERS:
+            return
+        self.error(info.path, prop_tok, "UNKNOWN_MEMBER",
+                   f'{target_script.path.name} has no property "{prop}".')
+
     def check_args(self, info: ScriptInfo, tok, sig: Sig, args: list, label: str) -> None:
         n = len(args)
         if sig.maximum is not None and n > sig.maximum:
@@ -1047,6 +1173,25 @@ class Analyzer:
             return
         self.error(info.path, node, "UNDECLARED", f'Identifier "{name}" not declared in the current scope.')
 
+
+# Propriedades do Godot 3 que sumiram no Godot 4 (leitura gera erro em runtime).
+GODOT4_RENAMES = {
+    "receive_shadow": "BaseMaterial3D.disable_receive_shadows (falso por padrao)",
+    "receive_shadows": "BaseMaterial3D.disable_receive_shadows (falso por padrao)",
+    "flags_receive_shadow": "BaseMaterial3D.disable_receive_shadows",
+    "shadow_casting_setting": "cast_shadow (GeometryInstance3D)",
+    "use_in_baked_light": "GeometryInstance3D.gi_mode",
+    "lightmap_mode": "GeometryInstance3D.gi_mode",
+    "set_as_toplevel": "Node3D.top_level",
+    "translation": "Node3D.position",
+    "visible_in_tree": "Node3D.is_visible_in_tree()",
+}
+
+
+# Propriedades legitimas fora da lista documentada (dinamicas por natureza).
+DYNAMIC_MEMBERS = {
+    "callable_mp", "scene_file_path", "owner", "multiplayer", "data",
+}
 
 VIRTUALS = {
     "_init", "_ready", "_process", "_physics_process", "_input", "_unhandled_input",

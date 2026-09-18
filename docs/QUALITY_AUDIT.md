@@ -68,6 +68,42 @@ Resultado atual: `python3 tools/check_gdscript.py` → 0 problema(s),
 `python3 tools/validate_project.py` → PRE-FLIGHT OK e
 `python3 tools/audit_balance.py` → curva consistente.
 
+## Correção do erro de sombra (`receive_shadow`) no Godot 4 (18/09/2026)
+
+O erro reportado ao rodar o jogo — `Invalid assignment of property or key
+'receive_shadow' with value of type 'bool' on a base object of type
+'MeshInstance3D'` — era um resquício da API do Godot 3. A propriedade não existe
+em nenhuma classe do Godot 4.7.2 (conferido nos XMLs oficiais de `doc/classes`):
+por instância só existe `GeometryInstance3D.cast_shadow`, e quem controla o
+recebimento de sombra é o material (`BaseMaterial3D.disable_receive_shadows`,
+`false` por padrão).
+
+- `scripts/runner_character.gd` — removidas as atribuições inválidas em
+  `_split_regions()` (linha 204), no rebind de roupas de `_attach_outfit()`
+  (284), em `_creator_mesh()` (492) e no laço de `_configure_mesh_shadows()`
+  (622); todas ficavam logo depois de `cast_shadow = SHADOW_CASTING_SETTING_ON`.
+- `scripts/world_animal.gd` — mesma remoção em `_mesh()` (linha 90).
+- O resultado visual é o mesmo: no Godot 4 a malha recebe sombra por padrão
+  (nenhum material do projeto usa `disable_receive_shadows`) e a projeção de
+  sombra continua garantida por `cast_shadow`.
+- `tools/check_gdscript.py` ganhou a checagem `UNKNOWN_MEMBER`: propriedades
+  inexistentes em receptores de tipo conhecido passam a ser detectadas sem abrir
+  o editor, com dica para nomes do Godot 3 (`receive_shadow` →
+  `disable_receive_shadows`, `translation` → `position`, `lightmap_mode` →
+  `gi_mode`, `set_as_toplevel` → `top_level`, ...). Para isso o analisador
+  também passou a inferir o tipo de construtores (`var x := Classe.new()`), de
+  casts (`x as T`) e de laços sobre `Array[T]` (`for mesh in _skinned_meshes(n)`),
+  que é exatamente o caso do laço de sombras.
+
+Resultado atual: `python3 tools/check_gdscript.py` → 0 problema(s),
+`python3 tools/validate_project.py` → PRE-FLIGHT OK e
+`python3 tools/audit_balance.py` → mesma curva (piso R$ 5425, 2200 moedas,
+metas 20=45 e 50=120). Os 14 scripts continuam com sintaxe válida no parser do
+gdtoolkit. Contra o estado anterior do projeto (`git archive` do commit
+`c6e7d8b`) o verificador acusa exatamente os 25 defeitos já corrigidos mais os
+5 `receive_shadow`, sem nenhum falso positivo; um arquivo de teste com
+`if mesh.receive_shadow:` é detectado pela checagem de leitura.
+
 ## Limitações conhecidas / validação ainda obrigatória
 
 - Não há binário Godot 4.x disponível no sandbox para executar `godot --headless --editor --quit --path .`; a checagem possível aqui é estática (`tools/check_gdscript.py`, que reproduz as classes de erro do analisador) e a confirmação final de importação GLTF/GLB, retarget da AnimationLibrary, renderização e warnings restantes precisa ser feita em uma máquina com Godot 4.x.

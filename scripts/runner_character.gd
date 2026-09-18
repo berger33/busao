@@ -201,7 +201,6 @@ func _split_base_body() -> void:
         # default parent-skeleton behavior.
         region_mesh.skeleton = region_mesh.get_path_to(skeleton)
         region_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-        region_mesh.receive_shadow = true
     body_mesh.visible = false
 
 func _split_regions(body_mesh: MeshInstance3D) -> Dictionary:
@@ -281,7 +280,6 @@ func _attach_outfit(body_gender: String) -> void:
             # Rebind each garment to the live body skeleton after instancing.
             worn.skeleton = worn.get_path_to(skeleton)
             worn.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-            worn.receive_shadow = true
             _tint_exposed_skin_materials(worn)
         outfit_root.free()
 
@@ -489,7 +487,6 @@ func _creator_mesh(parent: Node3D, node_name: String, mesh: Mesh, material: Mate
     instance.mesh = mesh
     instance.material_override = material
     instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-    instance.receive_shadow = true
     parent.add_child(instance)
     return instance
 
@@ -617,9 +614,10 @@ func set_motion(run_phase: float, is_running: bool, is_crouching: bool, jump_hei
         model_root.rotation.z = lerpf(model_root.rotation.z, -model_lean, 0.16)
 
 func _configure_mesh_shadows(node: Node) -> void:
+    # No Godot 4 existem apenas "cast_shadow" por instancia; o recebimento e dado
+    # pelo material (BaseMaterial3D.disable_receive_shadows, falso por padrao).
     for mesh in _skinned_meshes(node):
         mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-        mesh.receive_shadow = true
 
 func _build_fallback(reason: String) -> void:
     push_warning("Humanoide Quaternius indisponível (%s); ativando fallback de diagnóstico." % reason)
