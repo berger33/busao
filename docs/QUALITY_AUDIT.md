@@ -95,6 +95,16 @@ recebimento de sombra é o material (`BaseMaterial3D.disable_receive_shadows`,
   casts (`x as T`) e de laços sobre `Array[T]` (`for mesh in _skinned_meshes(n)`),
   que é exatamente o caso do laço de sombras.
 
+- Varredura complementar de API: todas as chamadas de engine/singleton usadas
+  pelos scripts (`Input`, `Time`, `OS`, `DisplayServer`, `RenderingServer`,
+  `Engine`, `ProjectSettings`, `ResourceLoader`, `AudioServer`, `FileAccess`,
+  `DirAccess`, `JSON`, `SceneTree`, `RandomNumberGenerator`) foram conferidas
+  contra os XMLs do Godot 4.7.2 — nenhuma função removida no Godot 4 continua no
+  código, e não há `File.new()`, `Directory.new()`, `.instance()`,
+  `change_scene()`, `interpolate_property()`, `yield()`, `set_as_toplevel()` nem
+  conexões de sinal apontando para métodos inexistentes.
+- Atribuições compostas (`mesh.receive_shadow += 1`) também entram na checagem.
+
 Resultado atual: `python3 tools/check_gdscript.py` → 0 problema(s),
 `python3 tools/validate_project.py` → PRE-FLIGHT OK e
 `python3 tools/audit_balance.py` → mesma curva (piso R$ 5425, 2200 moedas,

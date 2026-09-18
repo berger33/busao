@@ -1053,8 +1053,10 @@ class Analyzer:
                 return
             if prop.startswith("_") or prop in DYNAMIC_MEMBERS:
                 return
+            hint = GODOT4_RENAMES.get(prop, "")
+            extra = f' No Godot 4 use {hint}.' if hint else ""
             self.error(info.path, prop_tok, "UNKNOWN_MEMBER",
-                       f'{owner_type} has no property "{prop}".')
+                       f'{owner_type} has no property "{prop}".{extra}')
             return
         target_script = self.script_of(info, owner_type)
         if target_script is None:
