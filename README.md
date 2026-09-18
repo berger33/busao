@@ -46,6 +46,7 @@ scripts/runner_character.gd  Instância GLTF skinned, roupa modular, rig e clips
 scripts/world_character.gd   Adaptador de pedestres humanos 3D para obstáculos
 scripts/world_animal.gd      Cachorro caramelo 3D articulado e animado
 scripts/obstacle_data.gd     Contrato dos 13 obstáculos e adapters 3D
+scripts/shop_data.gd         Catálogo autoritativo de preços e itens
 scripts/game.gd              Implementação vetorial 2D histórica mantida como referência
 scripts/phase_data.gd        Dados das 50 fases e curva de dificuldade
 scripts/save_data.gd         Save local/progressão
@@ -57,7 +58,8 @@ assets/textures/*.png       Asfalto, calçada, panoramas de céu, fibras de cabe
 assets/characters/quaternius/  Corpo humano GLTF, roupa skinned, PBR, licença e AnimationLibrary CC0
 assets/audio/*.wav           SFX e músicas procedurais originais
 tools/generate_audio.py    Gerador reproduzível dos WAVs
-tools/validate_project.py  Preflight de catálogo, caminhos e assets
+tools/validate_project.py  Preflight de catálogo, caminhos, economia e assets
+tools/audit_balance.py     Simulação determinística de curva, metas e densidade
 docs/QUALITY_AUDIT.md      Auditoria e roadmap de qualidade visual/técnica
 docs/PRODUCT_AUDIT.md      Auditoria de produto, economia, retenção e métricas
 CREDITS.md                 Créditos e licenças
@@ -89,9 +91,11 @@ O catálogo continua oferecendo dez identidades e progressão de loja, mas a rep
 2. Abra o Project Manager → **Import** → selecione a pasta que contém este `project.godot`.
 3. Se o Godot perguntar pelo renderer, escolha **Compatibility / GL Compatibility**.
 4. Pressione **F6** para a cena atual ou **F5** para o projeto. A cena principal já é `scenes/main.tscn`.
-5. O jogo abre em retrato, viewport lógico de 720×1280, na cena `Node3D` `CorreProPonto3D`. No desktop, use `A/D` ou setas para mudar entre rua e calçadas, `W/↑/Espaço` para pular, `S/↓` para deslizar, `X` para dash e `M` para ligar/desligar o som. No Android, use os gestos indicados na HUD; o botão de som permanece disponível no menu.
+5. O jogo abre em retrato, viewport lógico de 720×1280, na cena `Node3D` `CorreProPonto3D`. No desktop, use `A/D` ou setas para mudar entre rua e calçadas, `W/↑/Espaço` para pular, `S/↓` para deslizar, `X` para dash e `M` para ligar/desligar o som. No Android, use os gestos indicados na HUD; o menu também oferece movimento reduzido e alto contraste, além do botão de som.
 
 O projeto não precisa de plugins, fontes, conexão de internet, banco de dados ou assets baixados. O save é criado automaticamente em `user://`; para reiniciar o progresso, apague `corre_pro_ponto.json`, `corre_pro_ponto.bak.json` e `corre_pro_ponto.tmp.json` na pasta de dados do usuário do Godot.
+
+Antes de abrir um PR de balanceamento, rode `python3 tools/validate_project.py` e `python3 tools/audit_balance.py`. O primeiro valida contratos e integridade estrutural; o segundo confirma que as metas de moedas são alcançáveis e que a rua permanece mais densa que as calçadas. Ambos são barreiras rápidas, não substitutos para playtest.
 
 ## Android 8.0+
 

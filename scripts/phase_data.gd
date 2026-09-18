@@ -134,7 +134,9 @@ static func get_phase(index: int) -> Dictionary:
         "wait": wait_time,
         "difficulty": difficulty,
         "distance": 400.0 + i * 8.0,
-        "coin_target": 5 + int(round(float(i) * 1.2)),
+        # A meta de moedas fica em cerca de 70–78% das moedas da pista:
+        # exige leitura e rota, mas nunca depende de uma coleta perfeita.
+        "coin_target": 4 + int(round(float(i) * 0.85)),
         "music_group": int(i / 5) % 4
     }
 

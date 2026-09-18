@@ -44,7 +44,8 @@ func show_feedback(title: String, detail: String, color: Color) -> void:
     feedback_detail = detail
     feedback_color = color
     feedback_time = 1.05
-    feedback_flash = maxf(feedback_flash, 0.055)
+    if not bool(state.get("reduced_motion", false)):
+        feedback_flash = maxf(feedback_flash, 0.055)
     queue_redraw()
 
 func set_feedback_time(time_left: float, flash: float) -> void:
@@ -78,6 +79,8 @@ func _draw_menu() -> void:
     _text(Vector2(444, 99), "● 3D", 15, CYAN)
     _text(Vector2(542, 99), "50 FASES", 14, WHITE)
     _button(Rect2(510, 132, 156, 46), "SOM: OFF" if AudioManager.muted else "SOM: ON", Color("#263958"), 13)
+    _button(Rect2(420, 190, 118, 38), "MOV: OFF" if bool(state.get("reduced_motion", false)) else "MOV: ON", Color("#263958"), 11)
+    _button(Rect2(544, 190, 122, 38), "CONTRASTE" if bool(state.get("high_contrast", false)) else "VISUAL", Color("#263958"), 10)
     _panel(Rect2(70, 564, 580, 104), Color("#f1b72f"), 22)
     draw_rect(Rect2(90, 574, 540, 4), Color(1, 1, 1, 0.35))
     _text_center(Vector2(360, 614), "CORRER AGORA", 30, INK)
@@ -221,6 +224,13 @@ func _draw_results() -> void:
         var breakdown: Dictionary = result_data.get("reward_breakdown", {})
         if not breakdown.is_empty():
             _text_center(Vector2(360, 708), "base %d • fase %d • estrelas %d • perfeito %d" % [int(breakdown.get("base", 0)), int(breakdown.get("level", 0)), int(breakdown.get("stars", 0)), int(breakdown.get("perfect", 0))], 11, Color("#a9b9ca"))
+        if not bool(result_data.get("endless", false)):
+            var next_unlock := int(state.get("next_unlock_stars", 0))
+            var stars_now := int(state.get("stars", 0))
+            var star_progress := "★ %d acumuladas • catálogo liberado" % stars_now
+            if next_unlock > 0:
+                star_progress = "★ %d acumuladas • próximo marco ★ %d" % [stars_now, next_unlock]
+            _text_center(Vector2(360, 738), star_progress, 13, CYAN)
     else:
         _text_center(Vector2(360, 180), "O BUSÃO FOI EMBORA", 34, RED)
         _text_center(Vector2(360, 220), "Use rua e calçada como rotas diferentes.", 18, WHITE)
@@ -264,6 +274,7 @@ func _character_card(rect: Rect2, character: Dictionary) -> void:
     _text(rect.position + Vector2(78, 30), str(character.get("name", "Corredor")), 16, WHITE)
     _text(rect.position + Vector2(78, 53), str(character.get("role", "brasileiro")), 12, accent)
     _text(rect.position + Vector2(16, 91), str(character.get("description", "")), 11, MUTED)
+    _text(rect.position + Vector2(16, 111), "efeito: " + str(character.get("effect", "equilíbrio")), 10, CYAN)
     var price: int = int(character.get("price", 0))
     var action: String = "EQUIPADO" if equipped else ("USAR" if owned else "R$ %d" % price)
     _button(Rect2(rect.end.x - 112, rect.position.y + 78, 96, 34), action, GREEN if owned else accent, 11)
@@ -285,7 +296,9 @@ func _item_card(rect: Rect2, item: Dictionary) -> void:
     _panel(rect, Color("#2a4663") if owned else Color("#223655"), 15)
     _text(rect.position + Vector2(22, 42), title, 21, WHITE)
     _text(rect.position + Vector2(22, 70), subtitle, 15, MUTED)
-    _text(rect.position + Vector2(22, 105), "efeito aplicado na próxima corrida" if owned else "compra única • sem aleatoriedade", 11, CYAN if owned else MUTED)
+    var cosmetic := bool(item.get("cosmetic", false))
+    var item_note := "cosmético • sem vantagem" if cosmetic else "efeito aplicado na próxima corrida"
+    _text(rect.position + Vector2(22, 105), item_note if owned else "compra única • sem aleatoriedade", 11, CYAN if owned else MUTED)
     _button(Rect2(rect.end.x - 126, rect.position.y + 42, 105, 52), "ADQUIRIDO" if owned else "R$ %d" % price, GREEN if owned else color, 13)
 
 func _draw_achievements() -> void:
@@ -420,11 +433,14 @@ func _make_box(color: Color, radius: float) -> StyleBoxFlat:
     box.corner_radius_top_right = int(radius)
     box.corner_radius_bottom_left = int(radius)
     box.corner_radius_bottom_right = int(radius)
-    box.border_width_left = 1
-    box.border_width_top = 1
-    box.border_width_right = 1
-    box.border_width_bottom = 1
-    box.border_color = Color(1, 1, 1, 0.10)
+    var high_contrast := bool(state.get("high_contrast", false))
+    var border_width := 2 if high_contrast else 1
+    var border_alpha := 0.34 if high_contrast else 0.10
+    box.border_width_left = border_width
+    box.border_width_top = border_width
+    box.border_width_right = border_width
+    box.border_width_bottom = border_width
+    box.border_color = Color(1, 1, 1, border_alpha)
     return box
 
 func _text(pos: Vector2, value: String, size: int, color: Color) -> void:

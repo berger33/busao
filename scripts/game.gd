@@ -346,7 +346,7 @@ func _start_run(index: int) -> void:
     distance = 0.0
     run_total = float(phase["distance"])
     player_lane = 1
-    max_hearts = 1 if phase_index in [19, 49] else 3
+    max_hearts = 3
     hearts = max_hearts
     collected_coins = 0
     run_coins_value = 0
@@ -368,8 +368,7 @@ func _start_run(index: int) -> void:
     shield_hits = 0
     var equipped := GameSave.equipped_character()
     if equipped == "motoboy":
-        max_hearts = 1
-        hearts = 1
+        speed_boost_timer = 9999.0
     elif equipped == "maria":
         shield_hits = 1
     elif equipped == "chefe":
@@ -410,7 +409,7 @@ func _start_endless() -> void:
     if not GameSave.data.get("endless_unlocked", false):
         _show_toast("Termine a Maratona final para abrir o Endless.")
         return
-    _start_run(48)
+    _start_run(BALANCE.endless_unlock_phase)
     endless_mode = true
     run_total = 1000.0
     phase["name"] = "ENDLESS"
@@ -787,7 +786,7 @@ func _collect(kind: String) -> void:
                 shield_hits = maxi(shield_hits, 1)
                 _show_toast("Trevo do Zé: hoje vai dar bom!")
             "golden":
-                if GameSave.unlock("caramelo", 0):
+                if GameSave.unlock_pet("caramelo"):
                     _feedback("SKIN LIBERADA", "Cachorro Caramelo entrou no time", GOLD, "streak", reward_position, 0.35, 0.1)
                 _show_toast("Bilhete dourado! Skin Caramelo liberada!")
         _floating_feedback("+EFEITO", reward_position + Vector2(0, -105), GOLD, 14)
@@ -1178,8 +1177,8 @@ func _draw_shop() -> void:
         _draw_item_card(Rect2(375, 250, 315, 150), "mochila", "Mochila", "escudo extra", 180, Color("#f4b84e"))
         _draw_item_card(Rect2(30, 425, 315, 150), "fone", "Fone", "ímã de moedas", 220, Color("#9b77e8"))
         _draw_item_card(Rect2(375, 425, 315, 150), "cafe", "Café térmico", "slow-motion", 150, Color("#c68053"))
-        _draw_item_card(Rect2(30, 600, 315, 150), "confete", "Kit confete", "só estilo", 120, Color("#ef5d9b"))
-        _draw_item_card(Rect2(375, 600, 315, 150), "placa", "Placa VIP", "atalho visual", 300, Color("#6aa9de"))
+        _draw_item_card(Rect2(30, 600, 315, 150), "confete", "Kit confete", "efeito visual", 120, Color("#ef5d9b"))
+        _draw_item_card(Rect2(375, 600, 315, 150), "placa", "Placa VIP", "placa decorativa", 300, Color("#6aa9de"))
         _panel(Rect2(30, 800, 660, 250), Color("#1c2d49"), 18)
         _text(Vector2(58, 850), "BILHETE DOURADO", 23, YELLOW)
         _text(Vector2(58, 886), "coletado nas pistas, desbloqueia a skin Caramelo", 16, MUTED)
@@ -1329,9 +1328,8 @@ func _claim_daily(index: int) -> void:
         _show_toast("Complete a missão antes de resgatar.")
         return
     completed.append(index)
-    GameSave.set_daily_completed(completed, key)
     var reward := 25 + index * 10
-    GameSave.add_coins(reward)
+    GameSave.set_daily_completed(completed, key, reward)
     _feedback("RECOMPENSA!", "+R$ %d • desafio concluído" % reward, GOLD, "reward", Vector2(360, 650), 0.35, 0.08)
     _spawn_confetti(18)
     _show_toast("Desafio completo! Recompensa recebida.")

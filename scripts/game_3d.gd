@@ -11,6 +11,7 @@ extends Node3D
 const BALANCE = preload("res://resources/game_balance.tres")
 const SCENARIO_DATA = preload("res://scripts/scenario_data.gd")
 const CHARACTER_DATA = preload("res://scripts/character_data.gd")
+const SHOP_DATA = preload("res://scripts/shop_data.gd")
 const OBSTACLE_DATA = preload("res://scripts/obstacle_data.gd")
 const RUNNER_CHARACTER_SCRIPT = preload("res://scripts/runner_character.gd")
 const WORLD_CHARACTER_SCRIPT = preload("res://scripts/world_character.gd")
@@ -118,6 +119,7 @@ var stop_wait_total := 0.0
 var wall_run_count := 0
 var dog_chase_timer := 0.0
 var tutorial_hint := ""
+var tutorial_stage := -1
 var result: Dictionary = {}
 var pulse := 0.0
 var run_phase := 0.0
@@ -146,11 +148,14 @@ var ambient_fx_root: Node3D
 var ambient_fx_nodes: Array[Dictionary] = []
 var entities: Array[Dictionary] = []
 var fx_nodes: Array[Dictionary] = []
+var primitive_mesh_cache: Dictionary = {}
 var rng := RandomNumberGenerator.new()
 var fx_rng := RandomNumberGenerator.new()
 var touch_start := Vector2.ZERO
 var touch_started_at := 0
 var pointer_active := false
+var hud_sync_timer := 0.0
+var performance_sample_timer := 0.0
 
 var feedback_title := ""
 var feedback_detail := ""
@@ -178,6 +183,12 @@ func _ready() -> void:
         _show_feedback("CORRE PRO PONTO 3D", "Rua à esquerda • calçadas à direita", YELLOW, "ui_confirm")
     _sync_hud()
 
+func _notification(what: int) -> void:
+    if what in [NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT]:
+        if screen == 2 and run_mode == "playing":
+            run_mode = "paused"
+            _show_feedback("PAUSA AUTOMÁTICA", "O corre ficou seguro", CYAN, "ui_back")
+
 func _phase_speed_for(index: int) -> float:
     var safe_index := clampi(index, 0, BALANCE.phase_count - 1)
     if safe_index <= BALANCE.chapter_unlock_phase:
@@ -195,6 +206,7 @@ func _process(delta: float) -> void:
     var dt: float = minf(delta, 0.05)
     pulse += dt
     _update_feedback(dt)
+    _sample_performance(dt)
     _update_fx(dt)
     _update_sky_fx(dt)
     _update_ambient_fx(dt)
@@ -203,7 +215,29 @@ func _process(delta: float) -> void:
         _update_run(dt)
     _update_player(dt)
     _update_camera(dt)
-    _sync_hud()
+    hud_sync_timer -= dt
+    if hud_sync_timer <= 0.0:
+        _sync_hud()
+        # A corrida precisa de leitura fluida, mas reconstruir todo o estado
+        # textual a cada frame desperdiça CPU no Android. 30 Hz é suficiente
+        # para distância, corações e progresso; telas paradas usam 10 Hz.
+        hud_sync_timer = 0.033 if screen == 2 else 0.10
+
+func _sample_performance(dt: float) -> void:
+    if screen != 2:
+        performance_sample_timer = 0.0
+        return
+    performance_sample_timer += dt
+    if performance_sample_timer < 1.0:
+        return
+    performance_sample_timer = 0.0
+    var fps := Engine.get_frames_per_second()
+    if fps >= 58:
+        GameSave.record_event("fps_60_plus")
+    elif fps >= 45:
+        GameSave.record_event("fps_45_59")
+    else:
+        GameSave.record_event("fps_below_45")
 
 func _validate_obstacle_catalog() -> void:
     for item in OBSTACLE_DATA.all():
@@ -347,7 +381,9 @@ func _start_run(index: int) -> void:
     player_lane = SIDEWALK_CENTER
     player_x = LANE_X[player_lane]
     player_speed = _phase_speed_for(phase_index)
-    hearts = 1 if phase_index in [BALANCE.chapter_unlock_phase, BALANCE.endless_unlock_phase] else 3
+    # As fases-gate aumentam a leitura, não a punição: a reserva de três
+    # corações permanece estável para que a dificuldade venha da pista.
+    hearts = 3
     GameSave.record_phase_attempt()
     max_hearts = hearts
     collected_coins = 0
@@ -360,6 +396,7 @@ func _start_run(index: int) -> void:
     slide_timer = 0.0
     dash_timer = 0.0
     dash_cooldown = 0.0
+    jump_duration = 0.9
     shield_hits = 0
     speed_boost_timer = 0.0
     slow_motion_timer = 0.0
@@ -369,14 +406,15 @@ func _start_run(index: int) -> void:
     stop_wait_total = 0.0
     wall_run_count = 0
     dog_chase_timer = 0.0
+    tutorial_stage = -1
+    performance_sample_timer = 0.0
     step_timer = 0.0
     motion_speed = 0.0
     lane_change_velocity = 0.0
     course_root.position.z = 0.0
     var equipped: String = CHARACTER_DATA.canonical_id(GameSave.equipped_character())
     if equipped == "motoboy":
-        hearts = 1
-        max_hearts = 1
+        speed_boost_timer = 9999.0
     elif equipped == "maria":
         shield_hits = 1
     elif equipped == "carlos":
@@ -405,17 +443,13 @@ func _start_run(index: int) -> void:
     _build_course()
     tutorial_hint = ""
     AudioManager.play_music(int(phase["music_group"]))
-    if phase_index == 0 and not GameSave.data.get("tutorial_seen", false):
-        tutorial_hint = "DESLIZE para trocar de faixa • toque para dash"
-        GameSave.data["tutorial_seen"] = true
-        GameSave.save()
     _show_feedback("FAIXAS: RUA + CALÇADAS", str(phase["name"]), phase["accent"], "ui_confirm")
 
 func _start_endless() -> void:
     if not GameSave.data.get("endless_unlocked", false):
         _show_feedback("ENDLESS BLOQUEADO", "Termine a Tela 50", RED, "ui_back")
         return
-    _start_run(48)
+    _start_run(BALANCE.endless_unlock_phase)
     endless_mode = true
     run_total = 1000.0
     phase["name"] = "ENDLESS"
@@ -445,8 +479,10 @@ func _build_course() -> void:
     _rebuild_ambient_fx()
     var total: float = run_total
     var obstacle_count: int = int(phase.get("obstacles", 6))
-    # A rua recebe deliberadamente quase o dobro de ameaças da calçada.
-    var road_interval: float = clampf(100.0 / maxf(3.0, float(obstacle_count)), 5.5, 12.0)
+    # `obstacles` é uma intensidade de design, não uma contagem literal.
+    # A curva começa espaçada para ensinar rota e chega a intervalos curtos
+    # apenas no fim; a rua continua deliberadamente mais densa.
+    var road_interval: float = clampf(26.0 - float(obstacle_count), 6.0, 24.0)
     var sidewalk_interval: float = maxf(15.0, road_interval * 2.1)
     var road_distance: float = 24.0
     var road_index := 0
@@ -507,9 +543,9 @@ func _spawn_forced_gags(total: float) -> void:
     if phase_index >= 20:
         forced = [
             ["bus_traffic", "pix", "motorcycle", "hydrant", "dog"],
-            ["car", "water_gun", "dog", "payphone", "bus_traffic"],
+            ["car", "umbrella", "dog", "payphone", "bus_traffic"],
             ["motorcycle", "bicycle", "pothole", "vendor", "dog"],
-            ["truck", "car", "dog", "water_gun", "motorcycle"],
+            ["truck", "car", "dog", "umbrella", "motorcycle"],
             ["bus_traffic", "pothole", "vendor", "truck", "dog"],
             ["car", "payphone", "motorcycle", "hydrant", "truck"]
         ][mini(5, int((phase_index - 20) / 5))]
@@ -583,6 +619,30 @@ func _animate_traffic(node: Node3D, speed: float, dt: float) -> void:
     var body_bob: float = sin(pulse * 4.0 + node.position.z * 0.14) * 0.006
     node.position.y = body_bob
 
+func _update_tutorial_hint() -> void:
+    if phase_index != 0 or bool(GameSave.data.get("tutorial_seen", false)):
+        tutorial_hint = ""
+        return
+    var next_stage := 0
+    var next_hint := "DESLIZE ← → para trocar de faixa"
+    if distance >= 18.0 and distance < 40.0:
+        next_stage = 1
+        next_hint = "TOQUE rápido para usar o DASH"
+    elif distance >= 40.0 and distance < BALANCE.first_session_hint_distance:
+        next_stage = 2
+        next_hint = "↑ pula • ↓ desliza • escolha sua rota"
+    elif distance >= BALANCE.first_session_hint_distance:
+        next_stage = 3
+        next_hint = "Boa leitura. Agora corra do seu jeito."
+    if next_stage != tutorial_stage:
+        tutorial_stage = next_stage
+        GameSave.record_event("tutorial_step")
+    tutorial_hint = next_hint
+    if tutorial_stage >= 3:
+        GameSave.data["tutorial_seen"] = true
+        GameSave.flush()
+        tutorial_hint = ""
+
 func _update_run(dt: float) -> void:
     if run_mode == "paused":
         return
@@ -615,6 +675,7 @@ func _update_run(dt: float) -> void:
     if dash_timer > 0.0:
         speed *= 2.0
     distance += speed * dt
+    _update_tutorial_hint()
     motion_speed = lerpf(motion_speed, speed, minf(1.0, dt * 7.0))
     course_root.position.z = distance
     step_timer -= dt
@@ -723,6 +784,7 @@ func _collect(kind: String, pos: Vector3) -> void:
 func _hit_player(kind: String) -> void:
     if dash_timer > 0.0:
         return
+    GameSave.record_event("hit_" + kind)
     if shield_hits > 0:
         shield_hits -= 1
         _show_feedback("ESCUDO!", "Impacto absorvido", CYAN, "hit")
@@ -749,6 +811,7 @@ func _change_lane(direction: int) -> void:
     player_lane = clampi(player_lane + direction, ROAD_LANE, SIDEWALK_RIGHT)
     if old_lane != player_lane:
         lane_change_velocity = float(direction) * 1.0
+        GameSave.record_event("lane_change")
         _show_feedback("FAIXA %s" % ["RUA", "CALÇADA", "CALÇADA"][player_lane], "Leitura perfeita", BLUE, "whoosh")
 
 func _jump() -> void:
@@ -759,6 +822,7 @@ func _jump() -> void:
     else:
         jump_duration = 0.9
     jump_timer = jump_duration
+    GameSave.record_event("jump")
     _show_feedback("PULO!", "Rota aérea", CYAN, "jump")
     _spawn_3d_burst(player_root.position + Vector3(0, 0.1, 0), CYAN, 7)
 
@@ -766,6 +830,7 @@ func _slide() -> void:
     if screen != 2 or run_mode != "playing" or jump_timer > 0.0:
         return
     slide_timer = 0.72
+    GameSave.record_event("slide")
     _show_feedback("DESLIZE!", "Passou por baixo", VIOLET, "slide")
 
 func _dash() -> void:
@@ -773,6 +838,7 @@ func _dash() -> void:
         return
     dash_timer = 0.42
     dash_cooldown = 3.2
+    GameSave.record_event("dash")
     camera_shake = 0.18
     _show_feedback("DASH!", "Invencível por um instante", YELLOW, "whoosh")
     _spawn_3d_burst(player_root.position + Vector3(0, 1.0, 0), YELLOW, 18)
@@ -788,6 +854,7 @@ func _finish_run(success: bool, game_over := false) -> void:
     GameSave.record_daily_progress(date_key, int(distance), collected_coins, success and no_damage)
     GameSave.record_weekly_progress(GameSave.weekly_key(), int(distance), collected_coins, success and no_damage)
     if endless_mode:
+        GameSave.record_endless_result(success, elapsed, int(distance))
         if success:
             var old_best: int = int(GameSave.data.get("endless_best", 0))
             var is_record: bool = int(distance) > old_best
@@ -885,6 +952,9 @@ func _finish_run(success: bool, game_over := false) -> void:
         }
         _show_feedback("PEGUEI O BUSÃO!", "%d estrelas • +R$ %d de bônus" % [stars, reward], YELLOW, "streak")
         _spawn_3d_burst(Vector3(player_x, 1.4, -8.0), YELLOW, 28)
+        if GameSave.owns("confete"):
+            _spawn_3d_burst(Vector3(player_x, 1.8, -8.0), RED, 10)
+            _spawn_3d_burst(Vector3(player_x, 1.8, -8.0), CYAN, 10)
     else:
         result = {
             "success": false,
@@ -951,15 +1021,18 @@ func _update_player(dt: float) -> void:
 func _update_camera(dt: float) -> void:
     if camera == null:
         return
+    var reduced_motion := bool(GameSave.data.get("reduced_motion", false))
     var shake_offset := Vector3.ZERO
-    if camera_shake > 0.0:
+    if not reduced_motion and camera_shake > 0.0:
         shake_offset = Vector3(fx_rng.randf_range(-camera_shake, camera_shake), fx_rng.randf_range(-camera_shake, camera_shake), 0.0)
         camera_shake = maxf(0.0, camera_shake - dt * 6.0)
-    var camera_bob: float = sin(run_phase * 1.6) * 0.035 if screen == 2 and run_mode == "playing" else 0.0
+    elif reduced_motion:
+        camera_shake = 0.0
+    var camera_bob: float = sin(run_phase * 1.6) * 0.035 if not reduced_motion and screen == 2 and run_mode == "playing" else 0.0
     var target := Vector3(player_x * 0.18, 1.15 + player_visual.position.y * 0.16, -14.0)
     var desired := Vector3(player_x * 0.15, 4.85 + camera_bob, 9.4 + sin(run_phase * 0.8) * 0.04) + shake_offset
     camera.position = camera.position.lerp(desired, minf(1.0, dt * 5.0))
-    var desired_fov: float = 64.0 + clampf(motion_speed * 0.34, 0.0, 5.0) + (4.0 if dash_timer > 0.0 else 0.0)
+    var desired_fov: float = 64.0 if reduced_motion else 64.0 + clampf(motion_speed * 0.34, 0.0, 5.0) + (4.0 if dash_timer > 0.0 else 0.0)
     camera.fov = lerpf(camera.fov, desired_fov, minf(1.0, dt * 4.0))
     camera.look_at(target, Vector3.UP)
 
@@ -1141,7 +1214,8 @@ func _show_feedback(title: String, detail: String, color: Color, sound: String) 
     feedback_detail = detail
     feedback_color = color
     feedback_timer = 1.05
-    flash_alpha = maxf(flash_alpha, 0.055)
+    if not bool(GameSave.data.get("reduced_motion", false)):
+        flash_alpha = maxf(flash_alpha, 0.055)
     if sound != "":
         AudioManager.play_sfx(sound)
     if hud:
@@ -1154,6 +1228,8 @@ func _update_feedback(dt: float) -> void:
         hud.call("set_feedback_time", feedback_timer, flash_alpha)
 
 func _spawn_3d_burst(pos: Vector3, color: Color, amount: int) -> void:
+    if bool(GameSave.data.get("reduced_motion", false)):
+        return
     var material := _material(color, 0.0, 0.34)
     material.emission_enabled = true
     material.emission = color
@@ -1513,6 +1589,8 @@ func _create_bus_stop(total: float) -> void:
     bus_stop_node.position = Vector3(3.25, 0.0, -total - 14.0)
     decor_root.add_child(bus_stop_node)
     var stop_accent: Color = _scenario_color("accent", Color("#e8c45b"))
+    if GameSave.owns("placa"):
+        stop_accent = Color("#63c8ed")
     _box(bus_stop_node, Vector3(2.5, 0.12, 0.12), Vector3(0.0, 2.95, 0.0), _material(stop_accent, 0.0, 0.7), "StopRoof")
     _box(bus_stop_node, Vector3(0.08, 3.0, 0.08), Vector3(-1.05, 1.45, 0.0), _material(Color("#c8d4d1"), 0.0, 0.55), "StopPole")
     _box(bus_stop_node, Vector3(1.65, 1.05, 0.08), Vector3(0.0, 1.25, 0.08), _material(Color("#5b7790"), 0.0, 0.48), "StopGlass")
@@ -1813,53 +1891,77 @@ func _wheels(parent: Node3D, material: Material, x_offset: float, z_offset: floa
 func _box(parent: Node3D, size: Vector3, pos: Vector3, material: Material, node_name: String) -> MeshInstance3D:
     var node := MeshInstance3D.new()
     node.name = node_name
-    var mesh := BoxMesh.new()
-    mesh.size = size
+    var key := "box:%0.3f:%0.3f:%0.3f" % [size.x, size.y, size.z]
+    var mesh := primitive_mesh_cache.get(key) as BoxMesh
+    if mesh == null:
+        mesh = BoxMesh.new()
+        mesh.size = size
+        primitive_mesh_cache[key] = mesh
     node.mesh = mesh
     node.material_override = material
     node.position = pos
+    if parent == decor_root:
+        node.visibility_range_end = 96.0
     parent.add_child(node)
     return node
 
 func _sphere(parent: Node3D, radius: float, pos: Vector3, material: Material, node_name: String) -> MeshInstance3D:
     var node := MeshInstance3D.new()
     node.name = node_name
-    var mesh := SphereMesh.new()
-    mesh.radius = radius
-    mesh.height = radius * 2.0
-    mesh.radial_segments = 20
-    mesh.rings = 14
+    var key := "sphere:%0.3f" % radius
+    var mesh := primitive_mesh_cache.get(key) as SphereMesh
+    if mesh == null:
+        mesh = SphereMesh.new()
+        mesh.radius = radius
+        mesh.height = radius * 2.0
+        mesh.radial_segments = 20
+        mesh.rings = 14
+        primitive_mesh_cache[key] = mesh
     node.mesh = mesh
     node.material_override = material
     node.position = pos
+    if parent == decor_root:
+        node.visibility_range_end = 96.0
     parent.add_child(node)
     return node
 
 func _capsule(parent: Node3D, radius: float, height: float, pos: Vector3, material: Material, node_name: String) -> MeshInstance3D:
     var node := MeshInstance3D.new()
     node.name = node_name
-    var mesh := CapsuleMesh.new()
-    mesh.radius = radius
-    mesh.height = height
-    mesh.radial_segments = 16
-    mesh.rings = 8
+    var key := "capsule:%0.3f:%0.3f" % [radius, height]
+    var mesh := primitive_mesh_cache.get(key) as CapsuleMesh
+    if mesh == null:
+        mesh = CapsuleMesh.new()
+        mesh.radius = radius
+        mesh.height = height
+        mesh.radial_segments = 16
+        mesh.rings = 8
+        primitive_mesh_cache[key] = mesh
     node.mesh = mesh
     node.material_override = material
     node.position = pos
+    if parent == decor_root:
+        node.visibility_range_end = 96.0
     parent.add_child(node)
     return node
 
 func _cylinder(parent: Node3D, top_radius: float, bottom_radius: float, height: float, pos: Vector3, material: Material, node_name: String) -> MeshInstance3D:
     var node := MeshInstance3D.new()
     node.name = node_name
-    var mesh := CylinderMesh.new()
-    mesh.top_radius = top_radius
-    mesh.bottom_radius = bottom_radius
-    mesh.height = height
-    mesh.radial_segments = 16
+    var key := "cylinder:%0.3f:%0.3f:%0.3f" % [top_radius, bottom_radius, height]
+    var mesh := primitive_mesh_cache.get(key) as CylinderMesh
+    if mesh == null:
+        mesh = CylinderMesh.new()
+        mesh.top_radius = top_radius
+        mesh.bottom_radius = bottom_radius
+        mesh.height = height
+        mesh.radial_segments = 16
+        primitive_mesh_cache[key] = mesh
     node.mesh = mesh
     node.material_override = material
     node.position = pos
+    if parent == decor_root:
+        node.visibility_range_end = 96.0
     parent.add_child(node)
     return node
 
@@ -1869,14 +1971,20 @@ func _cone(parent: Node3D, radius: float, height: float, pos: Vector3, material:
 func _torus(parent: Node3D, inner_radius: float, outer_radius: float, pos: Vector3, material: Material, node_name: String) -> MeshInstance3D:
     var node := MeshInstance3D.new()
     node.name = node_name
-    var mesh := TorusMesh.new()
-    mesh.inner_radius = inner_radius
-    mesh.outer_radius = outer_radius
-    mesh.rings = 16
-    mesh.ring_segments = 8
+    var key := "torus:%0.3f:%0.3f" % [inner_radius, outer_radius]
+    var mesh := primitive_mesh_cache.get(key) as TorusMesh
+    if mesh == null:
+        mesh = TorusMesh.new()
+        mesh.inner_radius = inner_radius
+        mesh.outer_radius = outer_radius
+        mesh.rings = 16
+        mesh.ring_segments = 8
+        primitive_mesh_cache[key] = mesh
     node.mesh = mesh
     node.material_override = material
     node.position = pos
+    if parent == decor_root:
+        node.visibility_range_end = 96.0
     parent.add_child(node)
     return node
 
@@ -2024,14 +2132,9 @@ func _sync_hud() -> void:
         character_card["owned"] = GameSave.owns(str(character.get("id", "")))
         character_card["equipped"] = str(character.get("id", "")) == equipped_character
         characters.append(character_card)
-    var items: Array[Dictionary] = [
-        {"id": "tenis", "title": "Tênis turbo", "subtitle": "velocidade +", "price": 200, "accent": CYAN, "owned": GameSave.owns("tenis")},
-        {"id": "mochila", "title": "Mochila", "subtitle": "escudo extra", "price": 180, "accent": GOLD, "owned": GameSave.owns("mochila")},
-        {"id": "fone", "title": "Fone", "subtitle": "ímã de moedas", "price": 220, "accent": VIOLET, "owned": GameSave.owns("fone")},
-        {"id": "cafe", "title": "Café térmico", "subtitle": "slow-motion", "price": 150, "accent": Color("#c68053"), "owned": GameSave.owns("cafe")},
-        {"id": "confete", "title": "Kit confete", "subtitle": "só estilo", "price": 120, "accent": RED, "owned": GameSave.owns("confete")},
-        {"id": "placa", "title": "Placa VIP", "subtitle": "atalho visual", "price": 300, "accent": BLUE, "owned": GameSave.owns("placa")}
-    ]
+    var items: Array[Dictionary] = SHOP_DATA.item_catalog()
+    for item in items:
+        item["owned"] = GameSave.owns(str(item.get("id", "")))
     var achievement_catalog: Array[Dictionary] = [
         {"id": "busao", "name": "Peguei o busão!", "description": "Conclua o capítulo 1", "kind": "achievement"},
         {"id": "enchente", "name": "Chuva sem susto", "description": "Passe a fase 9 sem dano", "kind": "achievement"},
@@ -2063,6 +2166,9 @@ func _sync_hud() -> void:
         "xp_to_next_level": GameSave.xp_to_next_level(),
         "stars": GameSave.total_stars(),
         "streak": int(GameSave.data.get("daily_streak", 0)),
+        "retention_flags": GameSave.retention_flags(),
+        "reduced_motion": bool(GameSave.data.get("reduced_motion", false)),
+        "high_contrast": bool(GameSave.data.get("high_contrast", false)),
         "phase_index": phase_index,
         "phase_name": str(phase.get("name", "Corre")),
         "location": str(phase.get("location", "Brasil")),
@@ -2181,6 +2287,14 @@ func _handle_tap(pos: Vector2) -> void:
         if Rect2(510, 132, 156, 46).has_point(pos):
             AudioManager.toggle_mute()
             _show_feedback("SOM DESLIGADO" if AudioManager.muted else "SOM LIGADO", "Você escolhe o feedback", BLUE, "ui_confirm")
+        elif Rect2(420, 190, 118, 38).has_point(pos):
+            var reduced_motion := not bool(GameSave.data.get("reduced_motion", false))
+            GameSave.set_preference("reduced_motion", reduced_motion)
+            _show_feedback("MOVIMENTO REDUZIDO" if reduced_motion else "MOVIMENTO COMPLETO", "Dash e câmera respeitam sua escolha", CYAN, "ui_confirm")
+        elif Rect2(544, 190, 122, 38).has_point(pos):
+            var high_contrast := not bool(GameSave.data.get("high_contrast", false))
+            GameSave.set_preference("high_contrast", high_contrast)
+            _show_feedback("ALTO CONTRASTE" if high_contrast else "CONTRASTE PADRÃO", "Leitura sem depender só de cor", YELLOW, "ui_confirm")
         elif Rect2(70, 564, 580, 104).has_point(pos):
             _start_run(0)
         elif Rect2(70, 700, 275, 82).has_point(pos):
@@ -2277,7 +2391,7 @@ func _daily_at_position(pos: Vector2) -> int:
 
 func _shop_tap(pos: Vector2) -> void:
     var chars: Array[Dictionary] = CHARACTER_DATA.all()
-    var items: Array = [["tenis", 200], ["mochila", 180], ["fone", 220], ["cafe", 150], ["confete", 120], ["placa", 300]]
+    var items: Array[Dictionary] = SHOP_DATA.item_catalog()
     if shop_tab == 0:
         for i in chars.size():
             var col: int = i % 2
@@ -2303,8 +2417,8 @@ func _shop_tap(pos: Vector2) -> void:
             var row: int = int(i / 2)
             var rect := Rect2(30 + col * 345, 250 + row * 175, 315, 150)
             if rect.has_point(pos):
-                var id: String = str(items[i][0])
-                var price: int = int(items[i][1])
+                var id: String = str(items[i].get("id", ""))
+                var price: int = int(items[i].get("price", SHOP_DATA.price_for(id)))
                 if GameSave.owns(id):
                     _show_feedback("JÁ ADQUIRIDO", "Efeito aplicado na próxima corrida", MUTED, "ui_back")
                 elif GameSave.unlock(id, price):
@@ -2323,9 +2437,7 @@ func _claim_daily(index: int) -> void:
         if int(weekly.get("meters", 0)) < BALANCE.weekly_distance_target:
             _show_feedback("MARCO SEMANAL", "%dm restantes" % maxi(0, BALANCE.weekly_distance_target - int(weekly.get("meters", 0))), RED, "ui_back")
             return
-        GameSave.set_weekly_claimed(current_week)
-        GameSave.add_coins(BALANCE.weekly_reward)
-        GameSave.flush()
+        GameSave.set_weekly_claimed(current_week, BALANCE.weekly_reward)
         _show_feedback("MARCO COMPLETO!", "+R$ %d • semana garantida" % BALANCE.weekly_reward, GOLD, "reward")
         return
     if index < 0:
@@ -2343,10 +2455,8 @@ func _claim_daily(index: int) -> void:
         _show_feedback("QUASE LÁ!", "Complete a missão primeiro", RED, "ui_back")
         return
     completed.append(index)
-    GameSave.set_daily_completed(completed, key)
     var reward: int = BALANCE.daily_base_reward + index * BALANCE.daily_step_reward
-    GameSave.add_coins(reward)
-    GameSave.flush()
+    GameSave.set_daily_completed(completed, key, reward)
     _show_feedback("RECOMPENSA!", "+R$ %d • objetivo claro" % reward, GOLD, "reward")
 
 # -----------------------------------------------------------------------------

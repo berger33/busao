@@ -4,14 +4,16 @@ extends Node
 ## usam escrita imediata, enquanto moedas de uma corrida são agrupadas em memória.
 
 const BALANCE = preload("res://resources/game_balance.tres")
+const SHOP_DATA = preload("res://scripts/shop_data.gd")
 const SAVE_PATH := "user://corre_pro_ponto.json"
 const BACKUP_PATH := "user://corre_pro_ponto.bak.json"
 const TEMP_PATH := "user://corre_pro_ponto.tmp.json"
-const SAVE_SCHEMA_VERSION := 2
+const SAVE_SCHEMA_VERSION := 3
 
 var data: Dictionary = {}
 var dirty := false
 var autosave_timer := 0.0
+var skip_backup_once := false
 
 func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
@@ -26,7 +28,9 @@ func _process(delta: float) -> void:
         flush()
 
 func _notification(what: int) -> void:
-    if what == NOTIFICATION_WM_CLOSE_REQUEST and dirty:
+    # Android pode suspender o processo sem emitir um close tradicional. O
+    # flush nesses eventos reduz a janela de perda sem gravar a cada moeda.
+    if what in [NOTIFICATION_WM_CLOSE_REQUEST, NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT] and dirty:
         flush()
 
 func _set_defaults() -> void:
@@ -49,6 +53,8 @@ func _set_defaults() -> void:
         "achievements": [],
         "tutorial_seen": false,
         "audio_muted": false,
+        "reduced_motion": false,
+        "high_contrast": false,
         "daily_date": "",
         "daily_completed": [],
         "daily_progress": {"meters": 0, "coins": 0, "clean": false},
@@ -59,6 +65,7 @@ func _set_defaults() -> void:
         "point_idle_seconds": 0.0,
         "endless_unlocked": false,
         "endless_best": 0,
+        "retention_flags": {"d1": false, "d7": false, "d30": false},
         "metrics": {
             "sessions": 0,
             "phase_attempts": 0,
@@ -67,20 +74,27 @@ func _set_defaults() -> void:
             "first_clears": 0,
             "daily_claims": 0,
             "shop_purchases": 0,
+            "coins_earned": 0,
+            "coins_spent": 0,
             "phase_time_total": 0.0,
             "distance_total": 0,
-            "longest_run_seconds": 0.0
+            "longest_run_seconds": 0.0,
+            "event_counts": {}
         }
     }
     for i in int(BALANCE.phase_count):
         data["phase_stars"].append(0)
 
 func _load_data() -> void:
-    var parsed := _read_dictionary(SAVE_PATH)
+    var primary_exists := FileAccess.file_exists(SAVE_PATH)
+    var primary := _read_dictionary(SAVE_PATH)
+    var parsed := primary
+    var recovered := false
     if parsed.is_empty():
         # Um JSON interrompido não pode apagar o progresso: tenta o último
         # snapshot íntegro antes de voltar ao estado inicial.
         parsed = _read_dictionary(BACKUP_PATH)
+        recovered = not parsed.is_empty()
     var source_version := int(parsed.get("schema_version", 1)) if not parsed.is_empty() else SAVE_SCHEMA_VERSION
     if not parsed.is_empty():
         for key in data.keys():
@@ -88,6 +102,12 @@ func _load_data() -> void:
                 data[key] = parsed[key]
         _migrate_data(source_version)
     _sanitize_data()
+    skip_backup_once = primary_exists and primary.is_empty()
+    if recovered:
+        # Não sobrescreve um backup bom com o arquivo primário corrompido na
+        # primeira reparação; o próximo flush cria um primário íntegro.
+        dirty = true
+        autosave_timer = 0.0
 
 func _migrate_data(source_version: int) -> void:
     if source_version < 2:
@@ -99,7 +119,19 @@ func _migrate_data(source_version: int) -> void:
             data["pet_skins"] = []
         if not (data.get("weekly_progress", {}) is Dictionary):
             data["weekly_progress"] = {"meters": 0, "coins": 0, "clean_runs": 0, "runs": 0}
-        data["schema_version"] = SAVE_SCHEMA_VERSION
+    if source_version < 3:
+        # Preferências e métricas novas são aditivas: nenhum progresso da v2 é
+        # recalculado nem perde sua semântica durante a migração.
+        if not (data.get("retention_flags", {}) is Dictionary):
+            data["retention_flags"] = {"d1": false, "d7": false, "d30": false}
+        if not (data.get("metrics", {}) is Dictionary):
+            data["metrics"] = {}
+        data["metrics"]["event_counts"] = {}
+        data["metrics"]["coins_earned"] = 0
+        data["metrics"]["coins_spent"] = 0
+        data["reduced_motion"] = bool(data.get("reduced_motion", false))
+        data["high_contrast"] = bool(data.get("high_contrast", false))
+    data["schema_version"] = SAVE_SCHEMA_VERSION
 
 func _read_dictionary(path: String) -> Dictionary:
     if not FileAccess.file_exists(path):
@@ -120,9 +152,21 @@ func _sanitize_data() -> void:
     data["login_days"] = maxi(0, int(data.get("login_days", 0)))
     data["last_login_day"] = int(data.get("last_login_day", -1))
     data["endless_best"] = maxi(0, int(data.get("endless_best", 0)))
+    data["dog_hits"] = maxi(0, int(data.get("dog_hits", 0)))
+    data["point_idle_seconds"] = maxf(0.0, float(data.get("point_idle_seconds", 0.0)))
     data["endless_unlocked"] = bool(data.get("endless_unlocked", false))
     data["tutorial_seen"] = bool(data.get("tutorial_seen", false))
     data["audio_muted"] = bool(data.get("audio_muted", false))
+    data["reduced_motion"] = bool(data.get("reduced_motion", false))
+    data["high_contrast"] = bool(data.get("high_contrast", false))
+    if not (data.get("retention_flags", {}) is Dictionary):
+        data["retention_flags"] = {"d1": false, "d7": false, "d30": false}
+    var retention_flags: Dictionary = data["retention_flags"]
+    data["retention_flags"] = {
+        "d1": bool(retention_flags.get("d1", false)),
+        "d7": bool(retention_flags.get("d7", false)),
+        "d30": bool(retention_flags.get("d30", false))
+    }
     var normalized_stars: Array = []
     var raw_stars = data.get("phase_stars", [])
     if raw_stars is Array:
@@ -136,18 +180,62 @@ func _sanitize_data() -> void:
     for key in ["badges", "inventory", "owned_items", "pet_skins", "achievements", "daily_completed"]:
         if not (data.get(key, []) is Array):
             data[key] = []
+    for key in ["badges", "inventory", "owned_items", "pet_skins", "achievements"]:
+        var unique_values: Array = []
+        for raw_value in data[key]:
+            var normalized_value := str(raw_value).strip_edges()
+            if normalized_value != "" and normalized_value not in unique_values:
+                unique_values.append(normalized_value)
+        data[key] = unique_values
     if not (data.get("best_times", {}) is Dictionary):
         data["best_times"] = {}
+    else:
+        var normalized_times: Dictionary = {}
+        for raw_key in data["best_times"].keys():
+            var phase_key := int(raw_key)
+            var time_value := float(data["best_times"][raw_key])
+            if phase_key >= 0 and phase_key < int(BALANCE.phase_count) and time_value > 0.0 and time_value < 999999.0:
+                normalized_times[str(phase_key)] = time_value
+        data["best_times"] = normalized_times
     if not (data.get("daily_progress", {}) is Dictionary):
         data["daily_progress"] = {"meters": 0, "coins": 0, "clean": false}
+    else:
+        var daily_raw: Dictionary = data["daily_progress"]
+        data["daily_progress"] = {
+            "meters": maxi(0, int(daily_raw.get("meters", 0))),
+            "coins": maxi(0, int(daily_raw.get("coins", 0))),
+            "clean": bool(daily_raw.get("clean", false))
+        }
     if not (data.get("weekly_progress", {}) is Dictionary):
         data["weekly_progress"] = {"meters": 0, "coins": 0, "clean_runs": 0, "runs": 0}
+    else:
+        var weekly_raw: Dictionary = data["weekly_progress"]
+        data["weekly_progress"] = {
+            "meters": maxi(0, int(weekly_raw.get("meters", 0))),
+            "coins": maxi(0, int(weekly_raw.get("coins", 0))),
+            "clean_runs": maxi(0, int(weekly_raw.get("clean_runs", 0))),
+            "runs": maxi(0, int(weekly_raw.get("runs", 0)))
+        }
+    var normalized_daily_completed: Array = []
+    for value in data.get("daily_completed", []):
+        var mission_id := int(value)
+        if mission_id >= 0 and mission_id <= 2 and mission_id not in normalized_daily_completed:
+            normalized_daily_completed.append(mission_id)
+    data["daily_completed"] = normalized_daily_completed
     if not (data.get("metrics", {}) is Dictionary):
         data["metrics"] = {}
-    for key in ["sessions", "phase_attempts", "phase_completions", "phase_failures", "first_clears", "daily_claims", "shop_purchases", "distance_total"]:
+    for key in ["sessions", "phase_attempts", "phase_completions", "phase_failures", "endless_completions", "endless_failures", "first_clears", "daily_claims", "shop_purchases", "coins_earned", "coins_spent", "distance_total"]:
         data["metrics"][key] = maxi(0, int(data["metrics"].get(key, 0)))
     data["metrics"]["phase_time_total"] = maxf(0.0, float(data["metrics"].get("phase_time_total", 0.0)))
     data["metrics"]["longest_run_seconds"] = maxf(0.0, float(data["metrics"].get("longest_run_seconds", 0.0)))
+    if not (data["metrics"].get("event_counts", {}) is Dictionary):
+        data["metrics"]["event_counts"] = {}
+    var normalized_events: Dictionary = {}
+    for raw_event in data["metrics"]["event_counts"].keys():
+        var event_name := str(raw_event).strip_edges().to_lower()
+        if event_name.length() > 0 and event_name.length() <= 40:
+            normalized_events[event_name] = maxi(0, int(data["metrics"]["event_counts"][raw_event]))
+    data["metrics"]["event_counts"] = normalized_events
     var equipped := str(data.get("equipped_character", "ze"))
     var aliases: Dictionary = {"chefe": "carlos", "caramelo": "julia", "nina": "influencer"}
     if aliases.has(equipped):
@@ -175,7 +263,7 @@ func flush() -> void:
         return
     temp.store_string(payload)
     temp.close()
-    if FileAccess.file_exists(SAVE_PATH):
+    if FileAccess.file_exists(SAVE_PATH) and not skip_backup_once:
         var current_bytes := FileAccess.get_file_as_bytes(SAVE_PATH)
         var backup := FileAccess.open(BACKUP_PATH, FileAccess.WRITE)
         if backup != null:
@@ -191,22 +279,37 @@ func flush() -> void:
         fallback.close()
     dirty = false
     autosave_timer = 0.0
+    skip_backup_once = false
+
+func set_preference(name: String, enabled: bool) -> void:
+    if name not in ["reduced_motion", "high_contrast"]:
+        return
+    data[name] = enabled
+    flush()
 
 func coins() -> int:
     return int(data.get("coins", 0))
 
 func add_coins(amount: int) -> void:
-    data["coins"] = coins() + maxi(0, amount)
+    var safe_amount := maxi(0, amount)
+    if safe_amount <= 0:
+        return
+    data["coins"] = coins() + safe_amount
+    data["metrics"]["coins_earned"] = int(data["metrics"].get("coins_earned", 0)) + safe_amount
     _request_save()
 
 func can_spend(amount: int) -> bool:
     return amount >= 0 and coins() >= amount
 
-func spend(amount: int) -> bool:
+func spend(amount: int, flush_now: bool = true) -> bool:
     if not can_spend(amount):
         return false
     data["coins"] = coins() - amount
-    flush()
+    data["metrics"]["coins_spent"] = int(data["metrics"].get("coins_spent", 0)) + amount
+    if flush_now:
+        flush()
+    else:
+        _request_save()
     return true
 
 func total_stars() -> int:
@@ -253,23 +356,35 @@ func best_time(index: int) -> float:
     return float(data["best_times"].get(str(index), 0.0))
 
 func owns(item: String) -> bool:
-    return item in data.get("owned_items", []) or item in data.get("inventory", [])
+    var canonical := SHOP_DATA.canonical_id(item)
+    return canonical in data.get("owned_items", []) or canonical in data.get("inventory", [])
 
-func unlock(item: String, price: int) -> bool:
-    if owns(item):
-        return true
-    if not spend(price):
+func unlock(item: String, _requested_price: int = -1) -> bool:
+    # O preço vindo da tela é apenas legado/visual. O save consulta o catálogo
+    # autoritativo para que nenhum fluxo antigo possa comprar por valor alterado.
+    var canonical := SHOP_DATA.canonical_id(item)
+    var price := SHOP_DATA.price_for(canonical)
+    if price < 0:
         return false
-    data["owned_items"].append(item)
+    if owns(canonical):
+        return true
+    if not spend(price, false):
+        return false
+    data["owned_items"].append(canonical)
     data["metrics"]["shop_purchases"] = int(data["metrics"].get("shop_purchases", 0)) + 1
+    record_event("shop_purchase")
     flush()
     return true
 
 func unlock_pet(id: String) -> bool:
-    if id in data.get("pet_skins", []):
+    var canonical := str(id).strip_edges().to_lower()
+    if canonical == "":
         return false
-    data["pet_skins"].append(id)
-    _request_save()
+    if canonical in data.get("pet_skins", []):
+        return false
+    data["pet_skins"].append(canonical)
+    record_event("pet_unlock")
+    flush()
     return true
 
 func owns_pet(id: String) -> bool:
@@ -299,12 +414,23 @@ func get_daily_completed(date_key: String = "") -> Array:
     var wanted_key := date_key if date_key != "" else Time.get_date_string_from_system()
     if str(data.get("daily_date", "")) != wanted_key:
         return []
-    return data.get("daily_completed", [])
+    var completed: Array = data.get("daily_completed", [])
+    return completed.duplicate()
 
-func set_daily_completed(values: Array, date_key: String) -> void:
+func set_daily_completed(values: Array, date_key: String, reward: int = 0) -> void:
+    var sanitized_values: Array = []
+    for value in values:
+        var mission_id := int(value)
+        if mission_id >= 0 and mission_id <= 2 and mission_id not in sanitized_values:
+            sanitized_values.append(mission_id)
     data["daily_date"] = date_key
-    data["daily_completed"] = values.duplicate()
+    data["daily_completed"] = sanitized_values
     data["metrics"]["daily_claims"] = int(data["metrics"].get("daily_claims", 0)) + 1
+    record_event("daily_claim")
+    if reward > 0:
+        add_coins(reward)
+    # Marca e recompensa entram no mesmo payload para não existir uma janela
+    # de crash em que a missão fica resgatada, mas o prêmio não chega.
     flush()
 
 func daily_progress(date_key: String) -> Dictionary:
@@ -358,15 +484,23 @@ func record_weekly_progress(key: String, meters: int, coins_collected: int, clea
 func weekly_claimed(key: String) -> bool:
     return str(data.get("weekly_key", "")) == key and bool(data.get("weekly_claimed", false))
 
-func set_weekly_claimed(key: String) -> void:
+func set_weekly_claimed(key: String, reward: int = 0) -> void:
     data["weekly_key"] = key
     data["weekly_claimed"] = true
+    record_event("weekly_claim")
+    if reward > 0:
+        add_coins(reward)
     flush()
 
 func register_login() -> int:
     var today := _local_day_number()
     var last := int(data.get("last_login_day", -1))
     if today == last:
+        # Sessões contam cada abertura; a sequência e o bônus continuam sendo
+        # calculados uma única vez por dia.
+        data["metrics"]["sessions"] = int(data["metrics"].get("sessions", 0)) + 1
+        record_event("session_start")
+        flush()
         return int(data.get("daily_streak", 0))
     if int(data.get("first_seen_day", -1)) < 0:
         data["first_seen_day"] = today
@@ -378,23 +512,63 @@ func register_login() -> int:
     data["max_streak"] = maxi(int(data.get("max_streak", 0)), int(data["daily_streak"]))
     data["last_login_day"] = today
     if int(data["daily_streak"]) % BALANCE.streak_reward_days == 0:
-        data["coins"] = coins() + BALANCE.streak_reward
+        add_coins(BALANCE.streak_reward)
+    var first_day := int(data.get("first_seen_day", today))
+    var days_since_first := maxi(0, today - first_day)
+    var retention_flags: Dictionary = data.get("retention_flags", {})
+    if days_since_first >= 1:
+        retention_flags["d1"] = true
+    if days_since_first >= 7:
+        retention_flags["d7"] = true
+    if days_since_first >= 30:
+        retention_flags["d30"] = true
+    data["retention_flags"] = retention_flags
     data["metrics"]["sessions"] = int(data["metrics"].get("sessions", 0)) + 1
+    record_event("session_start")
     flush()
     return int(data["daily_streak"])
 
+func record_event(event_name: String, amount: int = 1) -> void:
+    var safe_name := event_name.strip_edges().to_lower().replace(" ", "_")
+    var safe_amount := maxi(0, amount)
+    if safe_name == "" or safe_amount <= 0 or safe_name.length() > 40:
+        return
+    var events: Dictionary = data["metrics"].get("event_counts", {})
+    events[safe_name] = maxi(0, int(events.get(safe_name, 0))) + safe_amount
+    data["metrics"]["event_counts"] = events
+    _request_save()
+
+func retention_flags() -> Dictionary:
+    var flags: Dictionary = data.get("retention_flags", {})
+    return {
+        "d1": bool(flags.get("d1", false)),
+        "d7": bool(flags.get("d7", false)),
+        "d30": bool(flags.get("d30", false))
+    }
+
 func record_phase_attempt() -> void:
     data["metrics"]["phase_attempts"] = int(data["metrics"].get("phase_attempts", 0)) + 1
+    record_event("run_start")
     _request_save()
 
 func record_phase_result(success: bool, phase_index: int = -1, elapsed_seconds: float = 0.0, distance: int = 0) -> void:
     var key := "phase_completions" if success else "phase_failures"
     data["metrics"][key] = int(data["metrics"].get(key, 0)) + 1
+    record_event("run_finish" if success else "run_fail")
     data["metrics"]["phase_time_total"] = float(data["metrics"].get("phase_time_total", 0.0)) + maxf(0.0, elapsed_seconds)
     data["metrics"]["distance_total"] = int(data["metrics"].get("distance_total", 0)) + maxi(0, distance)
     data["metrics"]["longest_run_seconds"] = maxf(float(data["metrics"].get("longest_run_seconds", 0.0)), maxf(0.0, elapsed_seconds))
     if phase_index >= 0:
         data["metrics"]["last_phase"] = phase_index
+    _request_save()
+
+func record_endless_result(success: bool, elapsed_seconds: float, distance: int) -> void:
+    var key := "endless_completions" if success else "endless_failures"
+    data["metrics"][key] = int(data["metrics"].get(key, 0)) + 1
+    record_event("endless_finish" if success else "endless_fail")
+    data["metrics"]["phase_time_total"] = float(data["metrics"].get("phase_time_total", 0.0)) + maxf(0.0, elapsed_seconds)
+    data["metrics"]["distance_total"] = int(data["metrics"].get("distance_total", 0)) + maxi(0, distance)
+    data["metrics"]["longest_run_seconds"] = maxf(float(data["metrics"].get("longest_run_seconds", 0.0)), maxf(0.0, elapsed_seconds))
     _request_save()
 
 func add_xp(amount: int) -> void:

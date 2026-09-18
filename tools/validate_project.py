@@ -65,19 +65,25 @@ def check_3d_entrypoint() -> None:
     for required_file in (
         "scripts/hud_3d.gd", "scripts/scenario_data.gd", "scripts/character_data.gd",
         "scripts/runner_character.gd", "scripts/world_character.gd", "scripts/world_animal.gd",
-        "scripts/obstacle_data.gd",
+        "scripts/obstacle_data.gd", "scripts/shop_data.gd",
     ):
         if not (ROOT / required_file).exists():
             fail(f"missing {required_file}")
     scenario_data = (ROOT / "scripts/scenario_data.gd").read_text(encoding="utf-8")
     character_data = (ROOT / "scripts/character_data.gd").read_text(encoding="utf-8")
     obstacle_data = (ROOT / "scripts/obstacle_data.gd").read_text(encoding="utf-8")
+    shop_data = (ROOT / "scripts/shop_data.gd").read_text(encoding="utf-8")
     if scenario_data.count('"id":') != 10:
         fail("scenario_data.gd does not declare 10 scenario chapters")
     if character_data.count('"id":') != 10:
         fail("character_data.gd does not declare 10 characters")
     if character_data.count('"gender": "M"') != 5 or character_data.count('"gender": "F"') != 5:
         fail("character_data.gd does not contain five M and five F characters")
+    for shop_id in ("tenis", "mochila", "fone", "cafe", "confete", "placa"):
+        if f'"id": "{shop_id}"' not in shop_data or "price" not in shop_data:
+            fail(f"shop_data.gd missing authoritative item: {shop_id}")
+    if "price_for" not in shop_data or "SHOP_DATA" not in (ROOT / "scripts/save_data.gd").read_text(encoding="utf-8"):
+        fail("save layer does not use the authoritative shop catalog")
     if obstacle_data.count('"id":') != 13:
         fail("obstacle_data.gd does not declare the 13 3D obstacle contracts")
     for obstacle_id in ("car", "bus_traffic", "motorcycle", "pothole", "truck", "old_lady", "hydrant", "payphone", "dog", "bicycle", "cone", "vendor", "bench"):
@@ -103,6 +109,7 @@ def check_3d_entrypoint() -> None:
         'const WORLD_CHARACTER_SCRIPT = preload("res://scripts/world_character.gd")',
         'const WORLD_ANIMAL_SCRIPT = preload("res://scripts/world_animal.gd")',
         'const OBSTACLE_DATA = preload("res://scripts/obstacle_data.gd")',
+        'const SHOP_DATA = preload("res://scripts/shop_data.gd")',
         'player_visual.call("set_motion"',
         '_validate_obstacle_catalog()',
         '_audit_3d_entity',
@@ -307,11 +314,11 @@ def check_balance_and_persistence() -> None:
     if values and not (values.get("first_wait_seconds", 0) >= values.get("final_wait_seconds", 0) > 0):
         fail("balance wait curve is invalid")
     save = (ROOT / "scripts/save_data.gd").read_text(encoding="utf-8")
-    for token in ("SAVE_SCHEMA_VERSION := 2", "BACKUP_PATH", "TEMP_PATH", "DirAccess.rename_absolute", "_sanitize_data", "record_phase_attempt", "record_weekly_progress"):
+    for token in ("SAVE_SCHEMA_VERSION := 3", "BACKUP_PATH", "TEMP_PATH", "DirAccess.rename_absolute", "_sanitize_data", "record_phase_attempt", "record_weekly_progress", "record_event", "retention_flags"):
         if token not in save:
             fail(f"save layer missing resilience token: {token}")
     game_3d = (ROOT / "scripts/game_3d.gd").read_text(encoding="utf-8")
-    for token in ("_phase_speed_for", "_phase_wait_for", "record_phase_result", "reward_breakdown", "first_clear"):
+    for token in ("_phase_speed_for", "_phase_wait_for", "record_phase_result", "reward_breakdown", "first_clear", "_update_tutorial_hint", "primitive_mesh_cache", "reduced_motion"):
         if token not in game_3d:
             fail(f"3D progression missing token: {token}")
 

@@ -1,7 +1,7 @@
 # Auditoria de produto — Corre pro Ponto 3D
 
 **Revisão:** 18 de setembro de 2026  
-**Escopo:** gameplay 3D ativo, HUD, progressão de 50 fases, economia local, persistência, feedback audiovisual e instrumentação sem rede.
+**Escopo:** gameplay 3D ativo, HUD, progressão de 50 fases, economia local, persistência, feedback audiovisual, acessibilidade e instrumentação sem rede.
 
 Este documento registra as decisões implementadas nesta revisão e o que ainda precisa de validação no Godot e com jogadores. Ele não substitui playtest, teste de acessibilidade, medição de FPS ou revisão de publicação Android.
 
@@ -13,6 +13,8 @@ Este documento registra as decisões implementadas nesta revisão e o que ainda 
 4. **Recompensa de replay não é igual à de primeira conclusão.** Replays pagam um bônus fixo menor; uma nova estrela paga somente a diferença. As moedas coletadas na pista são o ganho principal da habilidade e não são duplicadas como bônus de conclusão.
 5. **A meta fica visível.** Estrelas têm regras explícitas: concluir = 1, terminar sem dano = +1, cumprir a meta de moedas = +1. Tempo serve para recorde, não para esconder uma condição de recompensa.
 6. **Loja sem aleatoriedade.** Personagens e itens são compras únicas com preço mostrado. O HUD distingue disponível, adquirido e equipado; efeitos aplicáveis são ativados na próxima corrida.
+7. **Retenção com consentimento e controle.** A sequência de retorno é um bônus opcional, não bloqueia conteúdo nem zera metas; movimento reduzido, alto contraste, áudio desligado e pausa automática deixam o jogador no controle.
+8. **A economia tem uma fonte autoritativa.** `scripts/shop_data.gd` guarda preços; `GameSave.unlock()` ignora valores enviados pela tela e valida o catálogo antes de gastar moedas.
 
 ## Curva atual de gameplay
 
@@ -20,13 +22,13 @@ Os valores editáveis ficam em `resources/game_balance.tres`, consumidos por `sc
 
 | Marco | Velocidade | Distância aproximada | Obstáculos | Espera no ponto |
 |---|---:|---:|---:|---:|
-| Fase 1 | 5,0 m/s | 400 m | 2 | 5,0 s |
-| Fase 10 | ~8,3 m/s | 472 m | 7 | ~3,6 s |
-| Fase 20 / terminal do capítulo 1 | 12,0 m/s | 552 m | 12 | 2,0 s |
-| Fase 40 | ~16,0 m/s | 712 m | 16 | 2,0 s |
-| Fase 50 | 18,0 m/s | 792 m | 18 | 2,0 s |
+| Fase 1 | 5,0 m/s | 400 m | intensidade 2 / ~15 rua | 5,0 s |
+| Fase 10 | ~8,3 m/s | 472 m | intensidade 7 / ~23 rua | ~3,6 s |
+| Fase 20 / terminal do capítulo 1 | 12,0 m/s | 552 m | intensidade 12 / ~37 rua | 2,0 s |
+| Fase 40 | ~16,0 m/s | 712 m | intensidade 16 / ~67 rua | 2,0 s |
+| Fase 50 | 18,0 m/s | 792 m | intensidade 18 / ~94 rua | 2,0 s |
 
-A duração nominal fica aproximadamente entre 45 e 85 segundos antes de efeitos de velocidade, colisões e pausa. Isso favorece sessões curtas sem transformar uma falha em uma espera longa. O número de obstáculos cresce gradualmente; a densidade da rua continua maior do que a das calçadas por construção.
+A duração nominal fica aproximadamente entre 45 e 80 segundos antes de efeitos de velocidade, colisões e pausa. Isso favorece sessões curtas sem transformar uma falha em uma espera longa. O campo `obstacles` é uma intensidade de design: o spawn converte-o em intervalos de 24 m na fase 1 até 8 m na fase 50, sem o erro de transformar a fase inicial em um corredor lotado. A densidade da rua continua maior do que a das calçadas por construção; o preflight simula essa relação nas 50 fases. A meta de moedas começa generosa para ensinar a rota e sobe gradualmente até cerca de 70–78% das moedas nominais no fim do catálogo, portanto é uma meta de leitura, não uma coleta perfeita impossível.
 
 ### Estrelas e desbloqueios
 
@@ -54,7 +56,7 @@ A economia usa `R$` como unidade fictícia de jogo, sempre apresentada como moed
 - Endless: recompensa inicial maior quando bate recorde e teto reduzido em repetição.
 - XP: primeira conclusão dá XP escalável por fase, replay dá XP menor e a HUD mostra nível e progresso até o próximo nível (250 XP por nível).
 
-A persistência não grava JSON a cada moeda. Eventos de corrida marcam o save como sujo e fazem autosave amortizado; compras, desbloqueios, login e conclusão de corrida fazem flush. A escrita usa arquivo temporário, backup e recuperação de JSON inválido.
+A persistência usa schema v3 e não grava JSON a cada moeda. Eventos de corrida marcam o save como sujo e fazem autosave amortizado; compras, desbloqueios, login, conclusão e mudança de preferência fazem flush. A escrita usa arquivo temporário, backup e recuperação de JSON inválido; quando o primário está corrompido, o primeiro reparo preserva o backup íntegro em vez de copiá-lo por cima.
 
 ## Feedback e UX
 
@@ -65,6 +67,9 @@ A persistência não grava JSON a cada moeda. Eventos de corrida marcam o save c
 - Câmera e flash leves em impacto; o runner possui animação de pernas e o tráfego tem movimento próprio.
 - Hint inicial de controles; a legenda inferior permanece disponível durante a sessão.
 - Pausa real e leitura de estado no ponto, sem interromper a corrida com anúncio.
+- Ao sair para segundo plano no Android, a corrida pausa automaticamente para não converter uma interrupção do sistema em dano.
+- Menu com movimento reduzido (remove câmera/partículas/flash intensos), alto contraste e áudio opcional; ações importantes também têm texto, não só cor.
+- HUD é sincronizado a 30 Hz durante a corrida e as malhas primitivas repetidas são cacheadas; decoração distante usa visibility range para reduzir custo no mobile.
 
 ### Pós-corrida
 
@@ -86,14 +91,15 @@ A HUD agora lê o estado real salvo. Missões mostram `em andamento`, `resgatar`
 
 `GameSave` mantém somente contadores anônimos no dispositivo, sem envio de rede:
 
-- sessões e dias de login;
-- tentativas, conclusões e falhas de fase;
+- sessões e dias de login, com flags locais de retorno D1/D7/D30;
+- tentativas, conclusões e falhas de fase, incluindo Endless;
 - primeiras conclusões;
 - tempo total de corrida, distância total e maior corrida;
-- resgates diários e compras;
-- maior sequência de retorno e primeiro dia observado.
+- resgates diários, marco semanal e compras;
+- moedas criadas/gastas, maior sequência de retorno e primeiro dia observado;
+- eventos agregados de tutorial, controles, colisões e buckets de FPS (`fps_60_plus`, `fps_45_59`, `fps_below_45`).
 
-Isso permite um primeiro diagnóstico em QA sem criar perfil remoto. Para uma versão comercial, o próximo passo é um provedor de telemetria com consentimento, política de privacidade, retenção limitada e eventos sem PII. Eventos recomendados: `tutorial_step`, `run_start`, `lane_change`, `hit`, `run_finish`, `phase_unlock`, `daily_claim`, `shop_purchase`, `fps_bucket` e `load_time_bucket`.
+Isso permite um primeiro diagnóstico em QA sem criar perfil remoto. Para uma versão comercial, o próximo passo é um provedor de telemetria com consentimento, política de privacidade, retenção limitada e eventos sem PII. O código local já usa nomes equivalentes a `tutorial_step`, `run_start`, `lane_change`, `hit_*`, `run_finish`, `daily_claim`, `weekly_claim`, `shop_purchase` e `fps_bucket`; `phase_unlock` e `load_time_bucket` continuam candidatos para uma camada de QA posterior.
 
 ## Métricas e critérios de decisão
 
@@ -114,11 +120,12 @@ Como referência contextual, a revisão considerou benchmarks públicos de GameA
 ## Pendências obrigatórias antes de publicação
 
 1. Rodar projeto no Godot 4.x em editor e modo headless; validar parser, importação GLTF, colisões, input touch e exportação Android 8+.
-2. Medir FPS, frame time, memória, draw calls e carregamento em pelo menos três aparelhos Android, incluindo um modelo médio.
+2. Medir FPS, frame time, memória, draw calls e carregamento em pelo menos três aparelhos Android, incluindo um modelo médio; os buckets locais ajudam a localizar uma queda, mas não substituem o profiler.
 3. Fazer playtest moderado com onboarding e fases 1, 9, 20, 40 e 50; registrar compreensão das faixas, tempo até a primeira vitória e percepção de justiça.
-4. Testar backup/recuperação interrompendo uma gravação e migrando um JSON da versão anterior.
-5. Testar zoom/fonte grande, modo sem áudio, contraste, toque com uma mão e ausência de feedback exclusivamente cromático.
+4. Testar backup/recuperação interrompendo uma gravação e migrando um JSON da versão anterior, incluindo a nova migração v3.
+5. Testar zoom/fonte grande, modo sem áudio, movimento reduzido, alto contraste, toque com uma mão e ausência de feedback exclusivamente cromático.
 6. Calibrar preços e recompensas somente após observar moeda criada versus moeda gasta e taxa de conclusão; não usar dificuldade artificial para vender vantagem.
+7. Executar `python3 tools/audit_balance.py` junto do preflight em cada ajuste de curva; o script é uma barreira matemática, não uma substituição de jogadores.
 
 ## Referências públicas consultadas
 

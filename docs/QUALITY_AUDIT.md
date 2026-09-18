@@ -17,7 +17,8 @@ Data da varredura: 18/09/2026.
 - **Personagem principal e NPCs:** catálogo de 10 identidades, cinco masculinas e cinco femininas, com representação baseada no humanoide Quaternius GLTF/skinned real. Corpo, rosto, olhos e cabelo usam o asset Universal Base Characters; roupa modular e mapas PBR vêm de meshes separados. Para Nina Creator, `runner_character.gd` mantém top, shorts jeans, botas, telefone, tatuagem, brincos, pulseiras, lantejoulas e metal em `BoneAttachment3D`, todos acompanhando o esqueleto. `world_character.gd` reutiliza o mesmo humanoide para velha e camelô, em vez de cabeças/cápsulas. `world_animal.gd` concentra o cachorro caramelo 3D com anatomia e animação de cauda/patas. A escala de 2,15 m, os pés no piso, a sombra de contato e os clips de locomoção são preservados, sem montar o corpo principal com cápsulas.
 - **Tráfego:** carros, ônibus, motos e caminhões são assemblies 3D detalhados com cabine, vidros, faróis, lanternas, para-choques, placas, retrovisores, maçanetas, rodas orientadas e velocidade própria no eixo da rua. Os carros variam entre hatch compacto, sedã compacto e utilitário/van inspirados na frota popular brasileira, sem logotipos.
 - **Preflight reproduzível:** `python3 tools/validate_project.py` passou após a migração.
-- **Preflight auxiliar:** `python3 tools/validate_project.py` inclui referências, binários, texturas, clips e manifesto SHA-256; a importação/renderização dos GLTF/GLB e a sintaxe final da nova camada `BoneAttachment3D` ainda precisam passar pelo editor Godot 4.x.
+- **Auditoria determinística de curva:** `python3 tools/audit_balance.py` confirma velocidades/distâncias monotônicas, metas de moedas alcançáveis e densidade de rua maior que calçada nas 50 fases.
+- **Preflight auxiliar:** `python3 tools/validate_project.py` inclui referências, binários, texturas, clips, manifesto SHA-256 e o catálogo autoritativo da loja; a importação/renderização dos GLTF/GLB e a sintaxe final da nova camada `BoneAttachment3D` ainda precisam passar pelo editor Godot 4.x.
 - **Godot/parser:** não estão instalados neste ambiente; o parser/editor headless, a renderização efetiva, o retarget da AnimationLibrary e a exportação Android ainda precisam ser executados em uma máquina com Godot 4.x e SDK Android.
 
 ## Verificações realizadas nesta etapa
@@ -74,7 +75,9 @@ Data da varredura: 18/09/2026.
 - [x] Pedestres de calçada usam personagens Quaternius GLTF/skinned reais; animais usam adapter 3D com anatomia, materiais e animação própria.
 - [x] Contrato de obstáculos valida 13 tipos, espaço rua/calçada, `MeshInstance3D` e presença dos adapters humano/animal.
 - [x] Carros com três silhuetas inspiradas em compactos populares brasileiros, pintura automotiva, placas, faróis, rodas, retrovisores e detalhes de carroceria.
-- [x] 50 fases, save, progressão, loja, personagens, desafios, áudio e feedback conectados.
+- [x] 50 fases, save schema v3, progressão, loja com preços autoritativos, personagens, desafios, áudio e feedback conectados.
+- [x] Onboarding em etapas, pausa automática ao perder foco, movimento reduzido e alto contraste.
+- [x] Cache de meshes primitivas, culling de decoração distante e HUD desacelerada para reduzir trabalho no Android.
 - [ ] Parser/importação real no Godot 4.x.
 - [ ] APK Android e teste em aparelho real.
 
