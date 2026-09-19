@@ -213,7 +213,7 @@ func _build_shadow() -> void:
         var scn := load(shadow_placeholder) as PackedScene
         if scn != null:
             var tmp := scn.instantiate() as Node3D
-            var mi := _find_mesh_instance(tmp) if has_method("_find_mesh_instance") else null
+            var mi: MeshInstance3D = _find_mesh_instance(tmp)
             if mi == null:
                 for child in tmp.get_children():
                     if child is MeshInstance3D:
@@ -243,6 +243,15 @@ func _find_skeleton(node: Node) -> Skeleton3D:
             return current as Skeleton3D
         for child in current.get_children():
             pending.append(child)
+    return null
+
+func _find_mesh_instance(root: Node) -> MeshInstance3D:
+    if root is MeshInstance3D:
+        return root as MeshInstance3D
+    for c in root.get_children():
+        var r: MeshInstance3D = _find_mesh_instance(c)
+        if r != null:
+            return r
     return null
 
 func _skinned_meshes(node: Node) -> Array[MeshInstance3D]:

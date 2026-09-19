@@ -2882,7 +2882,7 @@ func _box(parent: Node3D, size: Vector3, pos: Vector3, material: Material, node_
         var scn := load(placeholder_path) as PackedScene
         if scn != null:
             var tmp := scn.instantiate() as Node3D
-            var mi := _find_mesh_instance(tmp)
+            var mi: MeshInstance3D = _find_mesh_instance(tmp)
             if mi != null and mi.mesh != null:
                 node.mesh = mi.mesh
                 tmp.queue_free()
@@ -2898,7 +2898,7 @@ func _find_mesh_instance(root: Node) -> MeshInstance3D:
     if root is MeshInstance3D:
         return root as MeshInstance3D
     for c in root.get_children():
-        var r := _find_mesh_instance(c)
+        var r: MeshInstance3D = _find_mesh_instance(c)
         if r != null:
             return r
     return null
@@ -2912,7 +2912,7 @@ func _sphere(parent: Node3D, radius: float, pos: Vector3, material: Material, no
         var scn := load(placeholder_path) as PackedScene
         if scn != null:
             var tmp := scn.instantiate() as Node3D
-            var mi := _find_mesh_instance(tmp)
+            var mi: MeshInstance3D = _find_mesh_instance(tmp)
             if mi != null and mi.mesh != null:
                 node.mesh = mi.mesh
                 tmp.queue_free()
@@ -2934,7 +2934,7 @@ func _capsule(parent: Node3D, radius: float, height: float, pos: Vector3, materi
         var scn := load(placeholder_path) as PackedScene
         if scn != null:
             var tmp := scn.instantiate() as Node3D
-            var mi := _find_mesh_instance(tmp)
+            var mi: MeshInstance3D = _find_mesh_instance(tmp)
             if mi != null and mi.mesh != null:
                 node.mesh = mi.mesh
                 tmp.queue_free()
@@ -2956,7 +2956,7 @@ func _cylinder(parent: Node3D, top_radius: float, bottom_radius: float, height: 
         var scn := load(placeholder_path) as PackedScene
         if scn != null:
             var tmp := scn.instantiate() as Node3D
-            var mi := _find_mesh_instance(tmp)
+            var mi: MeshInstance3D = _find_mesh_instance(tmp)
             if mi != null and mi.mesh != null:
                 node.mesh = mi.mesh
                 tmp.queue_free()
@@ -2981,7 +2981,7 @@ func _torus(parent: Node3D, inner_radius: float, outer_radius: float, pos: Vecto
         var scn := load(placeholder_path) as PackedScene
         if scn != null:
             var tmp := scn.instantiate() as Node3D
-            var mi := _find_mesh_instance(tmp)
+            var mi: MeshInstance3D = _find_mesh_instance(tmp)
             if mi != null and mi.mesh != null:
                 node.mesh = mi.mesh
                 tmp.queue_free()
