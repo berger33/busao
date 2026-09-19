@@ -20,6 +20,7 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "assets" / "textures"
+OUT_PBR = ROOT / "assets" / "textures" / "pbr"
 SIZE = 1024
 SKY_W, SKY_H = 2048, 1024
 MASTER_SEED = 20260918
@@ -94,6 +95,14 @@ def save(arr: np.ndarray, name: str) -> None:
 
 def rough_to_gray(rough: np.ndarray) -> np.ndarray:
     return np.clip(rough * 255.0, 0, 255)
+
+
+def save_pbr(arr: np.ndarray, name: str) -> None:
+    if arr.ndim == 2:
+        arr = np.stack([arr] * 3, axis=-1)
+    img = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGB")
+    img.save(OUT_PBR / name, optimize=True)
+    print(f"  pbr/{name} ({img.size[0]}x{img.size[1]})")
 
 
 # ----------------------------------------------------------------------------
@@ -597,6 +606,376 @@ def gen_feathers(rng: np.random.Generator) -> None:
 
 
 # ----------------------------------------------------------------------------
+# Texturas PBR para o Lote 3 / Lote 10 — 10 materiais x 3 mapas (albedo/normal/orm)
+# building_kit.gd usa ORMMaterial3D: R=AO, G=roughness, B=metallic
+# Cada textura é 1024x1024 tileable, determinística (MASTER_SEED + offset).
+# ----------------------------------------------------------------------------
+
+def gen_pbr_asfalto(rng: np.random.Generator) -> None:
+    gravel = fbm(256, 3, rng)
+    mid = fbm(48, 3, rng)
+    patch = fbm(6, 3, rng)
+    base = 0.34 + 0.30 * mid + 0.12 * (patch - 0.5)
+    albedo_gray = base * (0.74 + 0.50 * gravel)
+    albedo_gray = np.clip(albedo_gray, 0.0, 1.0)
+    albedo = np.stack([albedo_gray, albedo_gray, albedo_gray * 0.985], axis=-1)
+    speck = rng.random((SIZE, SIZE))
+    albedo = np.where((speck > 0.9975)[..., None], albedo + 0.28, albedo)
+    cracks = np.zeros((SIZE, SIZE))
+    for _ in range(9):
+        x = float(rng.integers(0, SIZE))
+        y = float(rng.integers(0, SIZE))
+        ang = rng.random() * math.tau
+        for _step in range(150):
+            ang += (rng.random() - 0.5) * 0.55
+            x = (x + math.cos(ang) * 1.6) % SIZE
+            y = (y + math.sin(ang) * 1.6) % SIZE
+            xi, yi = int(x) % SIZE, int(y) % SIZE
+            cracks[yi, xi] = 1.0
+            cracks[yi, (xi + 1) % SIZE] = 0.6
+    cracks = np.maximum(cracks, np.roll(cracks, 1, 0) * 0.5)
+    # escurece albedo nas rachaduras
+    albedo = np.where((cracks > 0.01)[..., None], albedo * (1.0 - 0.45 * np.clip(cracks[..., None], 0, 1)), albedo)
+    repair = patch > 0.68
+    albedo = np.where(repair[..., None], albedo * 0.74 + 0.04, albedo)
+    height = gravel * 0.58 + mid * 0.42
+    height = np.where(repair, height * 0.38 + 0.12, height)
+    height = np.where(cracks > 0.2, height - 0.18 * np.clip(cracks, 0, 1), height)
+    ao = np.ones((SIZE, SIZE)) * 0.96
+    ao = np.where(cracks > 0.01, ao * (1.0 - 0.28 * np.clip(cracks, 0, 1)), ao)
+    ao = np.where(repair, ao * 0.92, ao)
+    ao = np.clip(ao + (gravel - 0.5) * 0.06, 0.0, 1.0)
+    rough = 0.86 + 0.11 * gravel - 0.11 * repair.astype(float) + 0.05 * (mid - 0.5)
+    rough = np.clip(rough, 0.0, 1.0)
+    metallic = np.zeros((SIZE, SIZE))
+    orm = np.stack([ao, rough, metallic], axis=-1)
+    save_pbr(np.clip(albedo * 255.0, 0, 255), "asfalto_albedo.png")
+    save_pbr(height_to_normal(height, 1.35), "asfalto_normal.png")
+    save_pbr(np.clip(orm * 255.0, 0, 255), "asfalto_orm.png")
+
+
+def gen_pbr_calcada_laje(rng: np.random.Generator) -> None:
+    # lajes retangulares grandes (0.6-0.9 m, junta 14 mm) — padrão das calçadas centrais
+    slab_w, slab_h, mortar = 256, 192, 4
+    y, x = np.mgrid[0:SIZE, 0:SIZE]
+    # deslocamento por fileira para quebrar monotonia (meio tijolo)
+    row = y // slab_h
+    off = (row % 2) * (slab_w // 2)
+    col = (x + off) // slab_w
+    bid = row * 64 + col
+    rng_laje = np.random.default_rng(MASTER_SEED + 210)
+    bt = rng_laje.random(4096)[bid % 4096]
+    grain = fbm(128, 2, rng)
+    mottle = fbm(16, 3, rng)
+    # cor base da spec 0.71,0.70,0.66 com variação por laje e micro-grão
+    base_r = 0.71 + 0.08 * (bt - 0.5) + 0.06 * (grain - 0.5)
+    base_g = 0.70 + 0.08 * (bt - 0.5) + 0.06 * (grain - 0.5)
+    base_b = 0.66 + 0.08 * (bt - 0.5) + 0.06 * (grain - 0.5)
+    albedo = np.stack([base_r, base_g, base_b], axis=-1)
+    albedo = albedo * (0.92 + 0.16 * mottle)[..., None]
+    is_mortar = ((x + off) % slab_w < mortar) | (y % slab_h < mortar)
+    # junta mais escura e com leve sujeira
+    albedo = np.where(is_mortar[..., None], albedo * 0.62, albedo)
+    # desgaste: leve polimento no centro da laje
+    wear = fbm(8, 2, rng)
+    albedo = np.where((~is_mortar)[..., None], albedo * (0.98 + 0.06 * (wear[..., None] - 0.5)), albedo)
+    height = np.where(is_mortar, 0.32, 0.62 + 0.10 * grain + 0.06 * bt)
+    # bordas levemente chanfradas (AO)
+    ao = np.where(is_mortar, 0.68, 0.98 + (grain - 0.5) * 0.08)
+    ao = np.clip(ao - 0.10 * np.clip(mottle - 0.6, 0, 1), 0.0, 1.0)
+    rough = np.where(is_mortar, 0.88, 0.80 + 0.08 * (1.0 - grain) - 0.04 * wear)
+    rough = np.clip(rough, 0.0, 1.0)
+    metallic = np.zeros((SIZE, SIZE))
+    orm = np.stack([ao, rough, metallic], axis=-1)
+    save_pbr(np.clip(albedo * 255.0, 0, 255), "calcada_laje_albedo.png")
+    save_pbr(height_to_normal(height, 1.4), "calcada_laje_normal.png")
+    save_pbr(np.clip(orm * 255.0, 0, 255), "calcada_laje_orm.png")
+
+
+def gen_pbr_calcada_mosaico(rng: np.random.Generator) -> None:
+    stone = 32  # 32x32 mosaicos pequenos (~3 cm por pedra)
+    n = SIZE // stone
+    y, x = np.mgrid[0:SIZE, 0:SIZE]
+    cell = (y // stone) * n + (x // stone)
+    rng_stone = np.random.default_rng(MASTER_SEED + 211)
+    tint = rng_stone.random(n * n)
+    tint_map = tint[cell]
+    # rejunte
+    grout = ((x % stone < 2) | (y % stone < 2))
+    grain = fbm(128, 2, rng)
+    mottle = fbm(16, 3, rng)
+    # pedras claras e escuras aleatórias (padrão português mas sem onda forte)
+    # base 0.63,0.62,0.58 com variação 0.08 por pedra
+    base = 0.63 + 0.12 * (tint_map - 0.5) + 0.05 * (grain - 0.5)
+    # leve variação cromática quente/fria
+    r = base + 0.015 * (tint_map - 0.5)
+    g = base
+    b = base - 0.02 * (tint_map - 0.5)
+    albedo = np.stack([r, g, b], axis=-1)
+    albedo = albedo * (0.94 + 0.12 * mottle)[..., None]
+    albedo = np.where(grout[..., None], albedo * 0.55, albedo)
+    # desgaste / polimento central
+    wear = fbm(8, 2, rng)
+    albedo = np.where((~grout)[..., None], albedo * (0.97 + 0.07 * (wear[..., None] - 0.5)), albedo)
+    height = np.where(grout, 0.28, 0.60 + 0.14 * grain + 0.07 * (tint_map - 0.5))
+    ao = np.where(grout, 0.62, 0.97 + (grain - 0.5) * 0.07)
+    ao = np.clip(ao - 0.08 * np.clip(mottle - 0.65, 0, 1), 0.0, 1.0)
+    rough = np.where(grout, 0.90, 0.78 + 0.10 * (1.0 - grain) - 0.05 * wear)
+    rough = np.clip(rough, 0.0, 1.0)
+    metallic = np.zeros((SIZE, SIZE))
+    orm = np.stack([ao, rough, metallic], axis=-1)
+    save_pbr(np.clip(albedo * 255.0, 0, 255), "calcada_mosaico_albedo.png")
+    save_pbr(height_to_normal(height, 1.8), "calcada_mosaico_normal.png")
+    save_pbr(np.clip(orm * 255.0, 0, 255), "calcada_mosaico_orm.png")
+
+
+def gen_pbr_tijolo(rng: np.random.Generator) -> None:
+    y, x = np.mgrid[0:SIZE, 0:SIZE]
+    bw, bh, mortar = 86, 36, 6
+    row = y // bh
+    off = (row % 2) * (bw // 2)
+    bid = row * 131 + ((x + off) // bw)
+    rng_b = np.random.default_rng(MASTER_SEED + 212)
+    bt = rng_b.random(8192)[bid % 8192]
+    grain = fbm(128, 2, rng)
+    soot = fbm(8, 3, rng)
+    r = 0.56 + 0.22 * (bt - 0.5)  # spec 0.56,0.33,0.26 com variação
+    g = 0.33 + 0.12 * (bt - 0.5) + 0.06 * (grain - 0.5)
+    b = 0.26 + 0.10 * (bt - 0.5) + 0.06 * (grain - 0.5)
+    albedo = np.stack([r, g, b], axis=-1)
+    albedo = albedo * (0.90 + 0.18 * soot)[..., None]
+    is_mortar = ((x + off) % bw < mortar) | (y % bh < mortar)
+    albedo = np.where(is_mortar[..., None], np.array([0.66, 0.64, 0.60])[None, None, :] * (0.92 + 0.14 * soot[..., None]), albedo)
+    height = np.where(is_mortar, 0.36, 0.58 + 0.09 * grain + 0.07 * bt)
+    ao = np.where(is_mortar, 0.66, 0.98)
+    ao = np.clip(ao - 0.12 * np.clip(soot - 0.60, 0, 1), 0.0, 1.0)
+    rough = np.where(is_mortar, 0.94, 0.86 + 0.08 * (1.0 - grain))
+    rough = np.clip(rough, 0.0, 1.0)
+    metallic = np.zeros((SIZE, SIZE))
+    orm = np.stack([ao, rough, metallic], axis=-1)
+    save_pbr(np.clip(albedo * 255.0, 0, 255), "tijolo_albedo.png")
+    save_pbr(height_to_normal(height, 1.5), "tijolo_normal.png")
+    save_pbr(np.clip(orm * 255.0, 0, 255), "tijolo_orm.png")
+
+
+def gen_pbr_reboco(rng: np.random.Generator) -> None:
+    stain = fbm(16, 3, rng)
+    grain = fbm(128, 2, rng)
+    fine = fbm(96, 2, rng)
+    base = np.array([0.84, 0.80, 0.72])
+    albedo = base[None, None, :] * (0.92 + 0.16 * stain + 0.06 * (grain - 0.5))[..., None]
+    # manchas de umidade e poeira no rodapé
+    damp = fbm(6, 2, rng)
+    albedo = np.where((damp > 0.68)[..., None], albedo * 0.88, albedo)
+    streak = fbm(64, 2, rng)
+    albedo = np.where((streak > 0.72)[..., None], albedo * 0.92, albedo)
+    # micro-grão
+    albedo = np.clip(albedo, 0.0, 1.0)
+    height = 0.50 + 0.14 * grain + 0.08 * (stain - 0.5) + 0.04 * (fine - 0.5)
+    height = np.where(damp > 0.70, height - 0.04, height)
+    ao = 0.97 + (grain - 0.5) * 0.06 - np.clip(damp - 0.62, 0, 1) * 0.22
+    ao = np.clip(ao, 0.0, 1.0)
+    rough = 0.84 + 0.08 * (1.0 - grain) + 0.04 * (damp - 0.5)
+    rough = np.clip(rough, 0.0, 1.0)
+    metallic = np.zeros((SIZE, SIZE))
+    orm = np.stack([ao, rough, metallic], axis=-1)
+    save_pbr(np.clip(albedo * 255.0, 0, 255), "reboco_albedo.png")
+    save_pbr(height_to_normal(height, 0.9), "reboco_normal.png")
+    save_pbr(np.clip(orm * 255.0, 0, 255), "reboco_orm.png")
+
+
+def gen_pbr_laje_cobertura(rng: np.random.Generator) -> None:
+    # laje de cobertura: placas de concreto com juntas e agregado exposto
+    slab_w, slab_h, mortar = 192, 192, 3
+    y, x = np.mgrid[0:SIZE, 0:SIZE]
+    row = y // slab_h
+    off = (row % 3) * (slab_w // 3)
+    col = (x + off) // slab_w
+    bid = row * 64 + col
+    rng_laje = np.random.default_rng(MASTER_SEED + 213)
+    bt = rng_laje.random(4096)[bid % 4096]
+    grain = fbm(128, 2, rng)
+    mottle = fbm(16, 3, rng)
+    aggregate = fbm(96, 2, rng)
+    base = 0.42 + 0.06 * (bt - 0.5) + 0.05 * (grain - 0.5)
+    albedo_gray = base * (0.90 + 0.14 * mottle + 0.06 * (aggregate - 0.5))
+    # pequenas pedrinhas claras
+    speck = rng.random((SIZE, SIZE))
+    albedo_gray = np.where(speck > 0.994, albedo_gray + 0.18, albedo_gray)
+    albedo = np.stack([albedo_gray, albedo_gray * 0.995, albedo_gray * 0.99], axis=-1)
+    is_mortar = ((x + off) % slab_w < mortar) | (y % slab_h < mortar)
+    albedo = np.where(is_mortar[..., None], albedo * 0.72, albedo)
+    height = np.where(is_mortar, 0.34, 0.56 + 0.10 * grain + 0.06 * aggregate + 0.04 * bt)
+    height = np.where(speck > 0.994, height + 0.12, height)
+    ao = np.where(is_mortar, 0.64, 0.96 + (grain - 0.5) * 0.07)
+    ao = np.clip(ao - 0.10 * np.clip(mottle - 0.64, 0, 1), 0.0, 1.0)
+    rough = np.where(is_mortar, 0.90, 0.84 + 0.08 * (1.0 - grain))
+    rough = np.clip(rough, 0.0, 1.0)
+    metallic = np.zeros((SIZE, SIZE))
+    orm = np.stack([ao, rough, metallic], axis=-1)
+    save_pbr(np.clip(albedo * 255.0, 0, 255), "laje_cobertura_albedo.png")
+    save_pbr(height_to_normal(height, 1.2), "laje_cobertura_normal.png")
+    save_pbr(np.clip(orm * 255.0, 0, 255), "laje_cobertura_orm.png")
+
+
+def gen_pbr_metal_pintado(rng: np.random.Generator) -> None:
+    wear = fbm(16, 3, rng)
+    albedo = np.full((SIZE, SIZE, 3), 0.62)  # cinza neutro que o albedo_color tingirá
+    # leve variação de tinta
+    albedo = albedo * (0.96 + 0.08 * wear)[..., None]
+    rough = np.full((SIZE, SIZE), 0.44) + 0.08 * wear
+    height = np.full((SIZE, SIZE), 0.50)
+    ao = np.full((SIZE, SIZE), 0.98)
+    metallic = np.full((SIZE, SIZE), 0.02)
+    # riscos finos
+    for _ in range(36):
+        x = float(rng.integers(0, SIZE))
+        y = float(rng.integers(0, SIZE))
+        ang = rng.random() * math.tau
+        for _step in range(70):
+            ang += (rng.random() - 0.5) * 0.35
+            x = (x + math.cos(ang) * 2.2) % SIZE
+            y = (y + math.sin(ang) * 2.2) % SIZE
+            xi, yi = int(x) % SIZE, int(y) % SIZE
+            albedo[yi, xi] = np.array([0.55, 0.55, 0.55])
+            rough[yi, xi] = 0.62
+            height[yi, xi] = 0.44
+            ao[yi, xi] = 0.90
+    # lascas expondo metal
+    yy, xx = np.mgrid[0:SIZE, 0:SIZE]
+    for _ in range(20):
+        cx = float(rng.integers(0, SIZE))
+        cy = float(rng.integers(0, SIZE))
+        r = 2.5 + rng.random() * 5.5
+        dx = np.minimum(np.abs(xx - cx), SIZE - np.abs(xx - cx))
+        dy = np.minimum(np.abs(yy - cy), SIZE - np.abs(yy - cy))
+        chip = (dx * dx + dy * dy) < r * r
+        albedo = np.where(chip[..., None], np.array([0.52, 0.54, 0.56])[None, None, :], albedo)
+        rough = np.where(chip, 0.38, rough)
+        height = np.where(chip, 0.34, height)
+        ao = np.where(chip, 0.78, ao)
+        metallic = np.where(chip, 0.85, metallic)
+    # poeira / sujeira leve
+    dust = fbm(8, 2, rng)
+    albedo = np.where((dust > 0.70)[..., None], albedo * 0.94, albedo)
+    ao = np.where(dust > 0.70, ao * 0.94, ao)
+    rough = np.clip(rough, 0.0, 1.0)
+    ao = np.clip(ao, 0.0, 1.0)
+    metallic = np.clip(metallic, 0.0, 1.0)
+    orm = np.stack([ao, rough, metallic], axis=-1)
+    save_pbr(np.clip(albedo * 255.0, 0, 255), "metal_pintado_albedo.png")
+    save_pbr(height_to_normal(height, 0.55), "metal_pintado_normal.png")
+    save_pbr(np.clip(orm * 255.0, 0, 255), "metal_pintado_orm.png")
+
+
+def gen_pbr_metal_zincado(rng: np.random.Generator) -> None:
+    # galvanizado: brilho levemente listrado, mais metálico
+    src = fbm(24, 2, rng)
+    smear = np.zeros((SIZE, SIZE))
+    for k in range(12):
+        smear += np.roll(src, k * (SIZE // 12), axis=0)
+    smear /= 12.0
+    smear = np.clip((smear - smear.mean()) * 2.2 + 0.5, 0.0, 1.0)
+    fine = fbm(128, 2, rng)
+    grain = np.clip(smear * 0.60 + fine * 0.45, 0.0, 1.0)
+    base = 0.66 + 0.10 * (grain - 0.5) + 0.04 * (fine - 0.5)
+    albedo = np.stack([base, base, base * 0.995], axis=-1)
+    # estrias horizontais sutis do processo de galvanização
+    y, x = np.mgrid[0:SIZE, 0:SIZE]
+    streak = 0.5 + 0.5 * np.sin((y * 0.08) + grain * 6.0)
+    albedo = albedo * (0.96 + 0.08 * streak)[..., None]
+    albedo = np.clip(albedo, 0.0, 1.0)
+    height = 0.50 + (grain - 0.5) * 0.22 + (streak - 0.5) * 0.08
+    ao = 0.97 + (grain - 0.5) * 0.05 - np.clip(fine - 0.70, 0, 1) * 0.12
+    ao = np.clip(ao, 0.0, 1.0)
+    rough = 0.34 + 0.14 * (1.0 - grain) + 0.06 * (1.0 - fine)
+    rough = np.clip(rough, 0.0, 1.0)
+    metallic = 0.74 + 0.16 * grain - 0.08 * (1.0 - fine)
+    metallic = np.clip(metallic, 0.0, 1.0)
+    orm = np.stack([ao, rough, metallic], axis=-1)
+    save_pbr(np.clip(albedo * 255.0, 0, 255), "metal_zincado_albedo.png")
+    save_pbr(height_to_normal(height, 0.45), "metal_zincado_normal.png")
+    save_pbr(np.clip(orm * 255.0, 0, 255), "metal_zincado_orm.png")
+
+
+def gen_pbr_madeira(rng: np.random.Generator) -> None:
+    src = fbm(24, 2, rng)
+    smear = np.zeros((SIZE, SIZE))
+    for k in range(16):
+        smear += np.roll(src, k * (SIZE // 16), axis=0)
+    smear /= 16.0
+    smear = np.clip((smear - smear.mean()) * 3.0 + 0.5, 0.0, 1.0)
+    fine = fbm(128, 2, rng)
+    grain = np.clip(smear * 0.74 + fine * 0.36, 0.0, 1.0)
+    yy, xx = np.mgrid[0:SIZE, 0:SIZE]
+    knots = np.zeros((SIZE, SIZE))
+    for _ in range(3):
+        kx = float(rng.integers(120, SIZE - 120))
+        ky = float(rng.integers(120, SIZE - 120))
+        dx = np.minimum(np.abs(xx - kx), SIZE - np.abs(xx - kx))
+        dy = np.minimum(np.abs(yy - ky), SIZE - np.abs(yy - ky))
+        d = np.sqrt(dx * dx + dy * dy) * (1.5 + rng.random() * 0.7)
+        rings = 0.5 + 0.5 * np.sin(d * 1.3)
+        knots = np.maximum(knots, np.where(d < 88.0, rings * np.exp(-d / 58.0), 0.0))
+    grain = np.clip(grain - knots * 0.50, 0, 1)
+    base = np.array([0.45, 0.32, 0.21])
+    shade = 0.58 + 0.88 * grain
+    albedo = base[None, None, :] * shade[..., None]
+    albedo = np.where((knots > 0.14)[..., None], albedo * 0.70, albedo)
+    albedo = np.clip(albedo, 0.0, 1.0)
+    height = 0.50 + (grain - 0.5) * 0.44 - knots * 0.20
+    ao = 0.96 - knots * 0.30 - np.clip(fine - 0.72, 0, 1) * 0.10
+    ao = np.clip(ao, 0.0, 1.0)
+    rough = 0.68 + 0.18 * (1.0 - grain) + 0.06 * knots
+    rough = np.clip(rough, 0.0, 1.0)
+    metallic = np.zeros((SIZE, SIZE))
+    orm = np.stack([ao, rough, metallic], axis=-1)
+    save_pbr(np.clip(albedo * 255.0, 0, 255), "madeira_albedo.png")
+    save_pbr(height_to_normal(height, 0.62), "madeira_normal.png")
+    save_pbr(np.clip(orm * 255.0, 0, 255), "madeira_orm.png")
+
+
+def gen_pbr_terra_vermelha(rng: np.random.Generator) -> None:
+    grain = fbm(192, 3, rng)
+    patch = fbm(8, 2, rng)
+    base = np.array([0.54, 0.30, 0.18])
+    shade = 0.68 + 0.58 * grain + 0.16 * (patch - 0.5)
+    albedo = base[None, None, :] * shade[..., None]
+    albedo = np.clip(albedo, 0.0, 1.0)
+    yy, xx = np.mgrid[0:SIZE, 0:SIZE]
+    height = 0.44 + grain * 0.38 + (patch - 0.5) * 0.18
+    ao = 0.96 + (grain - 0.5) * 0.06
+    rough = np.full((SIZE, SIZE), 0.94)
+    metallic = np.zeros((SIZE, SIZE))
+    # pedrinhas e torrões
+    for _ in range(220):
+        cx = float(rng.integers(0, SIZE))
+        cy = float(rng.integers(0, SIZE))
+        r = 1.6 + rng.random() * 3.2
+        dx = np.minimum(np.abs(xx - cx), SIZE - np.abs(xx - cx))
+        dy = np.minimum(np.abs(yy - cy), SIZE - np.abs(yy - cy))
+        peb = (dx * dx + dy * dy) < r * r
+        stone_color = np.array([0.62, 0.52, 0.42]) if rng.random() < 0.60 else np.array([0.58, 0.58, 0.58])
+        # leve variação tonal por pedra
+        stone_factor = 0.88 + 0.24 * rng.random()
+        albedo = np.where(peb[..., None], stone_color[None, None, :] * stone_factor, albedo)
+        height = np.where(peb, height + 0.28, height)
+        ao = np.where(peb, 0.88, ao)
+        rough = np.where(peb, 0.82, rough)
+    # manchas de umidade mais escuras
+    damp = fbm(6, 3, rng)
+    albedo = np.where((damp > 0.66)[..., None], albedo * 0.86, albedo)
+    ao = np.where(damp > 0.66, ao * 0.92, ao)
+    rough = np.where(damp > 0.66, np.clip(rough - 0.04, 0, 1), rough)
+    ao = np.clip(ao, 0.0, 1.0)
+    rough = np.clip(rough, 0.0, 1.0)
+    orm = np.stack([ao, rough, metallic], axis=-1)
+    save_pbr(np.clip(albedo * 255.0, 0, 255), "terra_vermelha_albedo.png")
+    save_pbr(height_to_normal(height, 1.0), "terra_vermelha_normal.png")
+    save_pbr(np.clip(orm * 255.0, 0, 255), "terra_vermelha_orm.png")
+
+
+# ----------------------------------------------------------------------------
 # Ceus equiretangulares (2048 x 1024)
 # ----------------------------------------------------------------------------
 
@@ -706,7 +1085,9 @@ def gen_sky(kind: str, rng: np.random.Generator) -> None:
 
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
+    OUT_PBR.mkdir(parents=True, exist_ok=True)
     print(f"Gerando texturas PBR em {OUT} (semente {MASTER_SEED})")
+    print(f"  destino PBR: {OUT_PBR}")
     gen_asphalt(np.random.default_rng(MASTER_SEED + 1))
     gen_sidewalk(np.random.default_rng(MASTER_SEED + 2))
     gen_facade(np.random.default_rng(MASTER_SEED + 3), "reboco")
@@ -727,7 +1108,18 @@ def main() -> None:
     gen_feathers(np.random.default_rng(MASTER_SEED + 25))
     for kind in ["tropical", "entardecer", "nublado"]:
         gen_sky(kind, np.random.default_rng(MASTER_SEED + 20 + ["tropical", "entardecer", "nublado"].index(kind)))
-    print("OK: texturas regeneradas.")
+    print(f"Gerando PBR do Lote 3 / Lote 10 em {OUT_PBR} (10 materiais x 3 mapas)")
+    gen_pbr_asfalto(np.random.default_rng(MASTER_SEED + 101))
+    gen_pbr_calcada_laje(np.random.default_rng(MASTER_SEED + 102))
+    gen_pbr_calcada_mosaico(np.random.default_rng(MASTER_SEED + 103))
+    gen_pbr_tijolo(np.random.default_rng(MASTER_SEED + 104))
+    gen_pbr_reboco(np.random.default_rng(MASTER_SEED + 105))
+    gen_pbr_laje_cobertura(np.random.default_rng(MASTER_SEED + 106))
+    gen_pbr_metal_pintado(np.random.default_rng(MASTER_SEED + 107))
+    gen_pbr_metal_zincado(np.random.default_rng(MASTER_SEED + 108))
+    gen_pbr_madeira(np.random.default_rng(MASTER_SEED + 109))
+    gen_pbr_terra_vermelha(np.random.default_rng(MASTER_SEED + 110))
+    print("OK: texturas regeneradas (inclui PBR pbr/).")
 
 
 if __name__ == "__main__":

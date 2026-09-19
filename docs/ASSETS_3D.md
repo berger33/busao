@@ -1,6 +1,6 @@
 # Inventario de assets 3D — Corre pro Ponto
 
-Auditoria completa dos assets do jogo (raiz + Lotes 2/3/4) em 2026-09-18.
+Auditoria completa dos assets do jogo (raiz + Lotes 2/3/4 + 9A/9B/9C/10) em 2026-09-19.
 Convencao: **"3D completo"** = mesh modelada (GLB/skinned) com materiais e,
 quando animado, clips de animacao. **"Procedural"** = montado em codigo com
 primitivas Godot (box/sphere/cylinder/torus) em `scripts/game_3d.gd`,
@@ -121,7 +121,7 @@ Centrados na origem (o jogo gira o node em Y) e escala 1:1. Drop-in em
 `_build_aerial` via `_optional_glb("sky_fx/<kind>.glb")`. As aves seguem no
 `Animal3D` articulado.
 
-## 7. Estruturas / cenario (Lote 1 do jogo, `game_3d.gd`) — 🔶 GLB em andamento
+## 7. Estruturas / cenario (Lote 1 do jogo, `game_3d.gd`) — ✅ GLB completo (9A/9B/9C)
 
 | Builder | GLB (`assets/scene/`) | Estado |
 |---|---|---|
@@ -137,28 +137,29 @@ Centrados na origem (o jogo gira o node em Y) e escala 1:1. Drop-in em
 | `_build_colonial_facade` | `colonial.glb` | ✅ Lote 9B (+ `TintTrim`, esquadrias azuis) |
 | `_build_profile_building` | `predio2.glb` / `predio3.glb` | ✅ Lote 9B (escala X/Y por instância, `TintTrim`) |
 | `_build_shopfront` | `loja.glb` | ✅ Lote 9B (placa `TintSign` MERCEARIA) |
-| `_build_church` | — | ❌ Lote 9C |
-| `_build_tourist_kiosk` | — | ❌ Lote 9C |
-| `_build_guard_post` | — | ❌ Lote 9C |
-| `_build_terminal_facade` | — | ❌ Lote 9C |
-| `_build_construction` | — | ❌ Lote 9C |
-| `pothole` (obstáculo de rua) | — | ❌ Lote 9C |
+| `_build_church` | `igreja.glb` | ✅ Lote 9C (nave + torre sineira + cruz + frontão, 682v, TintWall/Roof/Trim) |
+| `_build_tourist_kiosk` | `quiosque.glb` | ✅ Lote 9C (octógono + ripas + toldo, 800v, TintWall/Trim) |
+| `_build_guard_post` | `guarita.glb` | ✅ Lote 9C (abrigos + balcão + cortina, 464v, TintWall/Trim/Fabric) |
+| `_build_terminal_facade` | `terminal.glb` | ✅ Lote 9C (fachada + vidro + placa TERMINAL 512×128, 744v, TintWall/Trim/Sign) |
+| `_build_construction` | `obra.glb` | ✅ Lote 9C (tapume + andaime 3 níveis + rede + cata-vento, 632v) |
+| `pothole` (obstáculo de rua) | `pothole.glb` | ✅ Lote 9C (cratera irregular + 7 fragmentos, 124v) |
 | `_build_manhole` / `_build_asphalt_patch` | — | ➖ só usados em `_build_track_antigo` (morto desde o Lote 3) |
 
 Drop-ins via `_optional_glb("scene/<nome>.glb")` + `_tint_glb()` (cor da
 fase por instância); fallback procedural preservado em todos.
 
-## 8. Rua do Lote 3 (`building_kit.gd` + `world_spec.json`) — primitivas
+## 8. Rua do Lote 3 (`building_kit.gd` + `world_spec.json`) — ✅ com PBR (Lote 10)
 
 Piso, guias, lajes (MultiMesh), mosaicos, predios com janelas (MultiMesh),
 lojas com toldo, arvores, bancos, lixeiras, hidrante e horizonte — tudo
 primitivo, deterministico por semente. Desde o Lote 7, banco/lixeira/hidrante
 do kit sao substituidos automaticamente pelos GLBs de `assets/props/`
-(`_prop_glb`), mantendo o procedural apenas como fallback. **Faltam as texturas PBR**:
-`assets/textures/pbr/` (albedo/normal/orm de calcada_laje, calcada_mosaico,
-asfalto, tijolo, reboco, laje_cobertura, metal_pintado, metal_zincado,
-madeira, terra_vermelha) nao existe — o kit cai em cor plana com warning.
-(Trilha de texturas, nao de objetos 3D.)
+(`_prop_glb`), mantendo o procedural apenas como fallback. **✅ Texturas PBR entregues (Lote 10)**:
+`assets/textures/pbr/` com 10 materiais × 3 mapas (albedo/normal/orm, 1024×1024 tileable, 30 PNGs, ~41 MB) —
+calcada_laje, calcada_mosaico, asfalto, tijolo, reboco, laje_cobertura, metal_pintado, metal_zincado,
+madeira, terra_vermelha — gerados por `tools/generate_textures.py` (MASTER_SEED 20260918, offsets 101-110,
+ORM: R=AO, G=roughness, B=metallic). O `building_kit.gd` já usa `ORMMaterial3D` e o warning de
+textura ausente não ocorre mais.
 
 ---
 
@@ -176,8 +177,8 @@ madeira, terra_vermelha) nao existe — o kit cai em cor plana com warning.
 | **8** ✅ | Coletaveis (11) + `aviao` + `drone` | ✅ feito: `_optional_glb("collectibles/<kind>.glb")` em `_build_collectible` e `_optional_glb("sky_fx/<kind>.glb")` em `_build_aerial` (fallback procedural preservado) |
 | **9A** ✅ | Miudezas: `palmeira`, `arvore`, `caixa_dagua`, `varal`, `bandeira`, `outdoor`, `portao`, `barraca` (`assets/scene/`) | ✅ feito: `_optional_glb("scene/<nome>.glb")` nos 8 builders + `_tint_glb()` (cor da fase por instância) |
 | **9B** ✅ | Moradias/comércio: `casa`, `casa_favela`, `colonial`, `predio2`, `predio3`, `loja` (`assets/scene/`) | ✅ feito: drop-in nos 4 builders (`_tint_glb` com Dictionary; prédios com escala X/Y por instância) |
-| **9C** | Equipamentos: `igreja`, `quiosque`, `guarita`, `terminal`, `obra` + `pothole` | `_optional_glb` + `_tint_glb` (mesmo padrão 9A/9B) |
-| **10** | Texturas PBR do Lote 3 (`assets/textures/pbr/`) | sem codigo — o kit ja procura |
+| **9C** ✅ | Equipamentos: `igreja`, `quiosque`, `guarita`, `terminal`, `obra` + `pothole` (6 GLBs, 16–139 KB) | ✅ feito: `_optional_glb` + `_tint_glb` (mesmo padrão 9A/9B; pothole com early-return em `_build_road_obstacle`) |
+| **10** ✅ | Texturas PBR do Lote 3 (`assets/textures/pbr/` — 10×3 PNGs tileable 1024) | ✅ feito: `tools/generate_textures.py` agora gera `pbr/` (offsets 101-110, ORM R=AO G=rough B=metallic); `building_kit.gd` já consome via `ORMMaterial3D` |
 
 Toda GLB original do projeto eh CC0 (trabalho original, sem obrigacao de
 credito); `CREDITS.md` so muda se entrar asset de terceiro.
