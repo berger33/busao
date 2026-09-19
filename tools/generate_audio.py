@@ -36,14 +36,46 @@ def concat(*parts):
     for p in parts: out += p
     return out
 
+# Lote25 — Foley Realista: 4 variações de passo, caramelo real, buzina 2 tons, reverb por clima
+def _reverb(samples, delay_ms=110, decay=0.28):
+    # simples eco para simular IR de rua
+    d = int(RATE * delay_ms / 1000.0)
+    out = samples[:]
+    for i in range(len(samples)):
+        if i >= d:
+            out[i] = out[i] + samples[i-d] * decay
+    # normaliza
+    peak = max(abs(x) for x in out) or 1.0
+    if peak > 0.95:
+        out = [x * 0.95/peak for x in out]
+    return out
+
+def _stereo(samples, pan=0.0):
+    # pan -1 esquerda, 1 direita, retorna lista de tuplas
+    return [(x * (1-pan)*0.5 + x*0.5, x * (1+pan)*0.5 + x*0.5) for x in samples]
+
 write('click.wav', concat(tone(720,.045,.26),tone(980,.055,.18)))
-write('step.wav', concat(tone(105,.055,.18,'noise'), tone(135,.045,.10)))
+# 4 variações de passo em superficies (asfalto/calcada/terra/metal) — Foley 105Hz base + reverb curto
+step_asfalto = _reverb(concat(tone(105,.055,.18,'noise'), tone(135,.045,.10)), 85, 0.22)
+step_calcada = _reverb(concat(tone(125,.055,.16,'noise'), tone(155,.045,.09)), 95, 0.24)
+step_terra = _reverb(concat(tone(85,.060,.20,'noise'), tone(110,.045,.12,'noise')), 105, 0.26)
+step_metal = _reverb(concat(tone(165,.045,.14,'square'), tone(220,.035,.10,'sine')), 70, 0.20)
+write('step.wav', step_asfalto)
+write('step_asfalto.wav', step_asfalto)
+write('step_calcada.wav', step_calcada)
+write('step_terra.wav', step_terra)
+write('step_metal.wav', step_metal)
 write('jump.wav', tone(300,.25,.3,bend=1.5))
 write('coin.wav', concat(tone(880,.08,.33),tone(1320,.11,.31)))
 write('pickup.wav', concat(tone(420,.08,.25),tone(620,.08,.25),tone(930,.15,.22)))
 write('hit.wav', concat(tone(120,.16,.45,'noise'),tone(75,.22,.25,'sine')))
-write('bus_horn.wav', concat(tone(220,.20,.42),tone(175,.28,.40),tone(220,.14,.35)))
-write('bark.wav', concat(tone(180,.09,.5,'noise'),tone(240,.11,.42,'noise'),tone(155,.08,.35,'noise')))
+# buzina 2 tons brasileira (Fá-Mi) com reverb rua
+_horn = concat(tone(220,.20,.42),tone(175,.28,.40),tone(220,.14,.35))
+write('bus_horn.wav', _reverb(_horn, 120, 0.32))
+# latido caramelo SRD realista — 3 camadas noise + formante + reverb curta
+_bark_core = concat(tone(180,.09,.5,'noise'),tone(240,.11,.42,'noise'),tone(155,.08,.35,'noise'))
+_bark_formant = concat(tone(520,.09,.12,'sine'), tone(780,.09,.10,'sine'))
+write('bark.wav', _reverb(concat(_bark_core, _bark_formant), 60, 0.18))
 write('shout.wav', concat(tone(310,.10,.22),tone(420,.13,.20),tone(260,.16,.2)))
 write('slide.wav', tone(240,.22,.28,'noise'))
 write('wall.wav', concat(tone(520,.08,.2),tone(780,.08,.18),tone(1040,.10,.16)))
@@ -56,6 +88,9 @@ write('combo.wav', concat(tone(440,.06,.20), tone(660,.06,.22), tone(990,.07,.23
 write('streak.wav', concat(tone(392,.08,.22), tone(523,.08,.22), tone(659,.08,.22), tone(784,.20,.24)))
 write('whoosh.wav', tone(460,.28,.22,'noise',bend=1.8))
 write('impact_heavy.wav', concat(tone(92,.18,.45,'noise'), tone(54,.28,.32,'sine'), tone(180,.07,.15,'noise')))
+# Lote25 — trovao com IR reverb longa (raio)
+_trovao = concat(tone(60,.42,.52,'noise'), tone(35,.68,.44,'noise'), tone(80,.38,.31,'sine'))
+write('trovao.wav', _reverb(_trovao, 280, 0.45))
 
 # Four original, low-volume loop beds. Percussive sine/noise patterns keep the
 # game lively while remaining tiny and safe to redistribute.
