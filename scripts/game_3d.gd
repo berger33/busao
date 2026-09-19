@@ -1267,6 +1267,13 @@ func _build_aerial(parent: Node3D, kind: String) -> void:
         animal.call("enable_flight_cycle")
         parent.add_child(animal)
         return
+    # Lote 8: avião e drone viram GLB originais (assets/sky_fx/). O node pai
+    # gira em Y devagar (_update_sky_fx), então o GLB é centrado na origem.
+    var glb := _optional_glb("sky_fx/" + kind + ".glb")
+    if glb != null:
+        glb.name = "SkyFx3D_" + kind
+        parent.add_child(glb)
+        return
     var dark := _material(Color("#283242"), 0.0, 0.92)
     var pale := _material(Color("#f1f0de"), 0.0, 0.82)
     var sky_blue := _material(Color("#78cbd8"), 0.0, 0.54)
@@ -1985,6 +1992,26 @@ func _optional_prop(file: String) -> Node3D:
 	return node
 
 
+func _optional_glb(subpath: String) -> Node3D:
+	# Drop-in generico por subcaminho de assets/ (ex.: "collectibles/coin.glb",
+	# "sky_fx/aviao.glb"). Se o GLB existir, substitui o objeto procedural;
+	# se nao, o builder antigo continua como fallback de seguranca.
+	if not _glb_cache.has(subpath):
+		var packed: PackedScene = null
+		var path := "res://assets/" + subpath
+		if ResourceLoader.exists(path):
+			packed = load(path) as PackedScene
+		_glb_cache[subpath] = packed
+	var cached: PackedScene = _glb_cache[subpath]
+	if cached == null:
+		return null
+	var node := cached.instantiate() as Node3D
+	if node == null:
+		push_warning("Falha ao instanciar GLB: " + subpath)
+		return null
+	return node
+
+
 func _model_bounds(root: Node3D) -> AABB:
     var bounds := AABB()
     var found := false
@@ -2320,6 +2347,18 @@ func _build_collectible(parent: Node3D, kind: String) -> void:
         "pix": CYAN, "umbrella": BLUE
     }
     var color: Color = colors.get(kind, GOLD)
+    # Lote 8: coletáveis viram GLBs originais (assets/collectibles/); o builder
+    # procedural continua como fallback. O node pai gira em Y no _update_run,
+    # entao o GLB e centrado na origem. O glow translúcido fica por cima nos
+    # dois casos para manter a leitura de pickup.
+    var coletavel_glb := _optional_glb("collectibles/" + kind + ".glb")
+    if coletavel_glb != null:
+        coletavel_glb.name = "Collectible3D_" + kind
+        parent.add_child(coletavel_glb)
+        var glow_glb := _material(Color(color, 0.10), 0.0, 0.8, "glass")
+        glow_glb.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+        _sphere(parent, 0.36, Vector3.ZERO, glow_glb, "Glow")
+        return
     var mat := _material(color, 0.12 if kind in ["coin", "golden"] else 0.0, 0.28, "metal" if kind in ["coin", "golden"] else "paint")
     mat.emission_enabled = true
     mat.emission = color

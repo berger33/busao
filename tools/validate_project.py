@@ -28,6 +28,11 @@ def check_paths() -> None:
     text += "\n" + (ROOT / "project.godot").read_text(encoding="utf-8")
     for raw in sorted(set(re.findall(r"res://[^\"']+", text))):
         resource = raw.split("\"")[0].split("'")[0]
+        # Caminhos dinamicos nao tem existencia estatica: strings de formato
+        # ("%s.glb") e prefixos de diretorio montados por concatenacao sao
+        # resolvidos pelos proprios carregadores (ResourceLoader.exists/load).
+        if "%" in resource or resource.endswith("/"):
+            continue
         if "*" not in resource and not (ROOT / resource.removeprefix("res://")).exists():
             fail(f"missing resource: {resource}")
 
@@ -180,11 +185,10 @@ def check_3d_entrypoint() -> None:
         'enable_ground_behavior',
         'Bird3D',
         'BirdHeadPivot',
-        'BirdBeak',
-        'BirdShoulderL',
-        'BirdWingL',
-        'BirdTail',
-        'BirdLeg',
+        'BirdBico',
+        'BirdAsa',
+        'BirdTailPivot',
+        'BirdPerna',
         'GroundFauna_',
         '_rebuild_ground_fauna',
         '_update_ground_fauna',

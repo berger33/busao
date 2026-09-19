@@ -83,20 +83,37 @@ O drop-in da bicicleta foi adicionado ao `"bicycle"` de
 
 Sem drop-in no codigo hoje — o lote 7 adicione o caminho GLB.
 
-## 5. Coletaveis — ❌ todos procedurais (11)
+## 5. Coletaveis — ✅ todos GLB (Lote 8)
 
-`coin` (R$ 0,25), `golden` (bilhete dourado), `coffee` (cafe), `bread`
-(pao de queijo), `pastel`, `sugarcane` (caldo de cana), `pass`
-(vale-transporte), `coxinha`, `guarana`, `pix` (celular), `umbrella`
-(guarda-chuva) — todos montados com primitivas em `_build_collectible`
-+ esferas de glow. Sem drop-in hoje — o lote 8 adicione o caminho GLB.
+| Asset | Estado | Detalhe |
+|---|---|---|
+| `coin` | ✅ `coin.glb` | Moeda de R$ 0,25 em pe, face "R$ 0,25" e verso "BRASIL 2026" (texturas PIL no build) |
+| `golden` | ✅ `golden.glb` | Bilhete dourado "PREMIADO" com estrela emissiva |
+| `coffee` | ✅ `coffee.glb` | Copo com tampa e faixa kraft |
+| `bread` | ✅ `bread.glb` | Pao de queijo com manchas de forno |
+| `pastel` | ✅ `pastel.glb` | Pastel com borda crimpada (gominhos) |
+| `sugarcane` | ✅ `sugarcane.glb` | Tres talos com nos + folhas no topo |
+| `pass` | ✅ `pass.glb` | Vale-transporte "BUSÃO" com tarja |
+| `coxinha` | ✅ `coxinha.glb` | Gota empanada com bico |
+| `guarana` | ✅ `guarana.glb` | Garrafa verde com rotulo |
+| `pix` | ✅ `pix.glb` | Celular "PIX TURBO" com tela emissiva |
+| `umbrella` | ✅ `umbrella.glb` | Guarda-chuva azul fechado |
 
-## 6. CeU (sky fx) — ❌ 2 procedurais
+Todos modelados neste repo por Blender headless (`tools/blender/build_lote8.py`),
+**centrados na origem** (o node pai gira em Y) e com frente -Y no Blender.
+Drop-in em `_build_collectible` via `_optional_glb("collectibles/<kind>.glb")`;
+o glow translucido continua nos dois caminhos. Fallback procedural preservado.
 
-| Asset | Estado |
-|---|---|
-| `aviao` | ❌ caixas (corpo, asa, cauda) |
-| `drone` | ❌ caixas + cilindro de rotor |
+## 6. CeU (sky fx) — ✅ GLB (Lote 8)
+
+| Asset | Estado | Detalhe |
+|---|---|---|
+| `aviao` | ✅ `aviao.glb` | Fuselagem loftera, asa baixa, deriva azul e motores |
+| `drone` | ✅ `drone.glb` | Quadricoptero com 4 rotores, gimbal e trens |
+
+Centrados na origem (o jogo gira o node em Y) e escala 1:1. Drop-in em
+`_build_aerial` via `_optional_glb("sky_fx/<kind>.glb")`. As aves seguem no
+`Animal3D` articulado.
 
 ## 7. Estruturas / cenario (Lote 1 do jogo, `game_3d.gd`) — ❌ todos procedurais
 
@@ -131,7 +148,7 @@ madeira, terra_vermelha) nao existe — o kit cai em cor plana com warning.
 | **5** ✅ | Veiculos: `car`, `motorcycle`, `truck`, `bus_traffic`, `onibus`, `carro` + `bicycle` | ja existia (`_optional_model`); novo drop-in `bicycle.glb` no obstaculo de calcada; rodas giram via nomes |
 | **6** | (reserva — variantes de carro/cor/rodas com texturas baked) | — |
 | **7** ✅ | Mobiliario: `cone`, `hidrante`, `orelhao`, `banco`, `lixeira`, `poste`, `ponto`, `carrinho` (8 GLBs originais, `assets/props/`) | ✅ feito: `_optional_prop` em `_build_sidewalk_obstacle`/`_build_lamp`/`_create_bus_stop` e `_prop_glb` no `building_kit.gd` (banco/lixeira/hidrante dos quarteirões) |
-| **8** | Coletaveis (11) + `aviao` + `drone` | novo drop-in em `_build_collectible`/`_build_aerial` |
+| **8** ✅ | Coletaveis (11) + `aviao` + `drone` | ✅ feito: `_optional_glb("collectibles/<kind>.glb")` em `_build_collectible` e `_optional_glb("sky_fx/<kind>.glb")` em `_build_aerial` (fallback procedural preservado) |
 | **9** | Estruturas de cenario (casas, predios, igreja, quiosque, poste, palmeira…) | novo drop-in opcional em `_build_scenario_slice` |
 | **10** | Texturas PBR do Lote 3 (`assets/textures/pbr/`) | sem codigo — o kit ja procura |
 
