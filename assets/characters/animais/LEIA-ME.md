@@ -14,11 +14,15 @@ loop, idle e a pose de crouch — bicar/pastar/deitar) sao automaticos.
   articulacao; rig de 13 ossos e clipes `Walk` (16 frames, com o balanco
   de cabeca classico) e `Idle` (48 frames). Licenca: trabalho original do
   projeto (CC0).
-- **`caramelo.glb`** — a **raposa** da colecao oficial da Khronos
-  (`glTF-Sample-Assets`, CC0 1.0; conversao glTF por AsoboStudio/scurest).
-  Rigada e skinada, com os clips `Survey`, `Walk` e `Run` — o jogo toca o
-  `Walk` em loop. Canino laranja: em escala de arcade, le como um caramelo
-  de rua. Para voltar ao cachorro procedural, basta apagar este arquivo.
+- **`caramelo.glb`** — **vira-lata caramelo (SRD)** **modelado no proprio
+  repositorio** por Blender headless 4.5 LTS (`tools/blender/build_caramelo.py`):
+  pelagem caramelo médio (#d98a42), focinho alongado, orelhas semi-caídas com
+  ponta escura, cauda curva com tufos, coleira azul + pingente dourado;
+  rig de 14 ossos (Corpo/Pescoco/Cabeca/Cauda+CaudaPonta, 4 pernas Coxa/Canela/Pe)
+  e clipes `Walk` (16f trote diagonal), `Run` (16f galope), `Idle` (16f farejando)
+  e `Lie` (20f *play bow* — peito no chão, traseiro alto — usado no crouch).
+  Tamanho GLB_SIZES [0.95,0.72] (frente +Z, origem no chão). Licença: trabalho
+  original do projeto (CC0).
 - **`passaro.glb`** — tico-tico (Thraupis sayaca) **modelado no proprio
   repositorio** por Blender headless (lote 2, `tools/blender/build_aves.py`):
   peito amarelo, costas/cabeça escuras, cauda listrada,
