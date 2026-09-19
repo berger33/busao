@@ -223,6 +223,13 @@ var _world_horizonte: Node3D = null   # silhueta fixa (reparentada p/ world_root
 # --- Lote 4: clima --------------------------------------------------------
 var _clima: WeatherSystem = null
 
+# --- Lote 6: efeitos e captura ---------------------------------------------
+var _dust_particles: GPUParticles3D = null
+var _splash_particles: GPUParticles3D = null
+var _capture_mode := false
+var _capture_yaw := 0.0
+var _capture_pitch := -0.12
+
 func _ready() -> void:
     rng.seed = 20240917
     fx_rng.seed = 778899
@@ -296,6 +303,7 @@ func _process(delta: float) -> void:
         _update_run(dt)
     _update_world_kit(dt)        # Lote 3: recicla os quarteirões da rua
     _update_clima(dt)            # Lote 4: chuva/poças seguem o corredor
+    _update_lote6_effects(dt)    # Lote 6: poeira/respingo e PBR personagem
     _update_player(dt)
     _update_camera(dt)
     hud_sync_timer -= dt
@@ -1175,6 +1183,17 @@ func _update_camera(dt: float) -> void:
         camera_shake = maxf(0.0, camera_shake - dt * 6.0)
     elif reduced_motion:
         camera_shake = 0.0
+    # modo captura: órbita livre ao redor do corredor (Lote 6)
+    if _capture_mode:
+        var orbit_target := Vector3(player_x, 1.05 + player_visual.position.y * 0.12, -1.2)
+        var r := 6.2
+        var cp := cos(_capture_pitch)
+        var off := Vector3(sin(_capture_yaw) * r * cp, sin(_capture_pitch) * 2.2 + 2.0, cos(_capture_yaw) * r * cp) + shake_offset
+        var desired_cap := orbit_target + off
+        camera.position = camera.position.lerp(desired_cap, minf(1.0, dt * 6.0))
+        camera.look_at(orbit_target, Vector3.UP)
+        camera.fov = lerpf(camera.fov, RENDER_FOV_RUN + 2.0, minf(1.0, dt * 3.0))
+        return
     var camera_bob: float = sin(run_phase * 1.6) * 0.035 if not reduced_motion and screen == 2 and run_mode == "playing" else 0.0
     var target := Vector3(player_x * 0.18, 1.15 + player_visual.position.y * 0.16, -14.0)
     var desired := Vector3(player_x * 0.15, RENDER_CAMERA_Y + camera_bob, RENDER_CAMERA_Z + sin(run_phase * 0.8) * 0.04) + shake_offset
@@ -2066,6 +2085,13 @@ const GLB_FIT := {
     "onibus": Vector2(8.2, 3.0),
     "carro": Vector2(4.4, 1.55),
 }
+# Lote 6: reserva variantes de veículo (cor/rodas com textura baked) — drop-in opcional.
+# Cada kind sorteia entre a base e as variantes se o arquivo existir; fallback seguro.
+const VEHICLE_VARIANTS := {
+    "car": ["car.glb", "car_azul.glb", "car_prata.glb"],
+    "truck": ["truck.glb", "truck_vermelho.glb"],
+    "motorcycle": ["motorcycle.glb", "motorcycle_verde.glb"],
+}
 var _glb_cache: Dictionary = {}
 var _animal_glb_cache: Dictionary = {}
 var _tint_cache: Dictionary = {}
@@ -2205,9 +2231,23 @@ func _fit_model(node: Node3D, target_length: float, target_height: float) -> voi
     var offset := Vector3(-bounds.position.x, -bounds.position.y, -bounds.position.z - bounds.size.z * 0.5) * fit
     node.position += offset
 
+func _pick_vehicle_variant(kind: String) -> String:
+    # Lote 6: sorteia drop-in entre as variantes se existirem; determinístico por seed da corrida.
+    var lista: Array = VEHICLE_VARIANTS.get(kind, [kind + ".glb"])
+    var existentes: Array[String] = []
+    for f in lista:
+        if ResourceLoader.exists("res://assets/vehicles/" + str(f)):
+            existentes.append(str(f))
+    if existentes.is_empty():
+        return kind + ".glb"
+    # usa o tamanho atual de entities + phase_index para variar sem RNG extra (auditável)
+    var idx: int = abs((str(kind) + str(entities.size()) + str(phase_index)).hash()) % existentes.size()
+    return existentes[idx]
+
 func _build_road_obstacle(parent: Node3D, kind: String) -> void:
     if GLB_FIT.has(kind):
-        var replacement := _optional_model(kind + ".glb")
+        var variant := _pick_vehicle_variant(kind)
+        var replacement := _optional_model(variant)
         if replacement != null:
             parent.add_child(replacement)
             _fit_model(replacement, GLB_FIT[kind].x, GLB_FIT[kind].y)
@@ -3003,12 +3043,25 @@ func _sync_hud() -> void:
 
 func _handle_key(event: InputEventKey) -> void:
     if event.keycode == KEY_ESCAPE:
+        if _capture_mode:
+            _capture_mode = false
+            _show_feedback("CAPTURA OFF", "Voltando à corrida", BLUE, "ui_back")
+            return
         if screen == 2:
             run_mode = "playing" if run_mode != "playing" else "paused"
             _show_feedback("PAUSA" if run_mode == "paused" else "VAMOS!", "Leia as três faixas", YELLOW if run_mode == "paused" else GREEN, "click")
         elif screen != 0:
             screen = 0
             _show_feedback("MENU", "Escolha o próximo corre", BLUE, "ui_back")
+        return
+    if event.keycode == KEY_C:
+        _toggle_capture_mode()
+        return
+    if event.keycode == KEY_P and _capture_mode:
+        _capture_screenshot()
+        return
+    if event.keycode == KEY_F10:
+        _capture_screenshot()
         return
     if event.keycode == KEY_M:
         AudioManager.toggle_mute()
@@ -3036,6 +3089,11 @@ func _handle_key(event: InputEventKey) -> void:
             _start_run(phase_index)
 
 func _input(event: InputEvent) -> void:
+    if _capture_mode and event is InputEventMouseMotion:
+        if event.button_mask & MOUSE_BUTTON_MASK_LEFT:
+            _capture_yaw -= event.relative.x * 0.005
+            _capture_pitch = clampf(_capture_pitch - event.relative.y * 0.005, -0.80, 0.62)
+        return
     if event is InputEventKey and event.pressed and not event.echo:
         _handle_key(event)
         return
@@ -3356,3 +3414,103 @@ func _update_clima(_delta: float) -> void:
 func _trocar_clima_do_capitulo(indice: int) -> void:
     if _clima != null:
         _clima.set_chapter(indice)
+
+
+# --- Lote 6: efeitos de poeira, respingo molhado e captura ------------------
+func _ensure_lote6_particles() -> void:
+    if _dust_particles != null and _splash_particles != null:
+        return
+    # poeira de deslize: nuvem baixa atrás dos pés do corredor
+    if _dust_particles == null:
+        var dust := GPUParticles3D.new()
+        dust.name = "Lote6_Dust"
+        dust.emitting = false
+        dust.amount = 80
+        dust.lifetime = 0.7
+        dust.visibility_aabb = AABB(Vector3(-2, 0, -2), Vector3(4, 2.5, 4))
+        var mat := StandardMaterial3D.new()
+        mat.albedo_color = Color("#c2b8a3")
+        mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+        mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+        var quad := QuadMesh.new()
+        quad.size = Vector2(0.22, 0.22)
+        quad.material = mat
+        dust.draw_pass_1 = quad
+        var proc := ParticleProcessMaterial.new()
+        proc.direction = Vector3(0, 0.7, -0.6)
+        proc.spread = 28.0
+        proc.gravity = Vector3(0, -1.2, 0)
+        proc.initial_velocity_min = 1.5
+        proc.initial_velocity_max = 2.8
+        proc.scale_min = 0.35
+        proc.scale_max = 0.75
+        dust.process_material = proc
+        dust.preprocess = 0.1
+        (fx_root if fx_root != null else self).add_child(dust)
+        _dust_particles = dust
+    if _splash_particles == null:
+        var splash := GPUParticles3D.new()
+        splash.name = "Lote6_Splash"
+        splash.emitting = false
+        splash.amount = 64
+        splash.lifetime = 0.55
+        splash.visibility_aabb = AABB(Vector3(-2, 0, -2), Vector3(4, 2.2, 4))
+        var smat := StandardMaterial3D.new()
+        smat.albedo_color = Color("#87b9d9aa")
+        smat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+        smat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+        var sQuad := QuadMesh.new()
+        sQuad.size = Vector2(0.18, 0.18)
+        sQuad.material = smat
+        splash.draw_pass_1 = sQuad
+        var sProc := ParticleProcessMaterial.new()
+        sProc.direction = Vector3(0, 1.0, -0.2)
+        sProc.spread = 42.0
+        sProc.gravity = Vector3(0, -6.0, 0)
+        sProc.initial_velocity_min = 1.2
+        sProc.initial_velocity_max = 2.6
+        sProc.scale_min = 0.22
+        sProc.scale_max = 0.55
+        splash.process_material = sProc
+        splash.preprocess = 0.1
+        (fx_root if fx_root != null else self).add_child(splash)
+        _splash_particles = splash
+
+func _update_lote6_effects(_dt: float) -> void:
+    _ensure_lote6_particles()
+    # poeira só durante o deslize
+    if _dust_particles != null:
+        var should_dust: bool = slide_timer > 0.0 and screen == 2 and run_mode == "playing" and not bool(GameSave.data.get("reduced_motion", false))
+        _dust_particles.emitting = should_dust
+        if should_dust and player_root != null:
+            _dust_particles.global_position = player_root.global_position + Vector3(0, 0.06, 0.55)
+            _dust_particles.restart()
+    # respingo quando o clima indica piso molhado e o corredor avança rápido
+    if _splash_particles != null:
+        var wet: float = _clima.get_wetness() if _clima != null and _clima.has_method("get_wetness") else 0.0
+        var should_splash: bool = wet > 0.35 and motion_speed > 4.0 and screen == 2 and run_mode == "playing" and not bool(GameSave.data.get("reduced_motion", false))
+        # só respinga em intervalos para não saturar
+        _splash_particles.emitting = should_splash and fmod(pulse, 0.9) < 0.5
+        if should_splash and player_root != null:
+            _splash_particles.global_position = player_root.global_position + Vector3(0, 0.03, -0.25)
+
+func _capture_screenshot() -> void:
+    var vp: Viewport = get_viewport()
+    if vp == null:
+        push_warning("Captura: viewport indisponível")
+        return
+    var img: Image = vp.get_texture().get_image()
+    if img == null:
+        push_warning("Captura: imagem nula")
+        return
+    var path := "user://captura_%s.png" % Time.get_datetime_string_from_system().replace(":", "-")
+    var err := img.save_png(path)
+    if err != OK:
+        push_warning("Captura falhou: %d" % err)
+        return
+    _show_feedback("CAPTURA SALVA", path, CYAN, "ui_confirm")
+    print("CAPTURA: %s" % path)
+
+func _toggle_capture_mode() -> void:
+    _capture_mode = not _capture_mode
+    _show_feedback("MODO CAPTURA " + ("ON" if _capture_mode else "OFF"), "C arrasta órbita • P captura tela • ESC sai" if _capture_mode else "Retornando ao follow", CYAN if _capture_mode else BLUE, "ui_confirm")

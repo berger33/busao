@@ -70,6 +70,17 @@ Frente -Z, origem no chao; `_fit_model` assenta/escala por `GLB_FIT`.
 O drop-in da bicicleta foi adicionado ao `"bicycle"` de
 `_build_sidewalk_obstacle` (fit 1,85 x 1,15).
 
+**Lote 6 — variantes reservas** (ambos os significados de `6`):
+
+| Variante | Estado | Detalhe |
+|---|---|---|
+| `car_azul.glb` | ✅ `assets/vehicles/car_azul.glb` | hatch Lote 5 repintado azul (0.14,0.28,0.68) + rodas com aro texturizado baked 256×256 (faixa azul sobre prata) via PIL |
+| `car_prata.glb` | ✅ `assets/vehicles/car_prata.glb` | mesmo casco em prata (0.76) + rodas pretas |
+| `truck_vermelho.glb` | ✅ `assets/vehicles/truck_vermelho.glb` | cabine vermelha (0.70,0.14,0.13) preservando carroceria de madeira |
+| `motorcycle_verde.glb` | ✅ `assets/vehicles/motorcycle_verde.glb` | tanque verde (0.14,0.52,0.22) |
+
+Sorteio determinístico por `hash(kind+entities.size()+phase_index) % variantes_existem` em `_pick_vehicle_variant()`; cada variante mantém o mesmo contrato (fit `GLB_FIT` da base, frente -Z, nós `Wheel*`). O jogo continua compatível se só a base existir. Efeitos do Lote 6 (poeira no deslize, respingo quando `wetness>0.35`, PBR personagem já ativo e modo captura C/P) vivem em `game_3d.gd` com `GPUParticles3D` leves (≤80 partículas).
+
 ## 4. Objetos / mobiliario de calcada — ✅ todos GLB (Lote 7)
 
 | Asset | Estado | Detalhe |
@@ -172,7 +183,7 @@ textura ausente não ocorre mais.
 | **3** ✅ | Quadrupedes: `capivara`, `cavalo`, `boi` (clips Walk + Idle + Lie/Graze) | ✅ feito: `GLB_SIZES` + `_sincronizar_clip_glb` toca `Lie`/`Graze` no crouch |
 | **4** ✅ | `macaco`, `caranguejo` | ✅ ja coberto pelo drop-in generico do lote 3 (sem novo codigo) |
 | **5** ✅ | Veiculos: `car`, `motorcycle`, `truck`, `bus_traffic`, `onibus`, `carro` + `bicycle` | ja existia (`_optional_model`); novo drop-in `bicycle.glb` no obstaculo de calcada; rodas giram via nomes |
-| **6** | (reserva — variantes de carro/cor/rodas com texturas baked) | — |
+| **6** ✅ | Variantes de veículo: `car_azul`, `car_prata`, `truck_vermelho`, `motorcycle_verde` + efeitos poeira/respingo | ✅ feito: `VEHICLE_VARIANTS` + `_pick_vehicle_variant` em `game_3d.gd` (sorteio determinístico entre GLBs existentes, fit `GLB_FIT`); rodas `car_azul` com textura baked 256² (`hatch_azul_aro_tex.png` — PIL) + `_ensure_lote6_particles`/`_update_lote6_effects` (GPUParticles3D poeira deslize + respingo wetness via `_clima.get_wetness()`) + modo captura (C / P / F10, órbita com mouse) |
 | **7** ✅ | Mobiliario: `cone`, `hidrante`, `orelhao`, `banco`, `lixeira`, `poste`, `ponto`, `carrinho` (8 GLBs originais, `assets/props/`) | ✅ feito: `_optional_prop` em `_build_sidewalk_obstacle`/`_build_lamp`/`_create_bus_stop` e `_prop_glb` no `building_kit.gd` (banco/lixeira/hidrante dos quarteirões) |
 | **8** ✅ | Coletaveis (11) + `aviao` + `drone` | ✅ feito: `_optional_glb("collectibles/<kind>.glb")` em `_build_collectible` e `_optional_glb("sky_fx/<kind>.glb")` em `_build_aerial` (fallback procedural preservado) |
 | **9A** ✅ | Miudezas: `palmeira`, `arvore`, `caixa_dagua`, `varal`, `bandeira`, `outdoor`, `portao`, `barraca` (`assets/scene/`) | ✅ feito: `_optional_glb("scene/<nome>.glb")` nos 8 builders + `_tint_glb()` (cor da fase por instância) |

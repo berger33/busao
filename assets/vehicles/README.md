@@ -17,6 +17,31 @@ com os veículos construídos em código (nada quebra).
 | `bicycle.glb`           | Obstáculo "bicycle" (calçada)      | 1,85 m × 1,15 m       |
 
 O jogo escala o modelo para o tamanho-alvo e o assenta no chão automaticamente.
+
+## Variantes do Lote 6 (cores e rodas baked)
+
+A partir do Lote 6 o jogo sorteia **variantes** quando existirem (drop-in opcional,
+mesmo ajuste `GLB_FIT` da base). Se só a base existir, ela é usada.
+
+| Arquivo | Variante de | Cor | Roda | Geração |
+|---|---|---|---|---|
+| `car_azul.glb` | `car` | azul (0.14,0.28,0.68) | aro prata com faixa azul baked 256² | `build_lote6.py` |
+| `car_prata.glb` | `car` | prata (0.76) | aro preto | `build_lote6.py` |
+| `truck_vermelho.glb` | `truck` | vermelho (0.70,0.14,0.13) | cromada | `build_lote6.py` |
+| `motorcycle_verde.glb` | `motorcycle` | verde (0.14,0.52,0.22) | cromada | `build_lote6.py` |
+
+A roda azul tem textura baked procedural (PIL, 256×256, fundo prata + disco azul +
+parafusos) aplicada como `ShaderNodeTexImage` no `Principled BSDF`; o GLB embala a
+imagem. O sorteio é determinístico por `hash(kind+entities.size()+phase_index)` em
+`_pick_vehicle_variant()` — auditável e sem RNG extra.
+
+## Efeitos e captura (Lote 6)
+
+- Poeira de deslize e respingo em pista molhada (`_clima.get_wetness()>0.35`) via
+  `GPUParticles3D` leves (≤80 partículas, `fx_root`).
+- Modo captura: **C** alterna órbita livre, arraste com botão esquerdo para girar,
+  **P** (em captura) ou **F10** salva `user://captura_*.png`.
+
 O modelo deve estar orientado com o comprimento no eixo **Z** e virado para **-Z**
 (o mesmo padrão dos veículos procedurais).
 
