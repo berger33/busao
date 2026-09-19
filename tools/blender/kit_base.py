@@ -73,12 +73,17 @@ def elipsoide(nome, centro, raios, nivel=2):
     o.name = nome
     sozinho(o)
     o.scale = raios
-    bpy.ops.object.transform_apply(scale=True)
+    # Atencao: transform_apply tem defaults True para location/rotation.
+    # Aplicar location aqui colocaria a origem do objeto no mundo (0,0,0) e
+    # qualquer rotacao feita depois orbitaria a peca em torno da origem.
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     mm = o.modifiers.new("Subd", 'SUBSURF'); mm.levels = mm.render_levels = nivel; mm.quality = 4
     return o
 
 def pilar(nome, r_base, r_topo_rel, seg=10):
-    """Cilindro cônico unitario (base no plano z=0, topo em z=1)."""
+    """Cilindro cônico unitario (base no plano z=0, topo em z=1).
+    As tampas usam vertice central + leque de triangulos: com n-gons, o
+    subsurf colapsa a tampa e pincha a ponta (pernas viravam espetas)."""
     verts, faces = [], []
     rt = r_base * r_topo_rel
     for k in range(seg):
@@ -90,8 +95,12 @@ def pilar(nome, r_base, r_topo_rel, seg=10):
     for k in range(seg):
         k2 = (k + 1) % seg
         faces.append((k, k2, seg + k2, seg + k))
-    faces.append(tuple(range(seg - 1, -1, -1)))
-    faces.append(tuple(range(seg, 2 * seg)))
+    cb = len(verts); verts.append((0.0, 0.0, 0.0))
+    ct = len(verts); verts.append((0.0, 0.0, 1.0))
+    for k in range(seg):
+        k2 = (k + 1) % seg
+        faces.append((cb, k2, k))             # base, normal -Z
+        faces.append((ct, seg + k, seg + k2))  # topo, normal +Z
     o = novo_obj(nome, malha(nome, verts, faces))
     mm = o.modifiers.new("Subd", 'SUBSURF'); mm.levels = mm.render_levels = 1
     return o

@@ -1,8 +1,9 @@
 # Modelos de animais (drop-in)
 
 O jogo usa o arquivo `<especie>.glb` desta pasta se ele existir
-(`caramelo.glb`, `pombo.glb`); sem o arquivo, entra o modelo procedural.
-Escala, assentamento no chao e animacao de caminhada (loop) sao automaticos.
+(pombo, aves do lote 2 e quadrupedes do lote 3); sem o arquivo, entra o
+modelo procedural. Escala, assentamento no chao e animacao (caminhada em
+loop, idle e a pose de crouch — bicar/pastar/deitar) sao automaticos.
 
 ## O que ja vem aqui
 
@@ -39,6 +40,30 @@ Escala, assentamento no chao e animacao de caminhada (loop) sao automaticos.
   Aves do lote 2 seguem o mesmo contrato: frente +Z, origem no chao
   (rest e `Walk` assentados — `Fly` eh a pose de voo de pernas recolhidas),
   `Fly` no nome do clip para o ciclo aereo.
+- **`capivara.glb`** — capivara (Hydrochoerus hydrochaeris) **modelada no
+  proprio repositório** por Blender headless (lote 3,
+  `tools/blender/build_quadrupedes.py`): corpo tosa arroxeado, focinho
+  quadrado, orelhas curtas; rig de 16 ossos (4 principais + 4 pernas de 3
+  segmentos) e clipes `Walk` (16f, diagonais FE+TR / FD+TD), `Idle`
+  (respiração + cauda, 12f) e `Lie` (deitada — a capivara se deita no
+  crouch). Tamanhos de jogo: 1,35 m x 0,62 m. Licença: trabalho original do
+  projeto (CC0).
+- **`cavalo.glb`** — cavalo mestiço de rua **modelado no proprio
+  repositório** por Blender headless (lote 3): tordilho, crina e topete
+  escuros, cauda com tufo; rig de 16 ossos e clipes `Walk` (16f), `Idle`
+  (12f) e `Graze` (pastando: cabeça no chao + mastigar — o crouch do
+  cavalo). Tamanhos de jogo: 1,90 m x 1,45 m. Licença: trabalho original
+  (CC0).
+- **`boi.glb`** — boi mestiço de cria **modelado no proprio repositório**
+  por Blender headless (lote 3): branco com manchas castanhas, focinho e
+  úbere rosados, chifres claros; rig de 16 ossos e clipes `Walk` (16f,
+  passo lento), `Idle` (12f) e `Graze` (crouch = pastar). Tamanhos de
+  jogo: 2,00 m x 1,50 m. Licença: trabalho original (CC0).
+
+  Quadrúpedes do lote 3 seguem o mesmo contrato das aves (frente +Z,
+  origem no chao), com a diferenca de que o crouch usa o clip `Graze`
+  (pastar) no cavalo/boi e `Lie` (deitada) na capivara — o
+  `world_animal.gd` troca de clip por pose em `_sincronizar_clip_glb`.
 
 ## Como trocar por outros modelos
 

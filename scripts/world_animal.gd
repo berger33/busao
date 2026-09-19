@@ -20,10 +20,10 @@ const TEXTURE_FEATHER_N = preload("res://assets/textures/pena_realista_normal.pn
 const TEXTURE_FEATHER_R = preload("res://assets/textures/pena_realista_roughness.png")
 
 const BIRD_PROFILES: Dictionary = {
-    "pombo": {"body": Color("#8d95a5"), "wing": Color("#6f7889"), "beak": Color("#454b5e"), "size": 0.9, "span": 0.42, "flap": 7.6, "legs": Color("#c56b4a"), "glb_comprimento": 0.26, "glb_altura": 0.21},
-    "passaro": {"body": Color("#7c6a4b"), "wing": Color("#5d4f39"), "beak": Color("#3a352d"), "size": 0.62, "span": 0.34, "flap": 10.5, "legs": Color("#8a6a4a"), "glb_comprimento": 0.18, "glb_altura": 0.11},
-    "gaivota": {"body": Color("#f2efe2"), "wing": Color("#d9d4c4"), "beak": Color("#e8a13c"), "size": 1.0, "span": 0.60, "flap": 5.4, "legs": Color("#e8a13c"), "glb_comprimento": 0.80, "glb_altura": 0.46},
-    "urubu": {"body": Color("#36322f"), "wing": Color("#211e1c"), "beak": Color("#9aa0a8"), "size": 1.15, "span": 0.76, "flap": 3.6, "legs": Color("#6b6f75"), "glb_comprimento": 1.30, "glb_altura": 0.80},
+    "pombo": {"body": Color("#8d95a5"), "wing": Color("#6f7889"), "beak": Color("#454b5e"), "size": 0.9, "span": 0.42, "flap": 7.6, "legs": Color("#c56b4a")},
+    "passaro": {"body": Color("#7c6a4b"), "wing": Color("#5d4f39"), "beak": Color("#3a352d"), "size": 0.62, "span": 0.34, "flap": 10.5, "legs": Color("#8a6a4a")},
+    "gaivota": {"body": Color("#f2efe2"), "wing": Color("#d9d4c4"), "beak": Color("#e8a13c"), "size": 1.0, "span": 0.60, "flap": 5.4, "legs": Color("#e8a13c")},
+    "urubu": {"body": Color("#36322f"), "wing": Color("#211e1c"), "beak": Color("#9aa0a8"), "size": 1.15, "span": 0.76, "flap": 3.6, "legs": Color("#6b6f75")},
 }
 
 # Quadrúpedes de interior: capivara se deita (lie), cavalo e boi pastam
@@ -32,6 +32,23 @@ const QUADRUPED_PROFILES: Dictionary = {
     "capivara": {"cycle": 8.5, "bob": 0.022, "lie": true, "crouch_head": 0.10},
     "cavalo": {"cycle": 7.5, "bob": 0.035, "lie": false, "crouch_head": -0.95},
     "boi": {"cycle": 6.0, "bob": 0.030, "lie": false, "crouch_head": -0.75},
+}
+
+# Tamanhos-alvo (m) de cada modelo GLB drop-in: [comprimento, altura]. O
+# comprimento vira o eixo X no jogo (apois a rotação de 90°) e a altura o Y;
+# o `_fit_glb` escala pelo bbox real do GLB para caber nesses valores.
+# Espécie sem entrada aqui (ou sem .glb na pasta) usa o modelo procedural.
+const GLB_SIZES: Dictionary = {
+    "pombo": [0.26, 0.21],
+    "passaro": [0.18, 0.11],
+    "gaivota": [0.80, 0.46],
+    "urubu": [1.30, 0.80],
+    "caramelo": [0.95, 0.72],
+    "capivara": [1.35, 0.62],
+    "cavalo": [1.90, 1.45],
+    "boi": [2.00, 1.50],
+    "macaco": [0.85, 0.95],
+    "caranguejo": [0.60, 0.30],
 }
 
 var species: String = "caramelo"
@@ -60,16 +77,25 @@ var behavior_mode := "" # "" | flight | ground
 var behavior_timer := 0.0
 var rng := RandomNumberGenerator.new()
 
+# ---- GLB drop-in: animacao do modelo externo por pose ----
+var glb_player: AnimationPlayer
+var glb_clip_pose := {} # pose ("run"/"crouch"/"idle") -> nome do clip
+var glb_pose_atual := ""
+
 func configure(next_species: String = "caramelo") -> void:
     species = next_species
 
 func _ready() -> void:
     rng.seed = hash(species) + get_instance_id()
+    # Qualquer especie com <especie>.glb em assets/characters/animais/ usa o
+    # modelo drop-in (escala por GLB_SIZES); sem o arquivo, entra o
+    # builder procedural da especie.
+    if _build_animal_glb(species):
+        return
     if species == "caramelo":
         _build_caramelo()
     elif BIRD_PROFILES.has(species):
-        if not _build_animal_glb(species):
-            _build_bird()
+        _build_bird()
     elif species == "capivara":
         _build_capivara()
     elif species == "cavalo":
@@ -99,6 +125,7 @@ func _process(delta: float) -> void:
         behavior_timer -= delta
         if behavior_timer <= 0.0:
             _step_behavior()
+    _sincronizar_clip_glb()
     if species == "caramelo":
         _animate_caramelo()
     elif BIRD_PROFILES.has(species):
@@ -485,10 +512,12 @@ func _build_caramelo() -> void:
     var tail_tip := _ellipsoid(body_root, Vector3(-0.80, 1.16, 0.0), Vector3(0.075, 0.10, 0.075), fur, "DogTailTip")
     tail_tip.rotation.z = -0.5
 
-## Modelo GLB drop-in (assets/characters/animais/<species>.glb): escala pela
-## convencao da especie, assenta no chao e toca o clip de caminhada em loop.
+## Modelo GLB drop-in (assets/characters/animais/<species>.glb): escala por
+## GLB_SIZES, assenta no chao e toca a animacao de comportamento em loop.
 ## Retorna true se o modelo foi usado (builders proceduais sao pulados).
 func _build_animal_glb(p_species: String) -> bool:
+    if not GLB_SIZES.has(p_species):
+        return false
     var caminho := "res://assets/characters/animais/%s.glb" % p_species
     if not ResourceLoader.exists(caminho):
         return false
@@ -498,9 +527,9 @@ func _build_animal_glb(p_species: String) -> bool:
     var modelo := empacotado.instantiate()
     if modelo == null:
         return false
-    var perfil: Dictionary = BIRD_PROFILES.get(p_species, {})
-    var comp := float(perfil.get("glb_comprimento", 0.24))
-    var alt := float(perfil.get("glb_altura", 0.20))
+    var tamanhos: Array = GLB_SIZES[p_species]
+    var comp := float(tamanhos[0])
+    var alt := float(tamanhos[1])
     modelo.rotation.y = PI / 2.0   # GLBs chegam olhando +Z; convensao da entidade e +X
     add_child(modelo)
     _fit_glb(modelo, comp, alt)
@@ -538,34 +567,70 @@ func _fit_glb(modelo: Node3D, comp_alvo: float, alt_alvo: float) -> void:
 ## Escolhe o clip conforme o comportamento e toca em loop:
 ## - no voo (behavior_mode == "flight"): clip "fly"/"voo" (bater de asas),
 ##   se existir — o pombo (lote 1) nao tem, entao cai no walk como antes;
-## - no chao: clip "walk"/"trot" (andar), ou o primeiro disponivel.
+## - no chao: clip da pose atual (walk/trot para run, graze/lie para crouch,
+##   idle/stand para idle), com fallback em cascata — e o _process troca de
+##   clip quando a pose muda (_sincronizar_clip_glb).
 func _animar_glb(modelo: Node3D) -> void:
-    var player := _achar_player(modelo)
-    if player == null or player.get_animation_list().is_empty():
+    glb_player = _achar_player(modelo)
+    if glb_player == null or glb_player.get_animation_list().is_empty():
         return
-    var nomes := player.get_animation_list()
-    var em_voo := behavior_mode == "flight"
+    _mapear_clips_pose()
     var escolhido := ""
-    if em_voo:
+    if behavior_mode == "flight":
         # No voo, prefere o clip de bater de asas ("fly"/"voo").
-        for nome in nomes:
+        for nome in glb_player.get_animation_list():
             var baixo := nome.to_lower()
             if baixo.contains("fly") or baixo.contains("voo"):
                 escolhido = nome
                 break
     if escolhido == "":
-        # No chao, ou sem clip de voo (ex.: pombo no aereo): clip de caminhada.
-        for nome in nomes:
-            var baixo := nome.to_lower()
-            if baixo.contains("walk") or baixo.contains("trot"):
-                escolhido = nome
-                break
-    if escolhido == "":
-        escolhido = nomes[0]
-    var anim := player.get_animation(escolhido)
+        # No chao, ou sem clip de voo (ex.: pombo no aereo): clip da pose.
+        escolhido = _clip_para_pose(pose_state)
+    var anim := glb_player.get_animation(escolhido)
     if anim != null:
         anim.loop_mode = Animation.LOOP_LINEAR
-    player.play(escolhido)
+    glb_pose_atual = pose_state
+    glb_player.play(escolhido)
+
+## Mapeia clip por categoria de nome para cada pose do contrato.
+func _mapear_clips_pose() -> void:
+    for nome in glb_player.get_animation_list():
+        var baixo := nome.to_lower()
+        if baixo.contains("walk") or baixo.contains("trot") or baixo.contains("run"):
+            glb_clip_pose["run"] = nome
+        elif baixo.contains("graze") or baixo.contains("lie") or baixo.contains("deita") or baixo.contains("pasto"):
+            glb_clip_pose["crouch"] = nome
+        elif baixo.contains("idle") or baixo.contains("stand"):
+            glb_clip_pose["idle"] = nome
+
+## Clip para um estado de pose: a propria pose, senao run, senao idle,
+## senao o primeiro disponivel.
+func _clip_para_pose(pose: String) -> String:
+    if glb_clip_pose.has(pose):
+        return glb_clip_pose[pose]
+    if glb_clip_pose.has("run"):
+        return glb_clip_pose["run"]
+    if glb_clip_pose.has("idle"):
+        return glb_clip_pose["idle"]
+    return glb_player.get_animation_list()[0]
+
+## Troca o clip do GLB quando a pose muda. So em modo chao: no voo a ave
+## fica trancada no clip de asas (o planeio alterna run/idle de pose, o que
+## aqui nao deve trocar a animacao).
+func _sincronizar_clip_glb() -> void:
+    if glb_player == null or behavior_mode == "flight":
+        return
+    var pose := "run" if pose_state == "jump" else pose_state
+    if pose == glb_pose_atual:
+        return
+    glb_pose_atual = pose
+    var clip := _clip_para_pose(pose)
+    if glb_player.current_animation == clip:
+        return
+    var anim := glb_player.get_animation(clip)
+    if anim != null:
+        anim.loop_mode = Animation.LOOP_LINEAR
+    glb_player.play(clip)
 
 func _achar_player(no: Node) -> AnimationPlayer:
     if no is AnimationPlayer:
