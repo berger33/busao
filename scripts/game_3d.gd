@@ -17,6 +17,7 @@ const RUNNER_CHARACTER_SCRIPT = preload("res://scripts/runner_character.gd")
 const WORLD_CHARACTER_SCRIPT = preload("res://scripts/world_character.gd")
 const WORLD_ANIMAL_SCRIPT = preload("res://scripts/world_animal.gd")
 const PHYSICS_HANDLER = preload("res://scripts/physics_handler.gd")
+const LIGHTING_HANDLER = preload("res://scripts/lighting_handler.gd")
 const TEXTURE_ASPHALT = preload("res://assets/textures/asfalto_brasil.svg")
 const TEXTURE_ASPHALT_REAL = preload("res://assets/textures/asfalto_realista.png")
 const TEXTURE_ASPHALT_NORMAL = preload("res://assets/textures/asfalto_normal.png")
@@ -147,6 +148,8 @@ var physics_realista_enabled: bool = false
 var _player_physics_body: CharacterBody3D = null
 var _player_velocity_y: float = 0.0
 var _is_on_floor_physics: bool = true
+# Lote 24 — Luz Realista (F9 toggle; false Panorama 1024, true SDFGI/VoxelGI 4096 VSM)
+var lighting_realista_enabled: bool = false
 var player_speed := 5.0
 var hearts := 3
 var max_hearts := 3
@@ -467,6 +470,9 @@ func _setup_world() -> void:
     sun.shadow_opacity = 0.72
     sun.light_angular_distance = 0.6
     world_root.add_child(sun)
+    # Lote24 — Luz realista: SDFGI/VoxelGI + ReflectionProbe + 4096 VSM + VolumetricFog + PhysicalSky (F9 toggle)
+    if LIGHTING_HANDLER != null:
+        LIGHTING_HANDLER.setup_realista(environment, sun, world_root, lighting_realista_enabled)
 
     camera = Camera3D.new()
     camera.name = "RunnerCamera"
@@ -3319,6 +3325,12 @@ func _handle_key(event: InputEventKey) -> void:
     if event.keycode == KEY_F8:
         physics_realista_enabled = not physics_realista_enabled
         _show_feedback("FISICA REALISTA " + ("ON" if physics_realista_enabled else "OFF"), "Gravidade 9.81 • Impulso 6.3 • Dash 900 N·s" if physics_realista_enabled else "Arcade lerp/sin", YELLOW if physics_realista_enabled else BLUE, "ui_confirm")
+        return
+    if event.keycode == KEY_F9:
+        lighting_realista_enabled = not lighting_realista_enabled
+        if LIGHTING_HANDLER != null and environment != null and sun != null:
+            LIGHTING_HANDLER.setup_realista(environment, sun, world_root, lighting_realista_enabled)
+        _show_feedback("LUZ REALISTA " + ("ON" if lighting_realista_enabled else "OFF"), "SDFGI+VoxelGI+4096 VSM+SSAO 0.4" if lighting_realista_enabled else "Panorama 1024", YELLOW if lighting_realista_enabled else BLUE, "ui_confirm")
         return
     if screen == 2:
         if event.is_action_pressed("move_left") or event.keycode == KEY_LEFT:
