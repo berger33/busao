@@ -82,6 +82,10 @@ var glb_player: AnimationPlayer
 var glb_clip_pose := {} # pose ("run"/"crouch"/"idle") -> nome do clip
 var glb_pose_atual := ""
 
+# ---- blob shadow (P2) ----------------------------------------------------
+var blob_shadow: MeshInstance3D
+var blob_mat: StandardMaterial3D
+
 func configure(next_species: String = "caramelo") -> void:
     species = next_species
 
@@ -91,6 +95,7 @@ func _ready() -> void:
     # modelo drop-in (escala por GLB_SIZES); sem o arquivo, entra o
     # builder procedural da especie.
     if _build_animal_glb(species):
+        _ensure_blob_shadow(_blob_size_for_species(species))
         return
     if species == "caramelo":
         _build_caramelo()
@@ -108,6 +113,7 @@ func _ready() -> void:
         _build_caranguejo()
     else:
         _build_bird()
+    _ensure_blob_shadow(_blob_size_for_species(species))
 
 func _process(delta: float) -> void:
     motion_time += delta
@@ -136,6 +142,7 @@ func _process(delta: float) -> void:
         _animate_macaco()
     elif species == "caranguejo":
         _animate_caranguejo()
+    _update_blob_shadow()
 
 ## Mesmo contrato do corredor: pulo vence, depois agachamento (parado ou
 ## em movimento), depois corrida e por fim parado.
@@ -864,6 +871,68 @@ func _build_caranguejo() -> void:
             leg.rotation.z = side * 0.85
             legs.append(leg)
             leg_is_front.append(rank == 2)
+
+func _blob_size_for_species(sp: String) -> Vector2:
+    match sp:
+        \"caramelo\": return Vector2(0.85, 0.55)
+        \"capivara\": return Vector2(1.10, 0.72)
+        \"cavalo\": return Vector2(1.60, 0.90)
+        \"boi\": return Vector2(1.70, 0.95)
+        \"macaco\": return Vector2(0.60, 0.60)
+        \"caranguejo\": return Vector2(0.62, 0.42)
+        \"pombo\": return Vector2(0.42, 0.28)
+        \"passaro\": return Vector2(0.28, 0.18)
+        \"gaivota\": return Vector2(0.55, 0.36)
+        \"urubu\": return Vector2(0.72, 0.46)
+        _: return Vector2(0.60, 0.40)
+
+func _ensure_blob_shadow(size: Vector2) -> void:
+    if blob_shadow != null:
+        return
+    blob_shadow = MeshInstance3D.new()
+    blob_shadow.name = \"BlobShadow\"
+    var mesh := PlaneMesh.new()
+    mesh.size = size
+    blob_shadow.mesh = mesh
+    blob_shadow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+    blob_shadow.position = Vector3(0.0, 0.025, 0.0)
+    # Plane em XZ: rotaciona? PlaneMesh por padrão já é XZ? em Godot 4 PlaneMesh é XZ, mas vamos garantir
+    blob_shadow.rotation_degrees = Vector3.ZERO
+    var mat := StandardMaterial3D.new()
+    mat.albedo_color = Color(0, 0, 0, 0.30)
+    mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+    mat.no_depth_test = false
+    mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR
+    blob_shadow.material_override = mat
+    blob_mat = mat
+    add_child(blob_shadow)
+
+func _update_blob_shadow() -> void:
+    if blob_shadow == null or blob_mat == null:
+        return
+    var h: float = 0.0
+    if body_root != null:
+        h = maxf(0.0, body_root.position.y + 0.10)
+    else:
+        # GLB: estima pela pose (salto ~0.15–0.25)
+        match pose_state:
+            \"jump\": h = 0.22
+            \"crouch\": h = 0.02 if crouch_moving else 0.0
+            _: h = 0.04 if running else 0.01
+    # voo: sombra quase some, não some abruptamente
+    var flight_factor: float = 1.0
+    if behavior_mode == \"flight\":
+        h += 0.45
+        flight_factor = 0.55
+    # altura → escala menor + alpha menor
+    var s: float = clampf(1.0 - h * 0.85, 0.42, 1.0) * flight_factor
+    blob_shadow.scale = Vector3(s, 1.0, s)
+    var a: float = clampf(0.30 - h * 0.55, 0.08, 0.30) * (0.55 if behavior_mode == \"flight\" else 1.0)
+    blob_mat.albedo_color.a = a
+    # acompanha Y do chão: quando animal sobe, sombra fica no chão
+    blob_shadow.position.y = 0.025
 
 func _material(color: Color, texture: Texture2D, roughness: float, metallic: float = 0.0) -> StandardMaterial3D:
     var material := StandardMaterial3D.new()

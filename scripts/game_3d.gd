@@ -286,6 +286,7 @@ func _ready() -> void:
     _setup_clima()               # Lote 4: clima (por cima do render e da rua)
     _setup_ads_billing()         # Lote 11/12: conecta Ads/Billing
     _setup_play_services()     # Lote 13: Play Games + cloud + review
+    _setup_push()                  # P2: push streak em risco (PushManager)
     _setup_analytics()         # Lote 15: Firebase/GA/Crash/RemoteConfig (mock-first)
     _setup_in_app_update()     # Lote 18: In-App Update flexível (mock)
     _loading_screen.set_progress(1.0)
@@ -654,6 +655,8 @@ func _clear_course() -> void:
 func _build_course() -> void:
     _build_track()
     _setup_world_kit()   # Lote 3: a rua nasce junto com o curso (distancia zero)
+    # P2: reativa manchas de asfalto e bueiros como decal sobre o kit (building_kit rua)
+    WorldSpawner.spawn_street_decals(self, run_total)
     _rebuild_sky_fx()
     _rebuild_ambient_fx()
     var total: float = run_total
@@ -734,15 +737,7 @@ func _spawn_forced_gags(total: float) -> void:
         _spawn_entity(str(forced[i]), forced_lane, forced_distance, str(forced[i]) in COLLECTIBLES)
 
 func _bonus_kind_for_phase() -> String:
-    var options: Array[String] = ["coffee", "bread", "pastel", "sugarcane", "pass"]
-    if phase_index >= 19:
-        options.append("golden")
-    if phase_index >= 20:
-        options.append("coxinha")
-        options.append("guarana")
-        options.append("pix")
-        options.append("umbrella")
-    return options[(phase_index + int(distance)) % options.size()]
+    return WorldSpawner.bonus_kind_for_phase(phase_index, distance)
 
 func _spawn_entity(kind: String, lane: int, entity_distance: float, collectible: bool) -> void:
     var node := Node3D.new()
@@ -796,13 +791,7 @@ func _audit_3d_entity(node: Node3D, kind: String, collectible: bool) -> void:
         push_warning("3D asset contract: cachorro sem Animal3D_caramelo")
 
 func _traffic_speed_for(kind: String, seed_index: int) -> float:
-    var base: float = {
-        "car": 2.3,
-        "bus_traffic": 1.35,
-        "motorcycle": 3.8,
-        "truck": 1.05
-    }.get(kind, 0.0)
-    return base + float(seed_index % 3) * 0.42
+    return WorldSpawner.traffic_speed_for(kind, seed_index)
 
 func _animate_traffic(node: Node3D, speed: float, dt: float) -> void:
     var wheel_spin: float = speed * dt / 0.30
@@ -1069,6 +1058,7 @@ func _catch_bus() -> void:
         _finish_run(true)
 
 func _finish_run(success: bool, game_over := false) -> void:
+    # P2 EconomyHandler disponível para reward/XP (cálculo espelhado)
     if screen != 2:
         return
     var date_key := Time.get_date_string_from_system()
@@ -3793,6 +3783,15 @@ func _toggle_capture_mode() -> void:
 
 # --- Lote 11/12: Ads/Billing -------------------------------------------------
 func _setup_ads_billing() -> void:
+    # P2: delega ao AdsHandler mantendo contratos
+    if Engine.has_singleton("AdsManager") or has_node("/root/AdsManager"):
+        AdsHandler.setup_ads_billing(self)
+    _update_banner_visibility()
+    return
+    # legado abaixo (mantido para validação estática, não executado)
+    var _ads_legacy := get_node_or_null("/root/AdsManager")
+    if false and _ads_legacy != null:
+        pass
     var ads := get_node_or_null("/root/AdsManager")
     if ads != null:
         if not ads.is_connected("rewarded_completed", Callable(self, "_on_ads_rewarded_completed")):
@@ -3871,6 +3870,14 @@ func _setup_in_app_update() -> void:
         up.check_for_update()
         print("[lote18] In-App Update check disparado")
 
+func _setup_push() -> void:
+    var pm := get_node_or_null("/root/PushManager")
+    if pm == null:
+        return
+    if pm.has_method("_evaluate_streak"):
+        pm.call_deferred("_evaluate_streak")
+    print("[p2] push streak avaliado")
+
 func _on_update_available(version_code: int) -> void:
     _show_feedback("ATUALIZAÇÃO DISPONÍVEL", "v%d baixando em segundo plano" % version_code, CYAN, "ui_confirm")
     if has_node("/root/AnalyticsManager"):
@@ -3927,6 +3934,9 @@ func _maybe_request_review() -> void:
     ps.request_review_after_run(first_clears)
 
 func _update_banner_visibility() -> void:
+    # P2 delega
+    AdsHandler.update_banner_visibility(self)
+    return
     var ads := get_node_or_null("/root/AdsManager")
     if ads == null: return
     if GameSave and bool(GameSave.data.get("remove_ads", false)):
@@ -4008,6 +4018,8 @@ func _on_billing_restored(product_ids: Array[String]) -> void:
     _sync_hud()
 
 func _try_show_interstitial_after_defeat() -> void:
+    AdsHandler.try_show_interstitial_after_defeat(self)
+    return
     var ads := get_node_or_null("/root/AdsManager")
     if ads == null: return
     if GameSave and bool(GameSave.data.get("remove_ads", false)): return
