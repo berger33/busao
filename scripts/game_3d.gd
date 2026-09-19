@@ -166,6 +166,12 @@ var stop_wait := 0.0
 var stop_wait_total := 0.0
 var wall_run_count := 0
 var dog_chase_timer := 0.0
+# --- Lote 11/12: Ads/Billing estado ----------------------------------------
+var _ads_failed_runs: int = 0
+var _revive_used: bool = false
+var _double_used: bool = false
+var _rewarded_pending_placement: String = ""
+var _ads_banner_requested: bool = false
 var tutorial_hint := ""
 var tutorial_stage := -1
 var result: Dictionary = {}
@@ -234,6 +240,8 @@ func _ready() -> void:
     rng.seed = 20240917
     fx_rng.seed = 778899
     var login_streak := GameSave.register_login()
+    # Lote 11/12: restaura contador de falhas para interstitial (fallback local se save ainda vazio)
+    _ads_failed_runs = int(GameSave.data.get("ad_counters", {}).get("interstitial_run", 0))
     _setup_world()
     _setup_hud()
     _validate_obstacle_catalog()
@@ -251,6 +259,7 @@ func _ready() -> void:
     _apply_render_quality()      # Lote 2: controlador de render (RenderQuality)
     _setup_world_kit()           # Lote 3: rua do building_kit
     _setup_clima()               # Lote 4: clima (por cima do render e da rua)
+    _setup_ads_billing()         # Lote 11/12: conecta Ads/Billing
 
 func _notification(what: int) -> void:
     if what == NOTIFICATION_WM_GO_BACK_REQUEST:
@@ -563,6 +572,11 @@ func _start_run(index: int) -> void:
     _apply_render_quality()              # Lote 2: clima do capítulo instantâneo
     _update_world_kit(0.0)               # Lote 3: rua acompanha o novo capítulo
     _trocar_clima_do_capitulo(phase_index)   # Lote 4: clima do capítulo
+    # Lote 11: revive/2x reset por corrida
+    _revive_used = false
+    _double_used = false
+    _rewarded_pending_placement = ""
+    _update_banner_visibility()
     tutorial_hint = ""
     AudioManager.play_music(int(phase["music_group"]))
     _show_feedback("FAIXAS: RUA + CALÇADAS", str(phase["name"]), phase["accent"], "ui_confirm")
@@ -1051,6 +1065,10 @@ func _finish_run(success: bool, game_over := false) -> void:
         GameSave.flush()
         run_mode = "results"
         screen = 3
+        _update_banner_visibility()
+        if not success:
+            _try_show_interstitial_after_defeat()
+        _sync_hud()
         return
     GameSave.record_phase_result(success, phase_index, elapsed, int(distance))
     if success:
@@ -1125,6 +1143,10 @@ func _finish_run(success: bool, game_over := false) -> void:
     GameSave.flush()
     run_mode = "results"
     screen = 3
+    _update_banner_visibility()
+    if not success:
+        _try_show_interstitial_after_defeat()
+    _sync_hud()
 
 func _reaction_for(kind: String) -> String:
     var reactions: Dictionary = {
@@ -2937,6 +2959,8 @@ func _texture_scale(surface: String) -> Vector3:
 func _sync_hud() -> void:
     if hud == null:
         return
+    # Lote 11: garante banner correto sempre que HUD sinc (evita esquecer transição)
+    _update_banner_visibility()
     var cards: Array[Dictionary] = []
     if screen == 1:
         var first_phase: int = map_page * 10
@@ -3037,7 +3061,13 @@ func _sync_hud() -> void:
         "scenario_chapter": str(scenario.get("chapter", "Rua brasileira")),
         "scenario_weather": str(scenario.get("weather", "sol")),
         "characters": characters,
-        "equipped_character": equipped_character
+        "equipped_character": equipped_character,
+        "banner_visible": (get_node_or_null("/root/AdsManager").is_banner_visible() if get_node_or_null("/root/AdsManager") and get_node_or_null("/root/AdsManager").has_method("is_banner_visible") else false),
+        "remove_ads": bool(GameSave.data.get("remove_ads", false)),
+        "rewarded_ready": (get_node_or_null("/root/AdsManager").is_rewarded_ready() if get_node_or_null("/root/AdsManager") and get_node_or_null("/root/AdsManager").has_method("is_rewarded_ready") else false),
+        "revive_available": (not _revive_used and not bool(result.get("success", true)) and screen == 3),
+        "double_available": (not _double_used and bool(result.get("success", false)) and screen == 3 and int(result.get("reward", 0)) > 0),
+        "billing_packs": (get_node_or_null("/root/BillingManager").get_products() if get_node_or_null("/root/BillingManager") and get_node_or_null("/root/BillingManager").has_method("get_products") else SHOP_DATA.BILLING_PACKS)
     }
     hud.call("set_state", state)
 
@@ -3137,7 +3167,7 @@ func _shop_scroll_max() -> float:
     if shop_tab != 0:
         return 0.0
     var rows: float = ceilf(float(CHARACTER_DATA.all().size()) / 2.0)
-    var content_bottom: float = 250.0 + (rows - 1.0) * 145.0 + 126.0
+    var content_bottom: float = 280.0 + (rows - 1.0) * 145.0 + 126.0
     return maxf(0.0, content_bottom - 1125.0)
 
 func _handle_tap(pos: Vector2) -> void:
@@ -3197,8 +3227,38 @@ func _handle_tap(pos: Vector2) -> void:
         elif run_mode == "at_stop" and Rect2(70, 800, 580, 110).has_point(pos):
             _catch_bus()
     elif screen == 3:
+        # Lote 11: rewarded buttons têm prioridade sobre navegação
+        var rewarded_ready: bool = false
+        var ads_node := get_node_or_null("/root/AdsManager")
+        if ads_node and ads_node.has_method("is_rewarded_ready"):
+            rewarded_ready = ads_node.is_rewarded_ready()
+        var is_fail: bool = not bool(result.get("success", false))
+        if is_fail and not _revive_used and Rect2(55, 600, 610, 72).has_point(pos):
+            if not rewarded_ready:
+                _show_feedback("CARREGANDO ANÚNCIO", "Tente em segundos", MUTED, "ui_back")
+            else:
+                _rewarded_pending_placement = "rewarded_revive"
+                var ok: bool = ads_node.show_rewarded("rewarded_revive") if ads_node and ads_node.has_method("show_rewarded") else false
+                if not ok:
+                    _show_feedback("ANÚNCIO INDISPONÍVEL", "Tente novamente", RED, "ui_back")
+                else:
+                    _show_feedback("ANÚNCIO...", "Assista para reviver", CYAN, "ui_confirm")
+            return
+        var is_success: bool = bool(result.get("success", false))
+        if is_success and not _double_used and int(result.get("reward",0))>0 and Rect2(55, 760, 610, 72).has_point(pos):
+            if not rewarded_ready:
+                _show_feedback("CARREGANDO ANÚNCIO", "Tente em segundos", MUTED, "ui_back")
+            else:
+                _rewarded_pending_placement = "rewarded_double"
+                var ok2: bool = ads_node.show_rewarded("rewarded_double") if ads_node and ads_node.has_method("show_rewarded") else false
+                if not ok2:
+                    _show_feedback("ANÚNCIO INDISPONÍVEL", "Tente novamente", RED, "ui_back")
+                else:
+                    _show_feedback("ANÚNCIO...", "Dobre suas moedas!", GOLD, "ui_confirm")
+            return
         if Rect2(55, 880, 290, 88).has_point(pos):
             screen = 1
+            _update_banner_visibility()
             _show_feedback("MAPA", "Escolha o próximo capítulo", BLUE, "ui_back")
         elif Rect2(375, 880, 290, 88).has_point(pos):
             if result.get("success", false) and result.get("endless", false):
@@ -3207,17 +3267,44 @@ func _handle_tap(pos: Vector2) -> void:
                 _start_run(phase_index)
         elif Rect2(55, 1000, 610, 72).has_point(pos) or Rect2(55, 1090, 610, 72).has_point(pos):
             screen = 0
+            _update_banner_visibility()
             _show_feedback("ATÉ A PRÓXIMA", "O busão sempre volta", BLUE, "ui_back")
     elif screen == 4:
         if Rect2(45, 1135, 630, 70).has_point(pos):
             screen = 0
+            _update_banner_visibility()
             _show_feedback("DE VOLTA", "Seu estilo ficou salvo", BLUE, "ui_back")
-        elif Rect2(30, 150, 660, 80).has_point(pos):
-            shop_tab = 0 if pos.x < 360.0 else 1
+        elif Rect2(30, 230, 330, 36).has_point(pos):
+            # Botão remover anúncios
+            if bool(GameSave.data.get("remove_ads", false)):
+                _show_feedback("JÁ SEM ANÚNCIOS", "Obrigado pelo apoio!", GREEN, "ui_confirm")
+            else:
+                var billing2 := get_node_or_null("/root/BillingManager")
+                if billing2 and billing2.has_method("purchase"):
+                    billing2.purchase("remove_ads")
+                    _show_feedback("PROCESSANDO...", "Play Billing • R$ 9,90", MUTED, "ui_confirm")
+                else:
+                    _show_feedback("LOJA INDISPONÍVEL", "Billing não inicializado", RED, "ui_back")
+        elif Rect2(545, 230, 135, 36).has_point(pos):
+            var billing3 := get_node_or_null("/root/BillingManager")
+            if billing3 and billing3.has_method("restore_purchases"):
+                billing3.restore_purchases()
+                _show_feedback("RESTAURANDO...", "Verificando compras", MUTED, "ui_confirm")
+            else:
+                _show_feedback("SEM COMPRAS", "Nada a restaurar no editor", MUTED, "ui_back")
+        elif Rect2(30, 150, 660, 70).has_point(pos):
+            # 3 abas
+            if pos.x < 240.0:
+                shop_tab = 0
+            elif pos.x < 460.0:
+                shop_tab = 1
+            else:
+                shop_tab = 2
             shop_scroll = 0.0
-            _show_feedback("CATÁLOGO ATUALIZADO", "Toque para equipar", RED, "ui_confirm")
+            _show_feedback("CATÁLOGO ATUALIZADO", "Toque para equipar/comprar", RED, "ui_confirm")
         else:
             _shop_tap(pos)
+        _sync_hud()
     elif screen == 6:
         if Rect2(45, 1110, 630, 70).has_point(pos):
             screen = 0
@@ -3256,7 +3343,7 @@ func _shop_tap(pos: Vector2) -> void:
         for i in chars.size():
             var col: int = i % 2
             var row: int = int(float(i) / 2.0)
-            var rect := Rect2(25 + col * 340, 250 + row * 145, 330, 126)
+            var rect := Rect2(25 + col * 340, 280 + row * 145, 330, 126)
             if rect.has_point(local_pos):
                 var id: String = str(chars[i].get("id", "ze"))
                 var price: int = int(chars[i].get("price", 0))
@@ -3271,11 +3358,11 @@ func _shop_tap(pos: Vector2) -> void:
                 else:
                     _show_feedback("FALTAM MOEDAS", "Continue correndo", RED, "ui_back")
                 return
-    else:
+    elif shop_tab == 1:
         for i in items.size():
             var col: int = i % 2
             var row: int = int(float(i) / 2.0)
-            var rect := Rect2(30 + col * 345, 250 + row * 175, 315, 150)
+            var rect := Rect2(30 + col * 345, 280 + row * 175, 315, 150)
             if rect.has_point(pos):
                 var id: String = str(items[i].get("id", ""))
                 var price: int = int(items[i].get("price", SHOP_DATA.price_for(id)))
@@ -3286,6 +3373,33 @@ func _shop_tap(pos: Vector2) -> void:
                     _show_feedback("ITEM ADQUIRIDO!", id.to_upper(), GOLD, "reward")
                 else:
                     _show_feedback("FALTAM MOEDAS", "Junte mais R$", RED, "ui_back")
+                return
+    else:
+        # Pacotes de billing (Lote 12)
+        var packs: Array[Dictionary] = SHOP_DATA.BILLING_PACKS
+        # tenta buscar lista atualizada do manager se disponível
+        var billing := get_node_or_null("/root/BillingManager")
+        if billing and billing.has_method("get_products"):
+            var live: Array[Dictionary] = billing.get_products()
+            if not live.is_empty():
+                packs = live
+        for i in packs.size():
+            var col: int = i % 2
+            var row: int = int(float(i) / 2.0)
+            var rect := Rect2(30 + col * 345, 280 + row * 155, 315, 135)
+            if rect.has_point(pos):
+                var pid: String = str(packs[i].get("id",""))
+                if pid == "remove_ads" and bool(GameSave.data.get("remove_ads", false)):
+                    _show_feedback("JÁ SEM ANÚNCIOS", "Obrigado!", GREEN, "ui_confirm")
+                    return
+                if billing and billing.has_method("purchase"):
+                    var ok: bool = billing.purchase(pid)
+                    if ok:
+                        _show_feedback("PROCESSANDO...", "%s • %s" % [pid, str(packs[i].get("price_label",""))], MUTED, "ui_confirm")
+                    else:
+                        _show_feedback("INDISPONÍVEL", pid, RED, "ui_back")
+                else:
+                    _show_feedback("LOJA INDISPONÍVEL", "Billing não inicializado", RED, "ui_back")
                 return
 
 func _claim_daily(index: int) -> void:
@@ -3514,3 +3628,171 @@ func _capture_screenshot() -> void:
 func _toggle_capture_mode() -> void:
     _capture_mode = not _capture_mode
     _show_feedback("MODO CAPTURA " + ("ON" if _capture_mode else "OFF"), "C arrasta órbita • P captura tela • ESC sai" if _capture_mode else "Retornando ao follow", CYAN if _capture_mode else BLUE, "ui_confirm")
+
+# --- Lote 11/12: Ads/Billing -------------------------------------------------
+func _setup_ads_billing() -> void:
+    var ads := get_node_or_null("/root/AdsManager")
+    if ads != null:
+        if not ads.is_connected("rewarded_completed", Callable(self, "_on_ads_rewarded_completed")):
+            ads.rewarded_completed.connect(_on_ads_rewarded_completed)
+        if not ads.is_connected("interstitial_closed", Callable(self, "_on_ads_interstitial_closed")):
+            ads.interstitial_closed.connect(_on_ads_interstitial_closed)
+        if not ads.is_connected("rewarded_failed", Callable(self, "_on_ads_rewarded_failed")):
+            ads.rewarded_failed.connect(_on_ads_rewarded_failed)
+        if not ads.is_connected("banner_loaded", Callable(self, "_on_ads_banner_loaded")):
+            ads.banner_loaded.connect(_on_ads_banner_loaded)
+    var billing := get_node_or_null("/root/BillingManager")
+    if billing != null:
+        if not billing.is_connected("purchase_success", Callable(self, "_on_billing_success")):
+            billing.purchase_success.connect(_on_billing_success)
+        if not billing.is_connected("purchase_failed", Callable(self, "_on_billing_failed")):
+            billing.purchase_failed.connect(_on_billing_failed)
+        if not billing.is_connected("products_loaded", Callable(self, "_on_billing_products_loaded")):
+            billing.products_loaded.connect(_on_billing_products_loaded)
+        if not billing.is_connected("owned_restored", Callable(self, "_on_billing_restored")):
+            billing.owned_restored.connect(_on_billing_restored)
+    _update_banner_visibility()
+
+func _update_banner_visibility() -> void:
+    var ads := get_node_or_null("/root/AdsManager")
+    if ads == null: return
+    if GameSave and bool(GameSave.data.get("remove_ads", false)):
+        ads.hide_banner()
+        return
+    # Banner em menu/mapa/loja/desafios/conquistas/guia, nunca durante corrida
+    if screen in [0,1,4,5,6,7]:
+        ads.show_banner()
+    else:
+        ads.hide_banner()
+
+func _on_ads_banner_loaded() -> void:
+    _sync_hud()
+
+func _on_ads_interstitial_closed() -> void:
+    _show_feedback("VOLTAMOS!", "Próxima corrida liberada", CYAN, "ui_confirm")
+    _sync_hud()
+
+func _on_ads_rewarded_failed(reason: String) -> void:
+    _show_feedback("ANÚNCIO INDISPONÍVEL", reason, RED, "ui_back")
+    _rewarded_pending_placement = ""
+    _sync_hud()
+
+func _on_ads_rewarded_completed(placement: String) -> void:
+    _rewarded_pending_placement = ""
+    var ads := get_node_or_null("/root/AdsManager")
+    var is_revive: bool = placement == "rewarded_revive" or (ads != null and placement == ads.PLACEMENT_REWARDED_REVIVE)
+    var is_double: bool = placement == "rewarded_double" or (ads != null and placement == ads.PLACEMENT_REWARDED_DOUBLE)
+    if is_revive:
+        _do_revive_from_ad()
+    elif is_double:
+        _do_double_reward_from_ad()
+    else:
+        # fallback: decide pelo contexto atual
+        if not bool(result.get("success", false)) and not _revive_used:
+            _do_revive_from_ad()
+        elif bool(result.get("success", false)) and not _double_used:
+            _do_double_reward_from_ad()
+    _sync_hud()
+
+func _on_billing_products_loaded(_products: Array[Dictionary]) -> void:
+    _sync_hud()
+
+func _on_billing_success(product_id: String) -> void:
+    if product_id == "remove_ads":
+        _show_feedback("SEM ANÚNCIOS!", "Obrigado • interstitial e banner desativados", GREEN, "reward")
+        var ads := get_node_or_null("/root/AdsManager")
+        if ads and ads.has_method("set_remove_ads"): ads.set_remove_ads(true)
+    elif product_id.begins_with("coin_pack"):
+        _show_feedback("PACOTE CREDITADO!", "+ moedas na carteira", GOLD, "reward")
+    elif product_id == "starter_pack":
+        _show_feedback("PACK MOTOBOY!", "Rafa liberado + 120 R$", RED, "reward")
+        _rebuild_player_visual("motoboy")
+    else:
+        _show_feedback("COMPRA OK!", product_id, GREEN, "reward")
+    _sync_hud()
+
+func _on_billing_failed(product_id: String, reason: String) -> void:
+    _show_feedback("COMPRA FALHOU", "%s: %s" % [product_id, reason], RED, "ui_back")
+
+func _on_billing_restored(product_ids: Array[String]) -> void:
+    if product_ids.has("remove_ads"):
+        if GameSave:
+            GameSave.data["remove_ads"] = true
+            GameSave.flush()
+        var ads2 := get_node_or_null("/root/AdsManager")
+        if ads2 and ads2.has_method("set_remove_ads"):
+            ads2.set_remove_ads(true)
+        _show_feedback("COMPRAS RESTAURADAS", "Sem anúncios reativado", GREEN, "reward")
+    elif product_ids.is_empty():
+        _show_feedback("NADA A RESTAURAR", "Nenhuma compra encontrada", MUTED, "ui_back")
+    _sync_hud()
+
+func _try_show_interstitial_after_defeat() -> void:
+    var ads := get_node_or_null("/root/AdsManager")
+    if ads == null: return
+    if GameSave and bool(GameSave.data.get("remove_ads", false)): return
+    _ads_failed_runs += 1
+    # persiste contador para respeitar 1 a cada 2 mesmo após reiniciar o app
+    if GameSave:
+        GameSave.record_ad_counter("interstitial")
+        # alinha nosso contador com o save (evita divergência)
+        var saved: int = int(GameSave.data.get("ad_counters",{}).get("interstitial_run", _ads_failed_runs))
+        _ads_failed_runs = maxi(_ads_failed_runs, saved)
+    if ads.has_method("can_show_interstitial_now") and ads.can_show_interstitial_now(_ads_failed_runs):
+        var ok: bool = ads.show_interstitial()
+        if ok:
+            _show_feedback("ANÚNCIO", "Voltamos em segundos...", MUTED, "ui_confirm")
+
+func _do_revive_from_ad() -> void:
+    if _revive_used:
+        _show_feedback("JÁ REVIVEU", "Só 1 revive por corrida", RED, "ui_back")
+        return
+    _revive_used = true
+    hearts = 1
+    max_hearts = maxi(max_hearts, 3)
+    shield_hits = 1
+    dash_timer = 2.2  # invencível breve pós-revive
+    slow_motion_timer = 0.0
+    magnet_timer = 0.0
+    # limpa obstáculos muito próximos para não morrer no mesmo frame
+    var to_keep: Array[Dictionary] = []
+    for ent in entities:
+        var z: float = float(ent.get("z", 0.0))
+        if z < 4.0: # muito próximo do jogador (z ~ 0)
+            # mantém só moedas/coletáveis próximos, remove obstáculos imediatos
+            var kind: String = str(ent.get("kind",""))
+            if kind in ["coin","coffee","bread","pastel","sugarcane","pass","golden","coxinha","guarana","pix","umbrella"]:
+                to_keep.append(ent)
+        else:
+            to_keep.append(ent)
+    entities = to_keep
+    # desfaz estado de resultado e volta à corrida
+    screen = 2
+    run_mode = "playing"
+    _update_banner_visibility()
+    if GameSave:
+        GameSave.record_ad_counter("rewarded")
+    _show_feedback("REVIVE!", "5 s de escudo • corre!", GREEN, "reward")
+    _spawn_3d_burst(Vector3(player_x, 1.4, -2.0), GREEN, 18)
+
+func _do_double_reward_from_ad() -> void:
+    if _double_used:
+        _show_feedback("JÁ DOBROU", "2× só uma vez por vitória", RED, "ui_back")
+        return
+    _double_used = true
+    var base_reward: int = int(result.get("reward", 0))
+    if base_reward <= 0:
+        base_reward = int(result.get("bonus_reward", 0))
+    if base_reward <= 0:
+        _show_feedback("SEM BÔNUS", "Nada para dobrar", MUTED, "ui_back")
+        return
+    GameSave.add_coins(base_reward)
+    GameSave.flush()
+    result["reward"] = base_reward * 2
+    result["bonus_reward"] = base_reward * 2
+    # marca no result para HUD não reoferecer
+    _show_feedback("2× MOEDAS!", "+R$ %d bônus" % base_reward, GOLD, "reward")
+    if GameSave:
+        GameSave.record_ad_counter("rewarded")
+        GameSave.record_event("ad_rewarded_double")
+

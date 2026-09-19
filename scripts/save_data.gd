@@ -55,6 +55,10 @@ func _set_defaults() -> void:
         "audio_muted": false,
         "reduced_motion": false,
         "high_contrast": false,
+        "hard_currency": 0,
+        "remove_ads": false,
+        "ads_consent_granted": false,
+        "ad_counters": {"interstitial_run": 0, "rewarded_run": 0},
         "daily_date": "",
         "daily_completed": [],
         "daily_progress": {"meters": 0, "coins": 0, "clean": false},
@@ -159,6 +163,13 @@ func _sanitize_data() -> void:
     data["audio_muted"] = bool(data.get("audio_muted", false))
     data["reduced_motion"] = bool(data.get("reduced_motion", false))
     data["high_contrast"] = bool(data.get("high_contrast", false))
+    data["hard_currency"] = maxi(0, int(data.get("hard_currency", 0)))
+    data["remove_ads"] = bool(data.get("remove_ads", false))
+    data["ads_consent_granted"] = bool(data.get("ads_consent_granted", false))
+    if not (data.get("ad_counters", {}) is Dictionary):
+        data["ad_counters"] = {"interstitial_run": 0, "rewarded_run": 0}
+    var ad_c: Dictionary = data["ad_counters"]
+    data["ad_counters"] = {"interstitial_run": maxi(0,int(ad_c.get("interstitial_run",0))), "rewarded_run": maxi(0,int(ad_c.get("rewarded_run",0)))}
     if not (data.get("retention_flags", {}) is Dictionary):
         data["retention_flags"] = {"d1": false, "d7": false, "d30": false}
     var flags: Dictionary = data["retention_flags"]
@@ -371,6 +382,33 @@ func best_time(index: int) -> float:
 func owns(item: String) -> bool:
     var canonical := SHOP_DATA.canonical_id(item)
     return canonical in data.get("owned_items", []) or canonical in data.get("inventory", [])
+
+func set_remove_ads(enabled: bool) -> void:
+    data["remove_ads"] = enabled
+    _queue_flush()
+
+func has_remove_ads() -> bool: return bool(data.get("remove_ads", false))
+
+func add_hard_currency(amount: int) -> void:
+    if amount<=0: return
+    data["hard_currency"] = maxi(0,int(data.get("hard_currency",0))+amount)
+    _queue_flush()
+
+func set_ads_consent(granted: bool) -> void:
+    data["ads_consent_granted"] = granted
+    _queue_flush()
+
+func record_ad_counter(kind: String) -> void:
+    var c: Dictionary = data.get("ad_counters", {"interstitial_run": 0, "rewarded_run": 0})
+    if kind=="interstitial": c["interstitial_run"]=int(c.get("interstitial_run",0))+1
+    elif kind=="rewarded": c["rewarded_run"]=int(c.get("rewarded_run",0))+1
+    data["ad_counters"]=c
+    _queue_flush()
+
+func add_rewarded_bonus_coins(amount: int) -> bool:
+    if amount<=0: return false
+    add_coins(amount)
+    return true
 
 func unlock(item: String, _requested_price: int = -1) -> bool:
     # O preço vindo da tela é apenas legado/visual. O save consulta o catálogo

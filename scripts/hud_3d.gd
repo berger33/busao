@@ -98,6 +98,7 @@ func _draw_menu() -> void:
     _text(Vector2(72, 1140), "🔥 %02d dias" % int(state.get("streak", 0)), 17, Color("#ffb86b"))
     _text(Vector2(330, 1140), "NÍVEL %02d • XP %d/%d" % [int(state.get("xp_level", 1)), int(state.get("xp_into_level", 0)), int(state.get("xp_into_level", 0)) + int(state.get("xp_to_next_level", 250))], 14, Color("#f9c8ae"))
     _text(Vector2(72, 1178), "ônibus impossível • humor brasileiro • câmera 3D", 14, Color("#d3e5ef"))
+    _draw_banner_if_needed(1210)
 
 func _draw_map() -> void:
     _draw_ui_background()
@@ -136,6 +137,7 @@ func _draw_map() -> void:
     else:
         _text_center(Vector2(607, 1125), "★ 120 = TELA 50", 13, MUTED)
     _text_center(Vector2(360, 1205), "ESQUERDA = RUA   •   CENTRO/DIREITA = CALÇADA", 14, Color("#f9c8ae"))
+    _draw_banner_if_needed(1215)
 
 func _draw_run() -> void:
     draw_rect(Rect2(0, 0, 720, 132), Color(0.025, 0.055, 0.12, 0.93))
@@ -238,6 +240,22 @@ func _draw_results() -> void:
         _text_center(Vector2(360, 390), "DICA 3D", 20, Color("#ffbf8b"))
         _text_center(Vector2(360, 438), "Rua = mais obstáculos e mais moedas", 18, WHITE)
         _text_center(Vector2(360, 470), "Calçadas = leitura e atalhos", 18, MUTED)
+    # Lote 11 — ofertas rewarded (revive 1x e 2x moedas)
+    var rewarded_ready: bool = bool(state.get("rewarded_ready", false))
+    var revive_available: bool = bool(state.get("revive_available", false))
+    var double_available: bool = bool(state.get("double_available", false))
+    if not success and revive_available:
+        # revive ainda não usado e rewarded pronto
+        var revive_color: Color = CYAN if rewarded_ready else Color("#314563")
+        var revive_label: String = "▶ REVIVER COM ANÚNCIO (1×)" if rewarded_ready else "REVIVER • CARREGANDO..."
+        _button(Rect2(55, 600, 610, 72), revive_label, revive_color, 16)
+        _text_center(Vector2(360, 685), "assista e continue de onde parou • 5 s invencível", 12, MUTED)
+    elif success and double_available:
+        var reward_val: int = int(result_data.get("reward", 0))
+        var dbl_color: Color = GOLD if rewarded_ready else Color("#314563")
+        var dbl_label: String = "2× MOEDAS COM ANÚNCIO +%d" % reward_val if rewarded_ready else "2× MOEDAS • CARREGANDO..."
+        _button(Rect2(55, 760, 610, 72), dbl_label, dbl_color, 16)
+        _text_center(Vector2(360, 845), "dobra o bônus desta corrida • sem repetir", 12, MUTED)
     _button(Rect2(55, 880, 290, 88), "MAPA", BLUE, 24)
     _button(Rect2(375, 880, 290, 88), "TENTAR DE NOVO", GOLD, 18)
     _button(Rect2(55, 1000, 610, 72), "MENU PRINCIPAL", Color("#293955"), 20)
@@ -251,24 +269,46 @@ func _draw_shop() -> void:
         for i in characters.size():
             var col: int = i % 2
             var row: int = int(float(i) / 2.0)
-            var card_y: float = 250.0 + row * 145.0 - scroll
-            if card_y + 126.0 < 250.0 or card_y > 1125.0:
+            var card_y: float = 280.0 + row * 145.0 - scroll
+            if card_y + 126.0 < 280.0 or card_y > 1125.0:
                 continue
             var rect := Rect2(25.0 + col * 340.0, card_y, 330.0, 126.0)
             _character_card(rect, characters[i])
-        _mask_band(126.0, 250.0)
+        _mask_band(126.0, 280.0)
         _mask_band(1125.0, 1280.0)
-    else:
+    elif int(state.get("shop_tab", 0)) == 1:
         var items: Array = state.get("items", [])
         for i in items.size():
             var col: int = i % 2
             var row: int = int(float(i) / 2.0)
-            var rect := Rect2(30.0 + col * 345.0, 250.0 + row * 175.0, 315.0, 150.0)
+            var rect := Rect2(30.0 + col * 345.0, 280.0 + row * 175.0, 315.0, 150.0)
             _item_card(rect, items[i])
+        _mask_band(126.0, 280.0)
+    else:
+        var packs: Array = state.get("billing_packs", [])
+        for i in packs.size():
+            var col: int = i % 2
+            var row: int = int(float(i) / 2.0)
+            var rect := Rect2(30.0 + col * 345.0, 280.0 + row * 155.0, 315.0, 135.0)
+            # desfase para não desenhar fora da janela
+            if rect.position.y + rect.size.y < 280.0 or rect.position.y > 1125.0:
+                continue
+            _billing_card(rect, packs[i])
+        _text_center(Vector2(360, 1095), "compras únicas • sem loot box • teste: android.test.purchased", 10, MUTED)
     _header("LOJA DO PONTO", "R$ %03d" % int(state.get("coins", 0)))
     _text(Vector2(30, 126), "%d brasileiros para correr do seu jeito." % characters.size(), 16, MUTED)
-    _button(Rect2(30, 150, 330, 70), "PERSONAGENS", BLUE if int(state.get("shop_tab", 0)) == 0 else Color("#263958"), 18)
-    _button(Rect2(360, 150, 330, 70), "ITENS", RED if int(state.get("shop_tab", 0)) == 1 else Color("#263958"), 20)
+    # 3 abas: personagens | itens | pacotes
+    _button(Rect2(30, 150, 210, 70), "PERSONAGENS", BLUE if int(state.get("shop_tab", 0)) == 0 else Color("#263958"), 14)
+    _button(Rect2(250, 150, 210, 70), "ITENS", RED if int(state.get("shop_tab", 0)) == 1 else Color("#263958"), 16)
+    _button(Rect2(470, 150, 210, 70), "PACOTES", GOLD if int(state.get("shop_tab", 0)) == 2 else Color("#263958"), 15)
+    # linha remove_ads / info consent
+    var remove_ads_owned: bool = bool(state.get("remove_ads", false))
+    var remove_label: String = "✓ SEM ANÚNCIOS" if remove_ads_owned else "REMOVER ANÚNCIOS R$ 9,90"
+    var remove_color: Color = GREEN if remove_ads_owned else Color("#d9a03a")
+    _button(Rect2(30, 230, 330, 36), remove_label, remove_color, 11)
+    _text(Vector2(375, 254), "restaurar compras →", 11, MUTED)
+    _button(Rect2(545, 230, 135, 36), "RESTAURAR", Color("#263958"), 10)
+    # conteúdo por aba — desloca para baixo por causa da linha remove_ads
     if int(state.get("shop_tab", 0)) == 0 and scroll_max > 0.0:
         var track_height: float = 875.0
         var thumb_height: float = maxf(72.0, track_height * (875.0 / (875.0 + scroll_max)))
@@ -277,6 +317,40 @@ func _draw_shop() -> void:
         draw_rect(Rect2(703, thumb_y, 6, thumb_height), Color(0.45, 0.85, 0.88, 0.55))
         _text_center(Vector2(676, 1128), "arraste a lista", 11, MUTED)
     _button(Rect2(45, 1135, 630, 70), "VOLTAR", Color("#293955"), 22)
+    _draw_banner_if_needed(1210)
+
+func _draw_banner_if_needed(y: float) -> void:
+    var remove_ads_owned: bool = bool(state.get("remove_ads", false))
+    if remove_ads_owned:
+        _text_center(Vector2(360, y + 22), "sem anúncios • obrigado pelo apoio! ♡", 11, GREEN)
+        return
+    var banner_visible: bool = bool(state.get("banner_visible", false))
+    # Mock banner 320x50 centrado — em produção é view nativa AdMob sobreposta
+    var banner_rect := Rect2(200, y, 320, 50)
+    var banner_color: Color = Color("#1a335a") if banner_visible else Color("#12233f")
+    _panel(banner_rect, banner_color, 10)
+    var label: String = "ANÚNCIO  320×50  •  AdMob" if banner_visible else "anúncio carregando..."
+    _text_center(banner_rect.get_center() + Vector2(0,5), label, 11, MUTED if not banner_visible else Color("#d3e5ef"))
+    _text_center(Vector2(360, y + 62), "Data Safety • UMP consent • banner mock no editor", 9, Color("#7a8da6"))
+
+func _billing_card(rect: Rect2, pack: Dictionary) -> void:
+    var title := str(pack.get("title", "Pacote"))
+    var subtitle := str(pack.get("subtitle", ""))
+    var price_label := str(pack.get("price_label", "R$ —"))
+    var pack_id := str(pack.get("id",""))
+    var is_remove := pack_id == "remove_ads"
+    var owned: bool = bool(state.get("remove_ads", false)) if is_remove else false
+    var accent: Color = GOLD if is_remove else CYAN
+    if pack_id == "coin_pack_l": accent = VIOLET
+    elif pack_id == "coin_pack_m": accent = BLUE
+    elif pack_id == "starter_pack": accent = RED
+    _panel(rect, Color("#2a4663") if owned else Color("#223655"), 15)
+    _text(rect.position + Vector2(18, 36), title, 18, WHITE)
+    _text(rect.position + Vector2(18, 62), subtitle, 12, MUTED)
+    _text(rect.position + Vector2(18, 92), price_label, 14, accent)
+    var btn_label: String = "ADQUIRIDO" if owned else "COMPRAR"
+    var btn_color: Color = GREEN if owned else accent
+    _button(Rect2(rect.end.x - 110, rect.position.y + 42, 92, 52), btn_label, btn_color, 12)
 
 func _mask_band(y0: float, y1: float) -> void:
     # Reconstrói as faixas do gradiente de fundo para esconder cards que
