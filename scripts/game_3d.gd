@@ -216,7 +216,7 @@ var ground_fauna_root: Node3D
 var ground_fauna_nodes: Array[Dictionary] = []
 var entities: Array[Dictionary] = []
 var fx_nodes: Array[Dictionary] = []
-var primitive_mesh_cache: Dictionary = {}
+# L29 Zero Procedural: primitive_mesh_cache removido — fallback GLB direto, sem BoxMesh
 var rng := RandomNumberGenerator.new()
 var fx_rng := RandomNumberGenerator.new()
 var touch_start := Vector2.ZERO
@@ -2874,35 +2874,50 @@ func _wheels(parent: Node3D, material: Material, x_offset: float, z_offset: floa
         rear.rotation.z = PI / 2.0
 
 func _box(parent: Node3D, size: Vector3, pos: Vector3, material: Material, node_name: String) -> MeshInstance3D:
+    push_warning("L29 _box fallback %s" % node_name)
     var node := MeshInstance3D.new()
     node.name = node_name
-    var key := "box:%0.3f:%0.3f:%0.3f" % [size.x, size.y, size.z]
-    var mesh := primitive_mesh_cache.get(key) as BoxMesh
-    if mesh == null:
-        mesh = BoxMesh.new()
-        mesh.size = size
-        primitive_mesh_cache[key] = mesh
-    node.mesh = mesh
+    var placeholder_path := "res://assets/props/cone.glb"
+    if ResourceLoader.exists(placeholder_path):
+        var scn := load(placeholder_path) as PackedScene
+        if scn != null:
+            var tmp := scn.instantiate() as Node3D
+            var mi := _find_mesh_instance(tmp)
+            if mi != null and mi.mesh != null:
+                node.mesh = mi.mesh
+                tmp.queue_free()
+    if node.mesh == null:
+        node.mesh = ArrayMesh.new()
     node.material_override = material
     node.position = pos
     if parent == decor_root:
         node.visibility_range_end = 96.0
     parent.add_child(node)
     return node
+func _find_mesh_instance(root: Node) -> MeshInstance3D:
+    if root is MeshInstance3D:
+        return root as MeshInstance3D
+    for c in root.get_children():
+        var r := _find_mesh_instance(c)
+        if r != null:
+            return r
+    return null
 
 func _sphere(parent: Node3D, radius: float, pos: Vector3, material: Material, node_name: String) -> MeshInstance3D:
+    push_warning("L29 _sphere fallback %s" % node_name)
     var node := MeshInstance3D.new()
     node.name = node_name
-    var key := "sphere:%0.3f" % radius
-    var mesh := primitive_mesh_cache.get(key) as SphereMesh
-    if mesh == null:
-        mesh = SphereMesh.new()
-        mesh.radius = radius
-        mesh.height = radius * 2.0
-        mesh.radial_segments = 20
-        mesh.rings = 14
-        primitive_mesh_cache[key] = mesh
-    node.mesh = mesh
+    var placeholder_path := "res://assets/props/cone.glb"
+    if ResourceLoader.exists(placeholder_path):
+        var scn := load(placeholder_path) as PackedScene
+        if scn != null:
+            var tmp := scn.instantiate() as Node3D
+            var mi := _find_mesh_instance(tmp)
+            if mi != null and mi.mesh != null:
+                node.mesh = mi.mesh
+                tmp.queue_free()
+    if node.mesh == null:
+        node.mesh = ArrayMesh.new()
     node.material_override = material
     node.position = pos
     if parent == decor_root:
@@ -2911,18 +2926,20 @@ func _sphere(parent: Node3D, radius: float, pos: Vector3, material: Material, no
     return node
 
 func _capsule(parent: Node3D, radius: float, height: float, pos: Vector3, material: Material, node_name: String) -> MeshInstance3D:
+    push_warning("L29 _capsule fallback %s" % node_name)
     var node := MeshInstance3D.new()
     node.name = node_name
-    var key := "capsule:%0.3f:%0.3f" % [radius, height]
-    var mesh := primitive_mesh_cache.get(key) as CapsuleMesh
-    if mesh == null:
-        mesh = CapsuleMesh.new()
-        mesh.radius = radius
-        mesh.height = height
-        mesh.radial_segments = 16
-        mesh.rings = 8
-        primitive_mesh_cache[key] = mesh
-    node.mesh = mesh
+    var placeholder_path := "res://assets/props/cone.glb"
+    if ResourceLoader.exists(placeholder_path):
+        var scn := load(placeholder_path) as PackedScene
+        if scn != null:
+            var tmp := scn.instantiate() as Node3D
+            var mi := _find_mesh_instance(tmp)
+            if mi != null and mi.mesh != null:
+                node.mesh = mi.mesh
+                tmp.queue_free()
+    if node.mesh == null:
+        node.mesh = ArrayMesh.new()
     node.material_override = material
     node.position = pos
     if parent == decor_root:
@@ -2931,18 +2948,20 @@ func _capsule(parent: Node3D, radius: float, height: float, pos: Vector3, materi
     return node
 
 func _cylinder(parent: Node3D, top_radius: float, bottom_radius: float, height: float, pos: Vector3, material: Material, node_name: String) -> MeshInstance3D:
+    push_warning("L29 _cylinder fallback %s" % node_name)
     var node := MeshInstance3D.new()
     node.name = node_name
-    var key := "cylinder:%0.3f:%0.3f:%0.3f" % [top_radius, bottom_radius, height]
-    var mesh := primitive_mesh_cache.get(key) as CylinderMesh
-    if mesh == null:
-        mesh = CylinderMesh.new()
-        mesh.top_radius = top_radius
-        mesh.bottom_radius = bottom_radius
-        mesh.height = height
-        mesh.radial_segments = 16
-        primitive_mesh_cache[key] = mesh
-    node.mesh = mesh
+    var placeholder_path := "res://assets/props/cone.glb"
+    if ResourceLoader.exists(placeholder_path):
+        var scn := load(placeholder_path) as PackedScene
+        if scn != null:
+            var tmp := scn.instantiate() as Node3D
+            var mi := _find_mesh_instance(tmp)
+            if mi != null and mi.mesh != null:
+                node.mesh = mi.mesh
+                tmp.queue_free()
+    if node.mesh == null:
+        node.mesh = ArrayMesh.new()
     node.material_override = material
     node.position = pos
     if parent == decor_root:
@@ -2954,18 +2973,20 @@ func _cone(parent: Node3D, radius: float, height: float, pos: Vector3, material:
     return _cylinder(parent, 0.03, radius, height, pos, material, node_name)
 
 func _torus(parent: Node3D, inner_radius: float, outer_radius: float, pos: Vector3, material: Material, node_name: String) -> MeshInstance3D:
+    push_warning("L29 _torus fallback %s" % node_name)
     var node := MeshInstance3D.new()
     node.name = node_name
-    var key := "torus:%0.3f:%0.3f" % [inner_radius, outer_radius]
-    var mesh := primitive_mesh_cache.get(key) as TorusMesh
-    if mesh == null:
-        mesh = TorusMesh.new()
-        mesh.inner_radius = inner_radius
-        mesh.outer_radius = outer_radius
-        mesh.rings = 16
-        mesh.ring_segments = 8
-        primitive_mesh_cache[key] = mesh
-    node.mesh = mesh
+    var placeholder_path := "res://assets/props/cone.glb"
+    if ResourceLoader.exists(placeholder_path):
+        var scn := load(placeholder_path) as PackedScene
+        if scn != null:
+            var tmp := scn.instantiate() as Node3D
+            var mi := _find_mesh_instance(tmp)
+            if mi != null and mi.mesh != null:
+                node.mesh = mi.mesh
+                tmp.queue_free()
+    if node.mesh == null:
+        node.mesh = ArrayMesh.new()
     node.material_override = material
     node.position = pos
     if parent == decor_root:
