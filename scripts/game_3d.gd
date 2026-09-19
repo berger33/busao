@@ -2048,19 +2048,19 @@ func _build_colonial_facade(pos: Vector3, index: int) -> void:
     _box(decor_root, Vector3(2.55, 0.09, 0.08), pos + Vector3(0.0, 2.1, -1.64), _material(_scenario_color("accent", CYAN), 0.0, 0.45, "paint"), "ColonialTrim")
 
 func _build_palm(pos: Vector3, object_scale: float) -> void:
-	var palmeira_glb := _optional_glb("scene/palmeira.glb")
-	if palmeira_glb != null:
-		palmeira_glb.position = pos
-		palmeira_glb.scale = Vector3.ONE * object_scale
-		if palmeira_glb is GeometryInstance3D:
-			(palmeira_glb as GeometryInstance3D).visibility_range_end = 35.0
-			(palmeira_glb as GeometryInstance3D).visibility_range_end_margin = 2.0
-		decor_root.add_child(palmeira_glb)
-		var imp2 := _create_tree_impostor(pos, object_scale * 0.95)
-		if imp2 != null:
-			decor_root.add_child(imp2)
-		return
-	_cylinder(decor_root, 0.10 * object_scale, 0.15 * object_scale, 2.7 * object_scale, pos + Vector3(0.0, 1.35 * object_scale, 0.0), _material(Color("#805338"), 0.0, 0.9), "PalmTrunk")
+    var palmeira_glb := _optional_glb("scene/palmeira.glb")
+    if palmeira_glb != null:
+        palmeira_glb.position = pos
+        palmeira_glb.scale = Vector3.ONE * object_scale
+        if palmeira_glb is GeometryInstance3D:
+            (palmeira_glb as GeometryInstance3D).visibility_range_end = 35.0
+            (palmeira_glb as GeometryInstance3D).visibility_range_end_margin = 2.0
+        decor_root.add_child(palmeira_glb)
+        var imp2 := _create_tree_impostor(pos, object_scale * 0.95)
+        if imp2 != null:
+            decor_root.add_child(imp2)
+        return
+    _cylinder(decor_root, 0.10 * object_scale, 0.15 * object_scale, 2.7 * object_scale, pos + Vector3(0.0, 1.35 * object_scale, 0.0), _material(Color("#805338"), 0.0, 0.9), "PalmTrunk")
     var leaf := _material(Color("#3eaa75"), 0.0, 0.84, "leaves")
     for i in 5:
         var branch := _box(decor_root, Vector3(0.08, 0.06, 1.0 * object_scale), pos + Vector3(0.0, 2.75 * object_scale, 0.0), leaf, "PalmLeaf")
@@ -2363,43 +2363,43 @@ func _optional_model(file: String) -> Node3D:
     return node
 
 func _optional_prop(file: String) -> Node3D:
-	# Drop-in de mobiliario: se existir assets/props/<file> (GLB original, ver
-	# assets/props/LEIA-ME.md), ele substitui a versao procedural do objeto.
-	var chave := "props/" + file
-	if not _glb_cache.has(chave):
-		var packed: PackedScene = null
-		var path := "res://assets/props/" + file
-		if ResourceLoader.exists(path):
-			packed = load(path) as PackedScene
-		_glb_cache[chave] = packed
-	var cached: PackedScene = _glb_cache[chave]
-	if cached == null:
-		return null
-	var node := cached.instantiate() as Node3D
-	if node == null:
-		push_warning("Falha ao instanciar prop: " + file)
-		return null
-	return node
+    # Drop-in de mobiliario: se existir assets/props/<file> (GLB original, ver
+    # assets/props/LEIA-ME.md), ele substitui a versao procedural do objeto.
+    var chave := "props/" + file
+    if not _glb_cache.has(chave):
+        var packed: PackedScene = null
+        var path := "res://assets/props/" + file
+        if ResourceLoader.exists(path):
+            packed = load(path) as PackedScene
+        _glb_cache[chave] = packed
+    var cached: PackedScene = _glb_cache[chave]
+    if cached == null:
+        return null
+    var node := cached.instantiate() as Node3D
+    if node == null:
+        push_warning("Falha ao instanciar prop: " + file)
+        return null
+    return node
 
 
 func _optional_glb(subpath: String) -> Node3D:
-	# Drop-in generico por subcaminho de assets/ (ex.: "collectibles/coin.glb",
-	# "sky_fx/aviao.glb"). Se o GLB existir, substitui o objeto procedural;
-	# se nao, o builder antigo continua como fallback de seguranca.
-	if not _glb_cache.has(subpath):
-		var packed: PackedScene = null
-		var path := "res://assets/" + subpath
-		if ResourceLoader.exists(path):
-			packed = load(path) as PackedScene
-		_glb_cache[subpath] = packed
-	var cached: PackedScene = _glb_cache[subpath]
-	if cached == null:
-		return null
-	var node := cached.instantiate() as Node3D
-	if node == null:
-		push_warning("Falha ao instanciar GLB: " + subpath)
-		return null
-	return node
+    # Drop-in generico por subcaminho de assets/ (ex.: "collectibles/coin.glb",
+    # "sky_fx/aviao.glb"). Se o GLB existir, substitui o objeto procedural;
+    # se nao, o builder antigo continua como fallback de seguranca.
+    if not _glb_cache.has(subpath):
+        var packed: PackedScene = null
+        var path := "res://assets/" + subpath
+        if ResourceLoader.exists(path):
+            packed = load(path) as PackedScene
+        _glb_cache[subpath] = packed
+    var cached: PackedScene = _glb_cache[subpath]
+    if cached == null:
+        return null
+    var node := cached.instantiate() as Node3D
+    if node == null:
+        push_warning("Falha ao instanciar GLB: " + subpath)
+        return null
+    return node
 
 
 func _tint_glb(node: Node3D, tint) -> void:
