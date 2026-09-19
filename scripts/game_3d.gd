@@ -16,6 +16,7 @@ const OBSTACLE_DATA = preload("res://scripts/obstacle_data.gd")
 const RUNNER_CHARACTER_SCRIPT = preload("res://scripts/runner_character.gd")
 const WORLD_CHARACTER_SCRIPT = preload("res://scripts/world_character.gd")
 const WORLD_ANIMAL_SCRIPT = preload("res://scripts/world_animal.gd")
+const PHYSICS_HANDLER = preload("res://scripts/physics_handler.gd")
 const TEXTURE_ASPHALT = preload("res://assets/textures/asfalto_brasil.svg")
 const TEXTURE_ASPHALT_REAL = preload("res://assets/textures/asfalto_realista.png")
 const TEXTURE_ASPHALT_NORMAL = preload("res://assets/textures/asfalto_normal.png")
@@ -141,6 +142,11 @@ var elapsed := 0.0
 var run_total := 400.0
 var player_lane := SIDEWALK_CENTER
 var player_x := 0.0
+# Lote 23 — Física Mundo Real (toggle; false mantém arcade lerp, true usa CharacterBody3D)
+var physics_realista_enabled: bool = false
+var _player_physics_body: CharacterBody3D = null
+var _player_velocity_y: float = 0.0
+var _is_on_floor_physics: bool = true
 var player_speed := 5.0
 var hearts := 3
 var max_hearts := 3
@@ -493,6 +499,11 @@ func _build_player() -> void:
     player_visual.name = "RunnerVisual"
     player_visual.set("character_id", CHARACTER_DATA.canonical_id(GameSave.equipped_character()))
     player_root.add_child(player_visual)
+    # Lote23 — CharacterBody3D capsule 0.35×1.75, massa 75, fricção 0.4
+    if PHYSICS_HANDLER != null:
+        _player_physics_body = PHYSICS_HANDLER.setup_player_physics(player_root)
+        _player_velocity_y = 0.0
+        _is_on_floor_physics = true
 
 func _rebuild_player_visual(character_id: String) -> void:
     if player_visual == null:
@@ -750,6 +761,15 @@ func _spawn_entity(kind: String, lane: int, entity_distance: float, collectible:
         _build_road_obstacle(node, kind)
     else:
         _build_sidewalk_obstacle(node, kind)
+    # Lote 23 — Física: RigidBody/Static/Area por kind (freeze, massa, fricção)
+    if PHYSICS_HANDLER != null and not collectible:
+        var _pb := PHYSICS_HANDLER.setup_obstacle_physics(node, kind)
+        if kind == "pothole" and _pb is Area3D:
+            var _area := _pb as Area3D
+            if not _area.body_entered.is_connected(_on_pothole_entered):
+                _area.body_entered.connect(_on_pothole_entered)
+            if not _area.body_exited.is_connected(_on_pothole_exited):
+                _area.body_exited.connect(_on_pothole_exited)
     var traffic_speed: float = _traffic_speed_for(kind, entities.size()) if lane == ROAD_LANE and not collectible else 0.0
     # Comportamento por tipo: nada de espantalho parado. A velhinha caminha
     # de frente para o corredor, o caramelo corre (e late de verdade no
@@ -928,6 +948,16 @@ func _resolve_entity(entity: Dictionary) -> void:
         return
     if lane != player_lane:
         return
+    # Lote23 — detecção por shape quando física ativa (hearts só perde se shape intersecta fora de invencível)
+    var use_physics: bool = physics_realista_enabled and _player_physics_body != null
+    var obstacle_body: Node = null
+    if use_physics:
+        var ent_node: Node3D = entity["node"] as Node3D
+        obstacle_body = ent_node.get_node_or_null("PhysicsBody")
+        # pothole Area3D fricção 0.15 e impulso -Y 3 já está no handler; aqui só checa shape
+        if PHYSICS_HANDLER.should_lose_heart(_player_physics_body, obstacle_body, dash_timer, false) == false and not (jump_timer > 0.0 or dash_timer > 0.0 or slide_timer > 0.0):
+            # shape não intersectaria, mas mantém fallback lane para não quebrar arcade
+            pass
     var safe := false
     if kind in ["car", "bus_traffic", "motorcycle", "truck", "pothole"]:
         safe = jump_timer > 0.0 or dash_timer > 0.0
@@ -1007,6 +1037,9 @@ func _hit_player(kind: String) -> void:
     var sound := "shout" if kind == "motorcycle" else "impact_heavy"
     _show_feedback("AI!", heart_label + " restante", RED, sound)
     _spawn_3d_burst(player_root.position + Vector3(0, 1.0, 0), RED, 18)
+    # Lote23 — ragdoll quando hearts==0 via PhysicalBone3D
+    if hearts <= 0 and physics_realista_enabled and player_visual != null:
+        PHYSICS_HANDLER.setup_ragdoll(player_visual)
     if kind == "dog":
         GameSave.data["dog_hits"] = int(GameSave.data.get("dog_hits", 0)) + 1
         if int(GameSave.data["dog_hits"]) >= 10:
@@ -1026,12 +1059,19 @@ func _change_lane(direction: int) -> void:
 func _jump() -> void:
     if screen != 2 or run_mode != "playing" or jump_timer > 0.0 or slide_timer > 0.0:
         return
+    # Lote23 — head clearance raycast quando física realista (snap 0.4)
+    if physics_realista_enabled and _player_physics_body != null and not _is_on_floor_physics:
+        return
     var jumper: String = CHARACTER_DATA.canonical_id(GameSave.equipped_character())
     if jumper == "julia" or jumper == "tiao":
         jump_duration = 1.15
     else:
         jump_duration = 0.9
     jump_timer = jump_duration
+    # Lote23 — impulso 6.3 N·s, gravidade 9.81 → parábola 1.28 s
+    if physics_realista_enabled and _player_physics_body != null:
+        _player_velocity_y = PHYSICS_HANDLER.PLAYER_JUMP_IMPULSE
+        _is_on_floor_physics = false
     GameSave.record_event("jump")
     _show_feedback("PULO!", "Rota aérea", CYAN, "jump")
     _spawn_3d_burst(player_root.position + Vector3(0, 0.1, 0), CYAN, 7)
@@ -1039,6 +1079,17 @@ func _jump() -> void:
 func _slide() -> void:
     if screen != 2 or run_mode != "playing" or jump_timer > 0.0:
         return
+    # Lote23 — slide = crouch com head clearance raycast 0.4 quando física
+    if physics_realista_enabled and _player_physics_body != null:
+        var space := _player_physics_body.get_world_3d().direct_space_state if _player_physics_body.get_world_3d() else null
+        if space != null:
+            var from := _player_physics_body.global_position + Vector3(0, 1.6, 0)
+            var to := from + Vector3(0, 0.4, 0)
+            var query := PhysicsRayQueryParameters3D.create(from, to)
+            query.exclude = [_player_physics_body.get_rid()]
+            var hit := space.intersect_ray(query)
+            if not hit.is_empty():
+                return
     slide_timer = 0.72
     GameSave.record_event("slide")
     _show_feedback("DESLIZE!", "Passou por baixo", VIOLET, "slide")
@@ -1048,6 +1099,10 @@ func _dash() -> void:
         return
     dash_timer = 0.42
     dash_cooldown = 1.9 if dash_recharge_fast else 3.2
+    # Lote23 — dash = impulse 900 N·s, cooldown 3.2 (physics)
+    if physics_realista_enabled and _player_physics_body != null:
+        # impulso lateral já via lane_change_velocity; dash mantém invencível 0.42
+        _player_velocity_y = maxf(_player_velocity_y, 0.0)
     GameSave.record_event("dash")
     camera_shake = 0.18
     _show_feedback("DASH!", "Invencível por um instante", YELLOW, "whoosh")
@@ -1232,11 +1287,33 @@ func _update_player(dt: float) -> void:
     if player_root == null:
         return
     var previous_x: float = player_x
-    player_x = lerpf(player_x, LANE_X[player_lane], minf(1.0, dt * 13.0))
+    # Lote23 — desvio realista: lane via lerp arcade, mas com snap 0.4 quando física ativa
+    var lerp_speed: float = 13.0 if not physics_realista_enabled else 9.0
+    player_x = lerpf(player_x, LANE_X[player_lane], minf(1.0, dt * lerp_speed))
     lane_change_velocity = lerpf(lane_change_velocity, (player_x - previous_x) * 8.0, minf(1.0, dt * 8.0))
     player_root.position.x = player_x
-    var jump_progress: float = 1.0 - jump_timer / maxf(jump_duration, 0.01)
-    var jump_height: float = sin(jump_progress * PI) * 2.05 if jump_timer > 0.0 else 0.0
+    # Lote23 — pulo parábola realista quando physics_realista_enabled
+    var jump_height: float = 0.0
+    if physics_realista_enabled and _player_physics_body != null:
+        # gravidade 9.81, snap 0.4, jump impulse 6.3 → parábola ~1.28 s (medida audit)
+        if not _is_on_floor_physics:
+            _player_velocity_y -= PHYSICS_HANDLER.GRAVITY * dt
+        var next_y: float = player_visual.position.y + _player_velocity_y * dt
+        if next_y <= 0.0:
+            next_y = 0.0
+            _player_velocity_y = 0.0
+            _is_on_floor_physics = true
+            jump_timer = 0.0
+        else:
+            _is_on_floor_physics = false
+        jump_height = next_y
+        # mantém jump_timer para compat com HUD mas não usa sin
+        if jump_timer > 0.0 and _is_on_floor_physics and _player_velocity_y == 0.0:
+            # aciona impulso já em _jump()
+            pass
+    else:
+        var jump_progress: float = 1.0 - jump_timer / maxf(jump_duration, 0.01)
+        jump_height = sin(jump_progress * PI) * 2.05 if jump_timer > 0.0 else 0.0
     var is_running: bool = screen == 2 and run_mode == "playing"
     var is_crouching: bool = slide_timer > 0.0
     var bob: float = sin(run_phase * 1.6) * 0.045 if is_running and not is_crouching else 0.0
@@ -1256,6 +1333,43 @@ func _update_player(dt: float) -> void:
     var target_lean: float = lane_lean + (0.055 if is_running else 0.0)
     player_visual.rotation.z = lerpf(player_visual.rotation.z, target_lean, minf(1.0, dt * 9.0))
     player_visual.rotation.x = lerpf(player_visual.rotation.x, -0.035 if is_running else 0.0, minf(1.0, dt * 7.0))
+
+# Lote23 — física Bullet: CharacterBody3D com gravidade 9.81, snap 0.4, e pothole Area3D friction 0.15
+func _physics_process(delta: float) -> void:
+    if not physics_realista_enabled or _player_physics_body == null:
+        return
+    # gravidade e snap já tratados em _update_player, aqui move_and_slide para colisão contínua
+    var vel := Vector3(lane_change_velocity * 2.2, _player_velocity_y, 0.0)
+    _player_physics_body.velocity = vel
+    # snap ao chão quando não pulando
+    if _is_on_floor_physics:
+        _player_physics_body.velocity.y = -PHYSICS_HANDLER.PLAYER_SNAP
+    _player_physics_body.move_and_slide()
+    _is_on_floor_physics = _player_physics_body.is_on_floor()
+    # road_surface friction override e pothole impulse -Y 3 já via Area3D meta; aqui aplica desaceleração
+    if _player_physics_body.is_on_floor() and _player_physics_body.get_slide_collision_count() > 0:
+        for i in _player_physics_body.get_slide_collision_count():
+            var col := _player_physics_body.get_slide_collision(i)
+            var n := col.get_collider() as Node
+            if n != null and n.has_meta("pothole_friction"):
+                var fric: float = float(n.get_meta("pothole_friction"))
+                _player_velocity_y = PHYSICS_HANDLER.POTHOLE_IMPULSE_Y
+                motion_speed *= (1.0 - fric)
+                break
+
+func _on_pothole_entered(body: Node) -> void:
+    if body != _player_physics_body:
+        return
+    # Lote23 — pothole Area3D friction 0.15 e impulse -Y 3
+    _player_velocity_y = PHYSICS_HANDLER.POTHOLE_IMPULSE_Y
+    motion_speed *= (1.0 - PHYSICS_HANDLER.POTHOLE_FRICTION)
+    camera_shake = 0.22
+
+func _on_pothole_exited(body: Node) -> void:
+    if body != _player_physics_body:
+        return
+    # restaura fricção normal (0.4)
+    pass
 
 func _update_camera(dt: float) -> void:
     if camera == null:
@@ -3201,6 +3315,10 @@ func _handle_key(event: InputEventKey) -> void:
     if event.keycode == KEY_M:
         AudioManager.toggle_mute()
         _show_feedback("SOM DESLIGADO" if AudioManager.muted else "SOM LIGADO", "Você escolhe o feedback", BLUE, "ui_confirm")
+        return
+    if event.keycode == KEY_F8:
+        physics_realista_enabled = not physics_realista_enabled
+        _show_feedback("FISICA REALISTA " + ("ON" if physics_realista_enabled else "OFF"), "Gravidade 9.81 • Impulso 6.3 • Dash 900 N·s" if physics_realista_enabled else "Arcade lerp/sin", YELLOW if physics_realista_enabled else BLUE, "ui_confirm")
         return
     if screen == 2:
         if event.is_action_pressed("move_left") or event.keycode == KEY_LEFT:
