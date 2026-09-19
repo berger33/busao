@@ -80,6 +80,26 @@ arbitrarios via quaternion — evita o cacete de alinhar Euler na mao).
 O `world_animal.gd` nao precisou de mudanca: o drop-in generico do
 lote 3 cobre qualquer especie com GLB + `GLB_SIZES`.
 
+## Regenerar o lote 7 (mobiliário urbano)
+
+```bash
+sh tools/blender/run_bpy.sh tools/blender/build_lote7.py
+```
+
+Oito GLBs em `assets/props/`: `cone`, `hidrante`, `orelhao`, `banco`,
+`lixeira`, `poste`, `ponto` (abrigo sem a placa, que fica procedural com
+skin do GameSave) e `carrinho`. Escala real em metros e origem no chão —
+props NÃO passam por `_fit_model`. Abertura para −Y no Blender (= +Z no
+Godot, de frente para o corredor). Lições do lote: `caixa()`/`ripa()`
+NUNCA com subsurf (vira lente/agulha); cilindros via `pilar_seco()`
+(pilar do kit sem subsurf — o subsurf puxa a tampa e derrete a ponta);
+`coluna_entre()` loca na BASE (`a`), não no ponto médio;
+`bpy.context.view_layer.update()` antes do `join_parts` (senão o export
+usa matrix_world stale); materiais criados DEPOIS do `reset_scene`.
+O orelhão usa `casca_aberta()` (bmesh remove as faces frontais-baixas da
+esfera — abertura de verdade com o aparelho visível). Duração: ~2 min
+(8 exports + 8 previews Cycles).
+
 ## Regenerar o lote 5 (veículos)
 
 ```bash

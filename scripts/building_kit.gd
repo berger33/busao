@@ -625,14 +625,38 @@ static func _build_mobiliario(spec: Dictionary, raiz: Node3D, rng: RandomNumberG
 	_build_prop_linear(spec, raiz, rng, comprimento, props, "lixeira", "zincado", 0.50, visibilidade)
 	if rng.randf() < float(props.get("hidrante", {}).get("probabilidade", 0.0)):
 		var zz := rng.randf_range(3.0, comprimento - 3.0)
-		var hidrante := _malha(_cyl(0.12, 0.75, 8), material(spec, "estrutura_metalica"),
-				Vector3(_x_rua_esq(faixas) - 1.0, 0.15 + 0.375, -zz), raiz,
-				"Hidrante", true, visibilidade)
-		_marca(hidrante, "prop")
+		var hidrante_glb := _prop_glb("hidrante")
+		if hidrante_glb != null:
+			hidrante_glb.position = Vector3(_x_rua_esq(faixas) - 1.0, 0.15, -zz)
+			raiz.add_child(hidrante_glb)
+			_marca(hidrante_glb, "prop")
+		else:
+			var hidrante := _malha(_cyl(0.12, 0.75, 8), material(spec, "estrutura_metalica"),
+					Vector3(_x_rua_esq(faixas) - 1.0, 0.15 + 0.375, -zz), raiz,
+					"Hidrante", true, visibilidade)
+			_marca(hidrante, "prop")
+
+static func _prop_glb(nome: String) -> Node3D:
+	# Drop-in de mobiliario (assets/props/<nome>.glb, escala real).
+	var caminho := "res://assets/props/" + nome + ".glb"
+	if not ResourceLoader.exists(caminho):
+		return null
+	var cena := load(caminho) as PackedScene
+	if cena == null:
+		return null
+	return cena.instantiate() as Node3D
+
 
 ## Banco de praca: assento saliente de frente para a rua (encosto na faixa
 ## de props), com pe laterais, ripas do assento e do encosto.
 static func _build_banco(spec: Dictionary, raiz: Node3D, pos: Vector3, visibilidade: float) -> void:
+	var banco_glb := _prop_glb("banco")
+	if banco_glb != null:
+		banco_glb.position = pos
+		banco_glb.rotation.y = PI / 2.0  # comprimento ao longo da rua, abre p/ -X
+		raiz.add_child(banco_glb)
+		_marca(banco_glb, "prop")
+		return
 	var madeira := material(spec, "madeira")
 	var metal := material(spec, "estrutura_metalica")
 	var corpo := Node3D.new()
@@ -683,10 +707,16 @@ static func _build_prop_linear(spec: Dictionary, raiz: Node3D, rng: RandomNumber
 	while z < comprimento - 1.0:
 		var lado := 1.0 if rng.randf() < 0.5 else -1.0
 		var x := x_dir if lado > 0.0 else x_esq
-		var no := _malha(_box(Vector3(0.6, altura, 1.6)), material(spec, material_chave),
-				Vector3(x, 0.15 + altura * 0.5, -z), raiz, nome.capitalize(),
-				true, visibilidade)
-		_marca(no, "prop")
+		var glb := _prop_glb(nome)
+		if glb != null:
+			glb.position = Vector3(x, 0.15, -z)
+			raiz.add_child(glb)
+			_marca(glb, "prop")
+		else:
+			var no := _malha(_box(Vector3(0.6, altura, 1.6)), material(spec, material_chave),
+					Vector3(x, 0.15 + altura * 0.5, -z), raiz, nome.capitalize(),
+					true, visibilidade)
+			_marca(no, "prop")
 		z += passo * rng.randf_range(0.9, 1.2)
 
 static func _build_folhas(spec: Dictionary, raiz: Node3D, rng: RandomNumberGenerator,

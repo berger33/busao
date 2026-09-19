@@ -70,18 +70,23 @@ Frente -Z, origem no chao; `_fit_model` assenta/escala por `GLB_FIT`.
 O drop-in da bicicleta foi adicionado ao `"bicycle"` de
 `_build_sidewalk_obstacle` (fit 1,85 x 1,15).
 
-## 4. Objetos / mobiliario de calcada — ❌ todos procedurais (6)
+## 4. Objetos / mobiliario de calcada — ✅ todos GLB (Lote 7)
 
 | Asset | Estado |
 |---|---|
-| `hydrant` (hidrante) | ❌ cilindros + esfera |
-| `payphone` (orelhao) | ❌ caixas |
-| `cone` (cone de obra) | ❌ cone + cilindros |
-| `bench` (banco de praca) | ❌ caixas de madeira/metal |
-| carrinho do `vendor` (camelô) | ❌ caixas + rodas (o vendedor e 3D skinned) |
-| ponto de ônibus (`bus_stop`: toldo, vidro, banco, placa) | ❌ caixas |
+| `hydrant` (hidrante) | ✅ `assets/props/hidrante.glb` — corpo vermelho com domo, bicos e volante de latao |
+| `payphone` (orelhao) | ✅ `orelhao.glb` — capuz laranja com abertura REAL (faces removidas por bmesh), aparelho com teclado, moedeiro e fone dentro |
+| `cone` (cone de obra) | ✅ `cone.glb` — base quadrada, 2 faixas refletivas |
+| `bench` (banco de praca) | ✅ `banco.glb` — 3 ripas de assento + 2 de encosto, pes/travessas de aco |
+| carrinho do `vendor` (camelô) | ✅ `carrinho.glb` — corpo/tampo de madeira, vitrine, toldo listrado em 2 varas, rodas de borracha (o vendedor continua 3D skinned) |
+| ponto de ônibus (abrigo) | ✅ `ponto.glb` — 4 colunas, teto com testa amarela, vidro traseiro/laterais, banco laranja (a placa `StopSign` fica procedural: recebe skin do GameSave) |
+| lixeira (kit do Lote 3) | ✅ `lixeira.glb` — tambor verde suspenso em poste, aro e boca, placa de reciclagem |
+| poste de luz | ✅ `poste.glb` — haste afilada, braco curvo em 2 segmentos, luminaria com lente emissiva quente |
 
-Sem drop-in no codigo hoje — o lote 7 adicione o caminho GLB.
+Drop-ins: `_optional_prop()` em `game_3d.gd` (obstaculos, poste, abrigo) e
+`_prop_glb()` em `building_kit.gd` (banco/lixeira/hidrante do kit da rua).
+Contrato em `assets/props/LEIA-ME.md`: escala real (sem `_fit_model`),
+origem no chao, abertura para +Z. Gerador: `tools/blender/build_lote7.py`.
 
 ## 5. Coletaveis — ❌ todos procedurais (11)
 
@@ -128,7 +133,7 @@ madeira, terra_vermelha) nao existe — o kit cai em cor plana com warning.
 | **4** ✅ | `macaco`, `caranguejo` | ✅ ja coberto pelo drop-in generico do lote 3 (sem novo codigo) |
 | **5** ✅ | Veiculos: `car`, `motorcycle`, `truck`, `bus_traffic`, `onibus`, `carro` + `bicycle` | ja existia (`_optional_model`); novo drop-in `bicycle.glb` no obstaculo de calcada; rodas giram via nomes |
 | **6** | (reserva — variantes de carro/cor/rodas com texturas baked) | — |
-| **7** | Mobiliario: `hidrante`, `orelhao`, `cone`, `banco`, `caminho_camelô`, `ponto` | novo drop-in em `_build_sidewalk_obstacle` |
+| **7** ✅ | Mobiliario: `hidrante`, `orelhao`, `cone`, `banco`, `carrinho do camelô`, `ponto` + `lixeira` e `poste` | ✅ feito: `_optional_prop()`/`_prop_glb()` com fallback procedural |
 | **8** | Coletaveis (11) + `aviao` + `drone` | novo drop-in em `_build_collectible`/`_build_aerial` |
 | **9** | Estruturas de cenario (casas, predios, igreja, quiosque, poste, palmeira…) | novo drop-in opcional em `_build_scenario_slice` |
 | **10** | Texturas PBR do Lote 3 (`assets/textures/pbr/`) | sem codigo — o kit ja procura |
