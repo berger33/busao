@@ -874,23 +874,23 @@ func _build_caranguejo() -> void:
 
 func _blob_size_for_species(sp: String) -> Vector2:
     match sp:
-        \"caramelo\": return Vector2(0.85, 0.55)
-        \"capivara\": return Vector2(1.10, 0.72)
-        \"cavalo\": return Vector2(1.60, 0.90)
-        \"boi\": return Vector2(1.70, 0.95)
-        \"macaco\": return Vector2(0.60, 0.60)
-        \"caranguejo\": return Vector2(0.62, 0.42)
-        \"pombo\": return Vector2(0.42, 0.28)
-        \"passaro\": return Vector2(0.28, 0.18)
-        \"gaivota\": return Vector2(0.55, 0.36)
-        \"urubu\": return Vector2(0.72, 0.46)
+        "caramelo": return Vector2(0.85, 0.55)
+        "capivara": return Vector2(1.10, 0.72)
+        "cavalo": return Vector2(1.60, 0.90)
+        "boi": return Vector2(1.70, 0.95)
+        "macaco": return Vector2(0.60, 0.60)
+        "caranguejo": return Vector2(0.62, 0.42)
+        "pombo": return Vector2(0.42, 0.28)
+        "passaro": return Vector2(0.28, 0.18)
+        "gaivota": return Vector2(0.55, 0.36)
+        "urubu": return Vector2(0.72, 0.46)
         _: return Vector2(0.60, 0.40)
 
 func _ensure_blob_shadow(size: Vector2) -> void:
     if blob_shadow != null:
         return
     blob_shadow = MeshInstance3D.new()
-    blob_shadow.name = \"BlobShadow\"
+    blob_shadow.name = "BlobShadow"
     var mesh := PlaneMesh.new()
     mesh.size = size
     blob_shadow.mesh = mesh
@@ -918,18 +918,18 @@ func _update_blob_shadow() -> void:
     else:
         # GLB: estima pela pose (salto ~0.15–0.25)
         match pose_state:
-            \"jump\": h = 0.22
-            \"crouch\": h = 0.02 if crouch_moving else 0.0
+            "jump": h = 0.22
+            "crouch": h = 0.02 if crouch_moving else 0.0
             _: h = 0.04 if running else 0.01
     # voo: sombra quase some, não some abruptamente
     var flight_factor: float = 1.0
-    if behavior_mode == \"flight\":
+    if behavior_mode == "flight":
         h += 0.45
         flight_factor = 0.55
     # altura → escala menor + alpha menor
     var s: float = clampf(1.0 - h * 0.85, 0.42, 1.0) * flight_factor
     blob_shadow.scale = Vector3(s, 1.0, s)
-    var a: float = clampf(0.30 - h * 0.55, 0.08, 0.30) * (0.55 if behavior_mode == \"flight\" else 1.0)
+    var a: float = clampf(0.30 - h * 0.55, 0.08, 0.30) * (0.55 if behavior_mode == "flight" else 1.0)
     blob_mat.albedo_color.a = a
     # acompanha Y do chão: quando animal sobe, sombra fica no chão
     blob_shadow.position.y = 0.025

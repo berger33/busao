@@ -859,7 +859,7 @@ func _update_tutorial_hint() -> void:
         GameSave.flush()
         tutorial_hint = ""
     # Lote 16: seta 3D
-    var _show_arrow: bool = not bool(GameSave.data.get("tutorial_seen", false)) and float(state.get("distance", 0.0)) < float(BALANCE.first_session_hint_distance) and screen == 2 and run_mode == "playing"
+    var _show_arrow: bool = not bool(GameSave.data.get("tutorial_seen", false)) and distance < float(BALANCE.first_session_hint_distance) and screen == 2 and run_mode == "playing"
     _update_tutorial_arrow(_show_arrow, player_lane)
 
 func _update_run(dt: float) -> void:
@@ -4273,9 +4273,10 @@ func _ensure_tutorial_arrow() -> void:
     _tutorial_arrow = Node3D.new()
     _tutorial_arrow.name = "TutorialArrow"
     var arrow := MeshInstance3D.new()
-    var cone := ConeMesh.new()
+    var cone: CylinderMesh = CylinderMesh.new()
     cone.height = 1.2
-    cone.radius = 0.45
+    cone.top_radius = 0.0
+    cone.bottom_radius = 0.45
     var mat := StandardMaterial3D.new()
     mat.albedo_color = Color("#ffd34e")
     mat.emission_enabled = true
