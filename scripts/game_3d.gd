@@ -1731,6 +1731,11 @@ func _build_shopfront(pos: Vector3, index: int, accent: Color) -> void:
         _box(decor_root, Vector3(0.40, 0.70, 0.44), pos + Vector3(0.0, 0.42, -1.62), _material(Color("#744d3d"), 0.0, 0.74), "ShopDoor")
 
 func _build_construction(pos: Vector3, index: int) -> void:
+    var obra_glb := _optional_glb("scene/obra.glb")
+    if obra_glb != null:
+        obra_glb.position = pos
+        decor_root.add_child(obra_glb)
+        return
     var orange := _material(Color("#e7793f"), 0.0, 0.62, "metal")
     _box(decor_root, Vector3(2.8, 1.7, 2.9), pos + Vector3(0.0, 0.85, 0.0), _material(Color("#d8cfc2"), 0.0, 0.95, "brick_wall"), "ConstructionBrick")
     for side in [-1.0, 1.0]:
@@ -1741,12 +1746,24 @@ func _build_construction(pos: Vector3, index: int) -> void:
         _cone(decor_root, 0.28, 0.65, pos + Vector3(1.6, 0.34, -1.0), orange, "ConstructionCone")
 
 func _build_guard_post(pos: Vector3, _index: int) -> void:
+    var guarita_glb := _optional_glb("scene/guarita.glb")
+    if guarita_glb != null:
+        guarita_glb.position = pos
+        decor_root.add_child(guarita_glb)
+        _tint_glb(guarita_glb, {"TintWall": _scenario_color("building_alt", Color("#b9a770")), "TintTrim": _scenario_color("accent", YELLOW), "TintFabric": _scenario_color("accent", YELLOW)})
+        return
     _box(decor_root, Vector3(1.9, 1.9, 1.8), pos + Vector3(0.0, 0.95, 0.0), _material(_scenario_color("building_alt", Color("#b9a770")), 0.0, 0.74, "stucco"), "GuardPost")
     _box(decor_root, Vector3(1.3, 0.46, 0.05), pos + Vector3(0.0, 1.3, -0.94), _material(Color("#263d4b"), 0.0, 0.34, "glass"), "GuardWindow")
     _box(decor_root, Vector3(2.1, 0.10, 2.0), pos + Vector3(0.0, 2.0, 0.0), _material(_scenario_color("accent", YELLOW), 0.0, 0.72, "metal"), "GuardRoof")
     _build_flag(pos + Vector3(0.75, 0.0, 0.0), _scenario_color("accent", YELLOW))
 
 func _build_church(pos: Vector3, _index: int) -> void:
+    var igreja_glb := _optional_glb("scene/igreja.glb")
+    if igreja_glb != null:
+        igreja_glb.position = pos
+        decor_root.add_child(igreja_glb)
+        _tint_glb(igreja_glb, {"TintWall": _scenario_color("building", Color("#d8a46d")), "TintRoof": _scenario_color("roof", Color("#6c4f55")), "TintTrim": _scenario_color("accent", VIOLET)})
+        return
     var wall := _material(_scenario_color("building", Color("#d8a46d")), 0.0, 0.84, "stucco")
     _box(decor_root, Vector3(2.9, 4.0, 3.6), pos + Vector3(0.0, 2.0, 0.0), wall, "ChurchBody")
     _box(decor_root, Vector3(1.1, 5.6, 1.0), pos + Vector3(-1.0, 2.8, 0.0), wall, "ChurchTower")
@@ -1755,11 +1772,23 @@ func _build_church(pos: Vector3, _index: int) -> void:
     _box(decor_root, Vector3(0.25, 0.92, 0.05), pos + Vector3(-1.0, 6.9, -0.05), _material(_scenario_color("accent", VIOLET), 0.0, 0.42), "ChurchCross")
 
 func _build_tourist_kiosk(pos: Vector3, _index: int) -> void:
+    var quiosque_glb := _optional_glb("scene/quiosque.glb")
+    if quiosque_glb != null:
+        quiosque_glb.position = pos
+        decor_root.add_child(quiosque_glb)
+        _tint_glb(quiosque_glb, {"TintWall": _scenario_color("building_alt", Color("#72b1ad")), "TintTrim": _scenario_color("accent", CYAN)})
+        return
     _cylinder(decor_root, 0.72, 0.82, 1.55, pos + Vector3(0.0, 0.78, 0.0), _material(_scenario_color("building_alt", Color("#72b1ad")), 0.0, 0.74, "stucco"), "Kiosk")
     _cone(decor_root, 1.05, 0.52, pos + Vector3(0.0, 1.82, 0.0), _material(_scenario_color("accent", CYAN), 0.0, 0.62, "fabric"), "KioskRoof")
     _box(decor_root, Vector3(0.72, 0.22, 0.05), pos + Vector3(0.0, 0.98, -0.8), _material(Color("#f5e6bc"), 0.0, 0.45, "wood"), "KioskCounter")
 
 func _build_terminal_facade(pos: Vector3, _index: int) -> void:
+    var terminal_glb := _optional_glb("scene/terminal.glb")
+    if terminal_glb != null:
+        terminal_glb.position = pos
+        decor_root.add_child(terminal_glb)
+        _tint_glb(terminal_glb, {"TintWall": _scenario_color("building", Color("#344b70")), "TintTrim": _scenario_color("accent", CYAN), "TintSign": _scenario_color("accent", CYAN).lightened(0.18)})
+        return
     _box(decor_root, Vector3(3.2, 3.2, 2.8), pos + Vector3(0.0, 1.6, 0.0), _material(_scenario_color("building", Color("#344b70")), 0.0, 0.68, "metal"), "TerminalFacade")
     _box(decor_root, Vector3(2.9, 0.95, 0.05), pos + Vector3(0.0, 1.35, -1.46), _material(Color("#7ed3d0"), 0.0, 0.25, "glass"), "TerminalGlass")
     _box(decor_root, Vector3(3.5, 0.12, 0.72), pos + Vector3(0.0, 3.25, 0.0), _material(_scenario_color("accent", CYAN), 0.0, 0.42, "metal"), "TerminalRoof")
@@ -2235,6 +2264,11 @@ func _build_road_obstacle(parent: Node3D, kind: String) -> void:
             _box(parent, Vector3(2.22, 0.07, 0.05), Vector3(0.0, 1.60, 1.76), _material(Color("#f4c94e"), 0.0, 0.55, "paint"), "TruckReflectiveStrip")
             _wheels(parent, dark, 1.08, 1.15)
         "pothole":
+            var pothole_glb := _optional_glb("scene/pothole.glb")
+            if pothole_glb != null:
+                pothole_glb.position = Vector3(0, 0.02, 0)
+                parent.add_child(pothole_glb)
+                return
             _cylinder(parent, 0.84, 0.84, 0.035, Vector3(0.0, 0.04, 0.0), _material(Color("#101723"), 0.0, 1.0, "asphalt"), "Pothole")
             _cylinder(parent, 0.58, 0.58, 0.045, Vector3(0.0, 0.068, 0.0), _material(Color("#283243"), 0.0, 1.0, "dirt"), "PotholeInner")
             for i in 7:
