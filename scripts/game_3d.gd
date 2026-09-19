@@ -743,9 +743,17 @@ func _traffic_speed_for(kind: String, seed_index: int) -> float:
 
 func _animate_traffic(node: Node3D, speed: float, dt: float) -> void:
     var wheel_spin: float = speed * dt / 0.30
-    for wheel in node.get_children():
-        if wheel is Node3D and (str(wheel.name).begins_with("Wheel") or str(wheel.name).begins_with("BusWheel") or str(wheel.name).begins_with("MotoWheel")):
-            (wheel as Node3D).rotation.x -= wheel_spin
+    # Percorre todos os descendentes: nos veiculos procedurais as rodas sao
+    # filhas diretas; nos GLBs drop-in elas ficam aninhadas na cena do modelo.
+    var stack: Array[Node] = [node]
+    while not stack.is_empty():
+        var current: Node = stack.pop_back()
+        stack.append_array(current.get_children())
+        if current == node or not current is Node3D:
+            continue
+        var wheel_name := str(current.name)
+        if wheel_name.begins_with("Wheel") or wheel_name.begins_with("BusWheel") or wheel_name.begins_with("MotoWheel"):
+            (current as Node3D).rotation.x -= wheel_spin
     var body_bob: float = sin(pulse * 4.0 + node.position.z * 0.14) * 0.006
     node.position.y = body_bob
 
@@ -2166,6 +2174,13 @@ func _build_sidewalk_obstacle(parent: Node3D, kind: String) -> void:
         "dog":
             _build_animal_obstacle(parent, "caramelo")
         "bicycle":
+            # drop-in: um bicycle.glb em assets/vehicles/ substitui a
+            # bicicleta procedural (ver assets/vehicles/README.md)
+            var bike_glb := _optional_model("bicycle.glb")
+            if bike_glb != null:
+                parent.add_child(bike_glb)
+                _fit_model(bike_glb, 1.85, 1.15)
+                return
             # bicicleta de aco: rodas com pneu e aro, quadro em tubos,
             # guidao, selim, pedivela e pedais — alinhada com a rua (frente -Z)
             var bike_tire := _material(Color("#1d232e"), 0.15, 0.78, "rubber")

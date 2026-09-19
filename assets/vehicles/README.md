@@ -14,10 +14,18 @@ com os veículos construídos em código (nada quebra).
 | `motorcycle.glb`        | Obstáculo "motorcycle"             | 2,1 m × 1,15 m        |
 | `truck.glb`             | Obstáculo "truck"                  | 6,4 m × 2,7 m         |
 | `bus_traffic.glb`       | Obstáculo "bus_traffic"            | 7,4 m × 3,0 m         |
+| `bicycle.glb`           | Obstáculo "bicycle" (calçada)      | 1,85 m × 1,15 m       |
 
 O jogo escala o modelo para o tamanho-alvo e o assenta no chão automaticamente.
 O modelo deve estar orientado com o comprimento no eixo **Z** e virado para **-Z**
 (o mesmo padrão dos veículos procedurais).
+
+**Esta pasta já vem com os 7 modelos originais do projeto (Lote 5)**,
+modelados por Blender headless via `tools/blender/build_lote5.py`
+(hatch, sedan, moto, caminhão de carroceria de madeira, dois ônibus urbanos —
+o do ponto com letreiro LED "PONTO FINAL" — e bicicleta). Nós de roda nomeados
+`Wheel*`/`BusWheel*`/`MotoWheel*` giram sozinhos no trânsito. Para trocar por
+outro modelo, basta substituir o arquivo mantendo o nome.
 
 ## Onde baixar com licença aberta (uso comercial OK)
 

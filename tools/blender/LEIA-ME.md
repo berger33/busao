@@ -80,6 +80,22 @@ arbitrarios via quaternion — evita o cacete de alinhar Euler na mao).
 O `world_animal.gd` nao precisou de mudanca: o drop-in generico do
 lote 3 cobre qualquer especie com GLB + `GLB_SIZES`.
 
+## Regenerar o lote 5 (veículos)
+
+```bash
+sh tools/blender/run_bpy.sh tools/blender/build_lote5.py
+```
+
+Sete GLBs em `assets/vehicles/`: `car` (hatch), `carro` (sedan),
+`motorcycle`, `truck` (cabine + carroceria de madeira), `bus_traffic`,
+`onibus` (letreiro LED "PONTO FINAL" com textura emissiva gerada por PIL) e
+`bicycle`. Frente = +Y no Blender (vira -Z no Godot, contrato do README da
+pasta). `loft_box` faz cascos super-elipse com `subd=1` (subd 2 derrete as
+caixas). Rodas em nós separados com eixo no X e nomes `Wheel*/BusWheel*/
+MotoWheel*` — `_animate_traffic` em `game_3d.gd` gira `rotation.x` delas com
+busca recursiva. `caixa()` gera UVs 0..1 por face (obrigatório para texturas,
+ex.: o letreiro). Duração: ~90 s (7 exports + 7 previews Cycles).
+
 Em sandboxes sem bibliotecas X11/GL do sistema, o import do bpy resolve com
 stubs `.so` em `/home/user/blender-stubs` expostos via `LD_LIBRARY_PATH` —
 o modo headless (Cycles CPU) nao toca em GL/X de verdade. O venv e os stubs

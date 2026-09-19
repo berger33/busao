@@ -13,6 +13,7 @@ primitivas Godot (box/sphere/cylinder/torus) em `scripts/game_3d.gd`,
 | Animal | `assets/characters/animais/<especie>.glb` | frente +Z, origem no chao, clip com "walk"/"trot" no nome (o jogo escolhe); escala/assentamento automaticos. Aves aceitam clip "fly" para o ciclo aereo. |
 | Veiculo (rua) | `assets/vehicles/car.glb`, `motorcycle.glb`, `truck.glb`, `bus_traffic.glb` | comprimento no eixo Z, virado para -Z; tamanho-alvo definido em `GLB_FIT`. |
 | Veiculo (ponto/parqueado) | `assets/vehicles/onibus.glb`, `carro.glb` | idem. |
+| Bicicleta (calcada) | `assets/vehicles/bicycle.glb` | idem (fit 1,85 x 1,15 no obstaculo `bicycle`). |
 | Obstaculo de calcad a e coletaveis | (sem drop-in ainda — ver roadmap) | montados em `game_3d.gd`. |
 
 ---
@@ -49,19 +50,25 @@ no `_ready`, tamanhos em `GLB_SIZES`, troca de clip por pose em
 `_sincronizar_clip_glb` (crouch usa `Graze`/`Lie`). O caramelo (obstaculo
 `dog`) ja era GLB desde o lote 0.
 
-## 3. Carros e motos — ❌ todos procedurais (6 modelos)
+## 3. Carros e motos — ✅ todos GLB (Lote 5)
 
 | Asset | Estado | Detalhe |
 |---|---|---|
-| `car` (obstaculo de rua) | ❌ | `_build_brazilian_car`: 3 silhuetas (hatch, sedan, utilitario/van) de caixas |
-| `motorcycle` (motos) | ❌ | moto de entregas em caixas/esferas (o motoqueiro e 3D skinned) |
-| `truck` (caminhao) | ❌ | cabine + carga em caixas |
-| `bus_traffic` (onibus de transito) | ❌ | caixas + vidro + rodas |
-| `onibus` (o amarelo do ponto) | ❌ | `BusBody`/`BusRoofAC` etc. |
-| `carro` (parqueado na calcad a) | ❌ | reusa `_build_brazilian_car` |
-| `bicycle` (calcad a) | ❌ | quadro em tubos + rodas torus |
+| `car` (obstaculo de rua) | ✅ `car.glb` | hatch vermelho (Gol/Onix), cabine de vidro + teto na cor, farois/lanternas emissivos, placa |
+| `carro` (parqueado) | ✅ `carro.glb` | sedan prata 3 volumes (porta-malas elevado) |
+| `motorcycle` (motos) | ✅ `motorcycle.glb` | tanque/banco/escape/guidao/para-lama; proporcoes iguais as da procedural para o motoqueiro sentar certo |
+| `truck` (caminhao) | ✅ `truck.glb` | cabine avancada + carroceria de madeira (fasquias e esteios), bem brasileiro |
+| `bus_traffic` (transito) | ✅ `bus_traffic.glb` | urbano amarelo com faixa verde, letreiro "CIRCULAR" |
+| `onibus` (o amarelo do ponto) | ✅ `onibus.glb` | 8,2 m, faixa vermelha, portas no lado -X e letreiro LED emissivo "PONTO FINAL" (textura gerada por PIL no proprio build) |
+| `bicycle` (calcada) | ✅ `bicycle.glb` | quadro de tubos, 12 raios por roda, coroa, pedivela e pedais |
 
-Todos tem drop-in GLB pronto (`assets/vehicles/*.glb`, `GLB_FIT` em `game_3d.gd`).
+Todos modelados neste repo por Blender headless (`tools/blender/build_lote5.py`,
+`loft_box` = casco super-elipse + subd 1). Rodas sao nos separados com eixo
+no X e nomes `Wheel*`/`BusWheel*`/`MotoWheel*`: `_animate_traffic` gira
+`rotation.x` delas (busca recursiva — pega rodas aninhadas nos GLBs).
+Frente -Z, origem no chao; `_fit_model` assenta/escala por `GLB_FIT`.
+O drop-in da bicicleta foi adicionado ao `"bicycle"` de
+`_build_sidewalk_obstacle` (fit 1,85 x 1,15).
 
 ## 4. Objetos / mobiliario de calcada — ❌ todos procedurais (6)
 
@@ -119,8 +126,8 @@ madeira, terra_vermelha) nao existe — o kit cai em cor plana com warning.
 | **2** ✅ | Aves: `passaro`, `gaivota`, `urubu` (com clips Walk + Fly) | ✅ feito: tamanhos em `BIRD_PROFILES` (`_fit_glb` escala/assenta automaticamente) + `_animar_glb` agora toca o clip `fly` quando `behavior_mode == "flight"` (o pombo nao tem clip fly e segue no Walk) |
 | **3** ✅ | Quadrupedes: `capivara`, `cavalo`, `boi` (clips Walk + Idle + Lie/Graze) | ✅ feito: `GLB_SIZES` + `_sincronizar_clip_glb` toca `Lie`/`Graze` no crouch |
 | **4** ✅ | `macaco`, `caranguejo` | ✅ ja coberto pelo drop-in generico do lote 3 (sem novo codigo) |
-| **5** | Veiculos: `car`, `motorcycle`, `truck`, `bus_traffic`, `onibus`, `carro` | ja existe (`_optional_model`) |
-| **6** | (reserva — variantes de carro/cor) | — |
+| **5** ✅ | Veiculos: `car`, `motorcycle`, `truck`, `bus_traffic`, `onibus`, `carro` + `bicycle` | ja existia (`_optional_model`); novo drop-in `bicycle.glb` no obstaculo de calcada; rodas giram via nomes |
+| **6** | (reserva — variantes de carro/cor/rodas com texturas baked) | — |
 | **7** | Mobiliario: `hidrante`, `orelhao`, `cone`, `banco`, `caminho_camelô`, `ponto` | novo drop-in em `_build_sidewalk_obstacle` |
 | **8** | Coletaveis (11) + `aviao` + `drone` | novo drop-in em `_build_collectible`/`_build_aerial` |
 | **9** | Estruturas de cenario (casas, predios, igreja, quiosque, poste, palmeira…) | novo drop-in opcional em `_build_scenario_slice` |
