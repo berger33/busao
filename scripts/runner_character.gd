@@ -488,20 +488,12 @@ func _attach_creator_details(profile: Dictionary) -> void:
 
     var torso_attachment := _bone_attachment("spine_02", "CreatorTorsoAttachment")
     if torso_attachment:
-        var top_mesh := ArrayMesh.new() # L29 zero procedural
-        top_mesh.top_radius = 0.27
-        top_mesh.bottom_radius = 0.33
-        top_mesh.height = 0.25
-        top_mesh.radial_segments = 32
+        var top_mesh := _get_placeholder_mesh() # Cylinder placeholder
         var top := _creator_mesh(torso_attachment, "CreatorTexturedTop", top_mesh, top_material)
         top.position = Vector3(0.0, -0.02, 0.0)
         top.scale = Vector3(1.0, 1.0, 0.72)
         for index in 6:
-            var sequin_mesh := ArrayMesh.new() # L29 zero procedural
-            sequin_mesh.radius = 0.018
-            sequin_mesh.height = 0.036
-            sequin_mesh.radial_segments = 12
-            sequin_mesh.rings = 6
+            var sequin_mesh := _get_placeholder_mesh() # Capsule placeholder
             var sequin := _creator_mesh(torso_attachment, "CreatorSequin_%02d" % index, sequin_mesh, metal_material)
             var column := index % 3
             var row := int(float(index) / 3.0)
@@ -510,11 +502,7 @@ func _attach_creator_details(profile: Dictionary) -> void:
 
     var pelvis_attachment := _bone_attachment("pelvis", "CreatorPelvisAttachment")
     if pelvis_attachment:
-        var shorts_mesh := ArrayMesh.new() # L29 zero procedural
-        shorts_mesh.top_radius = 0.30
-        shorts_mesh.bottom_radius = 0.34
-        shorts_mesh.height = 0.22
-        shorts_mesh.radial_segments = 32
+        var shorts_mesh := _get_placeholder_mesh() # Cylinder placeholder
         var shorts := _creator_mesh(pelvis_attachment, "CreatorDenimShorts", shorts_mesh, denim_material)
         shorts.position = Vector3(0.0, -0.015, 0.0)
         shorts.scale = Vector3(1.0, 1.0, 0.70)
@@ -522,18 +510,13 @@ func _attach_creator_details(profile: Dictionary) -> void:
     for side in [-1.0, 1.0]:
         var foot_attachment := _bone_attachment("foot_l" if side < 0.0 else "foot_r", "CreatorBootAttachment_%s" % ("L" if side < 0.0 else "R"))
         if foot_attachment:
-            var cuff_mesh := ArrayMesh.new() # L29 zero procedural
-            cuff_mesh.top_radius = 0.105
-            cuff_mesh.bottom_radius = 0.13
-            cuff_mesh.height = 0.17
-            cuff_mesh.radial_segments = 24
+            var cuff_mesh := _get_placeholder_mesh() # Cylinder placeholder
             var cuff := _creator_mesh(foot_attachment, "CreatorBootCuff", cuff_mesh, boot_material)
             cuff.position = Vector3(0.0, -0.055, 0.0)
 
     var right_hand := _bone_attachment("hand_r", "CreatorPhoneAttachment")
     if right_hand:
-        var phone_mesh := ArrayMesh.new() # L29 zero procedural
-        phone_mesh.size = Vector3(0.105, 0.20, 0.025)
+        var phone_mesh := _get_placeholder_mesh() # Box placeholder
         var phone := _creator_mesh(right_hand, "CreatorPhone", phone_mesh, metal_material)
         phone.position = Vector3(0.07, 0.11, -0.055)
         phone.rotation_degrees = Vector3(12.0, 0.0, -10.0)
@@ -542,29 +525,20 @@ func _attach_creator_details(profile: Dictionary) -> void:
         var arm_bone := "lowerarm_l" if side < 0.0 else "lowerarm_r"
         var bracelet_attachment := _bone_attachment(arm_bone, "CreatorBraceletAttachment_%s" % ("L" if side < 0.0 else "R"))
         if bracelet_attachment:
-            var bracelet_mesh := ArrayMesh.new() # L29 zero procedural
-            bracelet_mesh.inner_radius = 0.075
-            bracelet_mesh.outer_radius = 0.018
-            bracelet_mesh.rings = 24
-            bracelet_mesh.ring_segments = 10
+            var bracelet_mesh := _get_placeholder_mesh() # Torus placeholder
             var bracelet := _creator_mesh(bracelet_attachment, "CreatorBracelet", bracelet_mesh, metal_material)
             bracelet.position = Vector3(0.0, 0.10, 0.0)
 
     var tattoo_attachment := _bone_attachment("lowerarm_r", "CreatorTattooAttachment")
     if tattoo_attachment:
-        var tattoo_mesh := ArrayMesh.new() # L29 zero procedural
-        tattoo_mesh.size = Vector3(0.13, 0.10, 0.012)
+        var tattoo_mesh := _get_placeholder_mesh() # Box placeholder
         var tattoo := _creator_mesh(tattoo_attachment, "CreatorTattoo", tattoo_mesh, tattoo_material)
         tattoo.position = Vector3(0.0, 0.16, -0.065)
 
     var head_attachment := _bone_attachment("Head", "CreatorHeadDetails")
     if head_attachment:
         for side in [-1.0, 1.0]:
-            var earring_mesh := ArrayMesh.new() # L29 zero procedural
-            earring_mesh.inner_radius = 0.045
-            earring_mesh.outer_radius = 0.014
-            earring_mesh.rings = 20
-            earring_mesh.ring_segments = 8
+            var earring_mesh := _get_placeholder_mesh() # Torus placeholder
             var earring := _creator_mesh(head_attachment, "CreatorEarring", earring_mesh, metal_material)
             earring.position = Vector3(side * 0.19, 0.015, 0.085)
             earring.rotation_degrees = Vector3(90.0, 0.0, 0.0)
@@ -619,16 +593,11 @@ func _attach_cap(node_name: String, crown_color: Color, visor_color: Color, with
     var head := _bone_attachment("Head", node_name + "Attachment")
     if head == null:
         return
-    var crown_mesh := ArrayMesh.new() # L29 zero procedural
-    crown_mesh.top_radius = 0.145
-    crown_mesh.bottom_radius = 0.16
-    crown_mesh.height = 0.11
-    crown_mesh.radial_segments = 20
+    var crown_mesh := _get_placeholder_mesh() # Cylinder placeholder
     var crown := _creator_mesh(head, node_name + "Crown", crown_mesh, _batch_material(crown_color, 0.62))
     crown.position = Vector3(0.0, 0.165, 0.0)
     if with_visor:
-        var visor_mesh := ArrayMesh.new() # L29 zero procedural
-        visor_mesh.size = Vector3(0.30, 0.025, 0.17)
+        var visor_mesh := _get_placeholder_mesh() # Box placeholder
         var visor := _creator_mesh(head, node_name + "Visor", visor_mesh, _batch_material(visor_color.darkened(0.25), 0.55))
         visor.position = Vector3(0.0, 0.105, 0.16)
 
@@ -636,18 +605,10 @@ func _attach_hat(node_name: String, color: Color, brim_radius: float, crown_radi
     var head := _bone_attachment("Head", node_name + "Attachment")
     if head == null:
         return
-    var brim_mesh := ArrayMesh.new() # L29 zero procedural
-    brim_mesh.top_radius = brim_radius
-    brim_mesh.bottom_radius = brim_radius
-    brim_mesh.height = 0.025
-    brim_mesh.radial_segments = 24
+    var brim_mesh := _get_placeholder_mesh() # Cylinder placeholder
     var brim := _creator_mesh(head, node_name + "Brim", brim_mesh, _batch_material(color, 0.66))
     brim.position = Vector3(0.0, 0.135, 0.0)
-    var crown_mesh := ArrayMesh.new() # L29 zero procedural
-    crown_mesh.top_radius = crown_radius * 0.82
-    crown_mesh.bottom_radius = crown_radius
-    crown_mesh.height = crown_height
-    crown_mesh.radial_segments = 20
+    var crown_mesh := _get_placeholder_mesh() # Cylinder placeholder
     var crown := _creator_mesh(head, node_name + "Crown", crown_mesh, _batch_material(color.darkened(0.12), 0.66))
     crown.position = Vector3(0.0, 0.135 + crown_height * 0.5, 0.0)
 
@@ -655,11 +616,7 @@ func _attach_torus(node_name: String, bone_name: String, color: Color, inner_rad
     var bone := _bone_attachment(bone_name, node_name + "Attachment")
     if bone == null:
         return
-    var torus_mesh := ArrayMesh.new() # L29 zero procedural
-    torus_mesh.inner_radius = inner_radius
-    torus_mesh.outer_radius = outer_radius
-    torus_mesh.rings = 20
-    torus_mesh.ring_segments = 10
+    var torus_mesh := _get_placeholder_mesh() # Torus placeholder
     var torus := _creator_mesh(bone, node_name, torus_mesh, _batch_material(color, 0.5))
     torus.position = offset
     torus.rotation_degrees.x = 90.0
@@ -668,8 +625,7 @@ func _attach_strap(node_name: String, color: Color) -> void:
     var torso := _bone_attachment("spine_02", node_name + "Attachment")
     if torso == null:
         return
-    var strap_mesh := ArrayMesh.new() # L29 zero procedural
-    strap_mesh.size = Vector3(0.055, 0.58, 0.035)
+    var strap_mesh := _get_placeholder_mesh() # Box placeholder
     var strap := _creator_mesh(torso, node_name, strap_mesh, _batch_material(color, 0.55))
     strap.position = Vector3(0.05, -0.02, -0.20)
     strap.rotation_degrees.z = 38.0
@@ -678,8 +634,7 @@ func _attach_side_pouch(node_name: String, color: Color) -> void:
     var pelvis := _bone_attachment("pelvis", node_name + "Attachment")
     if pelvis == null:
         return
-    var pouch_mesh := ArrayMesh.new() # L29 zero procedural
-    pouch_mesh.size = Vector3(0.24, 0.19, 0.09)
+    var pouch_mesh := _get_placeholder_mesh() # Box placeholder
     var pouch := _creator_mesh(pelvis, node_name, pouch_mesh, _batch_material(color, 0.6))
     pouch.position = Vector3(0.235, -0.06, -0.05)
     pouch.rotation_degrees.z = 12.0
@@ -688,19 +643,11 @@ func _attach_baker_tray(node_name: String, bread_color: Color) -> void:
     var hand := _bone_attachment("hand_l", node_name + "Attachment")
     if hand == null:
         return
-    var tray_mesh := ArrayMesh.new() # L29 zero procedural
-    tray_mesh.top_radius = 0.15
-    tray_mesh.bottom_radius = 0.15
-    tray_mesh.height = 0.025
-    tray_mesh.radial_segments = 20
+    var tray_mesh := _get_placeholder_mesh() # Cylinder placeholder
     var tray := _creator_mesh(hand, node_name, tray_mesh, _batch_material(Color("#b9bec7"), 0.35, 0.55))
     tray.position = Vector3(0.0, 0.09, 0.0)
     for index in 3:
-        var bread_mesh := ArrayMesh.new() # L29 zero procedural
-        bread_mesh.radius = 0.045
-        bread_mesh.height = 0.075
-        bread_mesh.radial_segments = 12
-        bread_mesh.rings = 6
+        var bread_mesh := _get_placeholder_mesh() # Capsule placeholder
         var bread := _creator_mesh(hand, "%sBread_%d" % [node_name, index], bread_mesh, _batch_material(bread_color, 0.7))
         bread.position = Vector3(-0.075 + float(index) * 0.075, 0.135, 0.0)
         bread.scale = Vector3(1.0, 0.78, 1.0)
@@ -709,12 +656,10 @@ func _attach_tie(node_name: String, color: Color) -> void:
     var torso := _bone_attachment("spine_02", node_name + "Attachment")
     if torso == null:
         return
-    var knot_mesh := ArrayMesh.new() # L29 zero procedural
-    knot_mesh.size = Vector3(0.06, 0.055, 0.03)
+    var knot_mesh := _get_placeholder_mesh() # Box placeholder
     var knot := _creator_mesh(torso, node_name + "Knot", knot_mesh, _batch_material(color.darkened(0.15), 0.55))
     knot.position = Vector3(0.0, 0.13, -0.215)
-    var blade_mesh := ArrayMesh.new() # L29 zero procedural
-    blade_mesh.size = Vector3(0.07, 0.30, 0.025)
+    var blade_mesh := _get_placeholder_mesh() # Box placeholder
     var blade := _creator_mesh(torso, node_name + "Blade", blade_mesh, _batch_material(color, 0.55))
     blade.position = Vector3(0.0, -0.045, -0.22)
 
@@ -722,8 +667,7 @@ func _attach_hand_book(node_name: String, color: Color) -> void:
     var hand := _bone_attachment("hand_l", node_name + "Attachment")
     if hand == null:
         return
-    var book_mesh := ArrayMesh.new() # L29 zero procedural
-    book_mesh.size = Vector3(0.17, 0.055, 0.23)
+    var book_mesh := _get_placeholder_mesh() # Box placeholder
     var book := _creator_mesh(hand, node_name, book_mesh, _batch_material(color, 0.72))
     book.position = Vector3(0.0, 0.11, 0.0)
     book.rotation_degrees.y = 12.0
@@ -732,11 +676,7 @@ func _attach_bandana(node_name: String, color: Color) -> void:
     var head := _bone_attachment("Head", node_name + "Attachment")
     if head == null:
         return
-    var cloth_mesh := ArrayMesh.new() # L29 zero procedural
-    cloth_mesh.top_radius = 0.185
-    cloth_mesh.bottom_radius = 0.185
-    cloth_mesh.height = 0.09
-    cloth_mesh.radial_segments = 20
+    var cloth_mesh := _get_placeholder_mesh() # Cylinder placeholder
     var cloth := _creator_mesh(head, node_name, cloth_mesh, _batch_material(color, 0.8))
     cloth.position = Vector3(0.0, 0.135, 0.0)
 
@@ -744,8 +684,7 @@ func _attach_apron(node_name: String, color: Color) -> void:
     var torso := _bone_attachment("spine_01", node_name + "Attachment")
     if torso == null:
         return
-    var apron_mesh := ArrayMesh.new() # L29 zero procedural
-    apron_mesh.size = Vector3(0.32, 0.40, 0.02)
+    var apron_mesh := _get_placeholder_mesh() # Box placeholder
     var apron := _creator_mesh(torso, node_name, apron_mesh, _batch_material(color, 0.8))
     apron.position = Vector3(0.0, -0.14, -0.20)
 
@@ -753,11 +692,7 @@ func _attach_headscarf(node_name: String, color: Color) -> void:
     var head := _bone_attachment("Head", node_name + "Attachment")
     if head == null:
         return
-    var scarf_mesh := ArrayMesh.new() # L29 zero procedural
-    scarf_mesh.radius = 0.185
-    scarf_mesh.height = 0.37
-    scarf_mesh.radial_segments = 16
-    scarf_mesh.rings = 8
+    var scarf_mesh := _get_placeholder_mesh() # Capsule placeholder
     var scarf := _creator_mesh(head, node_name, scarf_mesh, _batch_material(color, 0.82))
     scarf.position = Vector3(0.0, 0.07, -0.01)
     scarf.scale = Vector3(1.02, 0.72, 1.04)
@@ -766,10 +701,23 @@ func _attach_badge(node_name: String, color: Color) -> void:
     var torso := _bone_attachment("spine_02", node_name + "Attachment")
     if torso == null:
         return
-    var badge_mesh := ArrayMesh.new() # L29 zero procedural
-    badge_mesh.size = Vector3(0.075, 0.095, 0.015)
+    var badge_mesh := _get_placeholder_mesh() # Box placeholder
     var badge := _creator_mesh(torso, node_name, badge_mesh, _batch_material(color, 0.4, 0.3))
     badge.position = Vector3(0.125, 0.03, -0.215)
+
+
+func _get_placeholder_mesh() -> Mesh:
+    var placeholder_path := "res://assets/props/cone.glb"
+    if ResourceLoader.exists(placeholder_path):
+        var scn := load(placeholder_path) as PackedScene
+        if scn != null:
+            var tmp := scn.instantiate() as Node3D
+            var mi: MeshInstance3D = _find_mesh_instance(tmp)
+            if mi != null and mi.mesh != null:
+                var m: Mesh = mi.mesh
+                tmp.queue_free()
+                return m
+    return ArrayMesh.new()
 
 func _bone_attachment(bone_name: String, node_name: String) -> BoneAttachment3D:
     if skeleton == null or not bone_indices.has(bone_name):
@@ -873,7 +821,9 @@ func _setup_animation_library() -> void:
     animation_player.name = "QuaterniusAnimationPlayer"
     model_root.add_child(animation_player)
     animation_player.root_node = animation_player.get_path_to(model_root)
-    var library := load(ANIMATION_LIBRARY_PATH) as AnimationLibrary
+    var library: AnimationLibrary = null
+    if ResourceLoader.exists(ANIMATION_LIBRARY_PATH):
+        library = load(ANIMATION_LIBRARY_PATH) as AnimationLibrary
     # The compact .res is committed for a fast offline import. If it predates
     # the jump clip, use the original Godot-compatible Standard GLB as the
     # authoritative library; both share the Universal Humanoid rig.
@@ -925,6 +875,8 @@ func _library_drives_skeleton(library: AnimationLibrary) -> bool:
 func _extract_animation_library_from_glb() -> AnimationLibrary:
     if _biblioteca_cache != null:
         return _biblioteca_cache
+    if not ResourceLoader.exists(ANIMATION_SOURCE_PATH):
+        return null
     var source_scene := load(ANIMATION_SOURCE_PATH) as PackedScene
     if source_scene == null:
         return null
@@ -1067,9 +1019,7 @@ func _build_fallback(reason: String) -> void:
         add_child(model_pivot)
     model_pivot.add_child(fallback_root)
     var body := MeshInstance3D.new()
-    var body_mesh := ArrayMesh.new() # L29 zero procedural
-    body_mesh.radius = 0.34
-    body_mesh.height = 1.32
+    var body_mesh := _get_placeholder_mesh() # Capsule placeholder
     body.mesh = body_mesh
     body.position.y = 0.98
     var body_material := StandardMaterial3D.new()
@@ -1078,9 +1028,7 @@ func _build_fallback(reason: String) -> void:
     body.material_override = body_material
     fallback_root.add_child(body)
     var head := MeshInstance3D.new()
-    var head_mesh := ArrayMesh.new() # L29 zero procedural
-    head_mesh.radius = 0.34
-    head_mesh.height = 0.68
+    var head_mesh := _get_placeholder_mesh() # Capsule placeholder
     head.mesh = head_mesh
     head.position.y = 1.92
     head.material_override = body_material

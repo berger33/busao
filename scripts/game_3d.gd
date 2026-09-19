@@ -3943,32 +3943,6 @@ func _setup_ads_billing() -> void:
     if Engine.has_singleton("AdsManager") or has_node("/root/AdsManager"):
         AdsHandler.setup_ads_billing(self)
     _update_banner_visibility()
-    return
-    # legado abaixo (mantido para validação estática, não executado)
-    var _ads_legacy := get_node_or_null("/root/AdsManager")
-    if false and _ads_legacy != null:
-        pass
-    var ads := get_node_or_null("/root/AdsManager")
-    if ads != null:
-        if not ads.is_connected("rewarded_completed", Callable(self, "_on_ads_rewarded_completed")):
-            ads.rewarded_completed.connect(_on_ads_rewarded_completed)
-        if not ads.is_connected("interstitial_closed", Callable(self, "_on_ads_interstitial_closed")):
-            ads.interstitial_closed.connect(_on_ads_interstitial_closed)
-        if not ads.is_connected("rewarded_failed", Callable(self, "_on_ads_rewarded_failed")):
-            ads.rewarded_failed.connect(_on_ads_rewarded_failed)
-        if not ads.is_connected("banner_loaded", Callable(self, "_on_ads_banner_loaded")):
-            ads.banner_loaded.connect(_on_ads_banner_loaded)
-    var billing := get_node_or_null("/root/BillingManager")
-    if billing != null:
-        if not billing.is_connected("purchase_success", Callable(self, "_on_billing_success")):
-            billing.purchase_success.connect(_on_billing_success)
-        if not billing.is_connected("purchase_failed", Callable(self, "_on_billing_failed")):
-            billing.purchase_failed.connect(_on_billing_failed)
-        if not billing.is_connected("products_loaded", Callable(self, "_on_billing_products_loaded")):
-            billing.products_loaded.connect(_on_billing_products_loaded)
-        if not billing.is_connected("owned_restored", Callable(self, "_on_billing_restored")):
-            billing.owned_restored.connect(_on_billing_restored)
-    _update_banner_visibility()
 
 
 # --- Lote 13: Play Games / Cloud / In-App Review ---------------------------
@@ -4090,19 +4064,7 @@ func _maybe_request_review() -> void:
     ps.request_review_after_run(first_clears)
 
 func _update_banner_visibility() -> void:
-    # P2 delega
     AdsHandler.update_banner_visibility(self)
-    return
-    var ads := get_node_or_null("/root/AdsManager")
-    if ads == null: return
-    if GameSave and bool(GameSave.data.get("remove_ads", false)):
-        ads.hide_banner()
-        return
-    # Banner em menu/mapa/loja/desafios/conquistas/guia, nunca durante corrida
-    if screen in [0,1,4,5,6,7]:
-        ads.show_banner()
-    else:
-        ads.hide_banner()
 
 func _on_ads_banner_loaded() -> void:
     _sync_hud()
@@ -4175,21 +4137,6 @@ func _on_billing_restored(product_ids: Array[String]) -> void:
 
 func _try_show_interstitial_after_defeat() -> void:
     AdsHandler.try_show_interstitial_after_defeat(self)
-    return
-    var ads := get_node_or_null("/root/AdsManager")
-    if ads == null: return
-    if GameSave and bool(GameSave.data.get("remove_ads", false)): return
-    _ads_failed_runs += 1
-    # persiste contador para respeitar 1 a cada 2 mesmo após reiniciar o app
-    if GameSave:
-        GameSave.record_ad_counter("interstitial")
-        # alinha nosso contador com o save (evita divergência)
-        var saved: int = int(GameSave.data.get("ad_counters",{}).get("interstitial_run", _ads_failed_runs))
-        _ads_failed_runs = maxi(_ads_failed_runs, saved)
-    if ads.has_method("can_show_interstitial_now") and ads.can_show_interstitial_now(_ads_failed_runs):
-        var ok: bool = ads.show_interstitial()
-        if ok:
-            _show_feedback("ANÚNCIO", "Voltamos em segundos...", MUTED, "ui_confirm")
 
 func _do_revive_from_ad() -> void:
     if _revive_used:
@@ -4303,13 +4250,13 @@ func _ensure_tutorial_arrow() -> void:
     _tutorial_arrow.visible = false
     add_child(_tutorial_arrow)
 
-func _update_tutorial_arrow(visible: bool, lane: int = 1) -> void:
+func _update_tutorial_arrow(is_visible: bool, lane: int = 1) -> void:
     if _tutorial_arrow == null:
         _ensure_tutorial_arrow()
     if _tutorial_arrow == null:
         return
-    _tutorial_arrow.visible = visible and not bool(GameSave.data.get("tutorial_seen", false))
-    if visible:
+    _tutorial_arrow.visible = is_visible and not bool(GameSave.data.get("tutorial_seen", false))
+    if is_visible:
         _tutorial_arrow.position.x = [-3.25, 0.0, 3.25][clampi(lane, 0, 2)]
         _tutorial_arrow.position.z = player_visual.position.z - 7.0 if player_visual else -6.0
         _tutorial_arrow.rotation.y += 0.04

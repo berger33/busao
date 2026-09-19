@@ -50,7 +50,7 @@ static func setup_player_physics(player_root: Node3D) -> CharacterBody3D:
         return existing
     var body := CharacterBody3D.new()
     body.name = "PlayerPhysicsBody"
-    body.mass = PLAYER_MASS  # CharacterBody3D não tem mass, mas mantemos para doc
+    body.set_meta("mass", PLAYER_MASS) # CharacterBody3D não tem 'mass'; guardamos como meta para gravidade/empurrão
     # colisão: CapsuleShape3D 0.35x1.75 (altura total = altura + 2*raio)
     var shape := CapsuleShape3D.new()
     shape.radius = PLAYER_CAPSULE_RADIUS
