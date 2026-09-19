@@ -50,36 +50,31 @@ no `_ready`, tamanhos em `GLB_SIZES`, troca de clip por pose em
 `_sincronizar_clip_glb` (crouch usa `Graze`/`Lie`). O caramelo (obstaculo
 `dog`) ja era GLB desde o lote 0.
 
-## 3. Carros e motos — ✅ todos GLB (Lote 5)
+## 3. Carros e motos — ✅ todos GLB (Lote 21 HD — sobrescreve Lote 5/6)
 
-| Asset | Estado | Detalhe |
+| Asset | Estado | Detalhe HD 25k |
 |---|---|---|
-| `car` (obstaculo de rua) | ✅ `car.glb` | hatch vermelho (Gol/Onix), cabine de vidro + teto na cor, farois/lanternas emissivos, placa |
-| `carro` (parqueado) | ✅ `carro.glb` | sedan prata 3 volumes (porta-malas elevado) |
-| `motorcycle` (motos) | ✅ `motorcycle.glb` | tanque/banco/escape/guidao/para-lama; proporcoes iguais as da procedural para o motoqueiro sentar certo |
-| `truck` (caminhao) | ✅ `truck.glb` | cabine avancada + carroceria de madeira (fasquias e esteios), bem brasileiro |
-| `bus_traffic` (transito) | ✅ `bus_traffic.glb` | urbano amarelo com faixa verde, letreiro "CIRCULAR" |
-| `onibus` (o amarelo do ponto) | ✅ `onibus.glb` | 8,2 m, faixa vermelha, portas no lado -X e letreiro LED emissivo "PONTO FINAL" (textura gerada por PIL no proprio build) |
-| `bicycle` (calcada) | ✅ `bicycle.glb` | quadro de tubos, 12 raios por roda, coroa, pedivela e pedais |
+| `car` (obstaculo de rua) | ✅ `car.glb` | hatch vermelho HD — 1.57 MB, 9 mats, ~91k verts; pintura clearcoat (0.615,0.143,0.158) + friso lateral cromo, maçaneta côncava recess, interior (bancos/volante Painel) visível pelo vidro escuro, faróis/lanternas emissivos, placa |
+| `carro` (parqueado) | ✅ `carro.glb` | sedan prata 3 volumes HD — 1.75 MB, 9 mats, ~101k verts; mesma casca seg28 subd2, teto/cor e porta-malas elevado |
+| `motorcycle` (motos) | ✅ `motorcycle.glb` | moto preta HD — 421 KB, 6 mats, ~24k verts; tanque/banco/escape/guidao/para-lama com proporções para motoqueiro sentar, farol emissivo |
+| `truck` (caminhao) | ✅ `truck.glb` | caminhão HD — 937 KB, 10 mats, ~54k verts; cabine azul + carroceria madeira fasquias/esteios (tramado), 6 rodas |
+| `bus_traffic` (transito) | ✅ `bus_traffic.glb` | urbano HD 7.4 m — 1.36 MB, 11 mats, ~78k verts; amarelo faixa verde, letreiro "CIRCULAR" emissivo 512×128 energia 3.2, interior 6 fileiras bancos + volante |
+| `onibus` (o amarelo do ponto) | ✅ `onibus.glb` | 8.2 m HD — 1.35 MB, 11 mats, ~78k verts; faixa laranja, portas -X, letreiro "PONTO FINAL" 512×128 emissivo, espelhos, vidro curvo |
+| `bicycle` (calcada) | ✅ `bicycle.glb` | bicicleta HD — 595 KB, 5 mats, ~34k verts; quadro tubos, rodas 12 raios, coroa 16 dentes, pedivela/pedais |
 
-Todos modelados neste repo por Blender headless (`tools/blender/build_lote5.py`,
-`loft_box` = casco super-elipse + subd 1). Rodas sao nos separados com eixo
-no X e nomes `Wheel*`/`BusWheel*`/`MotoWheel*`: `_animate_traffic` gira
-`rotation.x` delas (busca recursiva — pega rodas aninhadas nos GLBs).
-Frente -Z, origem no chao; `_fit_model` assenta/escala por `GLB_FIT`.
-O drop-in da bicicleta foi adicionado ao `"bicycle"` de
-`_build_sidewalk_obstacle` (fit 1,85 x 1,15).
+Todos remodelados neste repo por Blender 4.5 headless via [`tools/blender/build_lote21_hd.py`](tools/blender/build_lote21_hd.py) (`hd_loft_box` seg 28 + Bevel 0.012×2 + Subd 2, rodas 28 seg/12 cortes, materiais Principled com Coat Weight 0.35). Rodas seguem nós separados eixo X `Wheel*`/`BusWheel*`/`MotoWheel*`/`BikeWheel*`: `_animate_traffic` gira `rotation.x` (busca recursiva). Frente -Z, origem no chão; `_fit_model` assenta/escala por `GLB_FIT` (car 4.4×1.55, truck 6.4×2.7, bus_traffic 7.4×3.0, onibus 8.2×3.0, bicycle 1.85×1.15). Renders HD em `tools/blender/out/lote21_*.png` (7× ~315 KB) copiados para `docs/media/vehicle_hd_*.png`.
+O drop-in da bicicleta segue em `"bicycle"` de `_build_sidewalk_obstacle`.
 
-**Lote 6 — variantes reservas** (ambos os significados de `6`):
+**Lote 6/21 — variantes reservas** (HD, mesma geometria seg28 subd2, repintadas via patch JSON):
 
-| Variante | Estado | Detalhe |
+| Variante | Estado | Detalhe HD |
 |---|---|---|
-| `car_azul.glb` | ✅ `assets/vehicles/car_azul.glb` | hatch Lote 5 repintado azul (0.14,0.28,0.68) + rodas com aro texturizado baked 256×256 (faixa azul sobre prata) via PIL |
-| `car_prata.glb` | ✅ `assets/vehicles/car_prata.glb` | mesmo casco em prata (0.76) + rodas pretas |
-| `truck_vermelho.glb` | ✅ `assets/vehicles/truck_vermelho.glb` | cabine vermelha (0.70,0.14,0.13) preservando carroceria de madeira |
-| `motorcycle_verde.glb` | ✅ `assets/vehicles/motorcycle_verde.glb` | tanque verde (0.14,0.52,0.22) |
+| `car_azul.glb` | ✅ `assets/vehicles/car_azul.glb` | hatch HD repintado azul (0.14,0.28,0.68) — 1.57 MB, patch `hatch_hd_pintura` baseColorFactor |
+| `car_prata.glb` | ✅ `assets/vehicles/car_prata.glb` | mesmo casco prata (0.76,0.77,0.79) — 1.57 MB |
+| `truck_vermelho.glb` | ✅ `assets/vehicles/truck_vermelho.glb` | cabine vermelha (0.70,0.14,0.13) preservando carroceria madeira — 937 KB, patch `truck_hd_pintura` |
+| `motorcycle_verde.glb` | ✅ `assets/vehicles/motorcycle_verde.glb` | tanque verde (0.14,0.52,0.22) — 421 KB, patch `moto_hd_pintura` |
 
-Sorteio determinístico por `hash(kind+entities.size()+phase_index) % variantes_existem` em `_pick_vehicle_variant()`; cada variante mantém o mesmo contrato (fit `GLB_FIT` da base, frente -Z, nós `Wheel*`). O jogo continua compatível se só a base existir. Efeitos do Lote 6 (poeira no deslize, respingo quando `wetness>0.35`, PBR personagem já ativo e modo captura C/P) vivem em `game_3d.gd` com `GPUParticles3D` leves (≤80 partículas).
+Variantes mantêm HD (não mais baked 256² Lote 6; agora seg28 subd2 contínuo). Sorteio determinístico por `hash(kind+entities.size()+phase_index) % variantes_existem` em `_pick_vehicle_variant()`; cada variante mantém contrato fit `GLB_FIT` frente -Z nós `Wheel*`. Jogo compatível se só base existir. Efeitos Lote 6 (poeira deslize, respingo `wetness>0.35`, PBR personagem e modo captura C/P) permanecem em `game_3d.gd` com `GPUParticles3D` ≤80 partículas.
 
 ## 4. Objetos / mobiliario de calcada — ✅ todos GLB (Lote 7)
 
@@ -190,6 +185,7 @@ textura ausente não ocorre mais.
 | **9B** ✅ | Moradias/comércio: `casa`, `casa_favela`, `colonial`, `predio2`, `predio3`, `loja` (`assets/scene/`) | ✅ feito: drop-in nos 4 builders (`_tint_glb` com Dictionary; prédios com escala X/Y por instância) |
 | **9C** ✅ | Equipamentos: `igreja`, `quiosque`, `guarita`, `terminal`, `obra` + `pothole` (6 GLBs, 16–139 KB) | ✅ feito: `_optional_glb` + `_tint_glb` (mesmo padrão 9A/9B; pothole com early-return em `_build_road_obstacle`) |
 | **10** ✅ | Texturas PBR do Lote 3 (`assets/textures/pbr/` — 10×3 PNGs tileable 1024) | ✅ feito: `tools/generate_textures.py` agora gera `pbr/` (offsets 101-110, ORM R=AO G=rough B=metallic); `building_kit.gd` já consome via `ORMMaterial3D` |
+| **21** ✅ | Veículos HD 25k — `car/carro/motorcycle/truck/bus_traffic/onibus/bicycle` + 4 variantes recolore (`tools/blender/build_lote21_hd.py` + patch JSON cor) | ✅ feito: sobrescreve `assets/vehicles/*.glb` (seg28 subd2, clearcoat, maçaneta côncava, friso, interior bancos/volante, letreiro 512 emissivo 3.2, rodas 28 seg); patch JSON troca `baseColorFactor` das variantes; `GLB_FIT` preservado, `_animate_traffic` intacto; PRE-FLIGHT OK |
 
 Toda GLB original do projeto eh CC0 (trabalho original, sem obrigacao de
 credito); `CREDITS.md` so muda se entrar asset de terceiro.
