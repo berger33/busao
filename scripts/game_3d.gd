@@ -287,6 +287,7 @@ func _ready() -> void:
     _setup_ads_billing()         # Lote 11/12: conecta Ads/Billing
     _setup_play_services()     # Lote 13: Play Games + cloud + review
     _setup_analytics()         # Lote 15: Firebase/GA/Crash/RemoteConfig (mock-first)
+    _setup_in_app_update()     # Lote 18: In-App Update flexível (mock)
     _loading_screen.set_progress(1.0)
     # métrica cold start
     var _cold_ms := Time.get_ticks_msec() - _cold_start_ms
@@ -3854,6 +3855,36 @@ func _setup_analytics() -> void:
         var am2 = get_node_or_null("/root/AnalyticsManager")
         if am2 and am2.has_method("log_run_start"):
             am2.call("log_run_start", 0)
+
+
+func _setup_in_app_update() -> void:
+    var up := get_node_or_null("/root/InAppUpdateManager")
+    if up == null:
+        return
+    if up.has_signal("update_available"):
+        up.update_available.connect(func(v: int): _on_update_available(v))
+    if up.has_signal("update_downloaded"):
+        up.update_downloaded.connect(func(): _on_update_downloaded())
+    if up.has_signal("update_failed"):
+        up.update_failed.connect(func(r: String): print("[update] failed %s" % r))
+    if up.has_method("check_for_update"):
+        up.check_for_update()
+        print("[lote18] In-App Update check disparado")
+
+func _on_update_available(version_code: int) -> void:
+    _show_feedback("ATUALIZAÇÃO DISPONÍVEL", "v%d baixando em segundo plano" % version_code, CYAN, "ui_confirm")
+    if has_node("/root/AnalyticsManager"):
+        var an = get_node_or_null("/root/AnalyticsManager")
+        if an and an.has_method("log_event"):
+            an.call("log_event", "inapp_update_available", {"version": version_code})
+
+func _on_update_downloaded() -> void:
+    _show_feedback("ATUALIZAÇÃO PRONTA", "Reinicie para instalar", GREEN, "reward")
+    # Snackbar flexível: auto completa após 2 s em Test Lab
+    var up2 := get_node_or_null("/root/InAppUpdateManager")
+    if up2 and up2.has_method("complete_flexible_update"):
+        await get_tree().create_timer(2.0).timeout
+        up2.complete_flexible_update()
 
 
 func _on_play_signed_in() -> void:

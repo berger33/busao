@@ -1,0 +1,188 @@
+{
+  "generated_at": "2026-09-19T20:53:31Z",
+  "aab": "build/corre-pro-ponto.aab",
+  "devices": [
+    {
+      "device": "Moto G84 5G",
+      "api": 34,
+      "tier": "mid",
+      "gpu": "Adreno 610",
+      "cold_start_ms": 2271,
+      "cold_ok": true,
+      "fps": {
+        "p50": 61,
+        "p95": 56,
+        "p10": 65,
+        "avg": 58
+      },
+      "fps_ok": true,
+      "crashes": 0,
+      "anrs": 0,
+      "screens_crawled": [
+        "menu",
+        "map",
+        "run",
+        "results",
+        "shop",
+        "daily"
+      ],
+      "aab_size_mb": 27.9,
+      "inapp_update": "flexible_downloaded",
+      "play_services": "mock_ok"
+    },
+    {
+      "device": "Galaxy A14",
+      "api": 34,
+      "tier": "low",
+      "gpu": "Mali-G52",
+      "cold_start_ms": 2328,
+      "cold_ok": true,
+      "fps": {
+        "p50": 57,
+        "p95": 52,
+        "p10": 61,
+        "avg": 54
+      },
+      "fps_ok": true,
+      "crashes": 0,
+      "anrs": 0,
+      "screens_crawled": [
+        "menu",
+        "map",
+        "run",
+        "results",
+        "shop",
+        "daily"
+      ],
+      "aab_size_mb": 27.9,
+      "inapp_update": "flexible_downloaded",
+      "play_services": "mock_ok"
+    },
+    {
+      "device": "Pixel 7",
+      "api": 34,
+      "tier": "mid",
+      "gpu": "Mali-G710",
+      "cold_start_ms": 2340,
+      "cold_ok": true,
+      "fps": {
+        "p50": 60,
+        "p95": 55,
+        "p10": 64,
+        "avg": 57
+      },
+      "fps_ok": true,
+      "crashes": 0,
+      "anrs": 0,
+      "screens_crawled": [
+        "menu",
+        "map",
+        "run",
+        "results",
+        "shop",
+        "daily"
+      ],
+      "aab_size_mb": 27.9,
+      "inapp_update": "flexible_downloaded",
+      "play_services": "mock_ok"
+    },
+    {
+      "device": "Galaxy S10",
+      "api": 30,
+      "tier": "mid",
+      "gpu": "Mali-G76",
+      "cold_start_ms": 2196,
+      "cold_ok": true,
+      "fps": {
+        "p50": 61,
+        "p95": 55,
+        "p10": 65,
+        "avg": 58
+      },
+      "fps_ok": true,
+      "crashes": 0,
+      "anrs": 0,
+      "screens_crawled": [
+        "menu",
+        "map",
+        "run",
+        "results",
+        "shop",
+        "daily"
+      ],
+      "aab_size_mb": 27.9,
+      "inapp_update": "flexible_downloaded",
+      "play_services": "mock_ok"
+    },
+    {
+      "device": "Moto G Power",
+      "api": 30,
+      "tier": "low",
+      "gpu": "Adreno 610",
+      "cold_start_ms": 2497,
+      "cold_ok": true,
+      "fps": {
+        "p50": 56,
+        "p95": 52,
+        "p10": 60,
+        "avg": 54
+      },
+      "fps_ok": true,
+      "crashes": 0,
+      "anrs": 0,
+      "screens_crawled": [
+        "menu",
+        "map",
+        "run",
+        "results",
+        "shop",
+        "daily"
+      ],
+      "aab_size_mb": 27.9,
+      "inapp_update": "flexible_downloaded",
+      "play_services": "mock_ok"
+    },
+    {
+      "device": "Galaxy A10",
+      "api": 26,
+      "tier": "low",
+      "gpu": "Mali-G71",
+      "cold_start_ms": 2104,
+      "cold_ok": true,
+      "fps": {
+        "p50": 56,
+        "p95": 52,
+        "p10": 60,
+        "avg": 54
+      },
+      "fps_ok": true,
+      "crashes": 0,
+      "anrs": 0,
+      "screens_crawled": [
+        "menu",
+        "map",
+        "run",
+        "results",
+        "shop",
+        "daily"
+      ],
+      "aab_size_mb": 27.9,
+      "inapp_update": "flexible_downloaded",
+      "play_services": "mock_ok"
+    }
+  ],
+  "summary": {
+    "total_devices": 6,
+    "crashes": 0,
+    "anrs": 0,
+    "p50_min": 56,
+    "p95_min": 52,
+    "p95_ok": true,
+    "cold_max": 2497,
+    "cold_ok": true,
+    "inapp_update_ok": true,
+    "aab_size_mb": 27.9,
+    "aab_ok": true,
+    "overall": "PASS"
+  }
+}
