@@ -675,7 +675,7 @@ func _build_bird() -> void:
     _ellipsoid(head, Vector3.ZERO, Vector3(0.075, 0.085, 0.085), feather, "BirdHead")
     _ellipsoid(head, Vector3(0.0, -0.045, 0.035), Vector3(0.05, 0.06, 0.06), feather, "BirdPescoco")
     _box(head, Vector3(0.035, 0.028, 0.09), Vector3(0.0, -0.012, 0.095), beak_mat, "BirdBico")
-    _ellipsoid(head, Vector3(0.0, 0.02, 0.028), Vector3(0.012, 0.014, 0.012), Color("#c9d4e0"), feather, "BirdCeroma")
+    _ellipsoid(head, Vector3(0.0, 0.02, 0.028), Vector3(0.012, 0.014, 0.012), _material(Color("#c9d4e0"), TEXTURE_FEATHER, 0.86), "BirdCeroma")
     for side in [-1.0, 1.0]:
         _ellipsoid(head, Vector3(side * 0.045, 0.02, 0.03), Vector3(0.014, 0.014, 0.014), eye, "BirdEye")
 
