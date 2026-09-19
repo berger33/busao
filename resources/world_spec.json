@@ -1,5 +1,5 @@
 {
-  "versao": 3,
+  "versao": 4,
   "seed": 20260918,
   "_notas": {
     "papel": "Fonte unica de verdade do leiaute do cenario. O jogo (scripts/building_kit.gd) e o auditor (tools/audit_world.py) leem ESTE arquivo: nenhuma medida de rua, altura de predio ou paleta deve ficar solta no codigo.",
@@ -129,43 +129,55 @@
   "materiais": {
     "piso_central": {
       "pbr": "calcada_laje",
-      "uv_escala": 0.62,
+      "uv_escala": 0.55,
       "triplanar": false,
       "cor": [
         0.71,
         0.7,
         0.66
-      ]
+      ],
+      "height_map": "calcada_laje_height.png",
+      "height_scale": 0.025,
+      "triplanar_sharpness": 0.0
     },
     "calcada_lateral": {
       "pbr": "calcada_mosaico",
-      "uv_escala": 0.9,
+      "uv_escala": 0.85,
       "triplanar": false,
       "cor": [
         0.63,
         0.62,
         0.58
-      ]
+      ],
+      "height_map": "calcada_mosaico_height.png",
+      "height_scale": 0.025,
+      "triplanar_sharpness": 0.0
     },
     "guia": {
       "pbr": "calcada_laje",
-      "uv_escala": 1.6,
+      "uv_escala": 1.4,
       "triplanar": false,
       "cor": [
         0.6,
         0.59,
         0.56
-      ]
+      ],
+      "height_map": "calcada_laje_height.png",
+      "height_scale": 0.025,
+      "triplanar_sharpness": 0.0
     },
     "pista": {
       "pbr": "asfalto",
-      "uv_escala": 0.22,
+      "uv_escala": 0.2,
       "triplanar": true,
       "cor": [
         0.13,
         0.13,
         0.145
-      ]
+      ],
+      "height_map": "asfalto_height.png",
+      "height_scale": 0.025,
+      "triplanar_sharpness": 8.0
     },
     "linha_amarela": {
       "pbr": "metal_pintado",
@@ -180,37 +192,46 @@
     },
     "fachada_tijolo": {
       "pbr": "tijolo",
-      "uv_escala": 0.45,
+      "uv_escala": 0.42,
       "triplanar": false,
       "cor": [
         0.56,
         0.33,
         0.26
-      ]
+      ],
+      "height_map": "tijolo_height.png",
+      "height_scale": 0.025,
+      "triplanar_sharpness": 0.0
     },
     "fachada_reboco": {
       "pbr": "reboco",
-      "uv_escala": 0.55,
+      "uv_escala": 0.5,
       "triplanar": false,
       "cor": [
         0.84,
         0.8,
         0.72
-      ]
+      ],
+      "height_map": "reboco_height.png",
+      "height_scale": 0.025,
+      "triplanar_sharpness": 0.0
     },
     "telhado": {
       "pbr": "laje_cobertura",
-      "uv_escala": 0.5,
+      "uv_escala": 0.45,
       "triplanar": false,
       "cor": [
         0.42,
         0.41,
         0.39
-      ]
+      ],
+      "height_map": "laje_cobertura_height.png",
+      "height_scale": 0.025,
+      "triplanar_sharpness": 0.0
     },
     "estrutura_metalica": {
       "pbr": "metal_pintado",
-      "uv_escala": 0.7,
+      "uv_escala": 0.65,
       "triplanar": false,
       "metalico": 0.6,
       "rugosidade": 0.45,
@@ -218,11 +239,14 @@
         0.45,
         0.47,
         0.5
-      ]
+      ],
+      "height_map": "metal_pintado_height.png",
+      "height_scale": 0.025,
+      "triplanar_sharpness": 0.0
     },
     "zincado": {
       "pbr": "metal_zincado",
-      "uv_escala": 0.8,
+      "uv_escala": 0.75,
       "triplanar": false,
       "metalico": 0.75,
       "rugosidade": 0.35,
@@ -230,27 +254,36 @@
         0.62,
         0.64,
         0.66
-      ]
+      ],
+      "height_map": "metal_zincado_height.png",
+      "height_scale": 0.025,
+      "triplanar_sharpness": 0.0
     },
     "madeira": {
       "pbr": "madeira",
-      "uv_escala": 0.9,
+      "uv_escala": 0.85,
       "triplanar": false,
       "cor": [
         0.45,
         0.32,
         0.21
-      ]
+      ],
+      "height_map": "madeira_height.png",
+      "height_scale": 0.025,
+      "triplanar_sharpness": 0.0
     },
     "canteiro": {
       "pbr": "terra_vermelha",
-      "uv_escala": 1.2,
+      "uv_escala": 1.1,
       "triplanar": false,
       "cor": [
         0.24,
         0.2,
         0.16
-      ]
+      ],
+      "height_map": "terra_vermelha_height.png",
+      "height_scale": 0.025,
+      "triplanar_sharpness": 0.0
     },
     "folhagem": {
       "pbr": null,
@@ -447,5 +480,12 @@
       "exposicao": 0.62,
       "nuvens": 0.25
     }
-  ]
+  ],
+  "_lote22": {
+    "pbr_size": 1024,
+    "pbr_size_env": "PBR_SIZE=2048/4096 para desktop 4K (mobile mantem 1024 + height 16-bit)",
+    "gerador": "tools/generate_textures.py (Lote22: agregado 5-19mm, cavity, tijolo 128x34, reboco streak, height 16-bit, PBR_SIZE env)",
+    "height_textura": "pbr/*_height.png 16-bit para parallax (0.025)",
+    "uv_ajustado": "reduzido ~10% para menos tiling com 4K baked"
+  }
 }

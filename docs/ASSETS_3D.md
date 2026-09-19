@@ -154,18 +154,17 @@ Centrados na origem (o jogo gira o node em Y) e escala 1:1. Drop-in em
 Drop-ins via `_optional_glb("scene/<nome>.glb")` + `_tint_glb()` (cor da
 fase por instância); fallback procedural preservado em todos.
 
-## 8. Rua do Lote 3 (`building_kit.gd` + `world_spec.json`) — ✅ com PBR (Lote 10)
+## 8. Rua do Lote 3 (`building_kit.gd` + `world_spec.json`) — ✅ com PBR 4K baked (Lote 22, sobrescreve Lote 10)
 
 Piso, guias, lajes (MultiMesh), mosaicos, predios com janelas (MultiMesh),
 lojas com toldo, arvores, bancos, lixeiras, hidrante e horizonte — tudo
 primitivo, deterministico por semente. Desde o Lote 7, banco/lixeira/hidrante
 do kit sao substituidos automaticamente pelos GLBs de `assets/props/`
-(`_prop_glb`), mantendo o procedural apenas como fallback. **✅ Texturas PBR entregues (Lote 10)**:
-`assets/textures/pbr/` com 10 materiais × 3 mapas (albedo/normal/orm, 1024×1024 tileable, 30 PNGs, ~41 MB) —
+(`_prop_glb`), mantendo o procedural apenas como fallback. **✅ Texturas PBR 4K baked entregues (Lote 22)**:
+`assets/textures/pbr/` com **10 materiais × 4 mapas (albedo/normal/orm + height 16-bit, 1024×1024 tileable mobile, pipeline 4K via `PBR_SIZE=2048/4096` env, 40 PNGs, ~44 MB pbr + ~15 MB height = 59 MB total)** —
 calcada_laje, calcada_mosaico, asfalto, tijolo, reboco, laje_cobertura, metal_pintado, metal_zincado,
 madeira, terra_vermelha — gerados por `tools/generate_textures.py` (MASTER_SEED 20260918, offsets 101-110,
-ORM: R=AO, G=roughness, B=metallic). O `building_kit.gd` já usa `ORMMaterial3D` e o warning de
-textura ausente não ocorre mais.
+ORM: R=AO, G=roughness, B=metallic; **height: 16-bit `*_height.png` para parallax 0.025**). Melhorias Lote22: asfalto agregado 5–19 mm (gravel 256 + fine 512 + cavity AO), calcada portuguesa pedra irregular + rejunte 5 mm desnivelado (grout 0.25/0.75), tijolo **128×34** real (era 86×36), reboco stain streak vertical por gravidade, metal com riscos/lascas e cavity, madeira veios 3× contrastados. `resources/world_spec.json` v4 com `uv_escala` reduzido ~10% (pista 0.22→0.20, piso 0.62→0.55, etc.) + `height_map`/`height_scale 0.025`/`triplanar_sharpness 8.0`. O `building_kit.gd` usa `ORMMaterial3D` (height pronto para shader parallax futuro) e warning não ocorre mais. 4K source bakeado via `PBR_SIZE=2048` gera 2048×2048 tileable sem tiling visível a 1 m (foto 640×480 `kit_base` sem repetição).
 
 ---
 
@@ -186,6 +185,7 @@ textura ausente não ocorre mais.
 | **9C** ✅ | Equipamentos: `igreja`, `quiosque`, `guarita`, `terminal`, `obra` + `pothole` (6 GLBs, 16–139 KB) | ✅ feito: `_optional_glb` + `_tint_glb` (mesmo padrão 9A/9B; pothole com early-return em `_build_road_obstacle`) |
 | **10** ✅ | Texturas PBR do Lote 3 (`assets/textures/pbr/` — 10×3 PNGs tileable 1024) | ✅ feito: `tools/generate_textures.py` agora gera `pbr/` (offsets 101-110, ORM R=AO G=rough B=metallic); `building_kit.gd` já consome via `ORMMaterial3D` |
 | **21** ✅ | Veículos HD 25k — `car/carro/motorcycle/truck/bus_traffic/onibus/bicycle` + 4 variantes recolore (`tools/blender/build_lote21_hd.py` + patch JSON cor) | ✅ feito: sobrescreve `assets/vehicles/*.glb` (seg28 subd2, clearcoat, maçaneta côncava, friso, interior bancos/volante, letreiro 512 emissivo 3.2, rodas 28 seg); patch JSON troca `baseColorFactor` das variantes; `GLB_FIT` preservado, `_animate_traffic` intacto; PRE-FLIGHT OK |
+| **22** ✅ | PBR 4K baked mundo — `pbr/*` 10×4 mapas + height 16-bit + `world_spec v4` (`tools/generate_textures.py` Lote22) | ✅ feito: `PBR_SIZE` env (1024 mobile / 2048/4096 desktop), asfalto 5–19 mm + cavity, tijolo 128×34, reboco streak, height 16-bit `*_height.png` parallax 0.025, `uv_escala` -10% e `height_map`/`triplanar_sharpness` em `world_spec.json`; `building_kit.gd` pronto para parallax; PRE-FLIGHT OK |
 
 Toda GLB original do projeto eh CC0 (trabalho original, sem obrigacao de
 credito); `CREDITS.md` so muda se entrar asset de terceiro.

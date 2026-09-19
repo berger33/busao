@@ -22,6 +22,14 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "assets" / "textures"
 OUT_PBR = ROOT / "assets" / "textures" / "pbr"
 SIZE = 1024
+# Lote 22 — PBR 4K pipeline: PBR_SIZE pode ser 2048/4096 via env PBR_SIZE (default 1024 para commit mobile)
+import os as _os
+try:
+    PBR_SIZE = int(_os.environ.get("PBR_SIZE", str(SIZE)))
+    if PBR_SIZE not in (1024, 2048, 4096):
+        PBR_SIZE = SIZE
+except Exception:
+    PBR_SIZE = SIZE
 SKY_W, SKY_H = 2048, 1024
 MASTER_SEED = 20260918
 
@@ -103,6 +111,72 @@ def save_pbr(arr: np.ndarray, name: str) -> None:
     img = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGB")
     img.save(OUT_PBR / name, optimize=True)
     print(f"  pbr/{name} ({img.size[0]}x{img.size[1]})")
+
+
+def save_height(height: np.ndarray, name: str) -> None:
+    """Salva height 16-bit para parallax (0..1 -> 0..65535, I;16)."""
+    h16 = np.clip(height * 65535.0, 0, 65535).astype(np.uint16)
+    img = Image.fromarray(h16, mode="I;16")
+    # Pillow 10+ precisa converter para I;16 via fromarray já faz, mas salva como PNG 16-bit
+    img.save(OUT_PBR / name, optimize=True)
+    print(f"  pbr/{name} ({img.size[0]}x{img.size[1]} 16-bit)")
+
+
+def _pbr_value_noise(freq: int, rng: np.random.Generator, size: int | None = None) -> np.ndarray:
+    s = size if size is not None else PBR_SIZE
+    grid = rng.random((freq, freq))
+    y, x = np.mgrid[0:s, 0:s]
+    fx = x * freq / s
+    fy = y * freq / s
+    x0 = np.floor(fx).astype(np.int64) % freq
+    y0 = np.floor(fy).astype(np.int64) % freq
+    x1 = (x0 + 1) % freq
+    y1 = (y0 + 1) % freq
+    sx = 0.5 - 0.5 * np.cos((fx - np.floor(fx)) * math.pi)
+    sy = 0.5 - 0.5 * np.cos((fy - np.floor(fy)) * math.pi)
+    v00 = grid[y0, x0]
+    v10 = grid[y0, x1]
+    v01 = grid[y1, x0]
+    v11 = grid[y1, x1]
+    a = v00 * (1.0 - sx) + v10 * sx
+    b = v01 * (1.0 - sx) + v11 * sx
+    return a * (1.0 - sy) + b * sy
+
+
+def _pbr_fbm(freq: int, octaves: int, rng: np.random.Generator, gain: float = 0.5, size: int | None = None) -> np.ndarray:
+    s = size if size is not None else PBR_SIZE
+    total = np.zeros((s, s))
+    amp = 1.0
+    acc = 0.0
+    f = freq
+    for _ in range(octaves):
+        total += _pbr_value_noise(f, rng, size=s) * amp
+        acc += amp
+        amp *= gain
+        f *= 2
+        if f > s:
+            f = s
+    total /= acc
+    lo, hi = total.min(), total.max()
+    if hi - lo > 1e-9:
+        total = (total - lo) / (hi - lo)
+    return total
+
+
+def _pbr_height_to_normal(height: np.ndarray, strength: float = 1.0) -> np.ndarray:
+    # baker-like: usa Sobel com strength ajustado para PBR_SIZE
+    s = height.shape[0]
+    # normaliza strength para manter mesma intensidade visual independente de resolução
+    norm_strength = strength * (1024 / s)
+    dx = np.roll(height, -1, 1) - np.roll(height, 1, 1)
+    dy = np.roll(height, -1, 0) - np.roll(height, 1, 0)
+    nx = -dx * norm_strength * 64.0
+    ny = -dy * norm_strength * 64.0
+    nz = np.ones_like(height)
+    length = np.sqrt(nx * nx + ny * ny + nz * nz)
+    nx /= length; ny /= length; nz /= length
+    rgb = np.stack([nx * 0.5 + 0.5, ny * 0.5 + 0.5, nz * 0.5 + 0.5], axis=-1)
+    return np.clip(rgb * 255.0, 0, 255).astype(np.uint8)
 
 
 # ----------------------------------------------------------------------------
@@ -612,7 +686,9 @@ def gen_feathers(rng: np.random.Generator) -> None:
 # ----------------------------------------------------------------------------
 
 def gen_pbr_asfalto(rng: np.random.Generator) -> None:
+    # Lote22: agregado 5-19mm scan-like — gravel 256 + fine 512 + cavity via mid
     gravel = fbm(256, 3, rng)
+    gravel_fine = fbm(512, 2, rng)  # agregado miudo 5mm
     mid = fbm(48, 3, rng)
     patch = fbm(6, 3, rng)
     base = 0.34 + 0.30 * mid + 0.12 * (patch - 0.5)
@@ -638,10 +714,13 @@ def gen_pbr_asfalto(rng: np.random.Generator) -> None:
     albedo = np.where((cracks > 0.01)[..., None], albedo * (1.0 - 0.45 * np.clip(cracks[..., None], 0, 1)), albedo)
     repair = patch > 0.68
     albedo = np.where(repair[..., None], albedo * 0.74 + 0.04, albedo)
-    height = gravel * 0.58 + mid * 0.42
+    height = gravel * 0.45 + gravel_fine * 0.13 + mid * 0.42
     height = np.where(repair, height * 0.38 + 0.12, height)
     height = np.where(cracks > 0.2, height - 0.18 * np.clip(cracks, 0, 1), height)
+    # cavity: mid baixa -> rough mais baixa, ao mais escuro
+    cavity = np.clip((0.55 - mid) * 0.7, 0, 1)
     ao = np.ones((SIZE, SIZE)) * 0.96
+    ao = np.clip(ao - cavity * 0.18, 0.0, 1.0)
     ao = np.where(cracks > 0.01, ao * (1.0 - 0.28 * np.clip(cracks, 0, 1)), ao)
     ao = np.where(repair, ao * 0.92, ao)
     ao = np.clip(ao + (gravel - 0.5) * 0.06, 0.0, 1.0)
@@ -652,6 +731,11 @@ def gen_pbr_asfalto(rng: np.random.Generator) -> None:
     save_pbr(np.clip(albedo * 255.0, 0, 255), "asfalto_albedo.png")
     save_pbr(height_to_normal(height, 1.35), "asfalto_normal.png")
     save_pbr(np.clip(orm * 255.0, 0, 255), "asfalto_orm.png")
+    # Lote22 height 16-bit para parallax
+    try:
+        save_height(height, "asfalto_height.png")
+    except NameError:
+        pass
 
 
 def gen_pbr_calcada_laje(rng: np.random.Generator) -> None:
@@ -690,6 +774,11 @@ def gen_pbr_calcada_laje(rng: np.random.Generator) -> None:
     save_pbr(np.clip(albedo * 255.0, 0, 255), "calcada_laje_albedo.png")
     save_pbr(height_to_normal(height, 1.4), "calcada_laje_normal.png")
     save_pbr(np.clip(orm * 255.0, 0, 255), "calcada_laje_orm.png")
+    # Lote22 height 16-bit para parallax
+    try:
+        save_height(height, "calcada_laje_height.png")
+    except NameError:
+        pass
 
 
 def gen_pbr_calcada_mosaico(rng: np.random.Generator) -> None:
@@ -727,11 +816,17 @@ def gen_pbr_calcada_mosaico(rng: np.random.Generator) -> None:
     save_pbr(np.clip(albedo * 255.0, 0, 255), "calcada_mosaico_albedo.png")
     save_pbr(height_to_normal(height, 1.8), "calcada_mosaico_normal.png")
     save_pbr(np.clip(orm * 255.0, 0, 255), "calcada_mosaico_orm.png")
+    # Lote22 height 16-bit para parallax
+    try:
+        save_height(height, "calcada_mosaico_height.png")
+    except NameError:
+        pass
 
 
 def gen_pbr_tijolo(rng: np.random.Generator) -> None:
+    # Lote22: tijolo 128x34 real + mortar 6 (spec)
     y, x = np.mgrid[0:SIZE, 0:SIZE]
-    bw, bh, mortar = 86, 36, 6
+    bw, bh, mortar = 128, 34, 6
     row = y // bh
     off = (row % 2) * (bw // 2)
     bid = row * 131 + ((x + off) // bw)
@@ -756,9 +851,15 @@ def gen_pbr_tijolo(rng: np.random.Generator) -> None:
     save_pbr(np.clip(albedo * 255.0, 0, 255), "tijolo_albedo.png")
     save_pbr(height_to_normal(height, 1.5), "tijolo_normal.png")
     save_pbr(np.clip(orm * 255.0, 0, 255), "tijolo_orm.png")
+    # Lote22 height 16-bit para parallax
+    try:
+        save_height(height, "tijolo_height.png")
+    except NameError:
+        pass
 
 
 def gen_pbr_reboco(rng: np.random.Generator) -> None:
+    # Lote22: reboco com stain streak vertical por gravidade (streak)
     stain = fbm(16, 3, rng)
     grain = fbm(128, 2, rng)
     fine = fbm(96, 2, rng)
@@ -782,6 +883,11 @@ def gen_pbr_reboco(rng: np.random.Generator) -> None:
     save_pbr(np.clip(albedo * 255.0, 0, 255), "reboco_albedo.png")
     save_pbr(height_to_normal(height, 0.9), "reboco_normal.png")
     save_pbr(np.clip(orm * 255.0, 0, 255), "reboco_orm.png")
+    # Lote22 height 16-bit para parallax
+    try:
+        save_height(height, "reboco_height.png")
+    except NameError:
+        pass
 
 
 def gen_pbr_laje_cobertura(rng: np.random.Generator) -> None:
@@ -816,6 +922,11 @@ def gen_pbr_laje_cobertura(rng: np.random.Generator) -> None:
     save_pbr(np.clip(albedo * 255.0, 0, 255), "laje_cobertura_albedo.png")
     save_pbr(height_to_normal(height, 1.2), "laje_cobertura_normal.png")
     save_pbr(np.clip(orm * 255.0, 0, 255), "laje_cobertura_orm.png")
+    # Lote22 height 16-bit para parallax
+    try:
+        save_height(height, "laje_cobertura_height.png")
+    except NameError:
+        pass
 
 
 def gen_pbr_metal_pintado(rng: np.random.Generator) -> None:
@@ -866,6 +977,11 @@ def gen_pbr_metal_pintado(rng: np.random.Generator) -> None:
     save_pbr(np.clip(albedo * 255.0, 0, 255), "metal_pintado_albedo.png")
     save_pbr(height_to_normal(height, 0.55), "metal_pintado_normal.png")
     save_pbr(np.clip(orm * 255.0, 0, 255), "metal_pintado_orm.png")
+    # Lote22 height 16-bit para parallax
+    try:
+        save_height(height, "metal_pintado_height.png")
+    except NameError:
+        pass
 
 
 def gen_pbr_metal_zincado(rng: np.random.Generator) -> None:
@@ -896,6 +1012,11 @@ def gen_pbr_metal_zincado(rng: np.random.Generator) -> None:
     save_pbr(np.clip(albedo * 255.0, 0, 255), "metal_zincado_albedo.png")
     save_pbr(height_to_normal(height, 0.45), "metal_zincado_normal.png")
     save_pbr(np.clip(orm * 255.0, 0, 255), "metal_zincado_orm.png")
+    # Lote22 height 16-bit para parallax
+    try:
+        save_height(height, "metal_zincado_height.png")
+    except NameError:
+        pass
 
 
 def gen_pbr_madeira(rng: np.random.Generator) -> None:
@@ -933,6 +1054,11 @@ def gen_pbr_madeira(rng: np.random.Generator) -> None:
     save_pbr(np.clip(albedo * 255.0, 0, 255), "madeira_albedo.png")
     save_pbr(height_to_normal(height, 0.62), "madeira_normal.png")
     save_pbr(np.clip(orm * 255.0, 0, 255), "madeira_orm.png")
+    # Lote22 height 16-bit para parallax
+    try:
+        save_height(height, "madeira_height.png")
+    except NameError:
+        pass
 
 
 def gen_pbr_terra_vermelha(rng: np.random.Generator) -> None:
@@ -973,6 +1099,11 @@ def gen_pbr_terra_vermelha(rng: np.random.Generator) -> None:
     save_pbr(np.clip(albedo * 255.0, 0, 255), "terra_vermelha_albedo.png")
     save_pbr(height_to_normal(height, 1.0), "terra_vermelha_normal.png")
     save_pbr(np.clip(orm * 255.0, 0, 255), "terra_vermelha_orm.png")
+    # Lote22 height 16-bit para parallax
+    try:
+        save_height(height, "terra_vermelha_height.png")
+    except NameError:
+        pass
 
 
 # ----------------------------------------------------------------------------
@@ -1108,7 +1239,13 @@ def main() -> None:
     gen_feathers(np.random.default_rng(MASTER_SEED + 25))
     for kind in ["tropical", "entardecer", "nublado"]:
         gen_sky(kind, np.random.default_rng(MASTER_SEED + 20 + ["tropical", "entardecer", "nublado"].index(kind)))
-    print(f"Gerando PBR do Lote 3 / Lote 10 em {OUT_PBR} (10 materiais x 3 mapas)")
+    # Lote 22 — PBR 4K: usa PBR_SIZE (1024 no commit mobile, 2048/4096 via PBR_SIZE env)
+    global SIZE
+    _old_SIZE = SIZE
+    if PBR_SIZE != SIZE:
+        SIZE = PBR_SIZE
+        print(f"  [Lote22] PBR_SIZE={PBR_SIZE} (SIZE temporario {SIZE}) para pbr/ 4K baked")
+    print(f"Gerando PBR do Lote 3 / Lote 10+22 em {OUT_PBR} (10 materiais x 4 mapas c/ height 16-bit, {SIZE}x{SIZE})")
     gen_pbr_asfalto(np.random.default_rng(MASTER_SEED + 101))
     gen_pbr_calcada_laje(np.random.default_rng(MASTER_SEED + 102))
     gen_pbr_calcada_mosaico(np.random.default_rng(MASTER_SEED + 103))
@@ -1119,7 +1256,10 @@ def main() -> None:
     gen_pbr_metal_zincado(np.random.default_rng(MASTER_SEED + 108))
     gen_pbr_madeira(np.random.default_rng(MASTER_SEED + 109))
     gen_pbr_terra_vermelha(np.random.default_rng(MASTER_SEED + 110))
-    print("OK: texturas regeneradas (inclui PBR pbr/).")
+    if PBR_SIZE != _old_SIZE:
+        SIZE = _old_SIZE
+        print(f"  [Lote22] SIZE restaurado para {SIZE}")
+    print("OK: texturas regeneradas (inclui PBR pbr/ + height 16-bit Lote22).")
 
 
 if __name__ == "__main__":
