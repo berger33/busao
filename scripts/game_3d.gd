@@ -236,13 +236,31 @@ var _capture_mode := false
 var _capture_yaw := 0.0
 var _capture_pitch := -0.12
 
+var _loading_screen: Control = null
+var _cold_start_ms: int = 0
+
 func _ready() -> void:
+    _cold_start_ms = Time.get_ticks_msec()
+    # Lote 14: LoadingScreen overlay (cold start <2.8s, barra mock 0→1)
+    _loading_screen = preload("res://scripts/loading_screen.gd").new()
+    _loading_screen.name = "LoadingScreen"
+    # CanvasLayer para ficar por cima do HUD (layer 30)
+    var _load_layer := CanvasLayer.new()
+    _load_layer.name = "LoadingLayer"
+    _load_layer.layer = 30
+    add_child(_load_layer)
+    _load_layer.add_child(_loading_screen)
+    _loading_screen.set_progress(0.05)
+    await get_tree().process_frame
     rng.seed = 20240917
     fx_rng.seed = 778899
+    _loading_screen.set_progress(0.12)
     var login_streak := GameSave.register_login()
     # Lote 11/12: restaura contador de falhas para interstitial (fallback local se save ainda vazio)
     _ads_failed_runs = int(GameSave.data.get("ad_counters", {}).get("interstitial_run", 0))
     _setup_world()
+    _loading_screen.set_progress(0.35)
+    await get_tree().process_frame
     _setup_hud()
     _validate_obstacle_catalog()
     phase = PhaseData.get_phase(0)
@@ -250,6 +268,8 @@ func _ready() -> void:
     _apply_scenario_atmosphere()
     _rebuild_sky_fx()
     _rebuild_ambient_fx()
+    _loading_screen.set_progress(0.65)
+    await get_tree().process_frame
     AudioManager.play_music(0)
     if login_streak > 0 and login_streak % BALANCE.streak_reward_days == 0:
         _show_feedback("MARCO DE RETORNO", "+R$ %d • %d dias seguidos" % [BALANCE.streak_reward, login_streak], GOLD, "streak")
@@ -258,9 +278,20 @@ func _ready() -> void:
     _sync_hud()
     _apply_render_quality()      # Lote 2: controlador de render (RenderQuality)
     _setup_world_kit()           # Lote 3: rua do building_kit
+    _loading_screen.set_progress(0.82)
+    await get_tree().process_frame
     _setup_clima()               # Lote 4: clima (por cima do render e da rua)
     _setup_ads_billing()         # Lote 11/12: conecta Ads/Billing
     _setup_play_services()     # Lote 13: Play Games + cloud + review
+    _loading_screen.set_progress(1.0)
+    # métrica cold start
+    var _cold_ms := Time.get_ticks_msec() - _cold_start_ms
+    if _cold_ms < 2800:
+        # segura pelo menos 0.25s para o jogador ler a dica
+        await get_tree().create_timer(0.25).timeout
+    _loading_screen.fade_out(0.35)
+    print("[lote14] cold start %d ms (alvo <2800)" % _cold_ms)
+
 
 func _notification(what: int) -> void:
     if what == NOTIFICATION_WM_GO_BACK_REQUEST:
@@ -1870,7 +1901,13 @@ func _build_palm(pos: Vector3, object_scale: float) -> void:
 	if palmeira_glb != null:
 		palmeira_glb.position = pos
 		palmeira_glb.scale = Vector3.ONE * object_scale
+		if palmeira_glb is GeometryInstance3D:
+			(palmeira_glb as GeometryInstance3D).visibility_range_end = 35.0
+			(palmeira_glb as GeometryInstance3D).visibility_range_end_margin = 2.0
 		decor_root.add_child(palmeira_glb)
+		var imp2 := _create_tree_impostor(pos, object_scale * 0.95)
+		if imp2 != null:
+			decor_root.add_child(imp2)
 		return
 	_cylinder(decor_root, 0.10 * object_scale, 0.15 * object_scale, 2.7 * object_scale, pos + Vector3(0.0, 1.35 * object_scale, 0.0), _material(Color("#805338"), 0.0, 0.9), "PalmTrunk")
     var leaf := _material(Color("#3eaa75"), 0.0, 0.84, "leaves")
@@ -1878,6 +1915,30 @@ func _build_palm(pos: Vector3, object_scale: float) -> void:
         var branch := _box(decor_root, Vector3(0.08, 0.06, 1.0 * object_scale), pos + Vector3(0.0, 2.75 * object_scale, 0.0), leaf, "PalmLeaf")
         branch.rotation.y = float(i) * TAU / 5.0
         branch.rotation.x = -0.28
+
+func _create_tree_impostor(pos: Vector3, object_scale: float) -> MeshInstance3D:
+    # Lote 14: impostor billboard de baixo custo para LOD >35m (2 tris, 1 draw call).
+    # Usa textura de folhagem já em VRAM, transparente, double-sided.
+    var quad := QuadMesh.new()
+    quad.size = Vector2(1.6 * object_scale, 2.4 * object_scale)
+    var mat := StandardMaterial3D.new()
+    mat.albedo_texture = TEXTURE_LEAVES_REAL
+    mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+    mat.billboard_keep_scale = true
+    mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+    mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+    quad.material = mat
+    var imp := MeshInstance3D.new()
+    imp.name = "TreeImpostor"
+    imp.mesh = quad
+    imp.position = pos + Vector3(0.0, 1.4 * object_scale, 0.0)
+    imp.visibility_range_begin = 33.0
+    imp.visibility_range_begin_margin = 2.0
+    imp.visibility_range_end = 96.0
+    imp.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+    return imp
 
 func _build_water_tank(pos: Vector3, height: float) -> void:
     var caixa_glb := _optional_glb("scene/caixa_dagua.glb")
@@ -1986,7 +2047,16 @@ func _build_tree(pos: Vector3, object_scale: float) -> void:
     if arvore_glb != null:
         arvore_glb.position = pos
         arvore_glb.scale = Vector3.ONE * object_scale
+        # Lote 14: LOD — high poly até 35m, impostor billboard além disso
+        # visibility_range_end: high poly some a 35m; impostor aparece a partir de 35m
+        if arvore_glb is GeometryInstance3D:
+            (arvore_glb as GeometryInstance3D).visibility_range_end = 35.0
+            (arvore_glb as GeometryInstance3D).visibility_range_end_margin = 2.0
         decor_root.add_child(arvore_glb)
+        # impostor de baixo custo (quad 1.6x2.4 com textura de folhagem, billboard)
+        var imp := _create_tree_impostor(pos, object_scale)
+        if imp != null:
+            decor_root.add_child(imp)
         return
     _cylinder(decor_root, 0.12 * object_scale, 0.16 * object_scale, 1.7 * object_scale, pos + Vector3(0.0, 0.85 * object_scale, 0.0), _material(Color("#67452f"), 0.0, 0.95, "wood"), "TreeTrunk")
     var foliage := _material(Color("#3b9b69"), 0.0, 0.86, "leaves")

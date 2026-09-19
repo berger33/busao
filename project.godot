@@ -10,6 +10,9 @@ run/main_scene="res://scenes/main.tscn"
 run/max_fps=60
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://assets/art/icon.svg"
+boot_splash/bg_color=Color(0.04, 0.08, 0.17, 1)
+boot_splash/show_image=false
+boot_splash/image="res://assets/art/icon.svg"
 
 [autoload]
 GameSave="*res://scripts/save_data.gd"
@@ -30,15 +33,19 @@ handheld/orientation=1
 [rendering]
 ; Lote 2: renderizador Mobile (Vulkan) com plano B automatico para OpenGL se o
 ; aparelho nao criar o contexto; anti-aliasing de partida (o controlador
-; RenderQuality troca em tempo de execucao) e sombra direcional 2048.
+; RenderQuality troca em tempo de execucao) e sombra direcional (Lote 14: 1024 para Moto G84).
 renderer/rendering_method="mobile"
 renderer/rendering_method.mobile="gl_compatibility"
 anti_aliasing/quality/msaa_3d=1
 anti_aliasing/quality/use_debanding=true
 anti_aliasing/quality/screen_space_aa=0
-lights_and_shadows/directional_shadow/size=2048
+lights_and_shadows/directional_shadow/size=1024
+lights_and_shadows/directional_shadow/bias=0.06
 environment/defaults/default_clear_color=Color(0.72, 0.78, 0.85, 1)
 textures/default_filters/use_nearest_mipmap_filter=false
+textures/canvas_textures/default_texture_filter=2
+textures/canvas_textures/default_texture_repeat=0
+
 
 [gui]
 theme/default_font_multichannel_signed_distance_field=true
