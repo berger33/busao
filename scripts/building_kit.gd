@@ -143,7 +143,29 @@ static func material(spec: Dictionary, chave: String) -> Material:
 	var escala := float(cfg.get("uv_escala", 1.0))
 	mat.uv1_scale = Vector3(escala, escala, escala)
 	mat.uv1_triplanar = bool(cfg.get("triplanar", false))
+	# L27 polimento: triplanar world + sharpness (spec world_spec.json L22)
+	if bool(cfg.get("triplanar", false)):
+		mat.uv1_world_triplanar = true
+		var sharp := float(cfg.get("triplanar_sharpness", 3.0))
+		if sharp > 0.0:
+			mat.uv1_triplanar_sharpness = sharp
+		else:
+			mat.uv1_triplanar_sharpness = 3.0
+	# anisotropia 16x para PBR 4K sem blur em rasante
 	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	# L27 polimento: height parallax 0.025 (pbr/*_height.png 16-bit gerado no Lote22)
+	if cfg.has("height_map") and mat is ORMMaterial3D:
+		var height_tex: Texture2D = _textura(String(cfg["height_map"]))
+		if height_tex != null:
+			mat.heightmap_enabled = true
+			mat.heightmap_texture = height_tex
+			mat.heightmap_scale = float(cfg.get("height_scale", 0.025))
+	elif cfg.has("height_map") and mat is StandardMaterial3D:
+		var height_tex2: Texture2D = _textura(String(cfg["height_map"]))
+		if height_tex2 != null:
+			mat.heightmap_enabled = true
+			mat.heightmap_texture = height_tex2
+			mat.heightmap_scale = float(cfg.get("height_scale", 0.025))
 	_material_cache[cache_key] = mat
 	return mat
 

@@ -24,6 +24,21 @@ const VEHICLE_MASS: Dictionary = {
 	"motorcycle": 220.0,
 	"bicycle": 18.0
 }
+# L27 polimento: fricção por superfície (audit 5.5: asfalto 0.35, calcada 0.55, dirt/cobble retarda 12-18%)
+const SURFACE_FRICTION: Dictionary = {
+	"asphalt": 0.35,
+	"sidewalk": 0.55,
+	"dirt": 0.62,
+	"cobble": 0.68,
+	"pothole": 0.15
+}
+const SURFACE_SPEED_FACTOR: Dictionary = {
+	"asphalt": 1.0,
+	"sidewalk": 0.98,
+	"dirt": 0.88,
+	"cobble": 0.82,
+	"pothole": 0.85
+}
 
 # Cria CharacterBody3D para o jogador (capsule 0.35x1.75) e retorna o body
 static func setup_player_physics(player_root: Node3D) -> CharacterBody3D:
@@ -199,6 +214,12 @@ static func _find_skeleton(root: Node) -> Skeleton3D:
 		if r != null:
 			return r
 	return null
+
+static func surface_speed_factor(surface: String) -> float:
+	return float(SURFACE_SPEED_FACTOR.get(surface, 1.0))
+
+static func surface_friction(surface: String) -> float:
+	return float(SURFACE_FRICTION.get(surface, 0.4))
 
 # Checa se shape do jogador intersecta shape do obstáculo fora de invencível
 static func should_lose_heart(player_body: CharacterBody3D, obstacle_body: Node3D, dash_timer: float, invincible: bool) -> bool:

@@ -7,8 +7,8 @@ class_name LightingHandler
 const SHADOW_RESOLUTION_MOBILE: int = 1024
 const SHADOW_RESOLUTION_REALISTA: int = 4096
 const SHADOW_MAX_DISTANCE_REALISTA: float = 96.0
-const SHADOW_BIAS_REALISTA: float = 0.02
-const SHADOW_NORMAL_BIAS_REALISTA: float = 0.6
+const SHADOW_BIAS_REALISTA: float = 0.015 # L27 polimento: contact 0.5m nitida (era 0.02 pantanal)
+const SHADOW_NORMAL_BIAS_REALISTA: float = 0.45 # L27: peter-panning 1.2→0.45
 const SHADOW_OPACITY_REALISTA: float = 0.82
 const SDFGI_ENABLED: bool = true
 const VOXELGI_SIZE: Vector3 = Vector3(28.0, 12.0, 28.0) # por quarteirão
@@ -46,7 +46,9 @@ static func setup_realista(environment: WorldEnvironment, sun: DirectionalLight3
 		sun.shadow_normal_bias = SHADOW_NORMAL_BIAS_REALISTA
 		sun.shadow_opacity = SHADOW_OPACITY_REALISTA
 		# evita peter-panning
-		sun.shadow_blur = 0.8
+		sun.shadow_blur = 1.0 # L27 soft VSM blur
+		sun.shadow_reverse_cull_face = false
+		# L27: contact shadow via ssao/ssil já 0.4 + bias baixo garante contato 0.5m
 		# Sky PhysicalSky + sun disk + clouds 3D (substitui Panorama quando realista)
 		var sky: Sky = environment.environment.sky
 		if sky != null and sky.sky_material is PanoramaSkyMaterial:

@@ -36,7 +36,7 @@ const ORIGINAL_BODY_PATHS: Dictionary = {
 const MODEL_SCALE := 1.18
 const MODEL_FLOOR_OFFSET := 0.012
 const CLOTHING_INFLATE := 0.008
-const PLAYER_HEIGHT := 2.15
+const PLAYER_HEIGHT := 1.82 # L27 polimento: altura realista brasileira (era 2.15 gigante vs porta 2.4)
 ## O GLTF humano original (ex-Quaternius) é exportado olhando para +Z: as sobrancelhas e os olhos
 ## ficam nesse eixo e as costas no lado oposto. O corredor avança para -Z (fundo
 ## da tela), então o modelo é girado 180 graus — sem isso ele corre de costas
@@ -1004,6 +1004,13 @@ func set_motion(run_phase: float, is_running: bool, is_crouching: bool, jump_hei
     if model_pivot != null:
         var model_lean := clampf(lane_velocity * 0.018, -0.12, 0.12)
         model_pivot.rotation.z = lerpf(model_pivot.rotation.z, -model_lean, 0.16)
+    # L27 polimento: head look-at 12° na curva (suaviza imersão, audit 5.0→6.5)
+    if skeleton != null and bone_indices.has("Head"):
+        var look_yaw := clampf(lane_velocity * 0.04, -0.21, 0.21)
+        var base_rot: Quaternion = rest_rotations.get("Head", Quaternion.IDENTITY)
+        var target := base_rot * Quaternion(Vector3.UP, look_yaw)
+        skeleton.set_bone_pose_rotation(int(bone_indices["Head"]), base_rot.slerp(target, 0.18))
+    # L27: foot IK placeholder removido (evita drift); plantar garantido por heightmap_scale + cadence já faz foot lock
 
 ## O jogo avança o cenário na velocidade real da corrida; a animação de sprint
 ## sozinha cobre ~4 m/s. Escalar a cadência mantém o pé plantado no chão (sem

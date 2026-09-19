@@ -893,6 +893,11 @@ func _update_run(dt: float) -> void:
         speed *= 0.55
     if dash_timer > 0.0:
         speed *= 2.0
+    # L27 polimento: fricção por superfície (dirt 0.88×, cobble 0.82× vs asfalto 1.0)
+    var surface_factor: float = 1.0
+    if scenario.has("street_surface"):
+        surface_factor = PhysicsHandler.surface_speed_factor(str(scenario["street_surface"]))
+    speed *= surface_factor
     distance += speed * dt
     _update_tutorial_hint()
     motion_speed = lerpf(motion_speed, speed, minf(1.0, dt * 7.0))
