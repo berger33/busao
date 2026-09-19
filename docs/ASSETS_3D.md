@@ -121,13 +121,32 @@ Centrados na origem (o jogo gira o node em Y) e escala 1:1. Drop-in em
 `_build_aerial` via `_optional_glb("sky_fx/<kind>.glb")`. As aves seguem no
 `Animal3D` articulado.
 
-## 7. Estruturas / cenario (Lote 1 do jogo, `game_3d.gd`) — ❌ todos procedurais
+## 7. Estruturas / cenario (Lote 1 do jogo, `game_3d.gd`) — 🔶 GLB em andamento
 
-Casas (favela/residencial/colonial), predios de perfil, lojinhas, obras
-com andaimento, guarita, igreja, quiosque, fachada de terminal, barraca de
-mercado, palmeiras, arvores, caixas d'agua, varais, portoes, bandeiras,
-placas de publicidade, postes de luz, buraco na rua (`pothole`), tampas de
-bueiro — caixas/esferas/cilindros com texturas PBR geradas por codigo.
+| Builder | GLB (`assets/scene/`) | Estado |
+|---|---|---|
+| `_build_palm` | `palmeira.glb` | ✅ Lote 9A (tronco + 6 folhas + cocos) |
+| `_build_tree` | `arvore.glb` | ✅ Lote 9A (tronco + galhos + 4 copas) |
+| `_build_water_tank` | `caixa_dagua.glb` | ✅ Lote 9A (cavalete + bojo + tampa cônica) |
+| `_build_clothesline` | `varal.glb` | ✅ Lote 9A (mastros + corda + roupas) |
+| `_build_flag` | `bandeira.glb` | ✅ Lote 9A (pano `TintFabric`) |
+| `_build_billboard` | `outdoor.glb` | ✅ Lote 9A (painel `TintPaint`) |
+| `_build_gate` | `portao.glb` | ✅ Lote 9A (`TintMetal`) |
+| `_build_market_stall` | `barraca.glb` | ✅ Lote 9A (lona `TintFabric`) |
+| `_build_house_facade` | `casa.glb` / `casa_favela.glb` | ✅ Lote 9B (`TintWall`/`TintRoof`/`TintAwning`) |
+| `_build_colonial_facade` | `colonial.glb` | ✅ Lote 9B (+ `TintTrim`, esquadrias azuis) |
+| `_build_profile_building` | `predio2.glb` / `predio3.glb` | ✅ Lote 9B (escala X/Y por instância, `TintTrim`) |
+| `_build_shopfront` | `loja.glb` | ✅ Lote 9B (placa `TintSign` MERCEARIA) |
+| `_build_church` | — | ❌ Lote 9C |
+| `_build_tourist_kiosk` | — | ❌ Lote 9C |
+| `_build_guard_post` | — | ❌ Lote 9C |
+| `_build_terminal_facade` | — | ❌ Lote 9C |
+| `_build_construction` | — | ❌ Lote 9C |
+| `pothole` (obstáculo de rua) | — | ❌ Lote 9C |
+| `_build_manhole` / `_build_asphalt_patch` | — | ➖ só usados em `_build_track_antigo` (morto desde o Lote 3) |
+
+Drop-ins via `_optional_glb("scene/<nome>.glb")` + `_tint_glb()` (cor da
+fase por instância); fallback procedural preservado em todos.
 
 ## 8. Rua do Lote 3 (`building_kit.gd` + `world_spec.json`) — primitivas
 
@@ -155,7 +174,9 @@ madeira, terra_vermelha) nao existe — o kit cai em cor plana com warning.
 | **6** | (reserva — variantes de carro/cor/rodas com texturas baked) | — |
 | **7** ✅ | Mobiliario: `cone`, `hidrante`, `orelhao`, `banco`, `lixeira`, `poste`, `ponto`, `carrinho` (8 GLBs originais, `assets/props/`) | ✅ feito: `_optional_prop` em `_build_sidewalk_obstacle`/`_build_lamp`/`_create_bus_stop` e `_prop_glb` no `building_kit.gd` (banco/lixeira/hidrante dos quarteirões) |
 | **8** ✅ | Coletaveis (11) + `aviao` + `drone` | ✅ feito: `_optional_glb("collectibles/<kind>.glb")` em `_build_collectible` e `_optional_glb("sky_fx/<kind>.glb")` em `_build_aerial` (fallback procedural preservado) |
-| **9** | Estruturas de cenario (casas, predios, igreja, quiosque, poste, palmeira…) | novo drop-in opcional em `_build_scenario_slice` |
+| **9A** ✅ | Miudezas: `palmeira`, `arvore`, `caixa_dagua`, `varal`, `bandeira`, `outdoor`, `portao`, `barraca` (`assets/scene/`) | ✅ feito: `_optional_glb("scene/<nome>.glb")` nos 8 builders + `_tint_glb()` (cor da fase por instância) |
+| **9B** ✅ | Moradias/comércio: `casa`, `casa_favela`, `colonial`, `predio2`, `predio3`, `loja` (`assets/scene/`) | ✅ feito: drop-in nos 4 builders (`_tint_glb` com Dictionary; prédios com escala X/Y por instância) |
+| **9C** | Equipamentos: `igreja`, `quiosque`, `guarita`, `terminal`, `obra` + `pothole` | `_optional_glb` + `_tint_glb` (mesmo padrão 9A/9B) |
 | **10** | Texturas PBR do Lote 3 (`assets/textures/pbr/`) | sem codigo — o kit ja procura |
 
 Toda GLB original do projeto eh CC0 (trabalho original, sem obrigacao de

@@ -26,7 +26,8 @@ def caixa(nome, centro, dims, subd=0):
          (cx + dx, cy + dy, cz - dz), (cx - dx, cy + dy, cz - dz),
          (cx - dx, cy - dy, cz + dz), (cx + dx, cy - dy, cz + dz),
          (cx + dx, cy + dy, cz + dz), (cx - dx, cy + dy, cz + dz)]
-    f = [(0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1), (3, 2, 6, 7), (0, 3, 7, 4), (1, 5, 6, 2)]
+    # ordem do lote 7 (normais para fora; a ordem antiga invertia todas as faces)
+    f = [(0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)]
     o = K.novo_obj(nome, K.malha(nome, v, f))
     uv = o.data.uv_layers.new(name="UVMap")
     for poly in o.data.polygons:

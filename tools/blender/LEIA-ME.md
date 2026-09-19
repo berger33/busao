@@ -146,3 +146,23 @@ luz `Cheia` do `setup_preview` nasce colada na origem e vira holofote no
 chao em pecas altas — o `render_prop` deste lote a reposiciona proporcional
 a distancia, e a limpeza entre pecas purga datablocks orfaos (luzes/cameras/
 mundos/malhas) para nao colidir nomes (`Sol.001`...).
+
+## Lote 9B — moradias e comercio (build_lote9b.py)
+
+```bash
+sh tools/blender/run_bpy.sh tools/blender/build_lote9b.py
+```
+
+Seis GLBs em `assets/scene/`: `casa` (telhado de 2 aguas via `frontao()` +
+`telhado_2aguas()`), `casa_favela` (tijolo + laje + vergalhoes + toldo),
+`colonial` (esquadrias azuis + faixa + cunhais), `predio2`/`predio3`
+(parametricos por andar, com coroa, platibanda, ar-condicionado e caixa
+d'agua no topo) e `loja` (vitrine + toldo + placa MERCEARIA em textura PIL
+sobre `TintSign` — fundo branco x tinta = fundo na cor da fase).
+Novos `Tint*`: `TintWall`, `TintRoof`, `TintTrim`, `TintAwning`, `TintSign`.
+Predios: corpo de 5,2/7,8 m, o jogo escala X/Y por instancia (corte em
+6,5 m). Licao daqui: a `caixa()` do 9A nasceu com winding invertido (todas
+as normais para dentro) — o `pintar_face_vis()` da placa denunciou, pois a
+textura caiu na face oposta. Ordem correta e a do lote 7; os GLBs do 9A
+foram reconstruidos com a correcao (bytes identicos para as pecas sem
+caixa, o que confirma o determinismo do rebuild).

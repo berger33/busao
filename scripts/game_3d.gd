@@ -1664,6 +1664,15 @@ func _build_house_facade(pos: Vector3, index: int, stacked: bool) -> void:
     var width: float = 2.4 + float(index % 2) * 0.35
     var height: float = 2.4 + float(index % 3) * 0.25
     var depth: float = 3.1
+    var casa_glb := _optional_glb("scene/casa_favela.glb" if stacked else "scene/casa.glb")
+    if casa_glb != null:
+        casa_glb.position = pos
+        decor_root.add_child(casa_glb)
+        if stacked:
+            _tint_glb(casa_glb, {"TintRoof": roof, "TintAwning": _scenario_color("accent", YELLOW)})
+        else:
+            _tint_glb(casa_glb, {"TintWall": base if index % 2 == 0 else alt, "TintRoof": roof})
+        return
     var surface: String = "facade_brick" if stacked else "facade_plaster"
     var tint: Color = Color("#ffffff") if stacked else (base if index % 2 == 0 else alt)
     var wall := _material(tint, 0.0, 1.0, surface)
@@ -1678,6 +1687,15 @@ func _build_house_facade(pos: Vector3, index: int, stacked: bool) -> void:
 
 func _build_profile_building(pos: Vector3, index: int, height: float, width: float) -> void:
     var brick: bool = index % 2 == 1
+    var predio_glb := _optional_glb("scene/predio2.glb" if height < 6.5 else "scene/predio3.glb")
+    if predio_glb != null:
+        # corpo de 5.2/7.8 m no GLB; o jogo escala X/Y (profundidade ja e 3.8)
+        predio_glb.position = pos
+        predio_glb.scale = Vector3(width / 3.0, height / (5.2 if height < 6.5 else 7.8), 1.0)
+        decor_root.add_child(predio_glb)
+        var parede: Color = Color("#b98a68") if brick else _scenario_color("building", Color("#8fa3b8")).lerp(Color.WHITE, 0.35)
+        _tint_glb(predio_glb, {"TintWall": parede, "TintTrim": _scenario_color("accent", YELLOW)})
+        return
     var tint: Color = Color("#ffffff") if brick else _scenario_color("building", Color("#8fa3b8")).lerp(Color.WHITE, 0.35)
     var material := _material(tint, 0.0, 1.0, "facade_brick" if brick else "facade_plaster")
     # tile de fachada = 4 janelas (6 m) x 4 andares (12 m)
@@ -1692,6 +1710,16 @@ func _build_profile_building(pos: Vector3, index: int, height: float, width: flo
         _box(decor_root, Vector3(0.6, 0.4, 0.22), pos + Vector3(-width * 0.18, ac_y, -1.99), ac, "ProfileAC")
 
 func _build_shopfront(pos: Vector3, index: int, accent: Color) -> void:
+    var loja_glb := _optional_glb("scene/loja.glb")
+    if loja_glb != null:
+        loja_glb.position = pos
+        decor_root.add_child(loja_glb)
+        _tint_glb(loja_glb, {
+            "TintWall": _scenario_color("building", Color("#527c98")).lerp(Color.WHITE, 0.25),
+            "TintAwning": accent,
+            "TintSign": accent.lightened(0.18),
+            "TintTrim": accent.lightened(0.18)})
+        return
     var shop_wall := _material(_scenario_color("building", Color("#527c98")).lerp(Color.WHITE, 0.25), 0.0, 1.0, "facade_plaster")
     shop_wall.uv1_scale = Vector3(2.5 / 6.0, 2.45 / 3.0, 3.0 / 6.0)
     shop_wall.uv1_offset = Vector3(0.075, 0.75, 0.0)
@@ -1748,6 +1776,17 @@ func _build_market_stall(pos: Vector3, _index: int) -> void:
     _sphere(decor_root, 0.23, pos + Vector3(0.0, 1.52, -0.08), _material(Color("#b8785a"), 0.0, 0.78), "MarketSeller")
 
 func _build_colonial_facade(pos: Vector3, index: int) -> void:
+    var colonial_glb := _optional_glb("scene/colonial.glb")
+    if colonial_glb != null:
+        colonial_glb.position = pos
+        decor_root.add_child(colonial_glb)
+        var base_c: Color = _scenario_color("building", Color("#b86d54"))
+        var alt_c: Color = _scenario_color("building_alt", Color("#d29d63"))
+        _tint_glb(colonial_glb, {
+            "TintWall": base_c if index % 2 == 0 else alt_c,
+            "TintRoof": _scenario_color("roof", Color("#5d4444")),
+            "TintTrim": _scenario_color("accent", CYAN)})
+        return
     _build_house_facade(pos, index, false)
     _box(decor_root, Vector3(2.55, 0.09, 0.08), pos + Vector3(0.0, 2.1, -1.64), _material(_scenario_color("accent", CYAN), 0.0, 0.45, "paint"), "ColonialTrim")
 
