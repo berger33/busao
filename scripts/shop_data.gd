@@ -94,6 +94,18 @@ static func is_character(id: String) -> bool:
 
 static func price_for(id: String) -> int:
     var wanted := canonical_id(id)
+    # Lote 15: RemoteConfig override (A/B sem update) — mock-first, fallback ao catálogo
+    if Engine.get_main_loop() != null:
+        var root = Engine.get_main_loop().root if Engine.get_main_loop().has_method("get_root") else null
+        if root == null:
+            # fallback para SceneTree root
+            root = (Engine.get_main_loop() as SceneTree).root if Engine.get_main_loop() is SceneTree else null
+        if root != null:
+            var rc = root.get_node_or_null("/root/RemoteConfig")
+            if rc != null and rc.has_method("price_for_item"):
+                var ov: int = rc.call("price_for_item", wanted)
+                if ov >= 0:
+                    return ov
     for item in ITEM_CATALOG:
         if str(item.get("id", "")) == wanted:
             return maxi(0, int(item.get("price", 0)))

@@ -59,6 +59,7 @@ func _set_defaults() -> void:
         "hard_currency": 0,
         "remove_ads": false,
         "ads_consent_granted": false,
+        "analytics_enabled": true,
         "ad_counters": {"interstitial_run": 0, "rewarded_run": 0},
         "play_signed_in": false,
         "last_review_ts": 0,
@@ -170,6 +171,7 @@ func _sanitize_data() -> void:
     data["hard_currency"] = maxi(0, int(data.get("hard_currency", 0)))
     data["remove_ads"] = bool(data.get("remove_ads", false))
     data["ads_consent_granted"] = bool(data.get("ads_consent_granted", false))
+    data["analytics_enabled"] = bool(data.get("analytics_enabled", true))
     if not (data.get("ad_counters", {}) is Dictionary):
         data["ad_counters"] = {"interstitial_run": 0, "rewarded_run": 0}
     var ad_c: Dictionary = data["ad_counters"]

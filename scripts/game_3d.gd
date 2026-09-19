@@ -283,6 +283,7 @@ func _ready() -> void:
     _setup_clima()               # Lote 4: clima (por cima do render e da rua)
     _setup_ads_billing()         # Lote 11/12: conecta Ads/Billing
     _setup_play_services()     # Lote 13: Play Games + cloud + review
+    _setup_analytics()         # Lote 15: Firebase/GA/Crash/RemoteConfig (mock-first)
     _loading_screen.set_progress(1.0)
     # métrica cold start
     var _cold_ms := Time.get_ticks_msec() - _cold_start_ms
@@ -521,6 +522,10 @@ func _start_run(index: int) -> void:
     # corações permanece estável para que a dificuldade venha da pista.
     hearts = 3
     GameSave.record_phase_attempt()
+    if has_node("/root/AnalyticsManager"):
+        var _am_run = get_node_or_null("/root/AnalyticsManager")
+        if _am_run and _am_run.has_method("log_run_start"):
+            _am_run.call("log_run_start", phase_index)
     max_hearts = hearts
     collected_coins = 0
     coin_multiplier = 1
@@ -985,6 +990,10 @@ func _hit_player(kind: String) -> void:
     if dash_timer > 0.0:
         return
     GameSave.record_event("hit_" + kind)
+    if has_node("/root/AnalyticsManager"):
+        var _am_hit = get_node_or_null("/root/AnalyticsManager")
+        if _am_hit and _am_hit.has_method("log_hit"):
+            _am_hit.call("log_hit", kind)
     if shield_hits > 0:
         shield_hits -= 1
         _show_feedback("ESCUDO!", "Impacto absorvido", CYAN, "hit")
@@ -3744,6 +3753,32 @@ func _setup_play_services() -> void:
     if not ps.is_connected("achievement_unlocked", Callable(self, "_on_play_achievement")):
         ps.achievement_unlocked.connect(_on_play_achievement)
 
+func _setup_analytics() -> void:
+    # Lote 15: conecta Analytics + RemoteConfig + Crash (mock não quebra sem plugin)
+    if has_node("/root/AnalyticsManager") or Engine.has_singleton("AnalyticsManager"):
+        var am = get_node_or_null("/root/AnalyticsManager")
+        if am:
+            # espelha consent do AdsManager (UMP) para Firebase/GA
+            var cons: bool = false
+            if has_node("/root/AdsManager"):
+                var adm = get_node("/root/AdsManager")
+                if adm and adm.has_method("is_consent_granted"):
+                    cons = adm.call("is_consent_granted")
+            # RemoteConfig fetch já disparado em autoload; aqui só loga readiness
+            if has_node("/root/RemoteConfig"):
+                var rc = get_node("/root/RemoteConfig")
+                if rc and rc.has_signal("config_ready"):
+                    rc.config_ready.connect(func(): print("[lote15] RemoteConfig pronto: " + str(rc.get_config())))
+            print("[lote15] analytics gate consent=%s enabled=%s" % [str(cons), str(am.is_enabled()) if am.has_method("is_enabled") else "?"])
+            # crash handler: captura erros não tratados em _notification
+            # teste manual: pressione F8 no editor para force_crash_test (ver docs/RELEASE_LOTE15.md)
+    # loga run_start já aqui (metrics→event espelhado)
+    if has_node("/root/AnalyticsManager"):
+        var am2 = get_node_or_null("/root/AnalyticsManager")
+        if am2 and am2.has_method("log_run_start"):
+            am2.call("log_run_start", 0)
+
+
 func _on_play_signed_in() -> void:
     _show_feedback("PLAY GAMES", "Progresso na nuvem ativo", GREEN, "ui_confirm")
     _sync_hud()
@@ -3925,4 +3960,8 @@ func _do_double_reward_from_ad() -> void:
     if GameSave:
         GameSave.record_ad_counter("rewarded")
         GameSave.record_event("ad_rewarded_double")
+        if has_node("/root/AnalyticsManager"):
+            var _am_ad = get_node_or_null("/root/AnalyticsManager")
+            if _am_ad and _am_ad.has_method("log_ad_rewarded"):
+                _am_ad.call("log_ad_rewarded", "rewarded_double")
 

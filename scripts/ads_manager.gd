@@ -154,7 +154,12 @@ func show_interstitial(placement: String = PLACEMENT_INTERSTITIAL_RESULT) -> boo
 		print("[ads] interstitial adiado: FPS baixo")
 		return false
 	_interstitial_ready = false
-	_interstitial_cooldown = 90.0
+	var _rc_cd := 90.0
+	if has_node("/root/RemoteConfig"):
+		var _rc = get_node_or_null("/root/RemoteConfig")
+		if _rc and _rc.has_method("ad_interstitial_cooldown"):
+			_rc_cd = _rc.call("ad_interstitial_cooldown")
+	_interstitial_cooldown = _rc_cd
 	if _native_available:
 		print("[ads] interstitial show nativo %s" % placement)
 		# MobileAds.show_interstitial()
