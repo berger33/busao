@@ -14,7 +14,7 @@ primitivas Godot (box/sphere/cylinder/torus) em `scripts/game_3d.gd`,
 | Veiculo (rua) | `assets/vehicles/car.glb`, `motorcycle.glb`, `truck.glb`, `bus_traffic.glb` | comprimento no eixo Z, virado para -Z; tamanho-alvo definido em `GLB_FIT`. |
 | Veiculo (ponto/parqueado) | `assets/vehicles/onibus.glb`, `carro.glb` | idem. |
 | Bicicleta (calcada) | `assets/vehicles/bicycle.glb` | idem (fit 1,85 x 1,15 no obstaculo `bicycle`). |
-| Obstaculo de calcad a e coletaveis | (sem drop-in ainda — ver roadmap) | montados em `game_3d.gd`. |
+| Mobiliario urbano | `assets/props/<nome>.glb` (cone, hidrante, orelhao, banco, lixeira, poste, ponto, carrinho) | escala real 1:1, origem no chao, frente -Z; `_optional_prop` (game_3d) e `_prop_glb` (kit). |
 
 ---
 
@@ -110,7 +110,9 @@ bueiro — caixas/esferas/cilindros com texturas PBR geradas por codigo.
 
 Piso, guias, lajes (MultiMesh), mosaicos, predios com janelas (MultiMesh),
 lojas com toldo, arvores, bancos, lixeiras, hidrante e horizonte — tudo
-primitivo, deterministico por semente. **Faltam as texturas PBR**:
+primitivo, deterministico por semente. Desde o Lote 7, banco/lixeira/hidrante
+do kit sao substituidos automaticamente pelos GLBs de `assets/props/`
+(`_prop_glb`), mantendo o procedural apenas como fallback. **Faltam as texturas PBR**:
 `assets/textures/pbr/` (albedo/normal/orm de calcada_laje, calcada_mosaico,
 asfalto, tijolo, reboco, laje_cobertura, metal_pintado, metal_zincado,
 madeira, terra_vermelha) nao existe — o kit cai em cor plana com warning.
@@ -128,7 +130,7 @@ madeira, terra_vermelha) nao existe — o kit cai em cor plana com warning.
 | **4** ✅ | `macaco`, `caranguejo` | ✅ ja coberto pelo drop-in generico do lote 3 (sem novo codigo) |
 | **5** ✅ | Veiculos: `car`, `motorcycle`, `truck`, `bus_traffic`, `onibus`, `carro` + `bicycle` | ja existia (`_optional_model`); novo drop-in `bicycle.glb` no obstaculo de calcada; rodas giram via nomes |
 | **6** | (reserva — variantes de carro/cor/rodas com texturas baked) | — |
-| **7** | Mobiliario: `hidrante`, `orelhao`, `cone`, `banco`, `caminho_camelô`, `ponto` | novo drop-in em `_build_sidewalk_obstacle` |
+| **7** ✅ | Mobiliario: `cone`, `hidrante`, `orelhao`, `banco`, `lixeira`, `poste`, `ponto`, `carrinho` (8 GLBs originais, `assets/props/`) | ✅ feito: `_optional_prop` em `_build_sidewalk_obstacle`/`_build_lamp`/`_create_bus_stop` e `_prop_glb` no `building_kit.gd` (banco/lixeira/hidrante dos quarteirões) |
 | **8** | Coletaveis (11) + `aviao` + `drone` | novo drop-in em `_build_collectible`/`_build_aerial` |
 | **9** | Estruturas de cenario (casas, predios, igreja, quiosque, poste, palmeira…) | novo drop-in opcional em `_build_scenario_slice` |
 | **10** | Texturas PBR do Lote 3 (`assets/textures/pbr/`) | sem codigo — o kit ja procura |

@@ -105,3 +105,13 @@ ficam FORA do repo e podem ser limpos entre sessoes; para reconstruir tudo
 ```bash
 sh tools/blender/make_env.sh
 ```
+
+## Lote 7 — mobiliario urbano (build_lote7.py)
+
+Oito props originais em escala real: `cone`, `hidrante`, `orelhao`, `banco`,
+`lixeira`, `poste`, `ponto` e `carrinho`, exportados para `assets/props/`.
+Contrato: frente -Z no Godot (+Y no Blender), origem no chao, escala 1:1
+(sem fit em runtime). Licao aprendida aqui: **nunca aplique subsurf em caixas
+finas** (catmull-clark encolhe/entorta ripas e tetos); o orelhao usa casca
+esferica com abertura recortada via bmesh. Drop-ins: `_optional_prop()` em
+`game_3d.gd` e `_prop_glb()` em `building_kit.gd`.

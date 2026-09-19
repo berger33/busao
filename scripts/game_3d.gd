@@ -1806,6 +1806,11 @@ func _build_building(pos: Vector3, index: int, _accent: Color) -> void:
     _build_profile_building(pos, index + 4, 4.6 + float((index * 17) % 5) * 1.25, 2.3 + float(index % 3) * 0.45)
 
 func _build_lamp(pos: Vector3, accent: Color) -> void:
+    var poste_glb := _optional_prop("poste.glb")
+    if poste_glb != null:
+        poste_glb.position = pos
+        decor_root.add_child(poste_glb)
+        return
     _cylinder(decor_root, 0.035, 0.035, 3.2, pos + Vector3(0.0, 1.6, 0.0), _material(Color("#3c4654"), 0.35, 0.4, "metal"), "LampPole")
     var lamp_material := _material(accent.lightened(0.20), 0.0, 0.22, "glass")
     lamp_material.emission_enabled = true
@@ -1829,10 +1834,15 @@ func _create_bus_stop(total: float) -> void:
     var stop_accent: Color = _scenario_color("accent", Color("#e8c45b"))
     if GameSave.owns("placa"):
         stop_accent = Color("#63c8ed")
-    _box(bus_stop_node, Vector3(2.5, 0.12, 0.12), Vector3(0.0, 2.95, 0.0), _material(stop_accent, 0.0, 0.7), "StopRoof")
-    _box(bus_stop_node, Vector3(0.08, 3.0, 0.08), Vector3(-1.05, 1.45, 0.0), _material(Color("#c8d4d1"), 0.0, 0.55), "StopPole")
-    _box(bus_stop_node, Vector3(1.65, 1.05, 0.08), Vector3(0.0, 1.25, 0.08), _material(Color("#5b7790"), 0.0, 0.48), "StopGlass")
-    _box(bus_stop_node, Vector3(1.55, 0.15, 0.45), Vector3(0.0, 0.55, 0.10), _material(Color("#8d5b3f"), 0.0, 0.75), "StopBench")
+    var ponto_glb := _optional_prop("ponto.glb")
+    if ponto_glb != null:
+        # abrigo original (GLB): abertura para -Z, como a versao procedural
+        bus_stop_node.add_child(ponto_glb)
+    else:
+        _box(bus_stop_node, Vector3(2.5, 0.12, 0.12), Vector3(0.0, 2.95, 0.0), _material(stop_accent, 0.0, 0.7), "StopRoof")
+        _box(bus_stop_node, Vector3(0.08, 3.0, 0.08), Vector3(-1.05, 1.45, 0.0), _material(Color("#c8d4d1"), 0.0, 0.55), "StopPole")
+        _box(bus_stop_node, Vector3(1.65, 1.05, 0.08), Vector3(0.0, 1.25, 0.08), _material(Color("#5b7790"), 0.0, 0.48), "StopGlass")
+        _box(bus_stop_node, Vector3(1.55, 0.15, 0.45), Vector3(0.0, 0.55, 0.10), _material(Color("#8d5b3f"), 0.0, 0.75), "StopBench")
     _box(bus_stop_node, Vector3(0.45, 0.62, 0.08), Vector3(-1.05, 2.65, -0.08), _material(stop_accent.lightened(0.16), 0.0, 0.6), "StopSign")
     bus_node = Node3D.new()
     bus_node.name = "YellowBus"
@@ -1954,6 +1964,26 @@ func _optional_model(file: String) -> Node3D:
         push_warning("Falha ao instanciar modelo de veiculo: " + file)
         return null
     return node
+
+func _optional_prop(file: String) -> Node3D:
+	# Drop-in de mobiliario: se existir assets/props/<file> (GLB original, ver
+	# assets/props/LEIA-ME.md), ele substitui a versao procedural do objeto.
+	var chave := "props/" + file
+	if not _glb_cache.has(chave):
+		var packed: PackedScene = null
+		var path := "res://assets/props/" + file
+		if ResourceLoader.exists(path):
+			packed = load(path) as PackedScene
+		_glb_cache[chave] = packed
+	var cached: PackedScene = _glb_cache[chave]
+	if cached == null:
+		return null
+	var node := cached.instantiate() as Node3D
+	if node == null:
+		push_warning("Falha ao instanciar prop: " + file)
+		return null
+	return node
+
 
 func _model_bounds(root: Node3D) -> AABB:
     var bounds := AABB()
@@ -2154,6 +2184,10 @@ func _build_sidewalk_obstacle(parent: Node3D, kind: String) -> void:
             var granny_profiles: Array[String] = ["zilda", "maria"]
             _build_pedestrian_obstacle(parent, granny_profiles[abs(parent.name.hash()) % granny_profiles.size()], "old_lady", 0.80)
         "hydrant":
+            var hidrante_glb := _optional_prop("hidrante.glb")
+            if hidrante_glb != null:
+                parent.add_child(hidrante_glb)
+                return
             var hydrant_red := _material(Color("#d95750"), 0.0, 0.62, "metal")
             _cylinder(parent, 0.28, 0.34, 0.64, Vector3(0.0, 0.40, 0.0), hydrant_red, "HydrantBody")
             _cylinder(parent, 0.22, 0.28, 0.22, Vector3(0.0, 0.82, 0.0), hydrant_red, "HydrantNeck")
@@ -2164,6 +2198,10 @@ func _build_sidewalk_obstacle(parent: Node3D, kind: String) -> void:
                 _cylinder(parent, 0.055, 0.07, 0.04, Vector3(side * 0.41, 0.60, 0.0), _material(Color("#f0a345"), 0.35, 0.42, "metal"), "HydrantCap")
             _cylinder(parent, 0.055, 0.055, 0.70, Vector3(0.0, 0.61, 0.0), _material(Color("#f0a345"), 0.35, 0.42, "metal"), "HydrantHandle")
         "payphone":
+            var orelhao_glb := _optional_prop("orelhao.glb")
+            if orelhao_glb != null:
+                parent.add_child(orelhao_glb)
+                return
             var phone_body := _material(Color("#2d9ca4"), 0.0, 0.52, "metal")
             _box(parent, Vector3(0.55, 1.72, 0.42), Vector3(0.0, 0.91, 0.0), phone_body, "PayphoneBody")
             _box(parent, Vector3(0.68, 0.10, 0.48), Vector3(0.0, 1.82, 0.0), phone_body, "PayphoneHood")
@@ -2229,6 +2267,10 @@ func _build_sidewalk_obstacle(parent: Node3D, kind: String) -> void:
             _box(movimento, Vector3(0.09, 0.02, 0.20), Vector3(0.09, 0.28, 0.10), chrome, "BikePedal")
             _box(movimento, Vector3(0.09, 0.02, 0.20), Vector3(-0.09, 0.44, 0.02), chrome, "BikePedal2")
         "cone":
+            var cone_glb := _optional_prop("cone.glb")
+            if cone_glb != null:
+                parent.add_child(cone_glb)
+                return
             var cone_orange := _material(Color("#f0783f"), 0.0, 0.68, "rubber")
             var cone_white := _material(Color("#f4e6c5"), 0.0, 0.72, "rubber")
             _box(parent, Vector3(0.98, 0.12, 0.58), Vector3(0.0, 0.08, 0.0), cone_orange, "ConeBase")
@@ -2236,21 +2278,29 @@ func _build_sidewalk_obstacle(parent: Node3D, kind: String) -> void:
             _cylinder(parent, 0.29, 0.33, 0.11, Vector3(0.0, 0.62, 0.0), cone_white, "ConeReflectiveBand")
             _cylinder(parent, 0.18, 0.22, 0.10, Vector3(0.0, 0.90, 0.0), cone_white, "ConeReflectiveTip")
         "vendor":
-            var cart_wood := _material(Color("#e2a846"), 0.0, 0.72, "wood")
-            var awning := _material(Color("#e94f5a"), 0.0, 0.66, "fabric")
-            _box(parent, Vector3(1.45, 1.0, 0.9), Vector3(0.0, 0.58, 0.0), cart_wood, "VendorCart")
-            _box(parent, Vector3(1.60, 0.08, 0.90), Vector3(0.0, 1.17, 0.0), _material(Color("#f2c35b"), 0.0, 0.66, "wood"), "VendorCounter")
-            _box(parent, Vector3(1.74, 0.10, 1.08), Vector3(0.0, 1.40, 0.0), awning, "VendorAwning")
-            _cylinder(parent, 0.18, 0.18, 0.10, Vector3(-0.50, 0.12, 0.52), dark, "VendorWheel")
-            _cylinder(parent, 0.18, 0.18, 0.10, Vector3(0.50, 0.12, 0.52), dark, "VendorWheel")
-            _cylinder(parent, 0.06, 0.06, 1.05, Vector3(-0.64, 1.55, 0.0), chrome, "VendorPole")
-            _cylinder(parent, 0.06, 0.06, 1.05, Vector3(0.64, 1.55, 0.0), chrome, "VendorPole")
+            var carrinho_glb := _optional_prop("carrinho.glb")
+            if carrinho_glb != null:
+                parent.add_child(carrinho_glb)
+            else:
+                var cart_wood := _material(Color("#e2a846"), 0.0, 0.72, "wood")
+                var awning := _material(Color("#e94f5a"), 0.0, 0.66, "fabric")
+                _box(parent, Vector3(1.45, 1.0, 0.9), Vector3(0.0, 0.58, 0.0), cart_wood, "VendorCart")
+                _box(parent, Vector3(1.60, 0.08, 0.90), Vector3(0.0, 1.17, 0.0), _material(Color("#f2c35b"), 0.0, 0.66, "wood"), "VendorCounter")
+                _box(parent, Vector3(1.74, 0.10, 1.08), Vector3(0.0, 1.40, 0.0), awning, "VendorAwning")
+                _cylinder(parent, 0.18, 0.18, 0.10, Vector3(-0.50, 0.12, 0.52), dark, "VendorWheel")
+                _cylinder(parent, 0.18, 0.18, 0.10, Vector3(0.50, 0.12, 0.52), dark, "VendorWheel")
+                _cylinder(parent, 0.06, 0.06, 1.05, Vector3(-0.64, 1.55, 0.0), chrome, "VendorPole")
+                _cylinder(parent, 0.06, 0.06, 1.05, Vector3(0.64, 1.55, 0.0), chrome, "VendorPole")
             # O camelô alterna entre a Dona Marta da Feira (lote 2) e o Zé:
             # a banca ganha bandana e avental sem perder a leitura de obstáculo.
             var vendor_profiles: Array[String] = ["marta", "ze"]
             var vendor_character := _build_pedestrian_obstacle(parent, vendor_profiles[abs(parent.name.hash()) % vendor_profiles.size()], "vendor", 0.78)
             vendor_character.position = Vector3(0.0, 0.0, -0.18)
         "bench":
+            var banco_glb := _optional_prop("banco.glb")
+            if banco_glb != null:
+                parent.add_child(banco_glb)
+                return
             var bench_wood := _material(Color("#9a633d"), 0.0, 0.8, "wood")
             var bench_metal := _material(Color("#3e4d59"), 0.55, 0.52, "metal")
             _box(parent, Vector3(1.5, 0.15, 0.42), Vector3(0.0, 0.72, 0.0), bench_wood, "BenchSeat")
