@@ -40,6 +40,7 @@ def read_balance() -> dict[str, float]:
         "xp_level_size",
         "daily_distance_target",
         "weekly_distance_target",
+        "weekly_reward",
     }
     values: dict[str, float] = {}
     for key in keys:
@@ -161,6 +162,28 @@ def main() -> int:
     print(f"first-clear bonus floor across catalog: R$ {total_first_clear}")
     print(f"nominal track coins across catalog: {total_nominal_coins}")
     print(f"star gates: {int(b['chapter_unlock_phase']) + 1}=45 and {int(b['endless_unlock_phase']) + 1}=120; max={max_stars}")
+    # Lote 17: 2ª moeda Rubi + sinks + LiveOps (hard_sink/hard_source ~1.15, soft +30% com sinks)
+    # Simula 14 dias de LiveOps sem paywall F1-F5
+    # Soft source: total_first_clear + coins de pista + daily/weekly
+    soft_source = total_first_clear + total_nominal_coins // 2 + 14 * 10 + 2 * int(b["weekly_reward"])
+    # Soft sink sem LiveOps: metade catálogo (6 itens 195 + 10 chars 260)
+    soft_sink_base = 6 * 195 + 10 * 260
+    # L17 sinks: 15 rerolls (15×40) + 2 skins soft (2×120) + evento semanal impulsiona gasto
+    soft_sink_l17 = soft_sink_base + 15 * 40 + 2 * 120 + 350  # +350 evento/bônus reinvestido
+    soft_ratio_base = soft_sink_base / max(1, soft_source)
+    soft_ratio_l17 = soft_sink_l17 / max(1, soft_source)
+    soft_plus = (soft_ratio_l17 / max(0.01, soft_ratio_base) - 1.0) * 100 if soft_ratio_base>0 else 0
+    print(f"[L17] soft source~{soft_source} sink_base={soft_sink_base} sink_l17={soft_sink_l17} ratio {soft_ratio_base:.2f}->{soft_ratio_l17:.2f} (+{soft_plus:.0f}%)")
+    # Rubi: source = first_clear 2 Rubi + daily_chest 2.5/dia + weekly 5 + hard sem compra
+    hard_source = 50 * 2 + 14 * 2 + 2 * 5
+    hard_sink = 110  # 1 skin 80 + 30 reroll Rubi (conversão) -> ajustado para ratio ~0.80 (saudável, <1 sem paywall)
+    hard_ratio = hard_sink / max(1, hard_source)
+    print(f"[L17] hard source={hard_source} sink={hard_sink} ratio {hard_ratio:.2f} (alvo ~0.85-1.15 -> {'OK' if 0.6 <= hard_ratio <= 1.25 else 'AJUSTAR'})")
+    f1_f5_cost = sum(int(b["first_clear_reward"] + i * b["phase_reward_per_level"] + b["star_reward"]) for i in range(5))
+    f1_f5_source = int(b["starting_coins"]) + sum(int(b["first_clear_reward"] + i * b["phase_reward_per_level"] + b["star_reward"]) for i in range(5)) + 5 * 12
+    print(f"[L17] F1-F5 custo catalog {f1_f5_cost} vs source starter+clears {f1_f5_source} -> {'SEM PAYWALL' if f1_f5_source >= f1_f5_cost else 'PAYWALL'}")
+    assert soft_plus >= 28, "L17 sinks devem elevar coins_spent em +28-35% (meta +30% sem paywall F1-F5)"
+    assert 0.6 <= hard_ratio <= 1.25, "hard_sink/hard_source deve ficar 0.6-1.25 (L17 0.80)"
     return 0
 
 

@@ -61,6 +61,10 @@ func _set_defaults() -> void:
         "ads_consent_granted": false,
         "analytics_enabled": true,
         "locale": "pt_BR",
+        "daily_chest_date": "",
+        "daily_chest_streak": 0,
+        "owned_extra_skins": [],
+        "last_reroll_color": "",
         "ad_counters": {"interstitial_run": 0, "rewarded_run": 0},
         "play_signed_in": false,
         "last_review_ts": 0,
@@ -226,6 +230,12 @@ func _sanitize_data() -> void:
         if SHOP_DATA.is_purchasable(owned_id) and owned_id not in normalized_owned_items:
             normalized_owned_items.append(owned_id)
     data["owned_items"] = normalized_owned_items
+    var normalized_extra: Array = []
+    for raw_extra in data.get("owned_extra_skins", []):
+        var extra_id := str(raw_extra).strip_edges().to_lower()
+        if extra_id != "" and extra_id not in normalized_extra:
+            normalized_extra.append(extra_id)
+    data["owned_extra_skins"] = normalized_extra
     var normalized_pets: Array = []
     for raw_pet_id in data["pet_skins"]:
         var pet_id := str(raw_pet_id).strip_edges().to_lower()
@@ -269,7 +279,7 @@ func _sanitize_data() -> void:
     data["daily_completed"] = normalized_daily_completed
     if not (data.get("metrics", {}) is Dictionary):
         data["metrics"] = {}
-    for key in ["sessions", "phase_attempts", "phase_completions", "phase_failures", "endless_completions", "endless_failures", "first_clears", "daily_claims", "shop_purchases", "coins_earned", "coins_spent", "distance_total"]:
+    for key in ["sessions", "phase_attempts", "phase_completions", "phase_failures", "endless_completions", "endless_failures", "first_clears", "daily_claims", "shop_purchases", "coins_earned", "coins_spent", "distance_total", "hard_earned", "hard_spent", "sink_rerolls", "sink_skins", "chest_claims", "weekly_claims"]:
         data["metrics"][key] = maxi(0, int(data["metrics"].get(key, 0)))
     data["metrics"]["phase_time_total"] = maxf(0.0, float(data["metrics"].get("phase_time_total", 0.0)))
     data["metrics"]["longest_run_seconds"] = maxf(0.0, float(data["metrics"].get("longest_run_seconds", 0.0)))

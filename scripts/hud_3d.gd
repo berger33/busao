@@ -143,6 +143,8 @@ func _draw_menu() -> void:
     _panel(Rect2(48, 1055, 624, 105), Color(0.04, 0.08, 0.17, 0.82), 20)
     _text(Vector2(72, 1095), "★ %03d / 150" % int(state.get("stars", 0)), 24, YELLOW)
     _text(Vector2(425, 1095), "R$ %03d" % int(state.get("coins", 0)), 22, Color("#8ee5bb"))
+    if state.has("rubi"):
+        _text(Vector2(545, 1095), _T("RUBI_LABEL") % int(state.get("rubi", 0)) if "%d" in _T("RUBI_LABEL") else "Rubi %d" % int(state.get("rubi", 0)), 14, Color("#ff7ab8"))
     _text(Vector2(72, 1140), "🔥 %02d dias" % int(state.get("streak", 0)), 17, Color("#ffb86b"))
     _text(Vector2(330, 1140), "NÍVEL %02d • XP %d/%d" % [int(state.get("xp_level", 1)), int(state.get("xp_into_level", 0)), int(state.get("xp_into_level", 0)) + int(state.get("xp_to_next_level", 250))], 14, Color("#f9c8ae"))
     _text(Vector2(72, 1178), "ônibus impossível • humor brasileiro • câmera 3D", 14, Color("#d3e5ef"))
@@ -152,6 +154,13 @@ func _draw_map() -> void:
     _draw_ui_background()
     _header(_T("MAP_TITLE"), "★ %03d / 150" % int(state.get("stars", 0)))
     _text(Vector2(30, 126), "Brasil sem Freio • capítulo %d / 5" % (int(state.get("map_page", 0)) + 1), 17, MUTED)
+    if state.has("weekly_event"):
+        var _we: Dictionary = state.get("weekly_event", {})
+        var _we_title: String = str(_we.get("title", "Evento"))
+        var _we_desc: String = str(_we.get("desc", ""))
+        _panel(Rect2(430, 100, 260, 44), Color("#2a1f3a") if str(_we.get("id",""))=="semana_motoboy" else Color("#1f2f3a"), 10)
+        _text(Vector2(442, 120), _we_title, 11, YELLOW)
+        _text(Vector2(442, 135), _we_desc, 9, MUTED)
     var next_unlock: int = int(state.get("next_unlock_stars", 0))
     if next_unlock > 0:
         _text(Vector2(430, 126), "próximo marco: ★ %d" % next_unlock, 14, GOLD)
@@ -322,6 +331,16 @@ func _draw_shop() -> void:
                 continue
             var rect := Rect2(25.0 + col * 340.0, card_y, 330.0, 126.0)
             _character_card(rect, characters[i])
+            # Lote 17: destaque semanal (15% OFF) — estrela no card featured
+            var _feat: Dictionary = state.get("featured_item", {})
+            if str(_feat.get("id","")) == str(characters[i].get("id","")):
+                _text(rect.position + Vector2(rect.size.x - 62, 18), _T("FEATURED_DISCOUNT"), 10, YELLOW)
+        # Sinks L17: reroll cor 40 R$ + skin extra 80 Rubi (aba personagens)
+        _panel(Rect2(30, 240, 640, 34), Color(0.08,0.12,0.18,0.6), 8)
+        _text(Vector2(42, 262), "Rubi: %d" % int(state.get("rubi", 0)), 12, Color("#ff7ab8"))
+        _text(Vector2(140, 262), "Destaque: %s 15%% OFF" % str(state.get("featured_item", {}).get("id","—")) if state.has("featured_item") else "Destaque: —", 10, MUTED)
+        _button(Rect2(500, 240, 140, 28), _T("REROLL"), Color("#63e6d2") if int(state.get("coins",0))>=40 else Color("#314563"), 10)
+        _button(Rect2(500, 274, 140, 28), _T("SKIN_EXTRA"), Color("#ff7ab8") if int(state.get("rubi",0))>=80 else Color("#314563"), 9)
         _mask_band(126.0, 280.0)
         _mask_band(1125.0, 1280.0)
     elif int(state.get("shop_tab", 0)) == 1:
@@ -343,7 +362,7 @@ func _draw_shop() -> void:
                 continue
             _billing_card(rect, packs[i])
         _text_center(Vector2(360, 1095), "compras únicas • sem loot box • teste: android.test.purchased", 10, MUTED)
-    _header(_T("SHOP_TITLE"), "R$ %03d" % int(state.get("coins", 0)))
+    _header(_T("SHOP_TITLE"), "R$ %03d • Rubi %d" % [int(state.get("coins", 0)), int(state.get("rubi", 0))])
     _text(Vector2(30, 126), "%d brasileiros para correr do seu jeito." % characters.size(), 16, MUTED)
     # 3 abas: personagens | itens | pacotes
     _button(Rect2(30, 150, 210, 70), "PERSONAGENS", BLUE if int(state.get("shop_tab", 0)) == 0 else Color("#263958"), 14)
@@ -506,6 +525,15 @@ func _draw_daily() -> void:
     _text(Vector2(65, 862), "%dm / %dm • objetivo acumulado" % [mini(weekly_meters, weekly_target), weekly_target], 15, MUTED)
     _text(Vector2(65, 900), "sem pressão: o progresso fica até a virada da semana", 13, Color("#c6c5df"))
     _button(Rect2(505, 832, 145, 58), "RESGATADO" if weekly_claimed else ("RESGATAR" if weekly_ready else "EM ANDAMENTO"), GREEN if weekly_claimed else (YELLOW if weekly_ready else Color("#314563")), 12)
+    # Lote 17: Baú diário (soft+ Rubi, 1/dia)
+    var _chest: Dictionary = state.get("daily_chest", {})
+    var _chest_claimed: bool = bool(_chest.get("claimed", false))
+    var _chest_soft: int = int(_chest.get("soft", 0))
+    var _chest_hard: int = int(_chest.get("hard", 0))
+    _panel(Rect2(35, 970, 650, 110), Color("#3a2d1f") if _chest_claimed else Color("#2f3a1f"), 14)
+    _text(Vector2(55, 1005), _T("CHEST_TITLE"), 20, YELLOW if not _chest_claimed else MUTED)
+    _text(Vector2(55, 1030), (_T("CHEST_CLAIMED") if _chest_claimed else _T("CHEST_REWARD") % [_chest_soft, _chest_hard]) if "%d" in _T("CHEST_REWARD") else "+%d R$ +%d Rubi" % [_chest_soft, _chest_hard], 13, WHITE)
+    _button(Rect2(505, 995, 145, 58), _T("CHEST_CLAIMED") if _chest_claimed else _T("CHEST_CLAIM"), GREEN if _chest_claimed else YELLOW, 12)
     _button(Rect2(45, 1110, 630, 70), "VOLTAR", Color("#293955"), 22)
 
 func _draw_how_to() -> void:

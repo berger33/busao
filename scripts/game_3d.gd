@@ -1087,6 +1087,14 @@ func _finish_run(success: bool, game_over := false) -> void:
             if not is_record:
                 reward = mini(reward, BALANCE.replay_reward + distance_bonus)
             GameSave.add_coins(reward)
+            # Lote 17: bônus semanal
+            if has_node("/root/EconomyManager"):
+                var _em_w2 = get_node_or_null("/root/EconomyManager")
+                if _em_w2 and _em_w2.has_method("get_weekly_bonus_coins"):
+                    var _wb2: int = int(_em_w2.call("get_weekly_bonus_coins"))
+                    if _wb2 > 0:
+                        GameSave.add_coins(_wb2)
+                        reward += _wb2
             var xp_reward := 40 + int(distance / 12.0) if is_record else BALANCE.xp_replay
             GameSave.add_xp(xp_reward)
             result = {
@@ -1145,6 +1153,14 @@ func _finish_run(success: bool, game_over := false) -> void:
         var reward: int = base_reward + level_reward + star_reward + perfect_reward
         var xp_reward: int = (BALANCE.xp_first_clear + phase_index * BALANCE.xp_per_level) if first_clear else BALANCE.xp_replay + new_stars * 5
         GameSave.add_coins(reward)
+        # Lote 17: bônus semanal LiveOps
+        if has_node("/root/EconomyManager"):
+            var _em_w3 = get_node_or_null("/root/EconomyManager")
+            if _em_w3 and _em_w3.has_method("get_weekly_bonus_coins"):
+                var _wb3: int = int(_em_w3.call("get_weekly_bonus_coins"))
+                if _wb3 > 0:
+                    GameSave.add_coins(_wb3)
+                    reward += _wb3
         GameSave.add_xp(xp_reward)
         if phase_index == 8 and no_damage:
             GameSave.award_achievement("enchente")
@@ -3161,7 +3177,11 @@ func _sync_hud() -> void:
         "rewarded_ready": (get_node_or_null("/root/AdsManager").is_rewarded_ready() if get_node_or_null("/root/AdsManager") and get_node_or_null("/root/AdsManager").has_method("is_rewarded_ready") else false),
         "revive_available": (not _revive_used and not bool(result.get("success", true)) and screen == 3),
         "double_available": (not _double_used and bool(result.get("success", false)) and screen == 3 and int(result.get("reward", 0)) > 0),
-        "billing_packs": (get_node_or_null("/root/BillingManager").get_products() if get_node_or_null("/root/BillingManager") and get_node_or_null("/root/BillingManager").has_method("get_products") else SHOP_DATA.BILLING_PACKS)
+        "billing_packs": (get_node_or_null("/root/BillingManager").get_products() if get_node_or_null("/root/BillingManager") and get_node_or_null("/root/BillingManager").has_method("get_products") else SHOP_DATA.BILLING_PACKS),
+        "rubi": (get_node_or_null("/root/EconomyManager").get_rubi() if get_node_or_null("/root/EconomyManager") and get_node_or_null("/root/EconomyManager").has_method("get_rubi") else int(GameSave.data.get("hard_currency", 0))),
+        "daily_chest": (get_node_or_null("/root/EconomyManager").get_daily_chest_status() if get_node_or_null("/root/EconomyManager") and get_node_or_null("/root/EconomyManager").has_method("get_daily_chest_status") else {}),
+        "weekly_event": (get_node_or_null("/root/EconomyManager").get_weekly_event() if get_node_or_null("/root/EconomyManager") and get_node_or_null("/root/EconomyManager").has_method("get_weekly_event") else {}),
+        "featured_item": (get_node_or_null("/root/EconomyManager").get_featured_item() if get_node_or_null("/root/EconomyManager") and get_node_or_null("/root/EconomyManager").has_method("get_featured_item") else {})
     }
     hud.call("set_state", state)
 
@@ -3407,6 +3427,17 @@ func _handle_tap(pos: Vector2) -> void:
             _shop_tap(pos)
         _sync_hud()
     elif screen == 6:
+        # Lote 17: baú diário (EconomyManager) tem prioridade sobre missões
+        if Rect2(505, 995, 145, 58).has_point(pos) or Rect2(35, 970, 650, 110).has_point(pos):
+            var _em_daily2 = get_node_or_null("/root/EconomyManager") if has_node("/root/EconomyManager") else null
+            if _em_daily2 and _em_daily2.has_method("claim_daily_chest"):
+                var _rew2: Dictionary = _em_daily2.call("claim_daily_chest")
+                if not _rew2.is_empty():
+                    _show_feedback("BAÚ ABERTO!", "+%d R$ +%d Rubi" % [int(_rew2.get("soft",0)), int(_rew2.get("hard",0))], GOLD, "reward")
+                    _sync_hud()
+                else:
+                    _show_feedback("BAÚ JÁ ABERTO", "Volte amanhã", MUTED, "ui_back")
+            return
         if Rect2(45, 1110, 630, 70).has_point(pos):
             screen = 0
             _show_feedback("DE VOLTA", "Seu progresso está seguro", BLUE, "ui_back")
@@ -3439,6 +3470,35 @@ func _daily_at_position(pos: Vector2) -> int:
 func _shop_tap(pos: Vector2) -> void:
     var chars: Array[Dictionary] = CHARACTER_DATA.all()
     var items: Array[Dictionary] = SHOP_DATA.item_catalog()
+    # Lote 17: sinks no topo da loja personagens (reroll 40 R$ e skin 80 Rubi) — áreas fixas
+    if shop_tab == 0 and Rect2(500, 240, 140, 28).has_point(pos):
+        var _em_r = get_node_or_null("/root/EconomyManager") if has_node("/root/EconomyManager") else null
+        if _em_r and _em_r.has_method("reroll_moto_color"):
+            var _ok: bool = _em_r.call("reroll_moto_color")
+            if _ok:
+                _show_feedback("COR RERROLADA!", "-40 R$ • nova cor salva", CYAN, "reward")
+                _sync_hud()
+            else:
+                _show_feedback("SEM MOEDAS", "Precisa 40 R$", RED, "ui_back")
+        return
+    if shop_tab == 0 and Rect2(500, 272, 140, 28).has_point(pos):
+        var _em_s = get_node_or_null("/root/EconomyManager") if has_node("/root/EconomyManager") else null
+        if _em_s and _em_s.has_method("buy_extra_skin"):
+            var _skins: Array[String] = ["vermelha", "dourada", "neon"]
+            var _handled: bool = false
+            for _sk in _skins:
+                if not _em_s.call("owns_extra_skin", _sk):
+                    var _ok2: bool = _em_s.call("buy_extra_skin", _sk)
+                    if _ok2:
+                        _show_feedback("SKIN EXTRA!", "+%s • -80 Rubi" % _sk.to_upper(), Color("#ff7ab8"), "reward")
+                        _sync_hud()
+                    else:
+                        _show_feedback("SEM RUBI", "Precisa 80 Rubi", RED, "ui_back")
+                    _handled = true
+                    break
+            if not _handled:
+                _show_feedback("TODAS AS SKINS", "Você já tem todas", GREEN, "ui_confirm")
+        return
     if shop_tab == 0:
         var local_pos := Vector2(pos.x, pos.y + shop_scroll)
         for i in chars.size():
