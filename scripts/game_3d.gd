@@ -1746,7 +1746,13 @@ func _build_colonial_facade(pos: Vector3, index: int) -> void:
     _box(decor_root, Vector3(2.55, 0.09, 0.08), pos + Vector3(0.0, 2.1, -1.64), _material(_scenario_color("accent", CYAN), 0.0, 0.45, "paint"), "ColonialTrim")
 
 func _build_palm(pos: Vector3, object_scale: float) -> void:
-    _cylinder(decor_root, 0.10 * object_scale, 0.15 * object_scale, 2.7 * object_scale, pos + Vector3(0.0, 1.35 * object_scale, 0.0), _material(Color("#805338"), 0.0, 0.9), "PalmTrunk")
+	var palmeira_glb := _optional_glb("scene/palmeira.glb")
+	if palmeira_glb != null:
+		palmeira_glb.position = pos
+		palmeira_glb.scale = Vector3.ONE * object_scale
+		decor_root.add_child(palmeira_glb)
+		return
+	_cylinder(decor_root, 0.10 * object_scale, 0.15 * object_scale, 2.7 * object_scale, pos + Vector3(0.0, 1.35 * object_scale, 0.0), _material(Color("#805338"), 0.0, 0.9), "PalmTrunk")
     var leaf := _material(Color("#3eaa75"), 0.0, 0.84, "leaves")
     for i in 5:
         var branch := _box(decor_root, Vector3(0.08, 0.06, 1.0 * object_scale), pos + Vector3(0.0, 2.75 * object_scale, 0.0), leaf, "PalmLeaf")
@@ -3193,4 +3199,6 @@ func _update_clima(_delta: float) -> void:
 func _trocar_clima_do_capitulo(indice: int) -> void:
     if _clima != null:
         _clima.set_chapter(indice)
+
+
 

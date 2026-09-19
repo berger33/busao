@@ -70,18 +70,24 @@ Frente -Z, origem no chao; `_fit_model` assenta/escala por `GLB_FIT`.
 O drop-in da bicicleta foi adicionado ao `"bicycle"` de
 `_build_sidewalk_obstacle` (fit 1,85 x 1,15).
 
-## 4. Objetos / mobiliario de calcada — ❌ todos procedurais (6)
+## 4. Objetos / mobiliario de calcada — ✅ todos GLB (Lote 7)
 
-| Asset | Estado |
-|---|---|
-| `hydrant` (hidrante) | ❌ cilindros + esfera |
-| `payphone` (orelhao) | ❌ caixas |
-| `cone` (cone de obra) | ❌ cone + cilindros |
-| `bench` (banco de praca) | ❌ caixas de madeira/metal |
-| carrinho do `vendor` (camelô) | ❌ caixas + rodas (o vendedor e 3D skinned) |
-| ponto de ônibus (`bus_stop`: toldo, vidro, banco, placa) | ❌ caixas |
+| Asset | Estado | Detalhe |
+|---|---|---|
+| `hydrant` (hidrante) | ✅ `hidrante.glb` | corpo vermelho com domo, bicos laterais e volante de latão |
+| `payphone` (orelhao) | ✅ `orelhao.glb` | capuz laranja com abertura real, teclado/moedeiro/fone dentro |
+| `cone` (cone de obra) | ✅ `cone.glb` | base quadrada + 2 faixas refletivas |
+| `bench` (banco de praca) | ✅ `banco.glb` | ripas de madeira + pés/travessas de aço |
+| carrinho do `vendor` (camelô) | ✅ `carrinho.glb` | corpo/tampo de madeira, vitrine, toldo listrado (o vendedor e 3D skinned) |
+| ponto de ônibus (`bus_stop`) | ✅ `ponto.glb` | abrigo: colunas, teto com testa amarela, vidros, banco laranja |
+| lixeira de rua | ✅ `lixeira.glb` | tambor verde suspenso em poste, placa de reciclagem |
+| poste de luz | ✅ `poste.glb` | haste afilada + braço curvo + lente emissiva quente |
 
-Sem drop-in no codigo hoje — o lote 7 adicione o caminho GLB.
+Modelados neste repo por Blender headless (`tools/blender/build_lote7.py`),
+escala real 1:1, origem no chao, frente -Z. Drop-in via `_optional_prop`
+(`_build_sidewalk_obstacle`, `_build_lamp`, `_create_bus_stop`) e `_prop_glb`
+no `building_kit.gd` (banco/lixeira/hidrante dos quarteirões). A placa
+`StopSign` segue procedural de propósito (recebe skin/cor do GameSave).
 
 ## 5. Coletaveis — ✅ todos GLB (Lote 8)
 

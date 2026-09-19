@@ -106,6 +106,20 @@ ficam FORA do repo e podem ser limpos entre sessoes; para reconstruir tudo
 sh tools/blender/make_env.sh
 ```
 
+## Lote 8 — coletaveis + ceu (build_lote8.py)
+
+```bash
+sh tools/blender/run_bpy.sh tools/blender/build_lote8.py
+```
+
+Onze coletaveis em `assets/collectibles/` (`coin` com faces "R$ 0,25" /
+"BRASIL 2026", `golden` bilhete "PREMIADO", `coffee`, `bread`, `pastel`,
+`sugarcane`, `pass` vale "BUSÃO", `coxinha`, `guarana`, `pix` celular com
+tela emissiva, `umbrella`) + `aviao` e `drone` em `assets/sky_fx/`.
+**Centrados na origem** (o node pai gira em Y no jogo) com frente -Y no
+Blender. Textos/letreiros gerados por PIL no proprio build. O glow
+translucido continua no GDScript nos dois caminhos (GLB e fallback).
+
 ## Lote 7 — mobiliario urbano (build_lote7.py)
 
 Oito props originais em escala real: `cone`, `hidrante`, `orelhao`, `banco`,
@@ -115,3 +129,20 @@ Contrato: frente -Z no Godot (+Y no Blender), origem no chao, escala 1:1
 finas** (catmull-clark encolhe/entorta ripas e tetos); o orelhao usa casca
 esferica com abertura recortada via bmesh. Drop-ins: `_optional_prop()` em
 `game_3d.gd` e `_prop_glb()` em `building_kit.gd`.
+
+## Lote 9A — cenario miudo (build_lote9a.py)
+
+```bash
+sh tools/blender/run_bpy.sh tools/blender/build_lote9a.py
+```
+
+Oito GLBs em `assets/scene/`: `palmeira` (folhas = `painel_pena` do kit +
+nervuras + 3 cocos), `arvore`, `caixa_dagua`, `varal`, `bandeira` (pano em
+grade ondulada + Solidify), `outdoor`, `portao` e `barraca`. Pecas com cor
+da fase usam materiais `Tint*` de albedo branco (`TintFabric`, `TintPaint`,
+`TintMetal`) — o jogo pinta via `_tint_glb()`; nos previews eles recebem
+uma cor-amostra mostarda so para a foto (o GLB sai branco). Licao daqui: a
+luz `Cheia` do `setup_preview` nasce colada na origem e vira holofote no
+chao em pecas altas — o `render_prop` deste lote a reposiciona proporcional
+a distancia, e a limpeza entre pecas purga datablocks orfaos (luzes/cameras/
+mundos/malhas) para nao colidir nomes (`Sol.001`...).
