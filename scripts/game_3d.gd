@@ -1737,6 +1737,12 @@ func _build_terminal_facade(pos: Vector3, _index: int) -> void:
     _box(decor_root, Vector3(3.5, 0.12, 0.72), pos + Vector3(0.0, 3.25, 0.0), _material(_scenario_color("accent", CYAN), 0.0, 0.42, "metal"), "TerminalRoof")
 
 func _build_market_stall(pos: Vector3, _index: int) -> void:
+    var barraca_glb := _optional_glb("scene/barraca.glb")
+    if barraca_glb != null:
+        barraca_glb.position = pos
+        decor_root.add_child(barraca_glb)
+        _tint_glb(barraca_glb, _scenario_color("accent", RED))
+        return
     _box(decor_root, Vector3(1.5, 1.1, 1.0), pos + Vector3(0.0, 0.56, 0.0), _material(Color("#d88c43"), 0.0, 0.76, "wood"), "MarketCart")
     _box(decor_root, Vector3(1.75, 0.10, 1.15), pos + Vector3(0.0, 1.34, 0.0), _material(_scenario_color("accent", RED), 0.0, 0.62, "fabric"), "MarketAwning")
     _sphere(decor_root, 0.23, pos + Vector3(0.0, 1.52, -0.08), _material(Color("#b8785a"), 0.0, 0.78), "MarketSeller")
@@ -1760,11 +1766,22 @@ func _build_palm(pos: Vector3, object_scale: float) -> void:
         branch.rotation.x = -0.28
 
 func _build_water_tank(pos: Vector3, height: float) -> void:
+    var caixa_glb := _optional_glb("scene/caixa_dagua.glb")
+    if caixa_glb != null:
+        # modelada para height 2.9 (unica chamada, na fatia da favela)
+        caixa_glb.position = pos
+        decor_root.add_child(caixa_glb)
+        return
     _cylinder(decor_root, 0.55, 0.55, 0.85, pos + Vector3(0.0, height, 0.0), _material(Color("#4d78a1"), 0.0, 0.62, "metal"), "WaterTank")
     _cylinder(decor_root, 0.08, 0.08, height - 0.35, pos + Vector3(-0.35, (height - 0.35) * 0.5, 0.0), _material(Color("#76533e"), 0.0, 0.92, "metal"), "TankLeg")
     _cylinder(decor_root, 0.08, 0.08, height - 0.35, pos + Vector3(0.35, (height - 0.35) * 0.5, 0.0), _material(Color("#76533e"), 0.0, 0.92, "metal"), "TankLeg")
 
 func _build_clothesline(pos: Vector3) -> void:
+    var varal_glb := _optional_glb("scene/varal.glb")
+    if varal_glb != null:
+        varal_glb.position = pos
+        decor_root.add_child(varal_glb)
+        return
     _cylinder(decor_root, 0.035, 0.035, 2.1, pos + Vector3(-0.9, 1.05, 0.0), _material(Color("#594a43"), 0.0, 0.9, "wood"), "ClothesPole")
     _cylinder(decor_root, 0.035, 0.035, 2.1, pos + Vector3(0.9, 1.05, 0.0), _material(Color("#594a43"), 0.0, 0.9, "wood"), "ClothesPole")
     _box(decor_root, Vector3(1.9, 0.025, 0.025), pos + Vector3(0.0, 1.85, 0.0), _material(Color("#a5a19a"), 0.0, 0.95, "metal"), "ClothesLine")
@@ -1772,6 +1789,12 @@ func _build_clothesline(pos: Vector3) -> void:
         _box(decor_root, Vector3(0.30, 0.38, 0.04), pos + Vector3(-0.63 + i * 0.42, 1.62, -0.02), _material([Color("#e56d63"), Color("#5d9bd1"), Color("#e5c44f"), Color("#82c99d")][i], 0.0, 0.8, "fabric"), "Clothes")
 
 func _build_gate(pos: Vector3, color: Color) -> void:
+    var portao_glb := _optional_glb("scene/portao.glb")
+    if portao_glb != null:
+        portao_glb.position = pos
+        decor_root.add_child(portao_glb)
+        _tint_glb(portao_glb, color)
+        return
     var metal := _material(color, 0.35, 0.45, "metal")
     _box(decor_root, Vector3(1.8, 1.7, 0.08), pos + Vector3(0.0, 0.85, 0.0), metal, "Gate")
     for i in 4:
@@ -1804,6 +1827,12 @@ func _build_utility_wire(start: Vector3, finish: Vector3) -> void:
     wire.look_at(finish + Vector3(0.0, 2.9, 0.0), Vector3.UP)
 
 func _build_flag(pos: Vector3, color: Color) -> void:
+    var bandeira_glb := _optional_glb("scene/bandeira.glb")
+    if bandeira_glb != null:
+        bandeira_glb.position = pos
+        decor_root.add_child(bandeira_glb)
+        _tint_glb(bandeira_glb, color)
+        return
     _cylinder(decor_root, 0.025, 0.025, 2.7, pos + Vector3(0.0, 1.35, 0.0), _material(Color("#d2d0c2"), 0.0, 0.68, "metal"), "FlagPole")
     _box(decor_root, Vector3(0.72, 0.38, 0.035), pos + Vector3(0.34, 2.38, 0.0), _material(color, 0.0, 0.64, "fabric"), "Flag")
 
@@ -1812,6 +1841,12 @@ func _build_flags(pos: Vector3, color: Color) -> void:
     _build_flag(pos + Vector3(0.9, 0.0, -0.6), color.lightened(0.14))
 
 func _build_billboard(pos: Vector3, color: Color) -> void:
+    var outdoor_glb := _optional_glb("scene/outdoor.glb")
+    if outdoor_glb != null:
+        outdoor_glb.position = pos
+        decor_root.add_child(outdoor_glb)
+        _tint_glb(outdoor_glb, color)
+        return
     _cylinder(decor_root, 0.04, 0.04, 3.8, pos + Vector3(0.0, 1.9, 0.0), _material(Color("#39404d"), 0.15, 0.5, "metal"), "BillboardPole")
     _box(decor_root, Vector3(2.25, 1.15, 0.08), pos + Vector3(0.0, 3.65, 0.0), _material(color, 0.0, 0.38, "paint"), "Billboard")
 
@@ -1833,6 +1868,12 @@ func _build_lamp(pos: Vector3, accent: Color) -> void:
     _box(decor_root, Vector3(0.65, 0.06, 0.06), pos + Vector3(0.27, 3.18, 0.0), _material(Color("#3c4654"), 0.35, 0.4, "metal"), "LampArm")
 
 func _build_tree(pos: Vector3, object_scale: float) -> void:
+    var arvore_glb := _optional_glb("scene/arvore.glb")
+    if arvore_glb != null:
+        arvore_glb.position = pos
+        arvore_glb.scale = Vector3.ONE * object_scale
+        decor_root.add_child(arvore_glb)
+        return
     _cylinder(decor_root, 0.12 * object_scale, 0.16 * object_scale, 1.7 * object_scale, pos + Vector3(0.0, 0.85 * object_scale, 0.0), _material(Color("#67452f"), 0.0, 0.95, "wood"), "TreeTrunk")
     var foliage := _material(Color("#3b9b69"), 0.0, 0.86, "leaves")
     _sphere(decor_root, 0.62 * object_scale, pos + Vector3(-0.28, 1.65 * object_scale, 0.0), foliage, "TreeLeaf")
@@ -1959,6 +2000,7 @@ const GLB_FIT := {
 }
 var _glb_cache: Dictionary = {}
 var _animal_glb_cache: Dictionary = {}
+var _tint_cache: Dictionary = {}
 
 func _optional_model(file: String) -> Node3D:
     # Drop-in opcional: se existir um modelo GLB em assets/vehicles/<file>,
@@ -2016,6 +2058,48 @@ func _optional_glb(subpath: String) -> Node3D:
 		push_warning("Falha ao instanciar GLB: " + subpath)
 		return null
 	return node
+
+
+func _tint_glb(node: Node3D, tint) -> void:
+    # Pinta os materiais "Tint*" de um GLB de cenario com a cor da fase.
+    # `tint` aceita um Color (uma cor para todos os Tint*) ou um Dictionary
+    # {nome_do_material: Color} para pecas com varias cores (parede/telhado).
+    # Cada (nome, cor) e duplicado uma vez e aplicado por surface override —
+    # a cena em cache (_glb_cache) nunca e modificada.
+    if node == null:
+        return
+    var stack: Array[Node] = [node]
+    while not stack.is_empty():
+        var current: Node = stack.pop_back()
+        stack.append_array(current.get_children())
+        if not current is MeshInstance3D:
+            continue
+        var mesh_node := current as MeshInstance3D
+        var mesh := mesh_node.mesh
+        if mesh == null:
+            continue
+        for surface in mesh.get_surface_count():
+            var base := mesh.surface_get_material(surface)
+            if base == null:
+                continue
+            var mat_name := str(base.resource_name)
+            if not mat_name.begins_with("Tint"):
+                continue
+            var color := Color.WHITE
+            if tint is Dictionary:
+                if not (tint as Dictionary).has(mat_name):
+                    continue
+                color = (tint as Dictionary)[mat_name]
+            else:
+                color = tint
+            var key := mat_name + "#" + color.to_html()
+            if not _tint_cache.has(key):
+                var dup := base.duplicate() as Material
+                if dup == null:
+                    continue
+                dup.set("albedo_color", color)
+                _tint_cache[key] = dup
+            mesh_node.set_surface_override_material(surface, _tint_cache[key])
 
 
 func _model_bounds(root: Node3D) -> AABB:
@@ -3199,6 +3283,3 @@ func _update_clima(_delta: float) -> void:
 func _trocar_clima_do_capitulo(indice: int) -> void:
     if _clima != null:
         _clima.set_chapter(indice)
-
-
-
