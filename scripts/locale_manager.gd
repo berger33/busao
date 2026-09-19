@@ -120,7 +120,7 @@ func tr_format(key: String, args: Array = []) -> String:
     var out := base
     for a in args:
         # substitui primeiro %s/%d/%0*d
-        out = out.replace("%s", str(a), false) if "%s" in out else out
+        out = out.replace("%s", str(a)) if "%s" in out else out
         # Para %d e %02d etc, usa String % Array quando possível
     # Fallback: se ainda tem % e args, tenta sprintf
     if "%" in out and not args.is_empty():
@@ -138,7 +138,7 @@ func tr_format(key: String, args: Array = []) -> String:
         # Não há try, então fazemos simples replace para %d
         for arg in args:
             if "%d" in out:
-                out = out.replace("%d", str(int(arg)), false)
+                out = out.replace("%d", str(int(arg)))
             elif "%02d" in out:
                 out = out.replace("%02d", "%02d" % int(arg))
     return out
