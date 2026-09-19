@@ -260,6 +260,7 @@ func _ready() -> void:
     _setup_world_kit()           # Lote 3: rua do building_kit
     _setup_clima()               # Lote 4: clima (por cima do render e da rua)
     _setup_ads_billing()         # Lote 11/12: conecta Ads/Billing
+    _setup_play_services()     # Lote 13: Play Games + cloud + review
 
 func _notification(what: int) -> void:
     if what == NOTIFICATION_WM_GO_BACK_REQUEST:
@@ -1063,6 +1064,8 @@ func _finish_run(success: bool, game_over := false) -> void:
             }
             _show_feedback("MAIS UM!", "Seu melhor corre ainda está aí", RED, "impact_heavy")
         GameSave.flush()
+        _push_play_progress()
+        _maybe_request_review()
         run_mode = "results"
         screen = 3
         _update_banner_visibility()
@@ -1141,6 +1144,8 @@ func _finish_run(success: bool, game_over := false) -> void:
         }
         _show_feedback("O BUSÃO FOI EMBORA", "Use as três faixas a seu favor", RED, "impact_heavy")
     GameSave.flush()
+    _push_play_progress()
+    _maybe_request_review()
     run_mode = "results"
     screen = 3
     _update_banner_visibility()
@@ -3652,6 +3657,61 @@ func _setup_ads_billing() -> void:
         if not billing.is_connected("owned_restored", Callable(self, "_on_billing_restored")):
             billing.owned_restored.connect(_on_billing_restored)
     _update_banner_visibility()
+
+
+# --- Lote 13: Play Games / Cloud / In-App Review ---------------------------
+func _setup_play_services() -> void:
+    var ps := get_node_or_null("/root/PlayServicesManager")
+    if ps == null: return
+    if not ps.is_connected("signed_in", Callable(self, "_on_play_signed_in")):
+        ps.signed_in.connect(_on_play_signed_in)
+    if not ps.is_connected("cloud_saved", Callable(self, "_on_play_cloud_saved")):
+        ps.cloud_saved.connect(_on_play_cloud_saved)
+    if not ps.is_connected("cloud_loaded", Callable(self, "_on_play_cloud_loaded")):
+        ps.cloud_loaded.connect(_on_play_cloud_loaded)
+    if not ps.is_connected("review_requested", Callable(self, "_on_play_review_requested")):
+        ps.review_requested.connect(_on_play_review_requested)
+    if not ps.is_connected("achievement_unlocked", Callable(self, "_on_play_achievement")):
+        ps.achievement_unlocked.connect(_on_play_achievement)
+
+func _on_play_signed_in() -> void:
+    _show_feedback("PLAY GAMES", "Progresso na nuvem ativo", GREEN, "ui_confirm")
+    _sync_hud()
+
+func _on_play_cloud_saved() -> void:
+    print("[play] cloud sync ok")
+    _sync_hud()
+
+func _on_play_cloud_loaded(_snap: Dictionary) -> void:
+    _show_feedback("NUVEM RESTAURADA", "Progresso e compras recuperados", GOLD, "reward")
+    _sync_hud()
+
+func _on_play_review_requested() -> void:
+    print("[play] review solicitado")
+
+func _on_play_achievement(id: String) -> void:
+    print("[play] achievement %s" % id)
+
+func _push_play_progress() -> void:
+    var ps := get_node_or_null("/root/PlayServicesManager")
+    if ps == null: return
+    if ps.has_method("cloud_save"):
+        ps.cloud_save()
+    if ps.has_method("submit_leaderboard_score"):
+        ps.submit_leaderboard_score("stars", int(GameSave.total_stars()))
+        if int(GameSave.data.get("endless_best", 0)) > 0:
+            ps.submit_leaderboard_score("endless", int(GameSave.data["endless_best"]))
+    if ps.has_method("unlock_achievement"):
+        for ach in GameSave.data.get("achievements", []):
+            ps.unlock_achievement(str(ach))
+        for badge in GameSave.data.get("badges", []):
+            ps.unlock_achievement(str(badge))
+
+func _maybe_request_review() -> void:
+    var ps := get_node_or_null("/root/PlayServicesManager")
+    if ps == null or not ps.has_method("request_review_after_run"): return
+    var first_clears: int = int(GameSave.data.get("metrics", {}).get("first_clears", 0))
+    ps.request_review_after_run(first_clears)
 
 func _update_banner_visibility() -> void:
     var ads := get_node_or_null("/root/AdsManager")

@@ -17,6 +17,7 @@ AudioManager="*res://scripts/audio_manager.gd"
 RenderQuality="*res://scripts/render_quality.gd"
 AdsManager="*res://scripts/ads_manager.gd"
 BillingManager="*res://scripts/billing_manager.gd"
+PlayServicesManager="*res://scripts/play_services_manager.gd"
 
 [display/window]
 size/viewport_width=720

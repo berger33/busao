@@ -9,6 +9,7 @@ const SAVE_PATH := "user://corre_pro_ponto.json"
 const BACKUP_PATH := "user://corre_pro_ponto.bak.json"
 const TEMP_PATH := "user://corre_pro_ponto.tmp.json"
 const SAVE_SCHEMA_VERSION := 3
+const CLOUD_SNAPSHOT_KEYS: Array = ["schema_version","coins","hard_currency","remove_ads","phase_stars","best_times","achievements","inventory","owned_items","pet_skins","equipped_character","xp","daily_streak","max_streak","metrics","endless_best","endless_unlocked"]
 
 var data: Dictionary = {}
 var dirty := false
@@ -59,6 +60,9 @@ func _set_defaults() -> void:
         "remove_ads": false,
         "ads_consent_granted": false,
         "ad_counters": {"interstitial_run": 0, "rewarded_run": 0},
+        "play_signed_in": false,
+        "last_review_ts": 0,
+        "review_requests": 0,
         "daily_date": "",
         "daily_completed": [],
         "daily_progress": {"meters": 0, "coins": 0, "clean": false},
@@ -172,6 +176,9 @@ func _sanitize_data() -> void:
     data["ad_counters"] = {"interstitial_run": maxi(0,int(ad_c.get("interstitial_run",0))), "rewarded_run": maxi(0,int(ad_c.get("rewarded_run",0)))}
     if not (data.get("retention_flags", {}) is Dictionary):
         data["retention_flags"] = {"d1": false, "d7": false, "d30": false}
+    data["play_signed_in"] = bool(data.get("play_signed_in", false))
+    data["last_review_ts"] = maxi(0, int(data.get("last_review_ts", 0)))
+    data["review_requests"] = maxi(0, int(data.get("review_requests", 0)))
     var flags: Dictionary = data["retention_flags"]
     data["retention_flags"] = {
         "d1": bool(flags.get("d1", false)),
@@ -408,6 +415,111 @@ func record_ad_counter(kind: String) -> void:
 func add_rewarded_bonus_coins(amount: int) -> bool:
     if amount<=0: return false
     add_coins(amount)
+    return true
+
+func _queue_flush() -> void:
+    flush()
+
+# ==== Lote 13 — Play Games Cloud Snapshot (<=50 KB) ====
+
+func get_cloud_snapshot() -> Dictionary:
+    var snap: Dictionary = {}
+    snap["v"] = 1
+    snap["ts"] = int(Time.get_unix_time_from_system())
+    snap["schema_version"] = SAVE_SCHEMA_VERSION
+    for k in CLOUD_SNAPSHOT_KEYS:
+        if not data.has(k):
+            continue
+        # Clona apenas chaves limitadas; não inclui flags locais nem ad_counters
+        var v = data[k]
+        if v is Array:
+            snap[k] = v.duplicate(true)
+        elif v is Dictionary:
+            snap[k] = v.duplicate(true)
+        else:
+            snap[k] = v
+    # Tamanho: JSON.stringify truncado em 50 KB — remove métricas verbosas se estourar
+    var j := JSON.stringify(snap)
+    if j.length() > 50 * 1024:
+        # Evita esgotar cota: descarta event_counts verbosos
+        if snap.get("metrics", {}).has("event_counts"):
+            (snap["metrics"] as Dictionary).erase("event_counts")
+        j = JSON.stringify(snap)
+    if j.length() > 50 * 1024:
+        # Ainda grande: esvazia metrics por completo (recuperável)
+        snap["metrics"] = {"first_clears": int(data.get("metrics", {}).get("first_clears", 0))}
+        j = JSON.stringify(snap)
+    # Enforce hard: se ainda >50KB aborta (não sobe snapshot corrompido)
+    if j.length() > 50 * 1024:
+        push_warning("[save] snapshot >50KB (%d), abort salvo" % j.length())
+        return {}
+    return snap
+
+func apply_cloud_snapshot(snap: Dictionary) -> bool:
+    if not snap is Dictionary:
+        return false
+    if int(snap.get("v", 0)) != 1:
+        return false
+    var ts_remote: int = int(snap.get("ts", 0))
+    var local_best: int = total_stars()
+    var remote_stars_arr: Array = snap.get("phase_stars", [])
+    var remote_total: int = 0
+    for v in remote_stars_arr:
+        remote_total += int(v)
+    # Só sobrescreve se remoto tiver progresso >= local (reinstall canon: restaura remove_ads/estrelas)
+    # E restaura compras estrelas/hard_currency por max()
+    if remote_total < local_best and not bool(snap.get("remove_ads", false)):
+        # Remoto vazio → não sobrescreve save local maior
+        if int(data.get("coins", 0)) > 40:
+            return false
+    # Merge conservador: estrelas por max por fase, moedas/compras por max
+    if snap.has("phase_stars") and snap["phase_stars"] is Array:
+        for i in range(mini(data["phase_stars"].size(), (snap["phase_stars"] as Array).size())):
+            var remote := clampi(int((snap["phase_stars"] as Array)[i]), 0, 3)
+            data["phase_stars"][i] = maxi(int(data["phase_stars"][i]), remote)
+    # Moedas/hard: max (evita perder moedas farmadas offline que snapshot antigo não tinha)
+    if snap.has("coins"):
+        data["coins"] = maxi(int(data.get("coins", 0)), int(snap["coins"]))
+    if snap.has("hard_currency"):
+        data["hard_currency"] = maxi(int(data.get("hard_currency", 0)), int(snap["hard_currency"]))
+    # remove_ads: OR restaura compra pós-reinstall
+    if bool(snap.get("remove_ads", false)):
+        data["remove_ads"] = true
+    # Inventory/owned: union
+    for k in ["inventory", "owned_items", "pet_skins", "achievements"]:
+        if not snap.has(k) or not snap[k] is Array:
+            continue
+        for id in (snap[k] as Array):
+            var s := str(id)
+            if s != "" and s not in (data[k] as Array):
+                (data[k] as Array).append(s)
+    # Equipped: só se inventory contém
+    if snap.has("equipped_character") and str(snap["equipped_character"]) in (data["inventory"] as Array):
+        data["equipped_character"] = str(snap["equipped_character"])
+    if snap.has("xp"):
+        data["xp"] = maxi(int(data.get("xp", 0)), int(snap["xp"]))
+    if snap.has("endless_best"):
+        data["endless_best"] = maxi(int(data.get("endless_best", 0)), int(snap["endless_best"]))
+    if bool(snap.get("endless_unlocked", false)):
+        data["endless_unlocked"] = true
+    # Best times: min
+    if snap.has("best_times") and snap["best_times"] is Dictionary:
+        for k in (snap["best_times"] as Dictionary).keys():
+            var rv := float((snap["best_times"] as Dictionary)[k])
+            if not data["best_times"].has(k) or rv < float(data["best_times"][k]):
+                if rv > 0.0 and rv < 999999.0:
+                    data["best_times"][k] = snappedf(rv, 0.01)
+    # Metrics: max por contador relevante
+    if snap.has("metrics") and snap["metrics"] is Dictionary:
+        for mk in ["first_clears", "sessions", "phase_attempts", "phase_completions", "distance_total"]:
+            if snap["metrics"].has(mk):
+                data["metrics"][mk] = maxi(int(data["metrics"].get(mk, 0)), int(snap["metrics"][mk]))
+        if snap["metrics"].has("event_counts") and snap["metrics"]["event_counts"] is Dictionary:
+            for ek in (snap["metrics"]["event_counts"] as Dictionary).keys():
+                var cnt: int = int((snap["metrics"]["event_counts"] as Dictionary)[ek])
+                var cur: int = int((data["metrics"]["event_counts"] as Dictionary).get(ek, 0))
+                (data["metrics"]["event_counts"] as Dictionary)[ek] = maxi(cur, cnt)
+    flush()
     return true
 
 func unlock(item: String, _requested_price: int = -1) -> bool:
