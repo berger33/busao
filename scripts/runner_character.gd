@@ -1,10 +1,12 @@
 extends Node3D
 ## Humanoide 3D principal do runner.
 ##
-## O personagem de gameplay é um asset real do Quaternius Universal Base
-## Characters: corpo humano skinned, cabelo, olhos e roupa modular com UV/PBR.
-## O runner nunca depende de primitivas para a aparência principal. Primitivas
-## só existem no fallback de diagnóstico caso o importador do GLTF falhe.
+## O personagem de gameplay agora é 100% original Blender headless 4.5
+## (gerado por tools/blender/build_humanos.py): Humano_M/F rigged/skinned
+## com 6 clips Idle/Walk/Sprint/Jump/Crouch. Mantém compatibilidade legacy
+## com Quaternius como fallback offline, mas o caminho preferencial é o
+## humano original em assets/characters/humanos_originais/. Primitivas só
+## existem no fallback de diagnóstico caso o importador do GLTF falhe.
 
 const CHARACTER_DATA = preload("res://scripts/character_data.gd")
 const TEXTURE_CREATOR_TOP = preload("res://assets/textures/tecido_realista.png")
@@ -25,6 +27,12 @@ const BASE_ROOT := MODEL_ROOT + "/base"
 const PARTS_ROOT := MODEL_ROOT + "/parts"
 const ANIMATION_LIBRARY_PATH := MODEL_ROOT + "/animation/UAL1_Standard.res"
 const ANIMATION_SOURCE_PATH := MODEL_ROOT + "/animation/UAL1_Standard.glb"
+# Lote 19 — humanos 100% originais Blender (preferencial, do zero, PBR)
+const ORIGINAL_ROOT := "res://assets/characters/humanos_originais"
+const ORIGINAL_BODY_PATHS: Dictionary = {
+    "M": ORIGINAL_ROOT + "/Humano_M.glb",
+    "F": ORIGINAL_ROOT + "/Humano_F.glb",
+}
 const MODEL_SCALE := 1.18
 const MODEL_FLOOR_OFFSET := 0.012
 const CLOTHING_INFLATE := 0.008
@@ -126,8 +134,19 @@ func set_character(next_id: String) -> void:
     gender = "F" if str(profile.get("gender", "M")) == "F" else "M"
     _clear_character()
     _build_shadow()
-    var body_path: String = str(BODY_PATHS.get(gender, BODY_PATHS["M"]))
-    var body_scene := load(body_path) as PackedScene
+    # Lote 19: humano original Blender 100% do zero tem prioridade (sem CC0).
+    var original_path: String = str(ORIGINAL_BODY_PATHS.get(gender, ""))
+    var is_original := false
+    var body_path: String = original_path
+    var body_scene: PackedScene = null
+    if original_path != "" and ResourceLoader.exists(original_path):
+        body_scene = load(original_path) as PackedScene
+        if body_scene != null:
+            is_original = true
+    if body_scene == null:
+        body_path = str(BODY_PATHS.get(gender, BODY_PATHS["M"]))
+        body_scene = load(body_path) as PackedScene
+        is_original = false
     if body_scene == null:
         _build_fallback("asset principal não importado")
         return
@@ -138,7 +157,7 @@ func set_character(next_id: String) -> void:
     model_pivot = Node3D.new()
     model_pivot.name = "ModelPivot"
     add_child(model_pivot)
-    model_root.name = "QuaterniusHuman"
+    model_root.name = "HumanoOriginal" if is_original else "QuaterniusHuman"
     model_root.rotation.y = MODEL_FACING_YAW
     model_root.scale = Vector3.ONE * MODEL_SCALE
     model_root.position.y = MODEL_FLOOR_OFFSET
@@ -148,6 +167,16 @@ func set_character(next_id: String) -> void:
         _build_fallback("esqueleto humano não encontrado")
         return
     _cache_skeleton()
+    if is_original:
+        _apply_skin_tint(profile.get("skin", Color.WHITE))
+        _apply_profile_palette(profile)
+        _attach_creator_details(profile)
+        _attach_batch2_details(profile)
+        if use_animation_library:
+            _setup_original_animation()
+        _configure_mesh_shadows(model_root)
+        primary_asset_loaded = true
+        return
     _split_base_body()
     _attach_outfit(gender)
     _apply_skin_tint(profile.get("skin", Color.WHITE))
@@ -355,18 +384,14 @@ func _tint_exposed_skin_materials(mesh: MeshInstance3D) -> void:
 func _apply_skin_tint(skin_color: Color) -> void:
     if skeleton == null:
         return
-    # Keep the authored texture detail and multiply only the skin regions.
     var tint := Color(skin_color.r / 0.72, skin_color.g / 0.48, skin_color.b / 0.36, 1.0)
     tint.r = clampf(tint.r, 0.62, 1.35)
     tint.g = clampf(tint.g, 0.62, 1.35)
     tint.b = clampf(tint.b, 0.62, 1.35)
-    for child in model_root.get_children():
-        if not child is MeshInstance3D:
-            continue
-        var mesh := child as MeshInstance3D
-        var base_skin := str(mesh.name).begins_with("BaseSkin_")
+    for mesh in _skinned_meshes(model_root):
         if mesh.mesh == null:
             continue
+        var base_skin := str(mesh.name).begins_with("BaseSkin_")
         for surface_index in mesh.mesh.get_surface_count():
             var source_material := mesh.get_surface_override_material(surface_index)
             if source_material == null:
@@ -390,14 +415,6 @@ func _apply_profile_palette(profile: Dictionary) -> void:
         if mesh.mesh == null:
             continue
         var mesh_name := str(mesh.name).to_lower()
-        var garment_color := Color.WHITE
-        if mesh_name.contains("outfit"):
-            if mesh_name.contains("_body") or mesh_name.contains("_arms"):
-                garment_color = shirt
-            elif mesh_name.contains("_legs"):
-                garment_color = pants
-            elif mesh_name.contains("_feet"):
-                garment_color = shoes
         for surface_index in mesh.mesh.get_surface_count():
             var source_material := mesh.get_surface_override_material(surface_index)
             if source_material == null:
@@ -407,9 +424,23 @@ func _apply_profile_palette(profile: Dictionary) -> void:
             var material_name := str(source_material.resource_name).to_lower()
             if material_name.contains("quaterniusskin"):
                 continue
-            var tint := garment_color
-            if material_name.contains("hair"):
+            var tint := Color.WHITE
+            # Original Blender humano usa nomes Camisa/Calca/Sapato/Hair nos materiais
+            if material_name.contains("camisa"):
+                tint = shirt
+            elif material_name.contains("calca"):
+                tint = pants
+            elif material_name.contains("sapato"):
+                tint = shoes
+            elif material_name.contains("hair"):
                 tint = hair.lightened(0.10)
+            elif mesh_name.contains("outfit"):
+                if mesh_name.contains("_body") or mesh_name.contains("_arms"):
+                    tint = shirt
+                elif mesh_name.contains("_legs"):
+                    tint = pants
+                elif mesh_name.contains("_feet"):
+                    tint = shoes
             if tint == Color.WHITE:
                 continue
             var material := source_material.duplicate() as BaseMaterial3D
@@ -769,6 +800,50 @@ func _creator_material(texture: Texture2D, color: Color, roughness: float, metal
         material.roughness_texture = TEXTURE_CREATOR_RUBBER_R
     return material
 
+func _setup_original_animation() -> void:
+    # O GLB original do Lote 19 já vem com AnimationPlayer e Skeleton no mesmo arquivo.
+    # Reaproveita o player embutido; se o importador não criou library "body", cria uma
+    # compatível para que _play_clip("body/...") continue funcionando.
+    var embedded: AnimationPlayer = _find_animation_player(model_root)
+    if embedded == null:
+        using_external_animation = false
+        _apply_neutral_pose()
+        return
+    animation_player = embedded
+    # O importer glTF do Godot coloca as animações diretamente no player sem library.
+    # Normaliza criando a library "body" a partir das animações existentes.
+    if animation_player.get_animation_library_list().is_empty():
+        var lib := AnimationLibrary.new()
+        for anim_name in animation_player.get_animation_list():
+            var anim: Animation = animation_player.get_animation(anim_name)
+            if anim != null:
+                lib.add_animation(anim_name, anim)
+        animation_player.add_animation_library("body", lib)
+        # limpa animações soltas duplicadas
+        for anim_name in animation_player.get_animation_list():
+            if "/" not in anim_name:
+                animation_player.remove_animation(anim_name)
+    # Fallback: se ainda não tem Idle, tenta extrair via cena (caso importação antiga)
+    if not animation_player.has_animation("body/Idle_Loop"):
+        var lib2 := _extract_animation_library_from_glb()
+        if lib2 != null and lib2.has_animation("Idle_Loop"):
+            if not animation_player.has_animation_library("body"):
+                animation_player.add_animation_library("body", lib2)
+    using_external_animation = animation_player.has_animation("body/Idle_Loop") or animation_player.has_animation("Idle_Loop")
+    if using_external_animation:
+        # garante que _play_clip encontra o nome certo
+        _play_clip("Idle_Loop")
+    else:
+        _apply_neutral_pose()
+
+func _resolve_clip_name(clip: String) -> String:
+    if animation_player == null:
+        return ""
+    for candidate in ["body/" + clip, clip]:
+        if animation_player.has_animation(candidate):
+            return candidate
+    return ""
+
 func _setup_animation_library() -> void:
     animation_player = AnimationPlayer.new()
     animation_player.name = "QuaterniusAnimationPlayer"
@@ -856,8 +931,8 @@ func _find_animation_player(node: Node) -> AnimationPlayer:
 func _play_clip(clip: String) -> void:
     if not using_external_animation or animation_player == null:
         return
-    var animation_name := "body/" + clip
-    if not animation_player.has_animation(animation_name):
+    var animation_name := _resolve_clip_name(clip)
+    if animation_name == "":
         return
     if current_clip == clip:
         return
@@ -916,7 +991,7 @@ func set_motion(run_phase: float, is_running: bool, is_crouching: bool, jump_hei
         clip = "Crouch_Fwd_Loop" if is_running else "Crouch_Idle_Loop"
     elif is_running:
         clip = "Sprint_Loop"
-    if using_external_animation and animation_player.has_animation("body/" + clip):
+    if using_external_animation and _resolve_clip_name(clip) != "":
         _play_clip(clip)
     else:
         var stride := sin(run_phase * 0.82) if is_running and not is_crouching else 0.0
