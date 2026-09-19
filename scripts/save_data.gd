@@ -60,6 +60,7 @@ func _set_defaults() -> void:
         "remove_ads": false,
         "ads_consent_granted": false,
         "analytics_enabled": true,
+        "locale": "pt_BR",
         "ad_counters": {"interstitial_run": 0, "rewarded_run": 0},
         "play_signed_in": false,
         "last_review_ts": 0,
@@ -172,6 +173,12 @@ func _sanitize_data() -> void:
     data["remove_ads"] = bool(data.get("remove_ads", false))
     data["ads_consent_granted"] = bool(data.get("ads_consent_granted", false))
     data["analytics_enabled"] = bool(data.get("analytics_enabled", true))
+    var _loc := str(data.get("locale", "pt_BR"))
+    if _loc not in ["pt_BR", "en_US", "pt", "en"]:
+        _loc = "pt_BR"
+    if _loc == "pt": _loc = "pt_BR"
+    if _loc == "en": _loc = "en_US"
+    data["locale"] = _loc
     if not (data.get("ad_counters", {}) is Dictionary):
         data["ad_counters"] = {"interstitial_run": 0, "rewarded_run": 0}
     var ad_c: Dictionary = data["ad_counters"]

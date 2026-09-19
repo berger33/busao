@@ -16,6 +16,30 @@ const RED := Color("#f2635e")
 const GREEN := Color("#54d18b")
 const VIOLET := Color("#ac8cff")
 
+var _safe_top: float = 0.0
+var _safe_bottom: float = 0.0
+var _safe_left: float = 0.0
+var _safe_right: float = 0.0
+
+func _update_safe_area() -> void:
+    var safe := DisplayServer.get_display_safe_area()
+    var win := DisplayServer.window_get_size()
+    if win.x == 0 or win.y == 0:
+        return
+    var sx: float = 720.0 / float(win.x) if win.x != 0 else 1.0
+    var sy: float = 1280.0 / float(win.y) if win.y != 0 else 1.0
+    _safe_left = float(safe.position.x) * sx
+    _safe_top = float(safe.position.y) * sy
+    _safe_right = float(win.x - safe.end.x) * sx
+    _safe_bottom = float(win.y - safe.end.y) * sy
+
+func _T(key: String) -> String:
+    if has_node("/root/LocaleManager"):
+        var lm = get_node_or_null("/root/LocaleManager")
+        if lm and lm.has_method("tr_key"):
+            return lm.call("tr_key", key)
+    return key
+
 var state: Dictionary = {}
 var feedback_title := ""
 var feedback_detail := ""
@@ -27,6 +51,12 @@ var pulse := 0.0
 func _ready() -> void:
     set_process(true)
     mouse_filter = Control.MOUSE_FILTER_IGNORE
+    _update_safe_area()
+    # SafeArea reage a resize/notch; LocaleManager troca idioma em runtime
+    if has_node("/root/LocaleManager"):
+        var _lm = get_node_or_null("/root/LocaleManager")
+        if _lm and _lm.has_signal("locale_changed"):
+            _lm.locale_changed.connect(func(_l: String): queue_redraw())
     queue_redraw()
 
 func _process(delta: float) -> void:
@@ -34,6 +64,11 @@ func _process(delta: float) -> void:
     feedback_time = maxf(0.0, feedback_time - delta)
     feedback_flash = maxf(0.0, feedback_flash - delta * 2.8)
     queue_redraw()
+
+func _notification(what: int) -> void:
+    if what == NOTIFICATION_WM_SIZE_CHANGED:
+        _update_safe_area()
+        queue_redraw()
 
 func set_state(next_state: Dictionary) -> void:
     state = next_state
@@ -53,6 +88,11 @@ func set_feedback_time(time_left: float, flash: float) -> void:
     feedback_flash = maxf(feedback_flash, flash)
 
 func _draw() -> void:
+    # Lote 16: SafeArea — escala+translada para dentro do notch (DisplayServer.get_display_safe_area)
+    if _safe_top > 0.0 or _safe_bottom > 0.0 or _safe_left > 0.0 or _safe_right > 0.0:
+        var sx: float = (720.0 - _safe_left - _safe_right) / 720.0
+        var sy: float = (1280.0 - _safe_top - _safe_bottom) / 1280.0
+        draw_set_transform(Vector2(_safe_left, _safe_top), 0.0, Vector2(sx, sy))
     var current_screen: int = int(state.get("screen", 0))
     match current_screen:
         0: _draw_menu()
@@ -72,9 +112,9 @@ func _draw_menu() -> void:
         draw_line(Vector2(x, 250 + (i % 3) * 22), Vector2(x - 86, 520), Color(1, 0.82, 0.42, 0.12), 2.0)
     draw_circle(Vector2(568, 228), 90 + sin(pulse * 1.4) * 5.0, Color(1.0, 0.72, 0.35, 0.10))
     _panel(Rect2(38, 62, 310, 173), Color(0.04, 0.08, 0.17, 0.74), 26)
-    _text(Vector2(60, 126), "CORRE", 62, YELLOW)
-    _text(Vector2(60, 188), "PRO PONTO", 52, WHITE)
-    _text(Vector2(62, 218), "runner 3D brasileiro", 17, Color("#ffe4ad"))
+    _text(Vector2(60, 126), _T("MENU_TITLE_CORRE"), 62, YELLOW)
+    _text(Vector2(60, 188), _T("MENU_TITLE_PRO_PONTO"), 52, WHITE)
+    _text(Vector2(62, 218), _T("MENU_SUBTITLE"), 17, Color("#ffe4ad"))
     _panel(Rect2(420, 68, 246, 48), Color(0.04, 0.08, 0.17, 0.82), 22)
     _text(Vector2(444, 99), "● 3D", 15, CYAN)
     _text(Vector2(542, 99), "50 FASES", 14, WHITE)
@@ -83,12 +123,20 @@ func _draw_menu() -> void:
     _button(Rect2(544, 190, 122, 38), "CONTRASTE" if bool(state.get("high_contrast", false)) else "VISUAL", Color("#263958"), 10)
     _panel(Rect2(70, 564, 580, 104), Color("#f1b72f"), 22)
     draw_rect(Rect2(90, 574, 540, 4), Color(1, 1, 1, 0.35))
-    _text_center(Vector2(360, 614), "CORRER AGORA", 30, INK)
+    _text_center(Vector2(360, 614), _T("MENU_PLAY_NOW"), 30, INK)
     _text_center(Vector2(360, 648), "rua à esquerda • calçadas à direita", 16, Color("#553526"))
-    _button(Rect2(70, 700, 275, 82), "MAPA", Color("#2c9dc1"), 25)
-    _button(Rect2(375, 700, 275, 82), "LOJA", Color("#d65b75"), 25)
+    _button(Rect2(70, 700, 275, 82), _T("MENU_MAP"), Color("#2c9dc1"), 25)
+    _button(Rect2(375, 700, 275, 82), _T("MENU_SHOP"), Color("#d65b75"), 25)
     _button(Rect2(70, 808, 275, 82), "CONQUISTAS", Color("#805ec7"), 21)
     _button(Rect2(375, 808, 275, 82), "DESAFIOS", Color("#4bad73"), 22)
+        # Lote 16: toggle idioma pt_BR/en_US
+    var _cur_lang: String = "pt_BR"
+    if has_node("/root/LocaleManager"):
+        var _lm2 = get_node_or_null("/root/LocaleManager")
+        if _lm2 and _lm2.has_method("get_locale"):
+            _cur_lang = _lm2.call("get_locale")
+    _button(Rect2(470, 885, 110, 34), _cur_lang, Color("#314563"), 11)
+    _text(Vector2(485, 907), "IDIOMA", 9, MUTED)
     _panel(Rect2(70, 930, 580, 80), Color("#172844"), 18)
     _text(Vector2(102, 970), "COMO JOGAR", 22, WHITE)
     _text(Vector2(102, 995), "swipe ← → troca de faixa • ↑ pula • ↓ desliza • toque dash", 14, MUTED)
@@ -102,7 +150,7 @@ func _draw_menu() -> void:
 
 func _draw_map() -> void:
     _draw_ui_background()
-    _header("MAPA 3D", "★ %03d / 150" % int(state.get("stars", 0)))
+    _header(_T("MAP_TITLE"), "★ %03d / 150" % int(state.get("stars", 0)))
     _text(Vector2(30, 126), "Brasil sem Freio • capítulo %d / 5" % (int(state.get("map_page", 0)) + 1), 17, MUTED)
     var next_unlock: int = int(state.get("next_unlock_stars", 0))
     if next_unlock > 0:
@@ -295,7 +343,7 @@ func _draw_shop() -> void:
                 continue
             _billing_card(rect, packs[i])
         _text_center(Vector2(360, 1095), "compras únicas • sem loot box • teste: android.test.purchased", 10, MUTED)
-    _header("LOJA DO PONTO", "R$ %03d" % int(state.get("coins", 0)))
+    _header(_T("SHOP_TITLE"), "R$ %03d" % int(state.get("coins", 0)))
     _text(Vector2(30, 126), "%d brasileiros para correr do seu jeito." % characters.size(), 16, MUTED)
     # 3 abas: personagens | itens | pacotes
     _button(Rect2(30, 150, 210, 70), "PERSONAGENS", BLUE if int(state.get("shop_tab", 0)) == 0 else Color("#263958"), 14)
@@ -462,7 +510,7 @@ func _draw_daily() -> void:
 
 func _draw_how_to() -> void:
     _draw_ui_background()
-    _header("COMO JOGAR", "MUNDO 3D")
+    _header(_T("HOWTO_TITLE"), _T("HOWTO_SUBTITLE"))
     _panel(Rect2(35, 145, 650, 430), Color("#1e3150"), 20)
     _text(Vector2(68, 198), "AS TRÊS FAIXAS", 26, YELLOW)
     _text(Vector2(75, 260), "← RUA", 24, RED)

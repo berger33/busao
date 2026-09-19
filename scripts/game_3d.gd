@@ -169,6 +169,9 @@ var dog_chase_timer := 0.0
 # --- Lote 11/12: Ads/Billing estado ----------------------------------------
 var _ads_failed_runs: int = 0
 var _revive_used: bool = false
+var _revive_screen: Control = null
+var _revive_pending: bool = false
+var _tutorial_arrow: Node3D = null
 var _double_used: bool = false
 var _rewarded_pending_placement: String = ""
 var _ads_banner_requested: bool = false
@@ -839,6 +842,9 @@ func _update_tutorial_hint() -> void:
         GameSave.data["tutorial_seen"] = true
         GameSave.flush()
         tutorial_hint = ""
+    # Lote 16: seta 3D
+    var _show_arrow: bool = not bool(GameSave.data.get("tutorial_seen", false)) and float(state.get("distance", 0.0)) < float(BALANCE.first_session_hint_distance) and screen == 2 and run_mode == "playing"
+    _update_tutorial_arrow(_show_arrow, player_lane)
 
 func _update_run(dt: float) -> void:
     if run_mode == "paused":
@@ -916,7 +922,11 @@ func _update_run(dt: float) -> void:
             bus_node.visible = true
         _show_feedback("CHEGOU NO PONTO!", "SEGURA O BUSÃO!" if bus_wait_bonus <= 0.0 else "MOTORISTA ACIONADA: +2s", YELLOW, "horn")
     if hearts <= 0:
-        _finish_run(false, true)
+        # Lote 16: tela Reviver? 5 s (ASSISTIR -30s vs DESISTIR) antes de _finish_run
+        if not _revive_used and not _revive_pending:
+            _show_revive_screen()
+        else:
+            _finish_run(false, true)
 
 func _resolve_entity(entity: Dictionary) -> void:
     var kind: String = str(entity["kind"])
@@ -3281,6 +3291,13 @@ func _handle_tap(pos: Vector2) -> void:
         elif Rect2(375, 808, 275, 82).has_point(pos):
             screen = 6
             _show_feedback("DESAFIOS", "Recompensas esperando", GREEN, "ui_confirm")
+        elif Rect2(470, 885, 110, 34).has_point(pos):
+            if has_node("/root/LocaleManager"):
+                var _lm_lang = get_node_or_null("/root/LocaleManager")
+                if _lm_lang and _lm_lang.has_method("toggle"):
+                    var _nl: String = _lm_lang.call("toggle")
+                    _show_feedback("IDIOMA " + _nl.to_upper(), "Tradução aplicada", BLUE, "ui_confirm")
+                    _sync_hud()
         elif Rect2(70, 930, 580, 80).has_point(pos):
             screen = 7
             previous_screen = 0
@@ -3840,6 +3857,13 @@ func _on_ads_interstitial_closed() -> void:
 func _on_ads_rewarded_failed(reason: String) -> void:
     _show_feedback("ANÚNCIO INDISPONÍVEL", reason, RED, "ui_back")
     _rewarded_pending_placement = ""
+    # Lote 16: se revive pendente, mantém tela para DESISTIR
+    if _revive_pending and _revive_screen != null and _revive_screen.visible:
+        if has_node("/root/AnalyticsManager"):
+            var _anf = get_node_or_null("/root/AnalyticsManager")
+            if _anf and _anf.has_method("log_event"):
+                _anf.call("log_event", "revive_failed", {"reason": reason})
+        return
     _sync_hud()
 
 func _on_ads_rewarded_completed(placement: String) -> void:
@@ -3913,6 +3937,8 @@ func _do_revive_from_ad() -> void:
         _show_feedback("JÁ REVIVEU", "Só 1 revive por corrida", RED, "ui_back")
         return
     _revive_used = true
+    _hide_revive_screen()
+    run_mode = "playing"
     hearts = 1
     max_hearts = maxi(max_hearts, 3)
     shield_hits = 1
@@ -3939,6 +3965,117 @@ func _do_revive_from_ad() -> void:
         GameSave.record_ad_counter("rewarded")
     _show_feedback("REVIVE!", "5 s de escudo • corre!", GREEN, "reward")
     _spawn_3d_burst(Vector3(player_x, 1.4, -2.0), GREEN, 18)
+
+func _show_revive_screen() -> void:
+    if _revive_used or _revive_pending:
+        _finish_run(false, true)
+        return
+    _revive_pending = true
+    run_mode = "revive"
+    # pausa lógica de corrida (scroll, input)
+    # cria overlay ReviveScreen (CanvasLayer 40 para ficar sobre HUD)
+    if _revive_screen == null:
+        var layer := CanvasLayer.new()
+        layer.name = "ReviveLayer"
+        layer.layer = 40
+        add_child(layer)
+        _revive_screen = preload("res://scripts/revive_screen.gd").new()
+        _revive_screen.name = "ReviveScreen"
+        layer.add_child(_revive_screen)
+        _revive_screen.watch_requested.connect(_on_revive_watch)
+        _revive_screen.give_up.connect(_on_revive_giveup)
+    else:
+        _revive_screen.visible = true
+        _revive_screen.get_parent().visible = true
+    var is_ready: bool = false
+    if has_node("/root/AdsManager"):
+        var am = get_node_or_null("/root/AdsManager")
+        if am and am.has_method("is_rewarded_ready"):
+            is_ready = am.call("is_rewarded_ready")
+    _revive_screen.call("setup", is_ready)
+    _show_feedback("ÔNIBUS QUASE FOI", "5 s para reviver com anúncio", YELLOW, "ui_confirm")
+    # Analytics espelho
+    if has_node("/root/AnalyticsManager"):
+        var an = get_node_or_null("/root/AnalyticsManager")
+        if an and an.has_method("log_event"):
+            an.call("log_event", "revive_offer", {"ready": int(is_ready)})
+
+func _hide_revive_screen() -> void:
+    _revive_pending = false
+    if _revive_screen != null:
+        _revive_screen.visible = false
+        if _revive_screen.get_parent() is CanvasLayer:
+            _revive_screen.get_parent().visible = false
+
+func _ensure_tutorial_arrow() -> void:
+    # Lote 16: seta 3D para tutorial (posicionada na faixa central, 6 m à frente)
+    if _tutorial_arrow != null:
+        return
+    _tutorial_arrow = Node3D.new()
+    _tutorial_arrow.name = "TutorialArrow"
+    var arrow := MeshInstance3D.new()
+    var cone := ConeMesh.new()
+    cone.height = 1.2
+    cone.radius = 0.45
+    var mat := StandardMaterial3D.new()
+    mat.albedo_color = Color("#ffd34e")
+    mat.emission_enabled = true
+    mat.emission = Color("#ff9a00")
+    mat.emission_energy_multiplier = 1.4
+    cone.material = mat
+    arrow.mesh = cone
+    arrow.rotation_degrees.x = 180  # ponta para baixo? Ajusta
+    arrow.position.y = 2.2
+    _tutorial_arrow.add_child(arrow)
+    # haste
+    var stem := MeshInstance3D.new()
+    var cyl := CylinderMesh.new()
+    cyl.height = 0.9
+    cyl.top_radius = 0.08
+    cyl.bottom_radius = 0.08
+    var mat2 := StandardMaterial3D.new()
+    mat2.albedo_color = Color("#fff8e7")
+    cyl.material = mat2
+    stem.mesh = cyl
+    stem.position.y = 1.1
+    _tutorial_arrow.add_child(stem)
+    _tutorial_arrow.position = Vector3(0.0, 0.0, -6.0)
+    _tutorial_arrow.visible = false
+    add_child(_tutorial_arrow)
+
+func _update_tutorial_arrow(visible: bool, lane: int = 1) -> void:
+    if _tutorial_arrow == null:
+        _ensure_tutorial_arrow()
+    if _tutorial_arrow == null:
+        return
+    _tutorial_arrow.visible = visible and not bool(GameSave.data.get("tutorial_seen", false))
+    if visible:
+        _tutorial_arrow.position.x = [-3.25, 0.0, 3.25][clampi(lane, 0, 2)]
+        _tutorial_arrow.position.z = player_visual.position.z - 7.0 if player_visual else -6.0
+        _tutorial_arrow.rotation.y += 0.04
+
+
+func _on_revive_watch() -> void:
+    # Lote 16: ASSISTIR (-30s) → rewarded_revive
+    if _revive_used:
+        _hide_revive_screen()
+        _finish_run(false, true)
+        return
+    var ads_node = get_node_or_null("/root/AdsManager") if has_node("/root/AdsManager") else null
+    var ok: bool = false
+    if ads_node and ads_node.has_method("show_rewarded"):
+        ok = ads_node.call("show_rewarded", "rewarded_revive")
+    if not ok:
+        _show_feedback("ANÚNCIO NÃO PRONTO", "Tente novamente", RED, "ui_back")
+        # mantém tela para DESISTIR
+        return
+    _show_feedback("ANÚNCIO...", "Assista para reviver", CYAN, "ui_confirm")
+    # fica aguardando rewarded_completed → _do_revive_from_ad
+
+func _on_revive_giveup() -> void:
+    _hide_revive_screen()
+    _finish_run(false, true)
+
 
 func _do_double_reward_from_ad() -> void:
     if _double_used:
