@@ -22,7 +22,7 @@ primitivas Godot (box/sphere/cylinder/torus) em `scripts/game_3d.gd`,
 
 | Asset | Origem | Estado |
 |---|---|---|
-| Corredor (20 perfis da loja) | Quaternius Universal Base Characters (CC0) + roupa Peasant skinned + acessorios `BoneAttachment3D` | ✅ skinned, PBR, clips UAL (Sprint/Jump/Crouch) |
+| Corredor (20 perfis da loja) | **100% original Blender** `Humano_M/F.glb` (Lote 19, L26 remove Quaternius) skinned 26 bones + 6 clips + `BoneAttachment3D` | ✅ original, PBR, skinned, clips próprios |
 | Pedestre `old_lady` (Zilda/Maria) | idem, via `world_character.gd` | ✅ |
 | Pedestre `vendor` (Marta/Zé) | idem | ✅ |
 | Motoqueiro (na moto) | idem, clip `Driving_Loop` | ✅ |
@@ -34,7 +34,7 @@ Nada a criar nesta categoria.
 | Especie | Estado | Detalhe |
 |---|---|---|
 | `pombo` | ✅ `pombo.glb` | modelado neste repo por Blender headless (lote 1); rig de 13 ossos; clips Walk+Idle; validado (14 materiais, 33k verts) |
-| `caramelo` (o cachorro) | ✅ `caramelo.glb` | raposa Khronos CC0 (glTF-Sample-Assets), rigada, Survey/Walk/Run |
+| `caramelo` (o cachorro) | ✅ `caramelo.glb` | **100% original Blender** vira-lata SRD (Lote 20) via `build_caramelo.py` — 14 bones, clips Walk/Run/Idle/Lie, 0.95×0.72 m |
 | `passaro` | ✅ `passaro.glb` | tico-tico modelado neste repo (lote 2); rig de 12 ossos; clips Walk (14f) + Fly; resting/Walk assentado no chao |
 | `gaivota` | ✅ `gaivota.glb` | gaivota de praia modelada neste repo (lote 2); rig de 12 ossos; clips Walk (16f) + Fly; resting/Walk assentado no chao |
 | `urubu` | ✅ `urubu.glb` | urubu-de-crista modelado neste repo (lote 2); rig de 12 ossos; clips Walk (22f) + Fly; resting/Walk assentado no chao |

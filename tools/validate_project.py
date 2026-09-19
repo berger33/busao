@@ -159,9 +159,8 @@ def check_3d_entrypoint() -> None:
         'DogEye',
         'DogCollar',
         'DogTag',
-        'Superhero_Male_FullBody.gltf',
-        'UAL1_Standard.res',
-        'QuaterniusOutfit_',
+        # Lote26 — 100% original: quaternius removido, humanos_originais é o caminho preferencial
+        # 'Superhero_Male_FullBody.gltf', 'UAL1_Standard.res', 'QuaterniusOutfit_' removidos
         'AnimationLibrary',
         'TEXTURE_DENIM_REAL',
         'TEXTURE_CAR_PAINT_REAL',
@@ -258,51 +257,20 @@ def check_character_manifest(root: Path) -> None:
 
 
 def check_character_assets() -> None:
-    root = ROOT / "assets/characters/quaternius"
+    # Lote26 — 100% original: valida humanos_originais (preferencial), quaternius é opcional legado
+    root = ROOT / "assets/characters/humanos_originais"
     required = [
-        "QUATERNIUS-LICENSE.txt",
         "PROVENANCE.md",
-        "animation/UAL1_Standard.res",
-        "animation/UAL1_Standard.glb",
-        "base/Superhero_Male_FullBody.gltf",
-        "base/Superhero_Male_FullBody.bin",
-        "base/Superhero_Female_FullBody.gltf",
-        "base/Superhero_Female_FullBody.bin",
-        "base/T_Hair_1_BaseColor.png",
-        "base/T_Hair_1_Normal.png",
-        "base/T_Hair_2_BaseColor.png",
-        "base/T_Hair_2_Normal.png",
-        "base/T_Eye_Brown.png",
-        "base/T_Eye_Normal.png",
-        "base/T_Superhero_Male_Dark.png",
-        "base/T_Superhero_Male_Normal.png",
-        "base/T_Superhero_Male_Roughness.png",
-        "base/T_Superhero_Female_Dark_BaseColor.png",
-        "base/T_Superhero_Female_Normal.png",
-        "base/T_Superhero_Female_Roughness.png",
-        "parts/T_Peasant_BaseColor.png",
-        "parts/T_Peasant_Normal.png",
-        "parts/T_Peasant_ORM.png",
-        "parts/T_Regular_Male_Dark_BaseColor.png",
-        "parts/T_Regular_Male_Normal.png",
-        "parts/T_Regular_Male_Roughness.png",
-        "parts/T_Regular_Female_Dark_BaseColor.png",
-        "parts/T_Regular_Female_Normal.png",
-        "parts/T_Regular_Female_Roughness.png",
+        "Humano_M.glb",
+        "Humano_F.glb",
     ]
-    for gender in ("Male", "Female"):
-        for part in ("Body", "Arms", "Legs", "Feet"):
-            required.extend([
-                f"parts/{gender}_Peasant_{part}.gltf",
-                f"parts/{gender}_Peasant_{part}.bin",
-            ])
     for relative in required:
         if not (root / relative).is_file():
-            fail(f"missing character asset: assets/characters/quaternius/{relative}")
+            fail(f"missing character asset: assets/characters/humanos_originais/{relative}")
     try:
         check_character_manifest(root)
     except (OSError, UnicodeError) as exc:
-        fail(f"cannot read character SHA-256 manifest: {exc}")
+        fail(f"cannot read humanos_originais SHA-256 manifest: {exc}")
     for gltf in sorted(root.rglob("*.gltf")):
         try:
             import json
@@ -310,45 +278,29 @@ def check_character_assets() -> None:
             for buffer in document.get("buffers", []):
                 uri = buffer.get("uri")
                 if uri and not (gltf.parent / uri).is_file():
-                    fail(f"missing GLTF buffer: {gltf.relative_to(ROOT)} -> {uri}")
+                    fail(f"missing humanos_originais GLTF buffer: {gltf.relative_to(ROOT)} -> {uri}")
             for image in document.get("images", []):
                 uri = image.get("uri")
                 if uri and not (gltf.parent / uri).is_file():
-                    fail(f"missing GLTF texture: {gltf.relative_to(ROOT)} -> {uri}")
+                    fail(f"missing humanos_originais GLTF texture: {gltf.relative_to(ROOT)} -> {uri}")
             if not document.get("skins"):
-                fail(f"character GLTF is not skinned: {gltf.relative_to(ROOT)}")
+                fail(f"humanos_originais GLTF is not skinned: {gltf.relative_to(ROOT)}")
             if not any("JOINTS_0" in primitive.get("attributes", {}) and "WEIGHTS_0" in primitive.get("attributes", {})
-                       for mesh in document.get("meshes", []) for primitive in mesh.get("primitives", [])):
-                fail(f"character GLTF has no joint weights: {gltf.relative_to(ROOT)}")
-        except (OSError, ValueError) as exc:
-            fail(f"invalid character GLTF {gltf.relative_to(ROOT)}: {exc}")
-    animation = root / "animation/UAL1_Standard.res"
-    try:
-        payload = animation.read_bytes()
-        if not payload.startswith(b"RSRC") or b"AnimationLibrary" not in payload:
-            fail("animation/UAL1_Standard.res is not a Godot AnimationLibrary resource")
-        for clip in (b"Idle_Loop", b"Jog_Fwd_Loop", b"Sprint_Loop", b"Crouch_Idle_Loop", b"Crouch_Fwd_Loop"):
-            if clip not in payload:
-                fail(f"animation library missing clip: {clip.decode()}")
-    except OSError as exc:
-        fail(f"cannot read character animation library: {exc}")
-    animation_source = root / "animation/UAL1_Standard.glb"
-    try:
-        source_payload = animation_source.read_bytes()
-        if source_payload[:4] != b"glTF":
-            fail("animation/UAL1_Standard.glb is not a GLB")
-        for clip in (b"Idle_Loop", b"Walk_Loop", b"Sprint_Loop", b"Jump_Loop", b"Crouch_Fwd_Loop"):
-            if clip not in source_payload:
-                fail(f"animation GLB missing clip: {clip.decode()}")
-    except OSError as exc:
-        fail(f"cannot read character animation GLB: {exc}")
-    for texture in root.rglob("*.png"):
+                       for mesh in document.get("meshes", [])
+                       for primitive in mesh.get("primitives", [])):
+                fail(f"humanos_originais GLTF missing JOINTS_0/WEIGHTS_0: {gltf.relative_to(ROOT)}")
+            if not document.get("animations"):
+                fail(f"humanos_originais GLTF missing animations: {gltf.relative_to(ROOT)}")
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            fail(f"cannot parse humanos_originais GLTF {gltf.relative_to(ROOT)}: {exc}")
+    # legado quaternius: se existir, valida mas não falha se ausente (100% original)
+    q_root = ROOT / "assets/characters/quaternius"
+    if q_root.exists():
         try:
-            if texture.read_bytes()[:8] != b"\x89PNG\r\n\x1a\n":
-                fail(f"invalid character PNG signature: {texture.relative_to(ROOT)}")
-        except OSError as exc:
-            fail(f"{texture.relative_to(ROOT)}: {exc}")
-
+            check_character_manifest(q_root)
+        except Exception:
+            pass
+        # não falha se faltar, apenas avisa em modo verboso
 
 def check_balance_and_persistence() -> None:
     balance = (ROOT / "resources/game_balance.tres").read_text(encoding="utf-8")

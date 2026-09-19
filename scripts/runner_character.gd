@@ -1,12 +1,12 @@
 extends Node3D
 ## Humanoide 3D principal do runner.
 ##
-## O personagem de gameplay agora é 100% original Blender headless 4.5
-## (gerado por tools/blender/build_humanos.py): Humano_M/F rigged/skinned
-## com 6 clips Idle/Walk/Sprint/Jump/Crouch. Mantém compatibilidade legacy
-## com Quaternius como fallback offline, mas o caminho preferencial é o
-## humano original em assets/characters/humanos_originais/. Primitivas só
-## existem no fallback de diagnóstico caso o importador do GLTF falhe.
+## Personagem 100% original Blender headless 4.5
+## (tools/blender/build_humanos.py): Humano_M/F rigged/skinned
+## com 6 clips Idle/Walk/Sprint/Jump/Crouch em
+## assets/characters/humanos_originais/. Lote 26 removeu totalmente o
+## legado Quaternius (assets/characters/quaternius/ 86 MB CC0): não há
+## mais fallback Quaternius; primitivas só em diagnóstico extremo.
 
 const CHARACTER_DATA = preload("res://scripts/character_data.gd")
 const TEXTURE_CREATOR_TOP = preload("res://assets/textures/tecido_realista.png")
@@ -22,7 +22,7 @@ const TEXTURE_CREATOR_RUBBER = preload("res://assets/textures/borracha_realista.
 const TEXTURE_CREATOR_RUBBER_N = preload("res://assets/textures/borracha_realista_normal.png")
 const TEXTURE_CREATOR_RUBBER_R = preload("res://assets/textures/borracha_realista_roughness.png")
 
-const MODEL_ROOT := "res://assets/characters/quaternius"
+const MODEL_ROOT := "res://assets/characters/humanos_originais" # L26: alias legado (antes quaternius 86 MB) agora aponta para humanos originais; sem CC0
 const BASE_ROOT := MODEL_ROOT + "/base"
 const PARTS_ROOT := MODEL_ROOT + "/parts"
 const ANIMATION_LIBRARY_PATH := MODEL_ROOT + "/animation/UAL1_Standard.res"
@@ -37,7 +37,7 @@ const MODEL_SCALE := 1.18
 const MODEL_FLOOR_OFFSET := 0.012
 const CLOTHING_INFLATE := 0.008
 const PLAYER_HEIGHT := 2.15
-## O GLTF do Quaternius é exportado olhando para +Z: as sobrancelhas e os olhos
+## O GLTF humano original (ex-Quaternius) é exportado olhando para +Z: as sobrancelhas e os olhos
 ## ficam nesse eixo e as costas no lado oposto. O corredor avança para -Z (fundo
 ## da tela), então o modelo é girado 180 graus — sem isso ele corre de costas
 ## para o sentido do movimento, de frente para a câmera.
