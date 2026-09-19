@@ -64,6 +64,21 @@ loop, idle e a pose de crouch — bicar/pastar/deitar) sao automaticos.
   origem no chao), com a diferenca de que o crouch usa o clip `Graze`
   (pastar) no cavalo/boi e `Lie` (deitada) na capivara — o
   `world_animal.gd` troca de clip por pose em `_sincronizar_clip_glb`.
+- **`macaco.glb`** — sagui meio-ereto **modelado no proprio repositório**
+  por Blender headless (lote 4, `tools/blender/build_lote4.py`): pelagem
+  castanha, rosto e peito claros, cauda longa enrolada por cima das
+  costas; rig de 9 ossos (Corpo/Pescoco/Cabeca, Cauda em 2 segmentos,
+  2 bracos e 2 pernas) e clipes `Walk` (16f, membros dianteiros na
+  contra-fase das pernas), `Idle` (16f) e `Lie` (agachado, cauda
+  enrolada, espiando = crouch). Tamanhos de jogo: 0,85 m x 0,95 m.
+  Licença: trabalho original do projeto (CC0).
+- **`caranguejo.glb`** — caranguejo-vermelho **modelado no proprio
+  repositório** por Blender headless (lote 4): casco em cupula
+  laranja, olhos em hastes, pinças grandes e 3 patas por lado; rig de
+  9 ossos (Corpo, 2 pinças, 6 patas) e clipes `Walk` (16f, garra de
+  tesoura com ondulacao), `Idle` (12f, pinça esquerda em saudação) e
+  `Lie` (corpo abaixado, patas dobradas = crouch). Tamanhos de jogo:
+  0,60 m x 0,30 m. Licença: trabalho original do projeto (CC0).
 
 ## Como trocar por outros modelos
 

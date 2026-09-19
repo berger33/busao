@@ -65,6 +65,21 @@ origem do mundo). Sempre passe os três argumentos explicitamente.
 
 Duração total: ~45 s (Cycles CPU 640x480, 6 previews).
 
+## Regenerar o lote 4 (macaco e caranguejo)
+
+```bash
+sh tools/blender/run_bpy.sh tools/blender/build_lote4.py
+```
+
+Macaco meio-ereto com cauda em 2 segmentos (10 ossos no rig:
+Corpo/Pescoco/Cabeca, Cauda/CaudaPonta, 2 bracos, 2 pernas) e
+caranguejo com casco em cupula, pinças e 3 patas por lado (9 ossos).
+Clipes Walk + Idle + Lie (o Lie e o crouch dos dois). O macaco reusa a
+nova helper `coluna_entre` do proprio script (pilar entre dois pontos
+arbitrarios via quaternion — evita o cacete de alinhar Euler na mao).
+O `world_animal.gd` nao precisou de mudanca: o drop-in generico do
+lote 3 cobre qualquer especie com GLB + `GLB_SIZES`.
+
 Em sandboxes sem bibliotecas X11/GL do sistema, o import do bpy resolve com
 stubs `.so` em `/home/user/blender-stubs` expostos via `LD_LIBRARY_PATH` —
 o modo headless (Cycles CPU) nao toca em GL/X de verdade. O venv e os stubs

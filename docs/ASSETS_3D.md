@@ -28,7 +28,7 @@ primitivas Godot (box/sphere/cylinder/torus) em `scripts/game_3d.gd`,
 
 Nada a criar nesta categoria.
 
-## 2. Animais — ✅ 8 / ❌ 2
+## 2. Animais — ✅ 10 / ❌ 0 (categoria completa)
 
 | Especie | Estado | Detalhe |
 |---|---|---|
@@ -40,13 +40,14 @@ Nada a criar nesta categoria.
 | `capivara` | ✅ `capivara.glb` | modelada neste repo (lote 3); rig de 16 ossos; clips Walk + Idle + Lie (deitada no crouch) |
 | `cavalo` | ✅ `cavalo.glb` | modelado neste repo (lote 3); rig de 16 ossos; clips Walk + Idle + Graze (pastando no crouch) |
 | `boi` | ✅ `boi.glb` | modelado neste repo (lote 3); rig de 16 ossos; clips Walk + Idle + Graze |
-| `macaco` | ❌ procedural | `Macaco3D` |
-| `caranguejo` | ❌ procedural | `Caranguejo3D` |
+| `macaco` | ✅ `macaco.glb` | modelado neste repo (lote 4); rig de 9 ossos; clips Walk + Idle + Lie (agachado com cauda enrolada) |
+| `caranguejo` | ✅ `caranguejo.glb` | modelado neste repo (lote 4); rig de 9 ossos; clips Walk (garra de tesoura) + Idle (pinça saudação) + Lie (abaixado) |
 
-Nota: o drop-in GLB cobre pombo, aves do lote 2 e quadrupedes do lote 3
-(`_build_animal_glb` no `_ready`, tamanhos em `GLB_SIZES`, troca de clip por
-pose em `_sincronizar_clip_glb` — crouch usa `Graze`/`Lie`). Sobra o
-obstaculo `dog` (caramelo) e faltam `macaco`/`caranguejo` (lote 4).
+Nota: o drop-in GLB cobre as 10 especies (pombo, aves do lote 2,
+quadrupedes do lote 3 e macaco/caranguejo do lote 4) — `_build_animal_glb`
+no `_ready`, tamanhos em `GLB_SIZES`, troca de clip por pose em
+`_sincronizar_clip_glb` (crouch usa `Graze`/`Lie`). O caramelo (obstaculo
+`dog`) ja era GLB desde o lote 0.
 
 ## 3. Carros e motos — ❌ todos procedurais (6 modelos)
 
@@ -117,7 +118,7 @@ madeira, terra_vermelha) nao existe — o kit cai em cor plana com warning.
 | **1** ✅ | `pombo.glb` | ja existia |
 | **2** ✅ | Aves: `passaro`, `gaivota`, `urubu` (com clips Walk + Fly) | ✅ feito: tamanhos em `BIRD_PROFILES` (`_fit_glb` escala/assenta automaticamente) + `_animar_glb` agora toca o clip `fly` quando `behavior_mode == "flight"` (o pombo nao tem clip fly e segue no Walk) |
 | **3** ✅ | Quadrupedes: `capivara`, `cavalo`, `boi` (clips Walk + Idle + Lie/Graze) | ✅ feito: `GLB_SIZES` + `_sincronizar_clip_glb` toca `Lie`/`Graze` no crouch |
-| **4** | `macaco`, `caranguejo` | idem (lote 3) |
+| **4** ✅ | `macaco`, `caranguejo` | ✅ ja coberto pelo drop-in generico do lote 3 (sem novo codigo) |
 | **5** | Veiculos: `car`, `motorcycle`, `truck`, `bus_traffic`, `onibus`, `carro` | ja existe (`_optional_model`) |
 | **6** | (reserva — variantes de carro/cor) | — |
 | **7** | Mobiliario: `hidrante`, `orelhao`, `cone`, `banco`, `caminho_camelô`, `ponto` | novo drop-in em `_build_sidewalk_obstacle` |
