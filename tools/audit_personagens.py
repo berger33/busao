@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Audit Lote 28 — valida 20 GLBs dedicados de personagens (personagens/<id>.glb)
 Compatível com validate_project.py mas específico para o lote expandido.
-Checagens: existe, <500KB, <3k verts (via tamanho), GLB binário glTF 2.0 header, presença de skins/animations JOINTS_0 (via parse bruto), e integra com runner_character.gd loader."""
+Checagens: existe, <1.2MB, <3k verts (via tamanho), GLB binário glTF 2.0 header, presença de skins/animations JOINTS_0 (via parse bruto), e integra com runner_character.gd loader."""
 import struct, pathlib, sys, json, os, hashlib
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -67,8 +67,8 @@ def main():
         total_bytes+=sz
         min_size=min(min_size, sz)
         max_size=max(max_size, sz)
-        if sz > 500*1024:
-            errors.append(f"{pid}.glb {sz} >500KB")
+        if sz > 1200*1024:
+            errors.append(f"{pid}.glb {sz} >1.2MB")
         # header
         ok, info = check_glb_header(p)
         if not ok:
@@ -76,6 +76,8 @@ def main():
             print(f"FAIL {pid}: {info}")
             continue
         doc=info["doc"]
+        if "KHR_draco_mesh_compression" in doc.get("extensionsRequired", []):
+            errors.append(f"{pid}.glb usa Draco — Godot 4 não decodifica (personagem invisível)")
         # detailed checks
         if not info["skins"]:
             errors.append(f"{pid}.glb sem skins")
@@ -101,7 +103,7 @@ def main():
         print("\nAUDIT FAIL:")
         for e in errors: print(" -",e)
         return 1
-    print("\nAUDIT OK: 20 GLBs dedicados, <500KB, skins/animations OK, loader personalizado ativo, fallback preservado")
+    print("\nAUDIT OK: 20 GLBs dedicados, <1.2MB, skins/animations OK, loader personalizado ativo, fallback preservado")
     print("Teste Godot headless equivalente: ResourceLoader.exists('res://assets/characters/personagens/<id>.glb') = true para todos os 20")
     # também verifica balance 100k ainda
     bal = (ROOT/"resources/game_balance.tres").read_text(encoding="utf-8")

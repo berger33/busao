@@ -744,7 +744,7 @@ def build_one(is_male, out_path):
         export_cameras=False,
         export_lights=False,
         export_animation_mode='ACTIONS',
-        export_draco_mesh_compression_enable=True,
+        export_draco_mesh_compression_enable=False,  # Godot 4 não suporta KHR_draco_mesh_compression (mesh invisível)
         use_selection=True
     )
     print("PRONTO:", out_path, os.path.getsize(out_path))

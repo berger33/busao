@@ -16,6 +16,9 @@ Personagens humanos 100% originais, modelados do zero no **Blender 4.5 LTS headl
 ## Manifesto SHA-256
 
 ```text
-c28183a0e5193331b4da5a8617c064cd948ea45c7e2bc16068c76037b090b6cb  Humano_M.glb  (216044 bytes)
-e4b9eb04e0f4da9818d86cc5e8f3c492a80aaee26b4583cdee7539319a2fd75d  Humano_F.glb  (216872 bytes)
+a40125df25a8ede85868639377e8303f165f8f33a23b296cda93e350bf733601  Humano_M.glb  (353136 bytes)
+ea07f41b9b45bfaf2f5681347c29bd4a89018cbf534d446f7a678049f0ed712c  Humano_F.glb  (359544 bytes)
 ```
+
+
+> 2026-09-20: todos regenerados **sem** Draco (`export_draco_mesh_compression_enable=False`). Godot 4 não decodifica `KHR_draco_mesh_compression` — os GLBs anteriores importavam sem geometria (personagem invisível, só a sombra). `julia.glb` vem de `tools/blender/build_corredora_fase1.py`.

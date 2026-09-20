@@ -810,11 +810,7 @@ def build_one_personagem(profile, out_path):
         export_animations=True,
         export_animation_mode='ACTIONS',
         export_materials='EXPORT',
-        export_draco_mesh_compression_enable=True,
-        export_draco_mesh_compression_level=6,
-        export_draco_position_quantization=14,
-        export_draco_normal_quantization=10,
-        export_draco_texcoord_quantization=12,
+        export_draco_mesh_compression_enable=False,  # Godot 4 não suporta KHR_draco_mesh_compression (mesh invisível)
     )
     sz = os.path.getsize(out_path)
     print("Export OK:", out_path, "Size:", sz)

@@ -783,7 +783,11 @@ def validar_glb(path):
         assert clip in anims, f"clip faltando: {clip}"
     for mn in ("QuaterniusSkin", "Camisa", "Calca", "Sapato", "Entressola", "Sola", "Meia", "Hair"):
         assert mn in mats, f"material faltando: {mn}"
+<<<<<<< HEAD
     assert info["bytes"] < 500 * 1024, "GLB > 500 KB"
+=======
+    assert info["bytes"] < 1200 * 1024, "GLB > 1.2 MB"
+>>>>>>> f9afe55 (fix(characters): exportar GLBs sem Draco — Godot 4 não decodifica KHR_draco_mesh_compression (personagem invisível))
     return info
 
 def checar_uv_sem_sobreposicao(obj):
@@ -838,9 +842,13 @@ def build(out_path, preview=False, tag="julia"):
         filepath=out_path, export_format='GLB', use_selection=True, export_yup=True,
         export_apply=False, export_skins=True, export_animations=True,
         export_animation_mode='ACTIONS', export_materials='EXPORT',
+<<<<<<< HEAD
         export_draco_mesh_compression_enable=True, export_draco_mesh_compression_level=6,
         export_draco_position_quantization=14, export_draco_normal_quantization=10,
         export_draco_texcoord_quantization=12,
+=======
+        export_draco_mesh_compression_enable=False,  # Godot 4 NÃO decodifica KHR_draco_mesh_compression (mesh invisível)
+>>>>>>> f9afe55 (fix(characters): exportar GLBs sem Draco — Godot 4 não decodifica KHR_draco_mesh_compression (personagem invisível))
     )
     info = validar_glb(out_path)
     if preview:
