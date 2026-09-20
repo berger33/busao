@@ -1165,7 +1165,7 @@ func _draw_shop() -> void:
         _draw_character_card(Rect2(30, 250, 660, 126), "ze", "Zé Atrasado", "o original", 0, Color("#e9525e"))
         _draw_character_card(Rect2(30, 395, 660, 126), "maria", "Maria do Bairro", "escudo de impacto", 180, Color("#a568d7"))
         _draw_character_card(Rect2(30, 540, 660, 126), "motoboy", "Rafa Motoboy", "velocidade +22%", 260, Color("#4fc2b1"))
-        _draw_character_card(Rect2(30, 685, 660, 126), "julia", "Júlia Atleta", "pulo prolongado", 360, Color("#e9d459"))
+        _draw_character_card(Rect2(30, 685, 660, 126), "julia", "Júlia Atleta", "pulo prolongado", 0, Color("#e9d459"))
         _draw_character_card(Rect2(30, 830, 660, 126), "carlos", "Carlos da Obra", "escudo de impacto", 440, Color("#5e7bc4"))
         _draw_character_card(Rect2(30, 975, 660, 126), "influencer", "Nina Creator", "ímã de moedas", 420, Color("#e56b98"))
         _text(Vector2(30, 1108), "Modo 2D de referência: o catálogo completo com os 20 corredores fica na loja do runner 3D.", 13, MUTED)
@@ -1201,7 +1201,7 @@ func _draw_item_card(rect: Rect2, id: String, title: String, subtitle: String, p
     _button(Rect2(rect.end.x - 126, rect.position.y + 42, 105, 52), "OK" if owned else "R$ %d" % price, color, 15)
 
 func _shop_tap(pos: Vector2) -> void:
-    var chars := [["ze", 0], ["maria", 180], ["motoboy", 260], ["julia", 360], ["carlos", 440], ["influencer", 420]]
+    var chars := [["ze", 0], ["julia", 0], ["maria", 180], ["motoboy", 260], ["carlos", 440], ["influencer", 420]]
     var items := [["tenis", 200], ["mochila", 180], ["fone", 220], ["cafe", 150], ["confete", 120], ["placa", 300]]
     if shop_tab == 0:
         for i in chars.size():

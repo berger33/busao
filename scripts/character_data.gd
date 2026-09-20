@@ -142,7 +142,7 @@ const CATALOG: Array[Dictionary] = [
         "role": "corredora",
         "description": "look esportivo, faixa e garrafa",
         "effect": "pulo prolongado",
-        "price": 360,
+        "price": 0,
         "skin": Color("#7b4937"),
         "hair": Color("#171319"),
         "shirt": Color("#e75076"),

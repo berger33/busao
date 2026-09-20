@@ -34,7 +34,7 @@ CATALOG = [
     {"id":"maria","name":"Maria do Bairro","gender":"F","skin":"#6c3e2d","hair":"#1d1517","shirt":"#e58aab","pants":"#5b4070","shoes":"#f2c65a","accent":"#68c6b1"},
     {"id":"bia","name":"Bia Estudante","gender":"F","skin":"#c98463","hair":"#4c2d24","shirt":"#f2f0e5","pants":"#3a6fa0","shoes":"#ec6b6a","accent":"#f5c85a"},
     {"id":"camila","name":"Camila do Negócio","gender":"F","skin":"#a96246","hair":"#24191a","shirt":"#46b6a3","pants":"#305a5d","shoes":"#f0b84e","accent":"#f27a5b"},
-    {"id":"julia","name":"Júlia Atleta","gender":"F","skin":"#7b4937","hair":"#171319","shirt":"#e75076","pants":"#242c4c","shoes":"#68e0c0","accent":"#e9d459"},
+    {"id":"julia","name":"Júlia Atleta","gender":"F","skin":"#a66b52","hair":"#171319","shirt":"#eb618c","pants":"#1e1e26","shoes":"#f5f5f7","accent":"#e9d459"},
     {"id":"influencer","name":"Nina Creator","gender":"F","skin":"#d49b7b","hair":"#291b2c","shirt":"#171824","pants":"#4f7897","shoes":"#171a26","accent":"#d7b9e9"},
     {"id":"chico","name":"Chico Carteiro","gender":"M","skin":"#8a5a3c","hair":"#1c1614","shirt":"#2f6db8","pants":"#22314a","shoes":"#2b2b33","accent":"#ffd23e"},
     {"id":"tiao","name":"Tião Vaqueiro","gender":"M","skin":"#6e452c","hair":"#191210","shirt":"#a8672f","pants":"#5a3d28","shoes":"#3a2617","accent":"#d9b06a"},
@@ -359,21 +359,21 @@ def build_one_personagem(profile, out_path):
         o.data.materials.append(m_calca)
         partes.append((o,"pelvis"))
     else:
-        o=caixa("Pelvis", (0,0,0.985), (largura_quadril*2+0.08, 0.18, 0.16))
+        o=elipsoide_bl("Pelvis", (0,0,0.985), (largura_quadril + 0.03, 0.12, 0.11), seg=2)
         o.data.materials.append(m_calca)
         partes.append((o,"pelvis"))
 
-    o=caixa("CinturaBaixa", (0,0,1.115), (0.34,0.17,0.14))
+    o=elipsoide_bl("CinturaBaixa", (0,0,1.12), (largura_quadril * 0.82 if not is_male else 0.16, 0.11, 0.10), seg=2)
     o.data.materials.append(m_camisa)
     partes.append((o,"spine_01"))
-    o=caixa("PeitoMedio", (0,0,1.25), (0.38+peito_extra,0.18,0.14))
+    o=elipsoide_bl("PeitoMedio", (0,0,1.25), (largura_ombro * 0.88 + peito_extra, 0.125 + (0.02 if not is_male else 0.0), 0.11), seg=2)
     o.data.materials.append(m_camisa)
     partes.append((o,"spine_02"))
-    o=caixa("Ombros", (0,0,1.385), (largura_ombro*2+0.04,0.19,0.15))
+    o=elipsoide_bl("Ombros", (0,0,1.38), (largura_ombro + 0.025, 0.12, 0.09), seg=2)
     o.data.materials.append(m_camisa)
     partes.append((o,"spine_03"))
     # pescoco
-    o=pilar_z("Pescoco", 0.055, 0.045, 0.095)
+    o=pilar_z("Pescoco", 0.052, 0.046, 0.095)
     sozinho(o); o.location=(0,0,1.45); bpy.ops.object.transform_apply(location=True, rotation=False, scale=False)
     o.data.materials.append(m_pele)
     partes.append((o,"neck_01"))
@@ -415,13 +415,20 @@ def build_one_personagem(profile, out_path):
             partes.append((ob,"Head"))
     else:
         if pid=="julia":
-            # rabo de cavalo + faixa
-            oc=elipsoide_bl("CabeloTopo", (0,0,1.705), (0.11,0.12,0.065), seg=1)
+            # rabo de cavalo atletico com drape identico a abb89707
+            oc=elipsoide_bl("CabeloTopo", (0, -0.005, 1.69), (0.115, 0.125, 0.08), seg=1)
             oc.data.materials.append(m_cabelo)
             partes.append((oc,"Head"))
-            oc2=elipsoide_bl("RaboJulia", (0,0.09,1.55), (0.055,0.065,0.20), seg=1)
-            oc2.data.materials.append(m_cabelo)
-            partes.append((oc2,"Head"))
+            for sx in (-0.10, 0.10):
+                oc2=elipsoide_bl(f"CabeloLado_{sx}", (sx, 0.02, 1.61), (0.025, 0.07, 0.10), seg=1)
+                oc2.data.materials.append(m_cabelo)
+                partes.append((oc2,"Head"))
+            oc3=elipsoide_bl("RaboCavalo", (0, 0.14, 1.55), (0.042, 0.055, 0.18), seg=1)
+            oc3.data.materials.append(m_cabelo)
+            partes.append((oc3,"Head"))
+            oc4=elipsoide_bl("ElasticoCabelo", (0, 0.10, 1.64), (0.022, 0.022, 0.018), seg=1)
+            oc4.data.materials.append(m_camisa)
+            partes.append((oc4,"Head"))
         elif pid in ("zilda","marta"):
             oc=elipsoide_bl("CabeloTopo", (0,0,1.68), (0.105,0.11,0.055), seg=1)
             oc.data.materials.append(m_cabelo)
@@ -452,40 +459,45 @@ def build_one_personagem(profile, out_path):
     # bracos
     for sx, lado in ((-1, "l"), (1, "r")):
         cx = sx * (largura_ombro+0.02)
-        oo=elipsoide_bl(f"OmbroCap_{lado}_{pid}", (cx,0,1.40), (0.065,0.065,0.065), seg=1)
+        oo=elipsoide_bl(f"OmbroCap_{lado}_{pid}", (cx,0,1.39), (0.062,0.062,0.065), seg=1)
         oo.data.materials.append(m_camisa)
         partes.append((oo,f"clavicle_{lado}"))
-        o=pilar_z(f"BracoSup_{lado}_{pid}", 0.055, 0.045, 0.24)
+        o=pilar_z(f"BracoSup_{lado}_{pid}", 0.050, 0.042, 0.24)
         sozinho(o); o.location=(cx,0,1.40); o.rotation_euler=(0, rad(90 if sx>0 else -90), 0); bpy.ops.object.transform_apply(location=True, rotation=True, scale=False)
         o.data.materials.append(m_camisa)
         partes.append((o,f"upperarm_{lado}"))
-        o2=pilar_z(f"Antebraco_{lado}_{pid}", 0.042, 0.032, 0.22)
+        o2=pilar_z(f"Antebraco_{lado}_{pid}", 0.040, 0.032, 0.22)
         sozinho(o2); o2.location=(sx*0.38,0,1.40); o2.rotation_euler=(0, rad(90 if sx>0 else -90),0); bpy.ops.object.transform_apply(location=True, rotation=True, scale=False)
         o2.data.materials.append(m_pele)
         partes.append((o2,f"lowerarm_{lado}"))
-        o3=elipsoide_bl(f"Mao_{lado}_{pid}", (sx*0.64,0,1.40), (0.045,0.025,0.04), seg=1)
+        o3=elipsoide_bl(f"Mao_{lado}_{pid}", (sx*0.62,0,1.40), (0.038,0.028,0.032), seg=1)
         o3.data.materials.append(m_pele)
         partes.append((o3,f"hand_{lado}"))
-        for i, dz in enumerate([-0.02,0,0.02]):
-            o4=caixa(f"Dedo_{lado}_{i}_{pid}", (sx*0.69, -0.045, 1.40+dz), (0.015,0.03,0.015))
-            o4.data.materials.append(m_pele)
-            partes.append((o4,f"hand_{lado}"))
+        o4=elipsoide_bl(f"Dedos_{lado}_{pid}", (sx*0.65, -0.018, 1.40), (0.020,0.024,0.026), seg=1)
+        o4.data.materials.append(m_pele)
+        partes.append((o4,f"hand_{lado}"))
 
     # pernas
     for sx, lado in ((-1,"l"),(1,"r")):
-        cx=sx*0.09
-        o=pilar_z(f"Coxa_{lado}_{pid}", 0.078, 0.065, 0.42)
+        cx = sx * (largura_quadril * 0.52 if not is_male else 0.10)
+        o=pilar_z(f"Coxa_{lado}_{pid}", 0.074, 0.062, 0.42)
         sozinho(o); o.location=(cx,0,0.50); bpy.ops.object.transform_apply(location=True, rotation=False, scale=False)
         o.data.materials.append(m_calca)
         partes.append((o,f"thigh_{lado}"))
-        o2=pilar_z(f"Panturrilha_{lado}_{pid}", 0.065, 0.045, 0.40)
+        oj=elipsoide_bl(f"Joelho_{lado}_{pid}", (cx, -0.015, 0.50), (0.052, 0.040, 0.040), seg=1)
+        oj.data.materials.append(m_calca)
+        partes.append((oj,f"thigh_{lado}"))
+        o2=pilar_z(f"Panturrilha_{lado}_{pid}", 0.062, 0.046, 0.40)
         sozinho(o2); o2.location=(cx,0,0.10); bpy.ops.object.transform_apply(location=True, rotation=False, scale=False)
         o2.data.materials.append(m_calca)
         partes.append((o2,f"calf_{lado}"))
-        o3=caixa(f"Sapato_{lado}_{pid}", (cx, -0.07, 0.035), (0.12,0.24,0.07))
+        o3=elipsoide_bl(f"SapatoCabedal_{lado}_{pid}", (cx, -0.05, 0.050), (0.048, 0.105, 0.035), seg=1)
         o3.data.materials.append(m_sapato)
         partes.append((o3,f"foot_{lado}"))
-        o4=caixa(f"PeitoPe_{lado}_{pid}", (cx, -0.09, 0.055), (0.11,0.18,0.04))
+        o3_sole=caixa(f"Sapato_{lado}_{pid}", (cx, -0.05, 0.035), (0.094, 0.21, 0.070))
+        o3_sole.data.materials.append(m_sapato)
+        partes.append((o3_sole,f"foot_{lado}"))
+        o4=caixa(f"PontaPe_{lado}_{pid}", (cx, -0.15, 0.025), (0.084, 0.08, 0.050))
         o4.data.materials.append(m_sapato)
         partes.append((o4,f"ball_{lado}"))
 
@@ -557,16 +569,11 @@ def build_one_personagem(profile, out_path):
         # bolsa tiracolo
         add_box(f"BolsaCamila_{pid}", (0.20, -0.015, 1.14), (0.16,0.10,0.16), material(f"BolsaCamilaMat_{pid}", cor_accent, 0.62), "pelvis")
     elif pid=="julia":
-        # faixa cabeça
+        # Atleta abb89707 corre com maos livres e faixa esportiva discreta
         o=torus_bl(f"FaixaJulia_{pid}", (0,0,1.675), 0.115, 0.015)
         o.data.materials.append(material(f"FaixaMat_{pid}", cor_accent, 0.62))
         sozinho(o); o.rotation_euler=(rad(90),0,0); bpy.ops.object.transform_apply(rotation=True, scale=False)
         partes.append((o,"Head"))
-        # garrafa na mão direita
-        go=pilar_z(f"Garrafa_{pid}", 0.025, 0.025, 0.18)
-        sozinho(go); go.location=(0.66, -0.06, 1.44); go.rotation_euler=(rad(90),0,0); bpy.ops.object.transform_apply(location=True, rotation=True, scale=False)
-        go.data.materials.clear(); go.data.materials.append(material(f"GarrafaMat_{pid}", hex_to_rgb("#68e0c0"), 0.35, 0.15))
-        partes.append((go,"hand_r"))
     elif pid=="influencer":
         # phone na mão direita + pulseira + brinco
         add_box(f"Phone_{pid}", (0.67, -0.06, 1.44), (0.02,0.07,0.13), material(f"PhoneMat_{pid}", hex_to_rgb("#171824"), 0.25, 0.65), "hand_r")

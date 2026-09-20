@@ -1,7 +1,7 @@
 # PLANO MESTRE DE FIDELIDADE VISUAL E REALISMO 3D
 **Referência Visual Canônica:** `abb89707-7fb0-4adc-a5f4-f3e4e81b48ef.jpg`  
 **Data de Aprovação:** 20/09/2026  
-**Status:** Em Execução (Etapa 1 Concluída, Etapa 2 em Andamento)
+**Status:** Concluído com Sucesso — Todas as 5 Etapas Implementadas, Auditadas e Validadas (131/131 Testes OK)
 
 ---
 
@@ -94,3 +94,13 @@ Qualquer modificação realizada deve obrigatoriamente manter os seguintes contr
 3. `tools/audit_balance.py`: BALANCE AUDIT OK (economia sem paywall).
 4. `tools/audit_runner_rig.py`: Rig do corredor com 52 ossos, altura 1.82 m e sola a +0.012 m do solo.
 5. Arquitetura orientada a arquivos em Git com rastreamento contínuo no branch `arena/01a0bce2-busao`.
+
+---
+
+## 5. Experiência Inicial do Jogador (Onboarding & Mostruário Imediato)
+
+Para garantir que o jogador e os avaliadores experimentem imediatamente a fidelidade gráfica idêntica à referência canônica `abb89707-7fb0-4adc-a5f4-f3e4e81b48ef.jpg`:
+- **Dupla de Corredores Iniciais Gratuitos:** Tanto o protagonista masculino `Zé Atrasado` quanto a atleta feminina `Júlia Atleta` estão desbloqueados de fábrica (`price = 0` e presentes no inventário inicial em `save_data.gd`).
+- **Júlia Atleta Equipada por Padrão:** Ao iniciar o jogo ou criar um save limpo, a corredora feminina atlética já está equipada por padrão, exibindo imediatamente a silhueta, o rabo de cavalo dinâmico, o top esportivo coral, a calça legging preta e os tênis brancos de amortecimento correndo sob a iluminação solar golden hour.
+- **Refinamento dos 20 Modelos Dedicados:** Todos os 20 arquétipos em `assets/characters/personagens/` contam com torso e membros orgânicos (elipsoides anatômicos, deltoides nos ombros, contorno patelar nos joelhos e tênis com sola de amortecimento), além de pesagem de ossos contínua e 6 loops biomecânicos validados.
+
