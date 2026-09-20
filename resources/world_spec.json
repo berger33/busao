@@ -138,6 +138,7 @@
       ],
       "height_map": "calcada_laje_height.png",
       "height_scale": 0.025,
+      "normal_scale": 1.25,
       "triplanar_sharpness": 0.0
     },
     "calcada_lateral": {
@@ -151,6 +152,7 @@
       ],
       "height_map": "calcada_mosaico_height.png",
       "height_scale": 0.025,
+      "normal_scale": 1.15,
       "triplanar_sharpness": 0.0
     },
     "guia": {
@@ -164,6 +166,7 @@
       ],
       "height_map": "calcada_laje_height.png",
       "height_scale": 0.025,
+      "normal_scale": 1.2,
       "triplanar_sharpness": 0.0
     },
     "pista": {
@@ -177,6 +180,7 @@
       ],
       "height_map": "asfalto_height.png",
       "height_scale": 0.025,
+      "normal_scale": 1.1,
       "triplanar_sharpness": 8.0
     },
     "linha_amarela": {
@@ -184,10 +188,23 @@
       "uv_escala": 1.0,
       "triplanar": false,
       "rugosidade": 0.55,
+      "normal_scale": 0.9,
       "cor": [
         1.0,
         0.82,
         0.1
+      ]
+    },
+    "faixa_branca": {
+      "pbr": "metal_pintado",
+      "uv_escala": 1.0,
+      "triplanar": false,
+      "rugosidade": 0.45,
+      "normal_scale": 0.9,
+      "cor": [
+        0.96,
+        0.97,
+        0.98
       ]
     },
     "fachada_tijolo": {

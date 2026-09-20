@@ -128,7 +128,7 @@ static func material(spec: Dictionary, chave: String) -> Material:
         mat.albedo_texture = _textura("%s_albedo.png" % nome_pbr)
         mat.normal_enabled = true
         mat.normal_texture = _textura("%s_normal.png" % nome_pbr)
-        mat.normal_scale = 0.8
+        mat.normal_scale = float(cfg.get("normal_scale", 1.0))
         mat.orm_texture = _textura("%s_orm.png" % nome_pbr)
     else:
         mat = StandardMaterial3D.new()
@@ -140,6 +140,8 @@ static func material(spec: Dictionary, chave: String) -> Material:
         mat.roughness = float(cfg["rugosidade"])
     if cfg.has("metalico"):
         mat.metallic = float(cfg["metalico"])
+    if mat is StandardMaterial3D and cfg.has("normal_scale") and mat.normal_enabled:
+        mat.normal_scale = float(cfg["normal_scale"])
     var escala := float(cfg.get("uv_escala", 1.0))
     mat.uv1_scale = Vector3(escala, escala, escala)
     mat.uv1_triplanar = bool(cfg.get("triplanar", false))
@@ -419,6 +421,56 @@ static func _build_linhas(spec: Dictionary, raiz: Node3D, comprimento: float, fa
             material(spec, "linha_amarela"),
             Vector3(x, 0.006, -comprimento * 0.5), raiz, nome, false, 0.0)
         _marca(no, "linha_amarela", "nenhum")
+
+    # Faixa de pedestres zebrada de alto contraste e divisores seccionados na pista
+    var index: int = int(raiz.get_meta("spec_index", 0))
+    var tem_faixa_pedestre: bool = (index % 2 == 1)
+    var z_faixa_ini := 4.2
+    var n_zebras := 6
+    var largura_zebra := 0.42
+    var gap_zebra := 0.45
+    var z_faixa_fim := z_faixa_ini + float(n_zebras) * largura_zebra + float(n_zebras - 1) * gap_zebra
+
+    if tem_faixa_pedestre:
+        var x_rua_ext := _x_rua_esq(faixas) + 0.35
+        var x_rua_int := x_base - 0.25
+        var largura_rua := absf(x_rua_int - x_rua_ext)
+        var x_centro_faixa := (x_rua_ext + x_rua_int) * 0.5
+        var xforms_zebra: Array = []
+        for s in range(n_zebras):
+            var z_zebra: float = z_faixa_ini + float(s) * (largura_zebra + gap_zebra) + largura_zebra * 0.5
+            xforms_zebra.append(_xform(
+                Vector3(x_centro_faixa, 0.008, -z_zebra),
+                Vector3(largura_rua, 0.01, largura_zebra)))
+        if not xforms_zebra.is_empty():
+            var faixa_mesh := _multimesh(_box(Vector3.ONE), material(spec, "faixa_branca"), xforms_zebra, raiz, "FaixaPedestre", false, 0.0)
+            _marca(faixa_mesh, "faixa_pedestre", "nenhum")
+
+        # Piso podotatil amarelo de alerta na borda da calcada correspondente a travessia
+        var z_alerta_centro := (z_faixa_ini + z_faixa_fim) * 0.5
+        var comp_alerta := (z_faixa_fim - z_faixa_ini) + 0.3
+        var podotatil := _malha(_box(Vector3(0.38, 0.014, comp_alerta)),
+            material(spec, "linha_amarela"),
+            Vector3(-borda_esq + 0.19, 0.155, -z_alerta_centro), raiz, "PisoPodotatil", false, 0.0)
+        _marca(podotatil, "podotatil", "nenhum")
+
+    # Linha tracejada divisoria de pistas no centro da rua (_x_rua_centro)
+    var x_centro_rua := _x_rua_centro(faixas)
+    var dash_len := 2.5
+    var dash_gap := 3.5
+    var dash_step := dash_len + dash_gap
+    var xforms_dashes: Array = []
+    var z_cursor := 1.2
+    while z_cursor + dash_len < comprimento - 1.0:
+        var overlaps_zebra := tem_faixa_pedestre and (z_cursor + dash_len >= z_faixa_ini - 0.6 and z_cursor <= z_faixa_fim + 0.6)
+        if not overlaps_zebra:
+            xforms_dashes.append(_xform(
+                Vector3(x_centro_rua, 0.007, -(z_cursor + dash_len * 0.5)),
+                Vector3(0.12, 0.01, dash_len)))
+        z_cursor += dash_step
+    if not xforms_dashes.is_empty():
+        var dashes_mesh := _multimesh(_box(Vector3.ONE), material(spec, "faixa_branca"), xforms_dashes, raiz, "LinhaTracejada", false, 0.0)
+        _marca(dashes_mesh, "linha_tracejada", "nenhum")
 
 static func _build_lajes(spec: Dictionary, raiz: Node3D, rng: RandomNumberGenerator,
         comprimento: float, faixas: Dictionary) -> void:

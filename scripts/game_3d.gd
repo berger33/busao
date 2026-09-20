@@ -3109,6 +3109,12 @@ func _material(color: Color, metallic: float, roughness: float, surface: String 
             material.normal_scale = 0.3
         elif surface == "skin":
             material.normal_scale = 0.2
+        elif surface == "sidewalk":
+            material.normal_scale = 0.82
+        elif surface == "cobble":
+            material.normal_scale = 0.92
+        elif surface == "asphalt":
+            material.normal_scale = 0.72
     var rough_map: Texture2D = _roughness_for_surface(surface)
     if rough_map != null:
         material.roughness_texture = rough_map
