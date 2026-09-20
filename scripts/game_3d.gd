@@ -3517,6 +3517,8 @@ func _handle_tap(pos: Vector2) -> void:
         elif Rect2(375, 880, 290, 88).has_point(pos):
             if result.get("success", false) and result.get("endless", false):
                 _start_endless()
+            elif result.get("success", false) and phase_index < BALANCE.phase_count - 1 and GameSave.is_phase_unlocked(phase_index + 1):
+                _start_run(phase_index + 1)
             else:
                 _start_run(phase_index)
         elif Rect2(55, 1000, 610, 72).has_point(pos) or Rect2(55, 1090, 610, 72).has_point(pos):
@@ -3886,21 +3888,25 @@ func _ensure_lote6_particles() -> void:
 
 func _update_lote6_effects(_dt: float) -> void:
     _ensure_lote6_particles()
-    # poeira só durante o deslize
+    # Poeira durante deslize e puffs sutis sob as passadas em velocidade alta
     if _dust_particles != null:
-        var should_dust: bool = slide_timer > 0.0 and screen == 2 and run_mode == "playing" and not bool(GameSave.data.get("reduced_motion", false))
+        var is_sliding: bool = slide_timer > 0.0
+        var is_sprint_step: bool = motion_speed > 8.5 and jump_timer <= 0.0 and fmod(run_phase, 0.5) < 0.20
+        var should_dust: bool = (is_sliding or is_sprint_step) and screen == 2 and run_mode == "playing" and not bool(GameSave.data.get("reduced_motion", false))
         _dust_particles.emitting = should_dust
         if should_dust and player_root != null:
-            _dust_particles.global_position = player_root.global_position + Vector3(0, 0.06, 0.55)
-            _dust_particles.restart()
-    # respingo quando o clima indica piso molhado e o corredor avança rápido
+            var dust_offset: Vector3 = Vector3(0, 0.06, 0.55) if is_sliding else Vector3(0, 0.03, 0.28)
+            _dust_particles.global_position = player_root.global_position + dust_offset
+            if is_sliding:
+                _dust_particles.restart()
+    # Respingo quando o clima indica piso molhado e o corredor avança rápido
     if _splash_particles != null:
         var wet: float = _clima.get_wetness() if _clima != null and _clima.has_method("get_wetness") else 0.0
-        var should_splash: bool = wet > 0.35 and motion_speed > 4.0 and screen == 2 and run_mode == "playing" and not bool(GameSave.data.get("reduced_motion", false))
-        # só respinga em intervalos para não saturar
-        _splash_particles.emitting = should_splash and fmod(pulse, 0.9) < 0.5
+        var should_splash: bool = wet > 0.35 and motion_speed > 4.0 and jump_timer <= 0.0 and screen == 2 and run_mode == "playing" and not bool(GameSave.data.get("reduced_motion", false))
+        # Respinga sincronizado com as passadas para não saturar
+        _splash_particles.emitting = should_splash and fmod(run_phase, 0.5) < 0.24
         if should_splash and player_root != null:
-            _splash_particles.global_position = player_root.global_position + Vector3(0, 0.03, -0.25)
+            _splash_particles.global_position = player_root.global_position + Vector3(0, 0.03, 0.15)
 
 func _capture_screenshot() -> void:
     var vp: Viewport = get_viewport()

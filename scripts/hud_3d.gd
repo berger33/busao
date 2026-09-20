@@ -319,7 +319,8 @@ func _draw_results() -> void:
         _button(Rect2(55, 760, 610, 72), dbl_label, dbl_color, 16)
         _text_center(Vector2(360, 845), "dobra o bônus desta corrida • sem repetir", 12, MUTED)
     _button(Rect2(55, 880, 290, 88), "MAPA", BLUE, 24)
-    _button(Rect2(375, 880, 290, 88), "TENTAR DE NOVO", GOLD, 18)
+    var next_action_label := "PRÓXIMA FASE" if (success and not bool(result_data.get("endless", false)) and int(state.get("phase_index", 0)) < 49 and GameSave.is_phase_unlocked(int(state.get("phase_index", 0)) + 1)) else "TENTAR DE NOVO"
+    _button(Rect2(375, 880, 290, 88), next_action_label, GOLD, 18)
     _button(Rect2(55, 1000, 610, 72), "MENU PRINCIPAL", Color("#293955"), 20)
 
 func _draw_shop() -> void:
