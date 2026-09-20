@@ -20,9 +20,17 @@ static func road_interval_for(obstacle_count: int) -> float:
 static func sidewalk_interval_for(road_interval: float) -> float:
     return maxf(15.0, road_interval * 2.1)
 
-static func traffic_speed_for(kind: String, seed_index: int) -> float:
-    var base: float = {"car": 2.3, "bus_traffic": 1.35, "motorcycle": 3.8, "truck": 1.05}.get(kind, 0.0)
-    return base + float(seed_index % 3) * 0.42
+static func traffic_speed_for(kind: String, seed_index: int, player_speed: float = 5.0) -> float:
+    # Tráfego mais rápido que o corredor: a pista é compartilhada, então o
+    # veículo ALCANÇA o jogador por trás em vez de ser "atropelado" por ele.
+    # Multiplicadores sobre a velocidade do jogador (m/s) — moto é a mais ágil,
+    # caminhão/ônibus urbanos são os mais lentos, mas nunca abaixo do corredor.
+    # Faixa urbana real: 5 m/s jogador → carro ~7,5-8,5 m/s (27-31 km/h).
+    var factor: float = {"car": 1.55, "bus_traffic": 1.25, "motorcycle": 1.85, "truck": 1.20}.get(kind, 0.0)
+    if factor <= 0.0:
+        return 0.0
+    var jitter: float = float(seed_index % 3) * 0.06   # 3 "temperamentos" de motorista
+    return player_speed * (factor + jitter)
 
 static func bonus_kind_for_phase(phase_index: int, distance: float) -> String:
     var options: Array[String] = ["coffee", "bread", "pastel", "sugarcane", "pass"]

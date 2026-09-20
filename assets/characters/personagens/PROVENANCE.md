@@ -1,6 +1,6 @@
 # Manifest de Proveniência — Personagens Dedicados (20 GLBs)
 
-Gerados proceduralmente pelo Blender 4.5 via `tools/blender/build_personagens.py`.
+Gerados proceduralmente pelo Blender 4.5 via `tools/blender/build_personagens.py` (julia.glb: `tools/blender/build_corredora_fase1.py`, Fase 1).
 Cada arquivo contém malha humana 3D anatômica e orgânica contínua com UV unwrapped em anéis de quads, paleta PBR, tênis esportivos moldados com entressola EVA, esqueleto de 52 ossos e 6 animações biomecânicas completas.
 
 ## Arquivos e Hashes SHA-256
@@ -15,7 +15,7 @@ b292c54640b2e17a68a41bf1d24d7761a0260c1800b6c2d60077ff433ecedfcc  cida.glb  (387
 45b378b0d0fb616f1d1ed187c4261a03f4dc0be02514157d5c3a3b3e4ead7222  deise.glb  (387024 bytes)
 640759895c3a7fcd36226a2a16e53e325f6d2006ce5f6da91f239f30f4a59f49  influencer.glb  (387036 bytes)
 663f5c2fd7a8be0ed14e0c0c9ff2bd4da2bfec2f89df88b597c709cf60ddda02  joao.glb  (373072 bytes)
-53538bdb03197cfd4f036a603ec8692a07aa4a23dc92e76aa7a6c493d9f59e30  julia.glb  (260548 bytes)  ← FASE 1: tools/blender/build_corredora_fase1.py
+53538bdb03197cfd4f036a603ec8692a07aa4a23dc92e76aa7a6c493d9f59e30  julia.glb  (260548 bytes)
 be476777bda71e867f4cb29791b8020ec064d145b9fa381dbdce2a72c8a788cb  luan.glb  (373072 bytes)
 1cb4b49bbe74ce4fed18e8051b7e25015e51a775963aa3354b01ee1a6aac06b6  maria.glb  (387024 bytes)
 b7232a737763e0ccaed4c0afaebb2b548565ae439b7eb813ee49ea073b7045eb  marta.glb  (387020 bytes)

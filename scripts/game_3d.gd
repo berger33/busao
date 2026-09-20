@@ -781,6 +781,12 @@ func _spawn_entity(kind: String, lane: int, entity_distance: float, collectible:
             if not _area.body_exited.is_connected(_on_pothole_exited):
                 _area.body_exited.connect(_on_pothole_exited)
     var traffic_speed: float = _traffic_speed_for(kind, entities.size()) if lane == ROAD_LANE and not collectible else 0.0
+    if traffic_speed > player_speed:
+        # Veículo mais rápido que o corredor: nasce ATRÁS dele, na posição em
+        # que — mantendo as velocidades — a ultrapassagem acontece exatamente
+        # quando o jogador estiver em `entity_distance` (mesma leitura de
+        # design das fases). z0 = d·(v_t/v_p − 1) > 0 (atrás da câmera).
+        node.position.z = entity_distance * (traffic_speed / maxf(0.1, player_speed) - 1.0)
     # Comportamento por tipo: nada de espantalho parado. A velhinha caminha
     # de frente para o corredor, o caramelo corre (e late de verdade no
     # world_animal), o vendedor fica no seu ponto conversando com a rua.
@@ -802,7 +808,8 @@ func _spawn_entity(kind: String, lane: int, entity_distance: float, collectible:
         "passed": false,
         "collectible": collectible,
         "traffic_speed": traffic_speed,
-        "mobility": mobility
+        "mobility": mobility,
+        "prev_z": node.position.z + distance
     })
     call_deferred("_audit_3d_entity", node, kind, collectible)
 
@@ -821,23 +828,76 @@ func _audit_3d_entity(node: Node3D, kind: String, collectible: bool) -> void:
         push_warning("3D asset contract: cachorro sem Animal3D_caramelo")
 
 func _traffic_speed_for(kind: String, seed_index: int) -> float:
-    return WorldSpawner.traffic_speed_for(kind, seed_index)
+    return WorldSpawner.traffic_speed_for(kind, seed_index, player_speed)
 
 func _animate_traffic(node: Node3D, speed: float, dt: float) -> void:
-    var wheel_spin: float = speed * dt / 0.30
-    # Percorre todos os descendentes: nos veiculos procedurais as rodas sao
-    # filhas diretas; nos GLBs drop-in elas ficam aninhadas na cena do modelo.
+    # Rolagem sem deslizar: ângulo = distância / raio. O sinal negativo faz o
+    # topo da roda avançar para -Z (sentido do tráfego). O raio vem do pivô
+    # (GLB, ver _pivot_wheels) ou da AABB do cilindro procedural.
     var stack: Array[Node] = [node]
     while not stack.is_empty():
         var current: Node = stack.pop_back()
-        stack.append_array(current.get_children())
         if current == node or not current is Node3D:
+            stack.append_array(current.get_children())
             continue
         var wheel_name := str(current.name)
         if wheel_name.begins_with("Wheel") or wheel_name.begins_with("BusWheel") or wheel_name.begins_with("MotoWheel"):
-            (current as Node3D).rotation.x -= wheel_spin
+            (current as Node3D).rotation.x -= speed * dt / _wheel_radius(current as Node3D)
+            continue  # não desce: a malha filha do pivô já gira junto
+        stack.append_array(current.get_children())
     var body_bob: float = sin(pulse * 4.0 + node.position.z * 0.14) * 0.006
     node.position.y = body_bob
+
+func _wheel_radius(wheel: Node3D) -> float:
+    if wheel.has_meta("wheel_radius"):
+        return maxf(0.05, float(wheel.get_meta("wheel_radius")))
+    if wheel is MeshInstance3D and (wheel as MeshInstance3D).mesh != null:
+        var aabb := (wheel as MeshInstance3D).mesh.get_aabb()
+        # cilindro procedural: eixo Y local (height) é a largura; raio = maior dos outros
+        var r: float = maxf(aabb.size.x, aabb.size.z) * 0.5
+        wheel.set_meta("wheel_radius", r)
+        return maxf(0.05, r)
+    return 0.30
+
+const VEHICLE_HALF_LENGTH := {"car": 2.1, "motorcycle": 1.05, "truck": 3.1, "bus_traffic": 3.6}
+const TRAFFIC_MIN_GAP := 2.2  # metros livres entre para-choques em pelotão
+
+func _harmonize_traffic(dt: float) -> void:
+    # Tráfego em harmonia: ninguém atravessa ninguém. Veículos da faixa da rua
+    # são ordenados por posição (menor z = mais à frente, pois andam para -Z);
+    # quem alcança o da frente assume a velocidade dele e mantém a distância
+    # de segurança (car-following). A velocidade harmonizada fica gravada na
+    # entidade, formando pelotões estáveis em vez de ultrapassagens fantasmas.
+    var vehicles: Array[Dictionary] = []
+    for entity in entities:
+        if bool(entity["collectible"]):
+            continue
+        if float(entity.get("traffic_speed", 0.0)) <= 0.0:
+            continue
+        if not VEHICLE_HALF_LENGTH.has(str(entity["kind"])):
+            continue
+        if not is_instance_valid(entity["node"]):
+            continue
+        vehicles.append(entity)
+    if vehicles.size() < 2:
+        return
+    vehicles.sort_custom(func(a, b): return (a["node"] as Node3D).position.z < (b["node"] as Node3D).position.z)
+    for i in range(1, vehicles.size()):
+        var ahead: Dictionary = vehicles[i - 1]
+        var me: Dictionary = vehicles[i]
+        var ahead_node: Node3D = ahead["node"]
+        var my_node: Node3D = me["node"]
+        var min_gap: float = float(VEHICLE_HALF_LENGTH[str(ahead["kind"])]) + float(VEHICLE_HALF_LENGTH[str(me["kind"])]) + TRAFFIC_MIN_GAP
+        var gap: float = my_node.position.z - ahead_node.position.z
+        var ahead_speed: float = float(ahead["traffic_speed"])
+        var my_speed: float = float(me["traffic_speed"])
+        if gap < min_gap:
+            my_node.position.z = ahead_node.position.z + min_gap
+            if my_speed > ahead_speed:
+                me["traffic_speed"] = ahead_speed
+        elif my_speed > ahead_speed and gap < min_gap + my_speed * 1.6:
+            # aproximação: desacelera suavemente antes de colar (sem "freada" seca)
+            me["traffic_speed"] = maxf(ahead_speed, my_speed - (my_speed - ahead_speed) * minf(1.0, dt * 2.5))
 
 func _update_tutorial_hint() -> void:
     if phase_index != 0 or bool(GameSave.data.get("tutorial_seen", false)):
@@ -920,16 +980,24 @@ func _update_run(dt: float) -> void:
             player_visual.visible = (int(invulnerability * 12.0) % 2 == 0)
     elif player_visual != null and not player_visual.visible and hearts > 0:
         player_visual.visible = true
+    _harmonize_traffic(dt)
     for entity in entities:
-        if bool(entity["passed"]):
-            continue
         var node: Node3D = entity["node"]
         var traffic_speed: float = float(entity.get("traffic_speed", 0.0))
-        if traffic_speed > 0.0:
-            # Tráfego avança no sentido da avenida (-Z); como o corredor é
-            # mais rápido, os veículos se aproximam naturalmente pela rua.
+        if traffic_speed > 0.0 and is_instance_valid(node):
+            # Tráfego avança no sentido da avenida (-Z), mais rápido que o
+            # corredor: os veículos vêm por trás, ultrapassam e somem à frente.
+            # Continua rodando mesmo depois de "passed" — um carro parado no
+            # meio da pista seria atravessado pelo jogador.
             node.position.z -= traffic_speed * dt
             _animate_traffic(node, traffic_speed, dt)
+            if bool(entity["passed"]):
+                if node.position.z + distance < -140.0:
+                    node.queue_free()
+                    entity["traffic_speed"] = 0.0
+                continue
+        if bool(entity["passed"]):
+            continue
         if bool(entity["collectible"]):
             node.rotation.y += dt * 2.6
         var mobility: float = float(entity.get("mobility", 0.0))
@@ -938,7 +1006,14 @@ func _update_run(dt: float) -> void:
             # colisão abaixo usa a posição real do nó, então nada mais muda.
             node.position.z += mobility * dt
         var entity_z: float = node.position.z + distance
-        if entity_z >= 0.6:
+        var prev_z: float = float(entity.get("prev_z", entity_z))
+        entity["prev_z"] = entity_z
+        # Cruzamento do corredor em QUALQUER sentido: obstáculo/coletável
+        # alcançado pelo jogador (entity_z sobe até 0.6) ou veículo rápido
+        # que vem por trás e ultrapassa (entity_z desce e cruza 0.0).
+        var crossed_forward: bool = entity_z >= 0.6 and prev_z < 0.6
+        var crossed_from_behind: bool = traffic_speed > 0.0 and prev_z > 0.0 and entity_z <= 0.0
+        if crossed_forward or crossed_from_behind:
             entity["passed"] = true
             _resolve_entity(entity)
     if distance >= run_total:
@@ -2510,6 +2585,38 @@ func _fit_model(node: Node3D, target_length: float, target_height: float) -> voi
     var offset := Vector3(-bounds.position.x, -bounds.position.y, -bounds.position.z - bounds.size.z * 0.5) * fit
     node.position += offset
     _enhance_vehicle_instance(node)
+    _pivot_wheels(node, fit)
+
+func _pivot_wheels(root: Node3D, fit: float) -> void:
+    # Nos GLBs originais (build_lote5/6) a roda vem com a geometria "assada" na
+    # posição final e o nó na origem do veículo. Girar rotation.x nesse nó faz
+    # a roda ORBITAR o centro do carro (bug visual reportado). Aqui cada roda
+    # ganha um pivô no centro da sua AABB; o pivô herda o nome Wheel*/BusWheel*/
+    # MotoWheel* (é ele que _animate_traffic gira) e guarda o raio real em metros.
+    for child in root.find_children("*", "MeshInstance3D", true, false):
+        var wheel := child as MeshInstance3D
+        if wheel == null or wheel.mesh == null:
+            continue
+        var wheel_name := str(wheel.name)
+        if not (wheel_name.begins_with("Wheel") or wheel_name.begins_with("BusWheel") or wheel_name.begins_with("MotoWheel")):
+            continue
+        if wheel.get_parent() != null and wheel.get_parent().has_meta("wheel_radius"):
+            continue
+        var aabb := wheel.mesh.get_aabb()
+        var center_local := aabb.get_center()
+        var parent := wheel.get_parent()
+        var pivot := Node3D.new()
+        pivot.name = wheel_name
+        pivot.transform = wheel.transform.translated_local(center_local)
+        # raio de rolagem em metros de mundo (eixo da roda é X nos GLBs; usa a maior
+        # dimensão perpendicular, robusto se algum modelo vier com eixo em Z)
+        var radius_local: float = maxf(aabb.size.y, aabb.size.z) * 0.5
+        pivot.set_meta("wheel_radius", radius_local * fit * wheel.transform.basis.get_scale().y)
+        parent.remove_child(wheel)
+        parent.add_child(pivot)
+        wheel.name = wheel_name + "Mesh"
+        wheel.transform = Transform3D(Basis.IDENTITY, -center_local)
+        pivot.add_child(wheel)
 
 func _enhance_vehicle_instance(node: Node3D) -> void:
     for child in node.find_children("*", "MeshInstance3D"):
