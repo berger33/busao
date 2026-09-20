@@ -76,10 +76,10 @@
   },
   "props": {
     "poste": {
-      "espacamento_m": 2.2,
+      "espacamento_m": 14.0,
       "lado": "junto_guia",
-      "raio_m": 0.06,
-      "altura_m": 0.95
+      "raio_m": 0.1,
+      "altura_m": 3.65
     },
     "arvore": {
       "espacamento_m": 8.0,

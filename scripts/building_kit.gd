@@ -175,6 +175,19 @@ static func material(spec: Dictionary, chave: String) -> Material:
         sm.clearcoat_roughness = 0.05
         sm.metallic = 0.25
         sm.roughness = 0.08
+    elif chave in ["folhagem", "esfera_verde"] and mat is StandardMaterial3D:
+        var sm := mat as StandardMaterial3D
+        if ResourceLoader.exists("res://assets/textures/folhagem_realista.png"):
+            sm.albedo_texture = ResourceLoader.load("res://assets/textures/folhagem_realista.png")
+            sm.albedo_color = Color(0.85, 0.95, 0.82, 1.0)
+            sm.normal_enabled = true
+            sm.normal_texture = ResourceLoader.load("res://assets/textures/folhagem_realista_normal.png")
+            sm.normal_scale = 0.65
+            sm.roughness_texture = ResourceLoader.load("res://assets/textures/folhagem_realista_roughness.png")
+            sm.roughness = 0.85
+            sm.uv1_scale = Vector3(2.5, 2.5, 2.5)
+            sm.uv1_triplanar = true
+            sm.uv1_world_triplanar = true
     _material_cache[cache_key] = mat
     return mat
 
@@ -283,6 +296,16 @@ static func _multimesh(mesh: Mesh, mat: Material, xforms: Array, pai: Node3D, no
 ## versao procedural do kit. Escala 1:1, origem no chao.
 static func _prop_glb(nome: String) -> Node3D:
     var path := "res://assets/props/" + nome + ".glb"
+    if not ResourceLoader.exists(path):
+        return null
+    var cena := load(path) as PackedScene
+    if cena == null:
+        return null
+    return cena.instantiate() as Node3D
+
+
+static func _scene_glb(nome: String) -> Node3D:
+    var path := "res://assets/scene/" + nome + ".glb"
     if not ResourceLoader.exists(path):
         return null
     var cena := load(path) as PackedScene
@@ -643,6 +666,15 @@ static func _build_loja(spec: Dictionary, raiz: Node3D, p: Dictionary, lado: flo
             Vector3(lado * (x_frente - 0.04), porta_a * 0.5, -(z + largura * 0.5)), raiz,
             "Porta%s%d" % [("D" if lado > 0.0 else "E"), indice], false)
     _marca(porta, "porta")
+    # Vitrine espelhada de vidro com reflexo PBR
+    if largura * 0.8 > porta_l + 1.2:
+        var vitrine_l := (largura * 0.8 - porta_l) * 0.45
+        for s in [-1.0, 1.0]:
+            var vitrine := _malha(_box(Vector3(0.06, porta_a - 0.3, vitrine_l)),
+                    material(spec, "vidro"),
+                    Vector3(lado * (x_frente - 0.03), (porta_a - 0.3) * 0.5 + 0.15, -(z + largura * 0.5 + s * (porta_l * 0.5 + vitrine_l * 0.5))),
+                    raiz, "Vitrine%s%d_%s" % [("D" if lado > 0.0 else "E"), indice, ("A" if s < 0 else "B")], false)
+            _marca(vitrine, "vidro")
 
 
 static func _build_arvores(spec: Dictionary, raiz: Node3D, rng: RandomNumberGenerator,
@@ -664,43 +696,54 @@ static func _build_arvores(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
     while z < comprimento:
         var x := x_dir if lado > 0.0 else x_esq
         var base := Vector3(x, 0.15, -z)
-        # tronco conico (largo no pe, fino no topo) com casca
-        var conico := CylinderMesh.new()
-        conico.top_radius = tronco_r * 0.62
-        conico.bottom_radius = tronco_r * 1.45
-        conico.height = tronco_h
-        conico.radial_segments = 9
-        var tronco := _malha(conico, material(spec, "madeira"),
-                base + Vector3(0.0, tronco_h * 0.5, 0.0), raiz, "Tronco", true)
-        _marca(tronco, "arvore")
-        # galhos baixos (duas pernas de apoio inclinadas)
-        for sinal in [-1.0, 1.0]:
-            var galho := _malha(_cyl(tronco_r * 0.35, tronco_h * 0.55, 6),
-                    material(spec, "madeira"),
-                    base + Vector3(sinal * tronco_h * 0.10, tronco_h * 0.72, 0.0), raiz, "Galho", true)
-            galho.rotation.z = sinal * 0.85
-        # copa em cachos irregulares (nunca uma bola unica)
-        var cachos := rng.randi_range(4, 5)
-        for i in range(cachos):
-            var angulo := TAU * float(i) / float(cachos) + rng.randf_range(-0.4, 0.4)
-            var raio_cacho := copa_r * rng.randf_range(0.52, 0.78)
-            var afast := copa_r * rng.randf_range(0.34, 0.62)
-            var altura_cacho := tronco_h + copa_r * (0.55 + 0.16 * float(i % 2))
-            var folha := _malha(_sphere(raio_cacho), material(spec, "folhagem"),
-                    base + Vector3(cos(angulo) * afast, altura_cacho, sin(angulo) * afast),
-                    raiz, "Copa", true)
-            # copa achatada de verdade: mais larga que alta, sem forma de bola
-            folha.scale = Vector3(1.0 + rng.randf_range(-0.1, 0.15), 0.62 + rng.randf_range(0.0, 0.14), 1.0 + rng.randf_range(-0.1, 0.12))
-            _marca(folha, "folhagem")
-        var coroa := _malha(_sphere(copa_r * 0.66), material(spec, "folhagem"),
-                base + Vector3(0.0, tronco_h + copa_r * 0.95, 0.0), raiz, "CoroaCopa", true)
-        coroa.scale = Vector3(1.15, 0.58, 1.15)
-        _marca(coroa, "folhagem")
+        var arvore_glb := _scene_glb("arvore")
+        if arvore_glb != null:
+            arvore_glb.position = base
+            var s_var := rng.randf_range(0.92, 1.14)
+            arvore_glb.scale = Vector3(s_var, s_var, s_var)
+            arvore_glb.rotation.y = rng.randf_range(0.0, TAU)
+            raiz.add_child(arvore_glb)
+            _marca(arvore_glb, "arvore")
+        else:
+            # tronco conico (largo no pe, fino no topo) com casca
+            var conico := CylinderMesh.new()
+            conico.top_radius = tronco_r * 0.62
+            conico.bottom_radius = tronco_r * 1.45
+            conico.height = tronco_h
+            conico.radial_segments = 9
+            var tronco := _malha(conico, material(spec, "madeira"),
+                    base + Vector3(0.0, tronco_h * 0.5, 0.0), raiz, "Tronco", true)
+            _marca(tronco, "arvore")
+            # galhos baixos (duas pernas de apoio inclinadas)
+            for sinal in [-1.0, 1.0]:
+                var galho := _malha(_cyl(tronco_r * 0.35, tronco_h * 0.55, 6),
+                        material(spec, "madeira"),
+                        base + Vector3(sinal * tronco_h * 0.10, tronco_h * 0.72, 0.0), raiz, "Galho", true)
+                galho.rotation.z = sinal * 0.85
+            # copa em cachos irregulares (nunca uma bola unica)
+            var cachos := rng.randi_range(4, 5)
+            for i in range(cachos):
+                var angulo := TAU * float(i) / float(cachos) + rng.randf_range(-0.4, 0.4)
+                var raio_cacho := copa_r * rng.randf_range(0.52, 0.78)
+                var afast := copa_r * rng.randf_range(0.34, 0.62)
+                var altura_cacho := tronco_h + copa_r * (0.55 + 0.16 * float(i % 2))
+                var folha := _malha(_sphere(raio_cacho), material(spec, "folhagem"),
+                        base + Vector3(cos(angulo) * afast, altura_cacho, sin(angulo) * afast),
+                        raiz, "Copa", true)
+                # copa achatada de verdade: mais larga que alta, sem forma de bola
+                folha.scale = Vector3(1.0 + rng.randf_range(-0.1, 0.15), 0.62 + rng.randf_range(0.0, 0.14), 1.0 + rng.randf_range(-0.1, 0.12))
+                _marca(folha, "folhagem")
+            var coroa := _malha(_sphere(copa_r * 0.66), material(spec, "folhagem"),
+                    base + Vector3(0.0, tronco_h + copa_r * 0.95, 0.0), raiz, "CoroaCopa", true)
+            coroa.scale = Vector3(1.15, 0.58, 1.15)
+            _marca(coroa, "folhagem")
+
         var canteiro := _malha(_cyl(0.62, 0.10, 9), material(spec, "canteiro"),
                 Vector3(x, 0.15, -z), raiz, "Canteiro", false)
         _marca(canteiro, "canteiro")
         z += passo * rng.randf_range(0.85, 1.15)
         lado = -lado
+
 
 static func _build_mobiliario(spec: Dictionary, raiz: Node3D, rng: RandomNumberGenerator,
         comprimento: float, faixas: Dictionary, visibilidade: float) -> void:
@@ -717,6 +760,23 @@ static func _build_mobiliario(spec: Dictionary, raiz: Node3D, rng: RandomNumberG
         _build_banco(spec, raiz, Vector3(x_faixa, 0.155, -zb), visibilidade)
         zb += passo_banco * rng.randf_range(0.9, 1.2)
     _build_prop_linear(spec, raiz, rng, comprimento, props, "lixeira", "zincado", 0.50, visibilidade)
+
+    # Postes de iluminacao publica de ferro fundido junto ao meio-fio
+    var cfg_poste: Dictionary = props.get("poste", {})
+    var passo_poste: float = float(cfg_poste.get("espacamento_m", 14.0))
+    if passo_poste < 8.0:
+        passo_poste = 14.0
+    var zp := rng.randf_range(5.0, 9.0)
+    while zp < comprimento - 3.0:
+        var poste_glb := _prop_glb("poste")
+        if poste_glb != null:
+            # Junto a guia, braco de iluminacao virado para a rua (-X)
+            poste_glb.position = Vector3(-borda_esq + 0.20, 0.15, -zp)
+            poste_glb.rotation.y = PI
+            raiz.add_child(poste_glb)
+            _marca(poste_glb, "prop")
+        zp += passo_poste * rng.randf_range(0.95, 1.10)
+
     if rng.randf() < float(props.get("hidrante", {}).get("probabilidade", 0.0)):
         var zz := rng.randf_range(3.0, comprimento - 3.0)
         var hidrante_glb := _prop_glb("hidrante")
