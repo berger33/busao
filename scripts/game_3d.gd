@@ -192,6 +192,7 @@ var run_phase := 0.0
 var step_timer := 0.0
 var motion_speed := 0.0
 var lane_change_velocity := 0.0
+var invulnerability := 0.0
 
 var world_root: Node3D
 var course_root: Node3D
@@ -543,6 +544,9 @@ func _start_run(index: int) -> void:
     # As fases-gate aumentam a leitura, não a punição: a reserva de três
     # corações permanece estável para que a dificuldade venha da pista.
     hearts = 3
+    invulnerability = 0.0
+    if player_visual != null:
+        player_visual.visible = true
     GameSave.record_phase_attempt()
     if has_node("/root/AnalyticsManager"):
         var _am_run = get_node_or_null("/root/AnalyticsManager")
@@ -910,6 +914,12 @@ func _update_run(dt: float) -> void:
             step_sfx = "step_terra" if surface == "dirt" else "step_asfalto"
         AudioManager.play_sfx(step_sfx, -13.0, 0.92 + fmod(run_phase, 0.4))
         step_timer = maxf(0.18, 0.34 - motion_speed * 0.009)
+    if invulnerability > 0.0:
+        invulnerability = maxf(0.0, invulnerability - dt)
+        if player_visual != null and hearts > 0:
+            player_visual.visible = (int(invulnerability * 12.0) % 2 == 0)
+    elif player_visual != null and not player_visual.visible and hearts > 0:
+        player_visual.visible = true
     for entity in entities:
         if bool(entity["passed"]):
             continue
@@ -1032,7 +1042,7 @@ func _collect(kind: String, pos: Vector3) -> void:
     _spawn_3d_burst(pos + Vector3(0, 1.0, 0), GOLD, 8)
 
 func _hit_player(kind: String) -> void:
-    if dash_timer > 0.0:
+    if dash_timer > 0.0 or invulnerability > 0.0:
         return
     GameSave.record_event("hit_" + kind)
     if has_node("/root/AnalyticsManager"):
@@ -1041,13 +1051,15 @@ func _hit_player(kind: String) -> void:
             _am_hit.call("log_hit", kind)
     if shield_hits > 0:
         shield_hits -= 1
+        invulnerability = 0.85
         _show_feedback("ESCUDO!", "Impacto absorvido", CYAN, "hit")
         _spawn_3d_burst(player_root.position + Vector3(0, 1.0, 0), CYAN, 14)
         return
     hearts -= 1
     no_damage = false
-    camera_shake = 0.55
-    flash_alpha = 0.18
+    invulnerability = 1.15
+    camera_shake = 0.38
+    flash_alpha = 0.22
     var heart_label: String = "1 coração" if hearts == 1 else "%d corações" % hearts
     var sound := "shout" if kind == "motorcycle" else "impact_heavy"
     _show_feedback("AI!", heart_label + " restante", RED, sound)
@@ -4193,6 +4205,7 @@ func _do_revive_from_ad() -> void:
     max_hearts = maxi(max_hearts, 3)
     shield_hits = 1
     dash_timer = 2.2  # invencível breve pós-revive
+    invulnerability = 2.5
     slow_motion_timer = 0.0
     magnet_timer = 0.0
     # limpa obstáculos muito próximos para não morrer no mesmo frame
