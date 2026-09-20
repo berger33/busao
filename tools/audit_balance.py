@@ -44,7 +44,7 @@ def read_balance() -> dict[str, float]:
     }
     values: dict[str, float] = {}
     for key in keys:
-        match = re.search(rf"^{re.escape(key)}\s*=\s*([-+]?\d+(?:\.\d+)?)\s*$", text, re.MULTILINE)
+        match = re.search(rf"^{re.escape(key)}\s*=\s*([-+]?\d+(?:\.\d+)?)", text, re.MULTILINE)
         if not match:
             raise AssertionError(f"balance field missing: {key}")
         values[key] = float(match.group(1))

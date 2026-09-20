@@ -168,6 +168,9 @@ func _sanitize_data() -> void:
             data["coins"] = 100000
             data["debug_100k_granted"] = true
             print("[save] TESTE 100k moedas injetadas para compra de personagens")
+    elif not bool(data.get("debug_100k_granted", false)) and int(data.get("coins", 0)) >= 90000:
+        # já tem saldo alto (100k inicial ou farm legítimo) — marca para não re-injetar após gastar abaixo de 90k
+        data["debug_100k_granted"] = true
     data["xp"] = maxi(0, int(data.get("xp", 0)))
     data["daily_streak"] = maxi(0, int(data.get("daily_streak", 0)))
     data["max_streak"] = maxi(0, int(data.get("max_streak", 0)))

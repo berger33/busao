@@ -299,7 +299,7 @@ def check_ground(project: pathlib.Path) -> None:
     height = max(acc["max"][1] for mesh in doc["meshes"] for primitive in mesh["primitives"]
                  for acc in [doc["accessors"][primitive["attributes"]["POSITION"]]]) * scale
     report(abs(soles) <= 0.02, f"sola em y = {soles:+.4f} m (sem flutuar nem afundar)")
-    report(1.9 <= height <= 2.4, f"altura final do boneco = {height:.2f} m")
+    report(1.70 <= height <= 2.4, f"altura final do boneco = {height:.2f} m") # Lote 28: 1.82 realista (era 1.9-2.4 gigante)
 
 
 def main() -> int:

@@ -26,7 +26,7 @@ PALETTES = [
 ]
 
 FEATURE_TEXT = "CORRE PRO PONTO"
-FEATURE_SUB = "runner 3D brasileiro  •  50 fases  •  Endless"
+FEATURE_SUB = "runner 3D brasileiro  •  50 fases  •  20 corredores  •  Endless"
 
 def font(size):
     # Tenta DejaVu, fallback bitmap
@@ -84,6 +84,13 @@ def make_screenshot(idx, c0,c1, accent, title, subtitle):
     draw.text((W-110, 68), f"{idx}", fill="#07101f", font=font(36), anchor="mm")
     return img
 
+def slugify(s: str) -> str:
+    repl = str.maketrans({"á":"a","à":"a","ã":"a","â":"a","é":"e","ê":"e","í":"i","ó":"o","ô":"o","õ":"o","ú":"u","ü":"u","ç":"c","Á":"a","À":"a","Ã":"a","Â":"a","É":"e","Ê":"e","Í":"i","Ó":"o","Ô":"o","Õ":"o","Ú":"u","Ü":"u","Ç":"c","&":""})
+    t = s.translate(repl).lower().replace(" ", "_")
+    while "__" in t:
+        t = t.replace("__", "_")
+    return t.strip("_")
+
 def hex_to_rgb(h): return tuple(int(h[i:i+2],16) for i in (1,3,5))
 def hex_to_rgba(h,a=255):
     r,g,b=hex_to_rgb(h)
@@ -103,9 +110,11 @@ def make_feature():
     # logo
     draw.text((FEATURE_W//2, 110), FEATURE_TEXT, fill="#fff8e7", font=font(44), anchor="mm")
     draw.text((FEATURE_W//2, 145), FEATURE_SUB, fill="#ffe4ad", font=font(14), anchor="mm")
-    # badge 50 fases
+    # badge 50 fases + 20 corredores (Lote 28)
     draw.rounded_rectangle([FEATURE_W-180, 20, FEATURE_W-20, 70], radius=10, fill="#07101f")
     draw.text((FEATURE_W-100, 45), "50 FASES", fill="#ffd34e", font=font(14), anchor="mm")
+    draw.rounded_rectangle([20, 20, 180, 70], radius=10, fill="#ffd34e")
+    draw.text((100, 45), "20 CORREDORES", fill="#07101f", font=font(13), anchor="mm")
     return img
 
 def make_clip(idx, title, desc, color):
@@ -127,7 +136,7 @@ def main():
     random.seed(20260918)
     for i, (c0,c1,accent,title,sub) in enumerate(PALETTES, start=1):
         img = make_screenshot(i,c0,c1,accent,title,sub)
-        out = SCREENSHOTS / f"{i:02d}_{title.lower().replace(' ','_')}_1080x1920.png"
+        out = SCREENSHOTS / f"{i:02d}_{slugify(title)}_1080x1920.png"
         img.save(out, "PNG", optimize=True)
         print(f"screenshot {out.name} {out.stat().st_size/1024:.0f} KB")
     feat = make_feature()
@@ -144,7 +153,7 @@ def main():
     ]
     for idx,(title,desc,col) in enumerate(clips,1):
         img = make_clip(idx,title,desc,col)
-        out = VIDEO / f"clip_{idx:02d}_{title.lower()}_1280x720.png"
+        out = VIDEO / f"clip_{idx:02d}_{slugify(title)}_1280x720.png"
         img.save(out,"PNG",optimize=True)
         print(f"clip {out.name}")
     # gera storyboard concat horizontal
