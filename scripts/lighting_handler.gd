@@ -13,7 +13,6 @@ const SHADOW_OPACITY_REALISTA: float = 0.82
 const SDFGI_ENABLED: bool = true
 const VOXELGI_SIZE: Vector3 = Vector3(28.0, 12.0, 28.0) # por quarteirão
 const REFLECTION_PROBE_SIZE: Vector3 = Vector3(28.0, 16.0, 28.0)
-const REFLECTION_PROBE_RESOLUTION: int = 128
 const VOLUMETRIC_FOG_DENSITY: float = 0.012
 const VOLUMETRIC_FOG_ALBEDO: Color = Color("#b9cbd0")
 const SSAO_ENABLED: bool = true
@@ -76,24 +75,24 @@ static func setup_realista(environment: WorldEnvironment, sun: DirectionalLight3
             sun.light_angular_distance = 1.2
         # ReflectionProbe por quarteirão (28 m) + VoxelGI
         if world_root != null:
-            # evita duplicar
-            if world_root.get_node_or_null("RealistaGI") == null:
+            var method := _get_rendering_method()
+            # ReflectionProbe suportado em Forward+ e Mobile (não em gl_compatibility)
+            if method != "gl_compatibility" and world_root.get_node_or_null("RealistaGI") == null:
                 var gi_root := Node3D.new()
                 gi_root.name = "RealistaGI"
                 world_root.add_child(gi_root)
-                # VoxelGI por quarteirão (3 visíveis)
                 for i in 3:
-                    var voxel := VoxelGI.new()
-                    voxel.name = "VoxelGI_%d" % i
-                    voxel.size = VOXELGI_SIZE
-                    voxel.position = Vector3(0, 4.0, -float(i) * 28.0 - 14.0)
-                    voxel.data = null # bake em runtime via bake()
-                    gi_root.add_child(voxel)
+                    if forward_plus:
+                        var voxel := VoxelGI.new()
+                        voxel.name = "VoxelGI_%d" % i
+                        voxel.size = VOXELGI_SIZE
+                        voxel.position = Vector3(0, 4.0, -float(i) * 28.0 - 14.0)
+                        gi_root.add_child(voxel)
                     var probe := ReflectionProbe.new()
                     probe.name = "ReflectionProbe_%d" % i
                     probe.size = REFLECTION_PROBE_SIZE
                     probe.position = Vector3(0, 3.5, -float(i) * 28.0 - 14.0)
-                    probe.resolution = REFLECTION_PROBE_RESOLUTION
+                    probe.box_projection = true
                     probe.update_mode = ReflectionProbe.UPDATE_ONCE
                     probe.intensity = 1.0
                     gi_root.add_child(probe)
