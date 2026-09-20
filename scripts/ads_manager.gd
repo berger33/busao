@@ -5,6 +5,7 @@ extends Node
 ## Sem SDK nativo o manager simula carregamento e recompensa com timers (editor não quebra).
 
 signal banner_loaded
+@warning_ignore("unused_signal")
 signal banner_failed(reason: String)
 signal interstitial_loaded
 signal interstitial_failed(reason: String)
@@ -81,12 +82,19 @@ func request_consent_if_required() -> void:
     if GameSave and not GameSave.data.has("ads_consent_granted"):
         # Mock: supõe consentido após 0.5 s para não bloquear teste interno
         _consent_granted = true
+        _consent_required = false
         GameSave.data["ads_consent_granted"] = true
         GameSave.flush()
         consent_updated.emit(true)
         print("[ads] consent mock concedido (interno)")
     elif _consent_granted:
+        _consent_required = false
         consent_updated.emit(true)
+    else:
+        _consent_required = true
+
+func is_consent_required() -> bool:
+    return _consent_required
 
 func is_consent_granted() -> bool:
     return _consent_granted
@@ -108,6 +116,7 @@ func set_remove_ads(enabled: bool) -> void:
 func show_banner() -> void:
     if has_remove_ads():
         print("[ads] banner suprimido (remove_ads)")
+        banner_failed.emit("remove_ads_active")
         return
     if _banner_visible:
         return

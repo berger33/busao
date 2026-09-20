@@ -5,6 +5,7 @@ extends Node
 
 signal chest_claimed(reward: Dictionary)
 signal chest_claim_failed(reason: String)
+@warning_ignore("unused_signal")
 signal weekly_event_changed(event: Dictionary)
 signal sink_purchased(kind: String)
 
@@ -138,6 +139,9 @@ func get_weekly_event(weekly_key: String = "") -> Dictionary:
     idx = abs(idx) % WEEKLY_EVENTS.size()
     var ev: Dictionary = WEEKLY_EVENTS[idx].duplicate(true)
     ev["weekly_key"] = key
+    if _last_weekly_key != key:
+        _last_weekly_key = key
+        weekly_event_changed.emit(ev)
     return ev
 
 func is_weekly_event_active(event_id: String) -> bool:

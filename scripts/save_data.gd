@@ -491,7 +491,7 @@ func apply_cloud_snapshot(snap: Dictionary) -> bool:
         return false
     if int(snap.get("v", 0)) != 1:
         return false
-    var ts_remote: int = int(snap.get("ts", 0))
+    var _ts_remote: int = int(snap.get("ts", 0))
     var local_best: int = total_stars()
     var remote_stars_arr: Array = snap.get("phase_stars", [])
     var remote_total: int = 0

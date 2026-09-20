@@ -20,9 +20,9 @@ func _ready() -> void:
     # Restaura preferência
     if GameSave and GameSave.data.has(SAVE_KEY):
         var saved := str(GameSave.data[SAVE_KEY])
-        if saved in ["pt_BR", "en_US", "pt", "en"]:
+        if saved in ["pt_BR", "en_US", "pt", "en", "enUS"]:
             if saved == "pt": saved = "pt_BR"
-            if saved == "en": saved = "en_US"
+            if saved in ["en", "enUS"]: saved = "en_US"
             current_locale = saved
     else:
         # Detecta do OS se ainda não escolheu
@@ -68,19 +68,35 @@ func _load_csv() -> void:
             continue
         _dict["pt_BR"][key] = pt
         _dict["en_US"][key] = en
-    # Fallback en_US.csv individual se strings.csv não tinha en?
-    if _dict["en_US"].is_empty() and FileAccess.file_exists("res://localization/en_US.csv"):
-        var txt2 := FileAccess.get_file_as_string("res://localization/en_US.csv")
+    # Fallback en_US.csv / enUS.csv individual se strings.csv não tinha en?
+    var en_path := "res://localization/en_US.csv"
+    if not FileAccess.file_exists(en_path) and FileAccess.file_exists("res://localization/enUS.csv"):
+        en_path = "res://localization/enUS.csv"
+    if _dict["en_US"].is_empty() and FileAccess.file_exists(en_path):
+        var txt2 := FileAccess.get_file_as_string(en_path)
         for line in txt2.split("\n", false):
             if line.begins_with("keys"): continue
             var cols2 := line.split(",", false)
             if cols2.size() >= 2:
                 _dict["en_US"][cols2[0].strip_edges()] = cols2[1].strip_edges()
 
+    # Registra no TranslationServer do engine para suportar tr() em todos os nós
+    var tr_pt := Translation.new()
+    tr_pt.locale = "pt_BR"
+    for k in _dict.get("pt_BR", {}):
+        tr_pt.add_message(k, _dict["pt_BR"][k])
+    TranslationServer.add_translation(tr_pt)
+
+    var tr_en := Translation.new()
+    tr_en.locale = "en_US"
+    for k in _dict.get("en_US", {}):
+        tr_en.add_message(k, _dict["en_US"][k])
+    TranslationServer.add_translation(tr_en)
+
 func set_locale(locale: String) -> void:
     var want := locale
     if want == "pt": want = "pt_BR"
-    if want == "en": want = "en_US"
+    if want in ["en", "enUS"]: want = "en_US"
     if want not in ["pt_BR", "en_US"]:
         return
     if current_locale == want:
@@ -124,18 +140,6 @@ func tr_format(key: String, args: Array = []) -> String:
         # Para %d e %02d etc, usa String % Array quando possível
     # Fallback: se ainda tem % e args, tenta sprintf
     if "%" in out and not args.is_empty():
-        # Tenta usar String.sprintf via % operator com Array
-        # GDScript 4: "foo %s" % [val] funciona
-        # Aqui usamos via call
-        var fmt_args := args
-        # se base tem um único placeholder, usa single
-        # workaround: usa `out % fmt_args` se fmt_args size 1
-        # mas para múltiplos, GDScript precisa de Array
-        # Vamos tentar:
-        var ok := false
-        # Use `out % fmt_args` quando out contém % e fmt_args não vazio
-        # Em GDScript, `"a %d b %d" % [1,2]` funciona
-        # Não há try, então fazemos simples replace para %d
         for arg in args:
             if "%d" in out:
                 out = out.replace("%d", str(int(arg)))

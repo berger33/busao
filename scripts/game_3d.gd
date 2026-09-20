@@ -2326,8 +2326,8 @@ func _build_brazilian_car(parent: Node3D, variant: int, dark: Material, chrome: 
             _cylinder(parent, 0.035, 0.035, 1.40, Vector3(0.82, 1.74, 0.50), chrome, "UtilityRoofRack")
 
 const GLB_FIT := {
-    "car": Vector2(4.2, 1.45) # 4.2x1.45 realista (era 4.4x1.55),
-    "motorcycle": Vector2(2.05, 1.05) # 2.05x1.05 compacta,
+    "car": Vector2(4.2, 1.45), # 4.2x1.45 realista (era 4.4x1.55)
+    "motorcycle": Vector2(2.05, 1.05), # 2.05x1.05 compacta
     "truck": Vector2(6.2, 2.65),
     "bus_traffic": Vector2(7.2, 2.95),
     "onibus": Vector2(8.0, 2.95),

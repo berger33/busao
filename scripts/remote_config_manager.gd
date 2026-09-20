@@ -5,6 +5,7 @@ extends Node
 ## Nativo: FirebaseRemoteConfig.fetchAndActivate() quando singleton disponível.
 
 signal config_ready
+@warning_ignore("unused_signal")
 signal config_fetch_failed(reason: String)
 
 const DEFAULTS := {
@@ -92,6 +93,11 @@ func _finish_mock_fetch() -> void:
     _ready_flag = true
     config_ready.emit()
     print("[remote] config_ready %s" % str(_config))
+
+func _on_fetch_failed(reason: String = "network_error") -> void:
+    _fetching = false
+    config_fetch_failed.emit(reason)
+    print("[remote] config_fetch_failed: %s" % reason)
 
 func is_ready() -> bool:
     return _ready_flag

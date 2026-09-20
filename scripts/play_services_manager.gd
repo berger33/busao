@@ -6,6 +6,7 @@ extends Node
 
 signal signed_in
 signal signed_out
+@warning_ignore("unused_signal")
 signal sign_in_failed(reason: String)
 signal cloud_saved
 signal cloud_save_failed(reason: String)
@@ -116,6 +117,11 @@ func sign_out() -> void:
         GameSave.flush()
     signed_out.emit()
     print("[play] sign_out")
+
+func _on_sign_in_failed(reason: String = "error") -> void:
+    _signed_in = false
+    sign_in_failed.emit(reason)
+    print("[play] sign-in falhou: %s" % reason)
 
 func is_signed_in() -> bool:
     return _signed_in

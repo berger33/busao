@@ -89,8 +89,8 @@ func _on_consent_updated(granted: bool) -> void:
         print("[analytics] consent revogado — pausando envios")
 
 # ---- Evento principal: espelha save_data + envia nativo/mock ----
-func log_event(name: String, params: Dictionary = {}) -> void:
-    var safe := name.strip_edges().to_lower().replace(" ", "_")
+func log_event(event_name: String, params: Dictionary = {}) -> void:
+    var safe := event_name.strip_edges().to_lower().replace(" ", "_")
     if safe == "" or safe.length() > 40:
         return
     # Gate LGPD: sem consent, apenas enfileira (max 50) e não persiste fora
@@ -100,28 +100,27 @@ func log_event(name: String, params: Dictionary = {}) -> void:
         return
     _send_event(safe, params)
 
-func _send_event(name: String, params: Dictionary) -> void:
+func _send_event(event_name: String, params: Dictionary) -> void:
     # 1 - Espelha em GameSave.metrics.event_counts (fonte canônica do dashboard local)
     if GameSave and GameSave.has_method("record_event"):
-        GameSave.call("record_event", name, 1)
+        GameSave.call("record_event", event_name, 1)
     # 2 - Mock file (jsonl) — dashboard local + teste de 5 min
-    _write_mock(name, params)
+    _write_mock(event_name, params)
     # 3 - Nativo quando disponível
     if _native_firebase:
-        # FirebaseAnalytics.logEvent(name, params)
-        print("[analytics] firebase log %s %s" % [name, str(params)])
+        # FirebaseAnalytics.logEvent(event_name, params)
+        print("[analytics] firebase log %s %s" % [event_name, str(params)])
     if _native_ga:
-        # GameAnalytics.addDesignEvent(name, params)
-        print("[analytics] GA mirror %s" % name)
-    event_logged.emit(name)
+        # GameAnalytics.addDesignEvent(event_name, params)
+        print("[analytics] GA mirror %s" % event_name)
+    event_logged.emit(event_name)
     # Retenção: session_start já conta para D1/D7 em save_data.retention_flags
-    if name == "run_start":
+    if event_name == "run_start":
         if GameSave:
             GameSave.data["metrics"]["sessions"] = int(GameSave.data["metrics"].get("sessions", 0))
 
-func _write_mock(name: String, params: Dictionary) -> void:
-    var line := JSON.stringify({"ts": int(Time.get_unix_time_from_system()), "session": _session_id, "name": name, "params": params})
-    var f := FileAccess.open(MOCK_LOG_PATH, FileAccess.READ_WRITE)
+func _write_mock(event_name: String, params: Dictionary) -> void:
+    var line := JSON.stringify({"ts": int(Time.get_unix_time_from_system()), "session": _session_id, "name": event_name, "params": params})
     var existing := ""
     if FileAccess.file_exists(MOCK_LOG_PATH):
         var r := FileAccess.open(MOCK_LOG_PATH, FileAccess.READ)
@@ -195,7 +194,7 @@ func force_crash_test() -> void:
     print("[crash] force_crash_test — verifique user://crash_mock.log e MOCK_LOG_PATH em até 5 min")
 
 # ---- Frame pacing (fps_below_45 por modelo) ----
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
     # Amostra a cada frame; contador por sessão para dashboard
     _fps_sample_frames += 1
     var fps := Engine.get_frames_per_second()

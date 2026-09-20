@@ -79,7 +79,7 @@ dash={
 }
 
 [internationalization]
-locale/translations=PackedStringArray("res://localization/strings.csv", "res://localization/pt_BR.csv", "res://localization/en_US.csv")
+locale/translations=PackedStringArray()
 locale/fallback="pt_BR"
 
 [physics]

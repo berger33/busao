@@ -5,6 +5,7 @@ extends Node
 ## Nativo: GodotInAppUpdate / PlayCore quando singleton presente.
 
 signal update_available(version_code: int)
+@warning_ignore("unused_signal")
 signal update_not_available
 signal update_downloaded
 signal update_failed(reason: String)

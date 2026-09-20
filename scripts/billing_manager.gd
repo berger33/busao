@@ -216,7 +216,7 @@ func _try_connect_native_signals() -> void:
     # Quando billing nativo existir, conecta sinais como `connected`, `disconnected`, `purchases_updated`, `querySkuDetails`
     pass
 
-func consume_if_needed(product_id: String) -> void:
+func consume_if_needed(_product_id: String) -> void:
     # Consumables precisam ser consumidos após acknowledge para recumpra. Em mock nada a fazer.
     if _native_available:
         # billing.consume(product_id)
