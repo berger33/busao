@@ -225,28 +225,27 @@ func _clear_character() -> void:
 func _build_shadow() -> void:
     runner_shadow = MeshInstance3D.new()
     runner_shadow.name = "RunnerShadow"
-    var shadow_placeholder := "res://assets/props/cone.glb"
-    var shadow_mesh: Mesh
-    if ResourceLoader.exists(shadow_placeholder):
-        var scn := load(shadow_placeholder) as PackedScene
-        if scn != null:
-            var tmp := scn.instantiate() as Node3D
-            var mi: MeshInstance3D = _find_mesh_instance(tmp)
-            if mi == null:
-                for child in tmp.get_children():
-                    if child is MeshInstance3D:
-                        mi = child
-                        break
-            if mi != null and mi.mesh != null:
-                shadow_mesh = mi.mesh
-            tmp.queue_free()
-    if shadow_mesh == null:
-        shadow_mesh = ArrayMesh.new()
-    runner_shadow.mesh = shadow_mesh
-    runner_shadow.rotation_degrees.x = -90.0
-    runner_shadow.position = Vector3(0.0, 0.025, 0.06)
+    var st := SurfaceTool.new()
+    st.begin(Mesh.PRIMITIVE_TRIANGLES)
+    var segments := 24
+    var rx := 0.36
+    var rz := 0.54
+    var center := Vector3.ZERO
+    for i in range(segments):
+        var a1 := float(i) / float(segments) * TAU
+        var a2 := float(i + 1) / float(segments) * TAU
+        var p1 := Vector3(cos(a1) * rx, 0.0, sin(a1) * rz)
+        var p2 := Vector3(cos(a2) * rx, 0.0, sin(a2) * rz)
+        st.set_color(Color(0.015, 0.02, 0.03, 0.40))
+        st.add_vertex(center)
+        st.set_color(Color(0.015, 0.02, 0.03, 0.0))
+        st.add_vertex(p1)
+        st.set_color(Color(0.015, 0.02, 0.03, 0.0))
+        st.add_vertex(p2)
+    runner_shadow.mesh = st.commit()
+    runner_shadow.position = Vector3(0.0, 0.025, 0.0)
     var material := StandardMaterial3D.new()
-    material.albedo_color = Color(0.015, 0.025, 0.04, 0.34)
+    material.albedo_color = Color(0.015, 0.02, 0.03, 0.40)
     material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
     material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
     material.no_depth_test = true
@@ -774,16 +773,6 @@ func _attach_badge(node_name: String, color: Color) -> void:
 
 
 func _get_placeholder_mesh() -> Mesh:
-    var placeholder_path := "res://assets/props/cone.glb"
-    if ResourceLoader.exists(placeholder_path):
-        var scn := load(placeholder_path) as PackedScene
-        if scn != null:
-            var tmp := scn.instantiate() as Node3D
-            var mi: MeshInstance3D = _find_mesh_instance(tmp)
-            if mi != null and mi.mesh != null:
-                var m: Mesh = mi.mesh
-                tmp.queue_free()
-                return m
     return ArrayMesh.new()
 
 func _bone_attachment(bone_name: String, node_name: String) -> BoneAttachment3D:
@@ -841,46 +830,34 @@ func _creator_material(texture: Texture2D, color: Color, roughness: float, metal
 
 func _setup_original_animation() -> void:
     # O GLB original do Lote 19 já vem com AnimationPlayer e Skeleton no mesmo arquivo.
-    # Reaproveita o player embutido; se o importador não criou library "body", cria uma
-    # compatível para que _play_clip("body/...") continue funcionando.
     var embedded: AnimationPlayer = _find_animation_player(model_root)
     if embedded == null:
         using_external_animation = false
         _apply_neutral_pose()
         return
     animation_player = embedded
-    # O importer glTF do Godot coloca as animações diretamente no player sem library.
-    # Normaliza criando a library "body" a partir das animações existentes.
-    if animation_player.get_animation_library_list().is_empty():
-        var lib := AnimationLibrary.new()
-        for anim_name in animation_player.get_animation_list():
-            var anim: Animation = animation_player.get_animation(anim_name)
-            if anim != null:
-                lib.add_animation(anim_name, anim)
-        animation_player.add_animation_library("body", lib)
-        # limpa animações soltas duplicadas
-        for anim_name in animation_player.get_animation_list():
-            if "/" not in anim_name:
-                animation_player.remove_animation(anim_name)
-    # Fallback: se ainda não tem Idle, tenta extrair via cena (caso importação antiga)
-    if not animation_player.has_animation("body/Idle_Loop"):
-        var lib2 := _extract_animation_library_from_glb()
-        if lib2 != null and lib2.has_animation("Idle_Loop"):
-            if not animation_player.has_animation_library("body"):
-                animation_player.add_animation_library("body", lib2)
-    using_external_animation = animation_player.has_animation("body/Idle_Loop") or animation_player.has_animation("Idle_Loop")
+    # Garante que as animações rodem em loop suave
+    for anim_name in animation_player.get_animation_list():
+        var anim: Animation = animation_player.get_animation(anim_name)
+        if anim != null:
+            anim.loop_mode = Animation.LOOP_LINEAR
+    using_external_animation = _resolve_clip_name("Sprint_Loop") != "" or _resolve_clip_name("Idle_Loop") != "" or _resolve_clip_name("Walk_Loop") != ""
     if using_external_animation:
-        # garante que _play_clip encontra o nome certo
-        _play_clip("Idle_Loop")
+        _play_clip("Sprint_Loop" if not world_mode else "Walk_Loop")
     else:
         _apply_neutral_pose()
 
 func _resolve_clip_name(clip: String) -> String:
     if animation_player == null:
         return ""
-    for candidate in ["body/" + clip, clip]:
-        if animation_player.has_animation(candidate):
-            return candidate
+    if animation_player.has_animation(clip):
+        return clip
+    if animation_player.has_animation("body/" + clip):
+        return "body/" + clip
+    for lib_name in animation_player.get_animation_library_list():
+        var prefixed := (lib_name + "/" + clip) if lib_name != "" else clip
+        if animation_player.has_animation(prefixed):
+            return prefixed
     return ""
 
 func _setup_animation_library() -> void:
@@ -1015,29 +992,41 @@ func _apply_procedural_fallback_pose(stride: float, crouching: bool, jumping: bo
     if skeleton == null:
         return
     _apply_neutral_pose()
-    var leg_swing := stride * 0.62
+    var leg_swing := stride * 0.65
     var knee_bend := 0.54 if crouching else (0.18 if jumping else 0.0)
+    # Pernas: balanço alternado com flexão do joelho
     _set_bone_extra("thigh_l", Quaternion(Vector3(1.0, 0.0, 0.0), leg_swing + knee_bend))
     _set_bone_extra("thigh_r", Quaternion(Vector3(1.0, 0.0, 0.0), -leg_swing + knee_bend))
-    _set_bone_extra("calf_l", Quaternion(Vector3(1.0, 0.0, 0.0), maxf(0.0, stride) * 0.32 + knee_bend))
-    _set_bone_extra("calf_r", Quaternion(Vector3(1.0, 0.0, 0.0), maxf(0.0, -stride) * 0.32 + knee_bend))
-    _set_bone_extra("upperarm_l", Quaternion(Vector3(0.0, 0.0, 1.0), -1.38 - stride * 0.42))
-    _set_bone_extra("upperarm_r", Quaternion(Vector3(0.0, 0.0, 1.0), 1.38 + stride * 0.42))
+    _set_bone_extra("calf_l", Quaternion(Vector3(1.0, 0.0, 0.0), maxf(0.0, -stride) * 0.75 + knee_bend))
+    _set_bone_extra("calf_r", Quaternion(Vector3(1.0, 0.0, 0.0), maxf(0.0, stride) * 0.75 + knee_bend))
+    # Tronco: leve inclinação atlética para a frente
+    _set_bone_extra("spine_01", Quaternion(Vector3(1.0, 0.0, 0.0), 0.12))
+    _set_bone_extra("spine_02", Quaternion(Vector3(1.0, 0.0, 0.0), 0.06))
+    # Braços: cotovelos flexionados a ~80 graus e balanço alternado longitudinal (oposto às pernas)
+    var arm_swing_l := -stride * 0.55
+    var arm_swing_r := stride * 0.55
+    _set_bone_extra("upperarm_l", Quaternion(Vector3(0.0, 0.0, 1.0), -1.35) * Quaternion(Vector3(1.0, 0.0, 0.0), arm_swing_l))
+    _set_bone_extra("upperarm_r", Quaternion(Vector3(0.0, 0.0, 1.0), 1.35) * Quaternion(Vector3(1.0, 0.0, 0.0), arm_swing_r))
+    _set_bone_extra("lowerarm_l", Quaternion(Vector3(1.0, 0.0, 0.0), 1.40))
+    _set_bone_extra("lowerarm_r", Quaternion(Vector3(1.0, 0.0, 0.0), 1.40))
 
 func set_motion(run_phase: float, is_running: bool, is_crouching: bool, jump_height: float, lane_velocity: float, speed: float = 0.0) -> void:
     motion_clock = run_phase
     var jumping := jump_height > 0.05
-    var clip := "Idle_Loop"
+    var clip := "Sprint_Loop"
     if jumping:
         clip = "Jump_Loop"
     elif is_crouching:
         clip = "Crouch_Fwd_Loop" if is_running else "Crouch_Idle_Loop"
     elif is_running:
         clip = "Sprint_Loop"
+    else:
+        clip = "Sprint_Loop" if not world_mode else "Idle_Loop"
+
     if using_external_animation and _resolve_clip_name(clip) != "":
         _play_clip(clip)
     else:
-        var stride := sin(run_phase * 0.82) if is_running and not is_crouching else 0.0
+        var stride := sin(run_phase * 0.82)
         _apply_procedural_fallback_pose(stride, is_crouching, jumping)
     _match_playback_to_speed(speed, is_running, is_crouching, jumping)
     if runner_shadow != null:

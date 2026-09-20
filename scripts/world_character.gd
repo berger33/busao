@@ -29,20 +29,18 @@ func _ready() -> void:
     avatar.call("set_world_mode", true)
     avatar.scale = Vector3.ONE * avatar_scale
     add_child(avatar)
-    # cada papel tem o seu clip da Universal Animation Library (CC0): a
-    # velhinha caminha, o vendedor conversa, o motoqueiro pilotA parado nao.
+    # cada papel usa as animações existentes no esqueleto:
+    # pedestres caminham normalmente (Walk_Loop), vendedores ficam em Idle_Loop.
     match role:
-        "old_lady":
-            world_clip = "Walk_Formal_Loop"
+        "old_lady", "pedestrian":
+            world_clip = "Walk_Loop"
         "vendor":
-            world_clip = "Idle_Talking_Loop"
+            world_clip = "Idle_Loop"
         "motoqueiro":
-            world_clip = "Driving_Loop"
-            # cinto de seguranca: se a biblioteca nao carregar, o piloto fica
-            # sentado por pose ossea em vez de em pe na moto
+            world_clip = "Idle_Loop"
             avatar.call_deferred("apply_world_seated_pose")
         _:
-            world_clip = "Idle_Loop"
+            world_clip = "Walk_Loop"
     call_deferred("_attach_role_details")
 
 func _process(delta: float) -> void:

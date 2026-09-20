@@ -91,11 +91,11 @@ const WORLD_LENGTH_MARGIN := 80.0
 
 # --- Lote 2: constantes de render/câmera (roteiro game_3d_lote2_patch.gd) --
 const RQ_PATH := "/root/RenderQuality"      # autoload do Lote 2
-const RENDER_FOV := 49.0                    # era 59.0 (retrato: menos distorção)
-const RENDER_FOV_RUN := 52.0                # era 64/69 na corrida
-const RENDER_CAMERA_Y := 2.65               # era 4.85 (câmera no ombro, não no telhado)
-const RENDER_CAMERA_Z := 6.2                # era 9.4
-const RENDER_CAMERA_FAR := 380.0            # era 125 (deixa a serra/skyline entrar)
+const RENDER_FOV := 54.0                    # perspectiva natural de terceira pessoa (ref abb89707)
+const RENDER_FOV_RUN := 56.0                # FOV na corrida
+const RENDER_CAMERA_Y := 2.25               # altura no ombro (ref abb89707, era 2.65 alto)
+const RENDER_CAMERA_Z := 4.85               # distância mais próxima e imersiva (era 6.2)
+const RENDER_CAMERA_FAR := 380.0            # deixa a serra/skyline entrar
 
 # --- Lote 3: rua construída pelo building_kit.gd --------------------------
 const WORLD_KIT_ATIVO := true          # false desliga a rua nova
@@ -149,7 +149,7 @@ var _player_physics_body: CharacterBody3D = null
 var _player_velocity_y: float = 0.0
 var _is_on_floor_physics: bool = true
 # Lote 24 — Luz Realista (F9 toggle; false Panorama 1024, true SDFGI/VoxelGI 4096 VSM)
-var lighting_realista_enabled: bool = false
+var lighting_realista_enabled: bool = true
 var player_speed := 5.0
 var hearts := 3
 var max_hearts := 3
@@ -434,11 +434,11 @@ func _setup_world() -> void:
     environment.environment.glow_bloom = 0.08
     environment.environment.glow_hdr_threshold = 1.15
     environment.environment.fog_enabled = true
-    environment.environment.fog_light_color = Color("#b9cbd0")
-    environment.environment.fog_light_energy = 0.46
-    environment.environment.fog_density = 0.0072
-    environment.environment.fog_aerial_perspective = 0.5
-    environment.environment.fog_sky_affect = 0.22
+    environment.environment.fog_light_color = Color("#cadde6")
+    environment.environment.fog_light_energy = 0.48
+    environment.environment.fog_density = 0.0034 # névoa suave matinal na distância (ref abb89707, era 0.0072 parede cinza)
+    environment.environment.fog_aerial_perspective = 0.65
+    environment.environment.fog_sky_affect = 0.28
     sky = Sky.new()
     sky_material = PanoramaSkyMaterial.new()
     sky_material.panorama = TEXTURE_SKY_PANORAMA
@@ -460,9 +460,9 @@ func _setup_world() -> void:
 
     sun = DirectionalLight3D.new()
     sun.name = "WarmSun"
-    sun.rotation_degrees = Vector3(-48.0, -28.0, 0.0)
-    sun.light_color = Color("#ffe0a3")
-    sun.light_energy = 1.25
+    sun.rotation_degrees = Vector3(-32.0, -58.0, 0.0) # luz lateral da manhã/tarde (ref abb89707)
+    sun.light_color = Color("#fff3e0")
+    sun.light_energy = 1.32
     sun.shadow_enabled = true
     sun.directional_shadow_max_distance = 72.0
     sun.shadow_bias = 0.045
@@ -482,7 +482,7 @@ func _setup_world() -> void:
     camera.far = RENDER_CAMERA_FAR
     camera.current = true
     add_child(camera)
-    camera.look_at(Vector3(0.0, 1.15, -14.0), Vector3.UP)
+    camera.look_at(Vector3(0.0, 1.35, -10.0), Vector3.UP)
     _build_player()
 
 func _setup_hud() -> void:
@@ -2896,20 +2896,11 @@ func _wheels(parent: Node3D, material: Material, x_offset: float, z_offset: floa
         rear.rotation.z = PI / 2.0
 
 func _box(parent: Node3D, size: Vector3, pos: Vector3, material: Material, node_name: String) -> MeshInstance3D:
-    push_warning("L29 _box fallback %s" % node_name)
     var node := MeshInstance3D.new()
     node.name = node_name
-    var placeholder_path := "res://assets/props/cone.glb"
-    if ResourceLoader.exists(placeholder_path):
-        var scn := load(placeholder_path) as PackedScene
-        if scn != null:
-            var tmp := scn.instantiate() as Node3D
-            var mi: MeshInstance3D = _find_mesh_instance(tmp)
-            if mi != null and mi.mesh != null:
-                node.mesh = mi.mesh
-                tmp.queue_free()
-    if node.mesh == null:
-        node.mesh = ArrayMesh.new()
+    var m := BoxMesh.new()
+    m.size = size
+    node.mesh = m
     node.material_override = material
     node.position = pos
     if parent == decor_root:
@@ -2926,20 +2917,12 @@ func _find_mesh_instance(root: Node) -> MeshInstance3D:
     return null
 
 func _sphere(parent: Node3D, radius: float, pos: Vector3, material: Material, node_name: String) -> MeshInstance3D:
-    push_warning("L29 _sphere fallback %s" % node_name)
     var node := MeshInstance3D.new()
     node.name = node_name
-    var placeholder_path := "res://assets/props/cone.glb"
-    if ResourceLoader.exists(placeholder_path):
-        var scn := load(placeholder_path) as PackedScene
-        if scn != null:
-            var tmp := scn.instantiate() as Node3D
-            var mi: MeshInstance3D = _find_mesh_instance(tmp)
-            if mi != null and mi.mesh != null:
-                node.mesh = mi.mesh
-                tmp.queue_free()
-    if node.mesh == null:
-        node.mesh = ArrayMesh.new()
+    var m := SphereMesh.new()
+    m.radius = radius
+    m.height = radius * 2.0
+    node.mesh = m
     node.material_override = material
     node.position = pos
     if parent == decor_root:
@@ -2948,20 +2931,12 @@ func _sphere(parent: Node3D, radius: float, pos: Vector3, material: Material, no
     return node
 
 func _capsule(parent: Node3D, radius: float, height: float, pos: Vector3, material: Material, node_name: String) -> MeshInstance3D:
-    push_warning("L29 _capsule fallback %s" % node_name)
     var node := MeshInstance3D.new()
     node.name = node_name
-    var placeholder_path := "res://assets/props/cone.glb"
-    if ResourceLoader.exists(placeholder_path):
-        var scn := load(placeholder_path) as PackedScene
-        if scn != null:
-            var tmp := scn.instantiate() as Node3D
-            var mi: MeshInstance3D = _find_mesh_instance(tmp)
-            if mi != null and mi.mesh != null:
-                node.mesh = mi.mesh
-                tmp.queue_free()
-    if node.mesh == null:
-        node.mesh = ArrayMesh.new()
+    var m := CapsuleMesh.new()
+    m.radius = radius
+    m.height = height
+    node.mesh = m
     node.material_override = material
     node.position = pos
     if parent == decor_root:
@@ -2970,20 +2945,13 @@ func _capsule(parent: Node3D, radius: float, height: float, pos: Vector3, materi
     return node
 
 func _cylinder(parent: Node3D, top_radius: float, bottom_radius: float, height: float, pos: Vector3, material: Material, node_name: String) -> MeshInstance3D:
-    push_warning("L29 _cylinder fallback %s" % node_name)
     var node := MeshInstance3D.new()
     node.name = node_name
-    var placeholder_path := "res://assets/props/cone.glb"
-    if ResourceLoader.exists(placeholder_path):
-        var scn := load(placeholder_path) as PackedScene
-        if scn != null:
-            var tmp := scn.instantiate() as Node3D
-            var mi: MeshInstance3D = _find_mesh_instance(tmp)
-            if mi != null and mi.mesh != null:
-                node.mesh = mi.mesh
-                tmp.queue_free()
-    if node.mesh == null:
-        node.mesh = ArrayMesh.new()
+    var m := CylinderMesh.new()
+    m.top_radius = top_radius
+    m.bottom_radius = bottom_radius
+    m.height = height
+    node.mesh = m
     node.material_override = material
     node.position = pos
     if parent == decor_root:
@@ -2995,20 +2963,12 @@ func _cone(parent: Node3D, radius: float, height: float, pos: Vector3, material:
     return _cylinder(parent, 0.03, radius, height, pos, material, node_name)
 
 func _torus(parent: Node3D, inner_radius: float, outer_radius: float, pos: Vector3, material: Material, node_name: String) -> MeshInstance3D:
-    push_warning("L29 _torus fallback %s" % node_name)
     var node := MeshInstance3D.new()
     node.name = node_name
-    var placeholder_path := "res://assets/props/cone.glb"
-    if ResourceLoader.exists(placeholder_path):
-        var scn := load(placeholder_path) as PackedScene
-        if scn != null:
-            var tmp := scn.instantiate() as Node3D
-            var mi: MeshInstance3D = _find_mesh_instance(tmp)
-            if mi != null and mi.mesh != null:
-                node.mesh = mi.mesh
-                tmp.queue_free()
-    if node.mesh == null:
-        node.mesh = ArrayMesh.new()
+    var m := TorusMesh.new()
+    m.inner_radius = inner_radius
+    m.outer_radius = outer_radius
+    node.mesh = m
     node.material_override = material
     node.position = pos
     if parent == decor_root:
