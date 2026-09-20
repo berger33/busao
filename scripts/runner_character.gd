@@ -33,6 +33,7 @@ const ORIGINAL_BODY_PATHS: Dictionary = {
     "M": ORIGINAL_ROOT + "/Humano_M.glb",
     "F": ORIGINAL_ROOT + "/Humano_F.glb",
 }
+const PERSONAGENS_ROOT := "res://assets/characters/personagens" # Lote 28: 20 GLBs dedicados (ze/motoboy/.../cida) — bakeado Blender
 const MODEL_SCALE := 1.03  # 1.77*1.03=1.82 realista (era 1.18->2.09)
 const MODEL_FLOOR_OFFSET := 0.012
 const CLOTHING_INFLATE := 0.008
@@ -134,19 +135,29 @@ func set_character(next_id: String) -> void:
     gender = "F" if str(profile.get("gender", "M")) == "F" else "M"
     _clear_character()
     _build_shadow()
-    # Lote 19: humano original Blender 100% do zero tem prioridade (sem CC0).
-    var original_path: String = str(ORIGINAL_BODY_PATHS.get(gender, ""))
-    var is_original := false
-    var body_path: String = original_path
+    # Lote 28: tenta GLB dedicado por personagem (assets/characters/personagens/<id>.glb) — bakeado Blender com paleta + props.
+    var personalized_path := PERSONAGENS_ROOT + "/" + character_id + ".glb"
+    var is_personalized := false
     var body_scene: PackedScene = null
-    if original_path != "" and ResourceLoader.exists(original_path):
-        body_scene = load(original_path) as PackedScene
+    var body_path: String = personalized_path
+    var is_original := false
+    if ResourceLoader.exists(personalized_path):
+        body_scene = load(personalized_path) as PackedScene
         if body_scene != null:
+            is_personalized = true
             is_original = true
+    # Lote 19: humano original Blender 100% do zero tem prioridade (sem CC0).
     if body_scene == null:
-        body_path = str(BODY_PATHS.get(gender, BODY_PATHS["M"]))
-        body_scene = load(body_path) as PackedScene
-        is_original = false
+        var original_path: String = str(ORIGINAL_BODY_PATHS.get(gender, ""))
+        body_path = original_path
+        if original_path != "" and ResourceLoader.exists(original_path):
+            body_scene = load(original_path) as PackedScene
+            if body_scene != null:
+                is_original = true
+        if body_scene == null:
+            body_path = str(BODY_PATHS.get(gender, BODY_PATHS["M"]))
+            body_scene = load(body_path) as PackedScene
+            is_original = false
     if body_scene == null:
         _build_fallback("asset principal não importado")
         return
@@ -170,8 +181,10 @@ func set_character(next_id: String) -> void:
     if is_original:
         _apply_skin_tint(profile.get("skin", Color.WHITE))
         _apply_profile_palette(profile)
-        _attach_creator_details(profile)
-        _attach_batch2_details(profile)
+        # Lote 28: GLB dedicado já vem bakeado — evita duplicar props (duplo celular/mochila).
+        if not is_personalized:
+            _attach_creator_details(profile)
+            _attach_batch2_details(profile)
         if use_animation_library:
             _setup_original_animation()
         _configure_mesh_shadows(model_root)
