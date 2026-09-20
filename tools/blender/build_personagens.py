@@ -717,7 +717,12 @@ def build_one_personagem(profile, out_path):
     bpy.ops.object.select_all(action='DESELECT')
     corpo.select_set(True); arm.select_set(True)
     bpy.context.view_layer.objects.active=arm
-    bpy.ops.export_scene.gltf(filepath=out_path, export_format='GLB', export_apply=True, export_animations=True, export_skins=True, export_yup=True, export_materials='EXPORT', export_cameras=False, export_lights=False, export_animation_mode='ACTIONS', use_selection=True)
+    # Lote 28 Passo 3 — Draco habilitado para <300KB cada (mantém skins/anim, textura runtime)
+    try:
+        bpy.ops.export_scene.gltf(filepath=out_path, export_format='GLB', export_apply=True, export_animations=True, export_skins=True, export_yup=True, export_materials='EXPORT', export_cameras=False, export_lights=False, export_animation_mode='ACTIONS', use_selection=True, export_draco_mesh_compression_enable=True, export_draco_mesh_compression_level=6, export_draco_position_quantization=14, export_draco_normal_quantization=10, export_draco_texcoord_quantization=12)
+    except TypeError as e:
+        print(f"Draco params não suportados ({e}), fallback sem Draco")
+        bpy.ops.export_scene.gltf(filepath=out_path, export_format='GLB', export_apply=True, export_animations=True, export_skins=True, export_yup=True, export_materials='EXPORT', export_cameras=False, export_lights=False, export_animation_mode='ACTIONS', use_selection=True)
     sz=os.path.getsize(out_path)
     print("PRONTO:", out_path, sz)
     # blend preview por personagem

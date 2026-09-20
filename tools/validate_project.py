@@ -293,6 +293,27 @@ def check_character_assets() -> None:
                 fail(f"humanos_originais GLTF missing animations: {gltf.relative_to(ROOT)}")
         except (OSError, UnicodeError, json.JSONDecodeError) as exc:
             fail(f"cannot parse humanos_originais GLTF {gltf.relative_to(ROOT)}: {exc}")
+    # Lote 28 — 20 personagens dedicados Draco (<300KB cada, 4.03 MB total)
+    p_root = ROOT / "assets/characters/personagens"
+    if p_root.is_dir():
+        required_p = ["PROVENANCE.md"] + [f"{pid}.glb" for pid in ("ze","motoboy","luan","joao","carlos","maria","bia","camila","julia","influencer","chico","tiao","beto","nilo","professor","marta","zilda","clara","deise","cida")]
+        for rel in required_p:
+            if not (p_root / rel).is_file():
+                fail(f"missing personagens asset: assets/characters/personagens/{rel}")
+        try:
+            check_character_manifest(p_root)
+        except (OSError, UnicodeError) as exc:
+            fail(f"cannot read personagens SHA-256 manifest: {exc}")
+        for glb in sorted(p_root.glob("*.glb")):
+            sz = glb.stat().st_size
+            if sz > 500 * 1024:
+                fail(f"personagens GLB >500KB (sem Draco?): {glb.name} {sz}")
+            try:
+                data = glb.read_bytes()[:12]
+                if data[:4] != b"glTF":
+                    fail(f"personagens GLB bad header: {glb.name}")
+            except OSError as exc:
+                fail(f"cannot read personagens GLB {glb.name}: {exc}")
     # legado quaternius: se existir, valida mas não falha se ausente (100% original)
     q_root = ROOT / "assets/characters/quaternius"
     if q_root.exists():
