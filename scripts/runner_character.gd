@@ -964,8 +964,10 @@ func _apply_neutral_pose() -> void:
         return
     for bone_name in rest_rotations:
         skeleton.set_bone_pose_rotation(int(bone_indices[bone_name]), rest_rotations[bone_name])
-    _set_bone_extra("upperarm_l", Quaternion(Vector3(0.0, 0.0, 1.0), -1.38))
-    _set_bone_extra("upperarm_r", Quaternion(Vector3(0.0, 0.0, 1.0), 1.38))
+    _set_bone_extra("upperarm_l", Quaternion(Vector3.RIGHT, -1.29) * Quaternion(Vector3.FORWARD, 0.17))
+    _set_bone_extra("upperarm_r", Quaternion(Vector3.RIGHT, -1.29) * Quaternion(Vector3.FORWARD, -0.17))
+    _set_bone_extra("lowerarm_l", Quaternion(Vector3.FORWARD, 0.38))
+    _set_bone_extra("lowerarm_r", Quaternion(Vector3.FORWARD, -0.38))
 
 func _set_bone_extra(bone_name: String, extra: Quaternion) -> void:
     if not bone_indices.has(bone_name):
@@ -984,8 +986,8 @@ func apply_world_seated_pose() -> void:
     _set_bone_extra("thigh_r", Quaternion(Vector3(1.0, 0.0, 0.0), -1.25))
     _set_bone_extra("calf_l", Quaternion(Vector3(1.0, 0.0, 0.0), 1.30))
     _set_bone_extra("calf_r", Quaternion(Vector3(1.0, 0.0, 0.0), 1.30))
-    _set_bone_extra("upperarm_l", Quaternion(Vector3(1.0, 0.0, 0.0), -0.85))
-    _set_bone_extra("upperarm_r", Quaternion(Vector3(1.0, 0.0, 0.0), -0.85))
+    _set_bone_extra("upperarm_l", Quaternion(Vector3.RIGHT, -0.85))
+    _set_bone_extra("upperarm_r", Quaternion(Vector3.RIGHT, -0.85))
 
 
 func _apply_procedural_fallback_pose(stride: float, crouching: bool, jumping: bool) -> void:
@@ -1005,10 +1007,10 @@ func _apply_procedural_fallback_pose(stride: float, crouching: bool, jumping: bo
     # Braços: cotovelos flexionados a ~80 graus e balanço alternado longitudinal (oposto às pernas)
     var arm_swing_l := -stride * 0.55
     var arm_swing_r := stride * 0.55
-    _set_bone_extra("upperarm_l", Quaternion(Vector3(0.0, 0.0, 1.0), -1.35) * Quaternion(Vector3(1.0, 0.0, 0.0), arm_swing_l))
-    _set_bone_extra("upperarm_r", Quaternion(Vector3(0.0, 0.0, 1.0), 1.35) * Quaternion(Vector3(1.0, 0.0, 0.0), arm_swing_r))
-    _set_bone_extra("lowerarm_l", Quaternion(Vector3(1.0, 0.0, 0.0), 1.40))
-    _set_bone_extra("lowerarm_r", Quaternion(Vector3(1.0, 0.0, 0.0), 1.40))
+    _set_bone_extra("upperarm_l", Quaternion(Vector3.RIGHT, -1.31) * Quaternion(Vector3.FORWARD, 0.20 + arm_swing_l))
+    _set_bone_extra("upperarm_r", Quaternion(Vector3.RIGHT, -1.31) * Quaternion(Vector3.FORWARD, -0.20 + arm_swing_r))
+    _set_bone_extra("lowerarm_l", Quaternion(Vector3.FORWARD, 1.40))
+    _set_bone_extra("lowerarm_r", Quaternion(Vector3.FORWARD, -1.40))
 
 func set_motion(run_phase: float, is_running: bool, is_crouching: bool, jump_height: float, lane_velocity: float, speed: float = 0.0) -> void:
     motion_clock = run_phase

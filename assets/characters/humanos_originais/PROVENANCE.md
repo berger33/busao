@@ -16,6 +16,6 @@ Personagens humanos 100% originais, modelados do zero no **Blender 4.5 LTS headl
 ## Manifesto SHA-256
 
 ```text
-6da355fefcf4bb9b160082812b84b46fa25569d997eb98567569f9d3c69e34c7  Humano_M.glb  (356040 bytes)
-317b72ad9a7057f08c618ecefcb77d43f8c489f6655e3d2c62dc513700e7fca3  Humano_F.glb  (361036 bytes)
+1dc422bcffc701cf4a331dc539aec35b66ccf5cc6cfb5bbb7cfbdc4c60163382  Humano_M.glb  (340800 bytes)
+c438e9e28943ce108c11bccd8f6f7c2fbeb3e1f331b207b415a6aa5a7b8233a3  Humano_F.glb  (343328 bytes)
 ```

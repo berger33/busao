@@ -108,7 +108,7 @@ def caixa(nome, centro, dims):
 
 def pilar_z(nome, r_base, r_topo_rel, altura, seg=24):
     verts, faces = [], []
-    rt = r_base * r_topo_rel
+    rt = (r_base * r_topo_rel) if r_topo_rel > 0.3 else r_topo_rel
     for k in range(seg):
         a = k/seg*TAU
         verts.append((r_base*math.cos(a), r_base*math.sin(a), 0.0))
@@ -152,6 +152,39 @@ def cilindro_bl(nome, centro, raio, altura, seg=24):
     o.name = nome
     return o
 
+def _blend_joint_weights(corpo):
+    vgs = {vg.name: vg for vg in corpo.vertex_groups}
+    for v in corpo.data.vertices:
+        co = v.co
+        z = co.z
+        ax = abs(co.x)
+        # Joelho (Z entre 0.46 e 0.54)
+        if 0.46 <= z <= 0.54:
+            t = (z - 0.46) / 0.08
+            lado = "l" if co.x < 0 else "r"
+            vg_thigh = vgs.get(f"thigh_{lado}")
+            vg_calf = vgs.get(f"calf_{lado}")
+            if vg_thigh and vg_calf:
+                vg_calf.add([v.index], 1.0 - t, 'ADD')
+                vg_thigh.add([v.index], t, 'ADD')
+        # Cotovelo (|X| entre 0.34 e 0.42, Z ~ 1.40)
+        elif 1.30 <= z <= 1.50 and 0.34 <= ax <= 0.42:
+            t = (ax - 0.34) / 0.08
+            lado = "l" if co.x < 0 else "r"
+            vg_upper = vgs.get(f"upperarm_{lado}")
+            vg_lower = vgs.get(f"lowerarm_{lado}")
+            if vg_upper and vg_lower:
+                vg_upper.add([v.index], 1.0 - t, 'ADD')
+                vg_lower.add([v.index], t, 'ADD')
+        # Cintura baixa (Z entre 1.02 e 1.10)
+        elif 1.02 <= z <= 1.10:
+            t = (z - 1.02) / 0.08
+            vg_pelvis = vgs.get("pelvis")
+            vg_spine1 = vgs.get("spine_01")
+            if vg_pelvis and vg_spine1:
+                vg_pelvis.add([v.index], 1.0 - t, 'ADD')
+                vg_spine1.add([v.index], t, 'ADD')
+
 def join_parts(partes):
     for o,_ in partes:
         sozinho(o)
@@ -181,6 +214,7 @@ def join_parts(partes):
         vg=corpo.vertex_groups.get(grupo) or corpo.vertex_groups.new(name=grupo)
         vg.add(list(range(idx, idx+n)), 1.0, 'REPLACE')
         idx+=n
+    _blend_joint_weights(corpo)
     return corpo
 
 def armature_humano(nome):
@@ -622,11 +656,14 @@ def build_one_personagem(profile, out_path):
         for f in (1,12,24,36,48):
             t=(f-1)/48*TAU
             clear_pose(arm)
+            key_rot(arm,"spine_01",f,(rad(1.5),0,0))
             key_rot(arm,"spine_02",f,(rad(1.2)*math.sin(t),0, rad(0.6)*math.cos(t*0.5)))
             key_rot(arm,"spine_03",f,(rad(0.8)*math.sin(t),0,0))
             key_rot(arm,"Head",f,(rad(1.0)*math.sin(t*0.7), rad(0.6)*math.cos(t),0))
-            key_rot(arm,"upperarm_l",f,(rad(-4)*math.sin(t),0,0))
-            key_rot(arm,"upperarm_r",f,(rad(4)*math.sin(t),0,0))
+            key_rot(arm,"upperarm_l",f,(rad(-74),0,rad(10)+rad(1.5)*math.sin(t)))
+            key_rot(arm,"upperarm_r",f,(rad(-74),0,-rad(10)-rad(1.5)*math.sin(t)))
+            key_rot(arm,"lowerarm_l",f,(0,0,rad(22)+rad(1.0)*math.sin(t)))
+            key_rot(arm,"lowerarm_r",f,(0,0,-rad(22)-rad(1.0)*math.sin(t)))
             key_loc(arm,"pelvis",f,(0,0,0.004*math.sin(t)))
         linearize(a)
         return a
@@ -637,18 +674,19 @@ def build_one_personagem(profile, out_path):
             t=(f-1)/C*TAU
             s=math.sin(t); c=math.cos(t)
             clear_pose(arm)
-            key_rot(arm,"thigh_l",f,(rad(28)*s,0,0))
-            key_rot(arm,"thigh_r",f,(rad(-28)*s,0,0))
-            key_rot(arm,"calf_l",f,(rad(42)*max(0, math.sin(t+0.9)),0,0))
-            key_rot(arm,"calf_r",f,(rad(42)*max(0, math.sin(t+0.9+math.pi)),0,0))
-            key_rot(arm,"foot_l",f,(rad(-14)*max(0, math.sin(t+0.9)),0,0))
-            key_rot(arm,"foot_r",f,(rad(-14)*max(0, math.sin(t+0.9+math.pi)),0,0))
-            key_rot(arm,"upperarm_l",f,(rad(-22)*s,0,0))
-            key_rot(arm,"upperarm_r",f,(rad(22)*s,0,0))
-            key_rot(arm,"lowerarm_l",f,(rad(-8)*s,0,0))
-            key_rot(arm,"lowerarm_r",f,(rad(8)*s,0,0))
-            key_rot(arm,"spine_02",f,(0, rad(1.2)*s,0))
-            key_loc(arm,"pelvis",f,(0,0,0.006*c))
+            key_rot(arm,"thigh_l",f,(rad(26)*s,0,0))
+            key_rot(arm,"thigh_r",f,(rad(-26)*s,0,0))
+            key_rot(arm,"calf_l",f,(rad(40)*max(0, math.sin(t+0.9)),0,0))
+            key_rot(arm,"calf_r",f,(rad(40)*max(0, math.sin(t+0.9+math.pi)),0,0))
+            key_rot(arm,"foot_l",f,(rad(-12)*max(0, math.sin(t+0.9)),0,0))
+            key_rot(arm,"foot_r",f,(rad(-12)*max(0, math.sin(t+0.9+math.pi)),0,0))
+            key_rot(arm,"upperarm_l",f,(rad(-74),0,rad(10)-rad(22)*s))
+            key_rot(arm,"upperarm_r",f,(rad(-74),0,-rad(10)+rad(22)*s))
+            key_rot(arm,"lowerarm_l",f,(0,0,rad(30)-rad(8)*s))
+            key_rot(arm,"lowerarm_r",f,(0,0,-rad(30)+rad(8)*s))
+            key_rot(arm,"spine_01",f,(rad(2.0),0,0))
+            key_rot(arm,"spine_02",f,(0, rad(1.8)*s,0))
+            key_loc(arm,"pelvis",f,(0,0,0.008*math.cos(2*t)))
         linearize(a)
         return a
     def act_sprint():
@@ -658,16 +696,43 @@ def build_one_personagem(profile, out_path):
             t=(f-1)/C*TAU
             s=math.sin(t); c=math.cos(t)
             clear_pose(arm)
-            key_rot(arm,"thigh_l",f,(rad(38)*s,0,0))
-            key_rot(arm,"thigh_r",f,(rad(-38)*s,0,0))
-            key_rot(arm,"calf_l",f,(rad(58)*max(0, math.sin(t+0.8)),0,0))
-            key_rot(arm,"calf_r",f,(rad(58)*max(0, math.sin(t+0.8+math.pi)),0,0))
-            key_rot(arm,"upperarm_l",f,(rad(-42)*s,0,0))
-            key_rot(arm,"upperarm_r",f,(rad(42)*s,0,0))
-            key_rot(arm,"lowerarm_l",f,(rad(-18)*s,0,0))
-            key_rot(arm,"lowerarm_r",f,(rad(18)*s,0,0))
-            key_rot(arm,"spine_02",f,(rad(4)*c,0,0))
-            key_loc(arm,"pelvis",f,(0,0,0.009*c))
+            key_rot(arm,"spine_01",f,(rad(7.5),0,0))
+            key_rot(arm,"spine_02",f,(rad(3.0)*c, rad(2.5)*s, 0))
+            key_rot(arm,"spine_03",f,(0, rad(1.5)*s, 0))
+            key_rot(arm,"thigh_l",f,(rad(42)*s,0,0))
+            key_rot(arm,"thigh_r",f,(rad(-42)*s,0,0))
+            key_rot(arm,"calf_l",f,(rad(65)*max(0, math.sin(t+0.85)),0,0))
+            key_rot(arm,"calf_r",f,(rad(65)*max(0, math.sin(t+0.85+math.pi)),0,0))
+            key_rot(arm,"foot_l",f,(rad(-18)*max(0, math.sin(t+0.85)),0,0))
+            key_rot(arm,"foot_r",f,(rad(-18)*max(0, math.sin(t+0.85+math.pi)),0,0))
+            key_rot(arm,"upperarm_l",f,(rad(-75),0,rad(12)-rad(42)*s))
+            key_rot(arm,"upperarm_r",f,(rad(-75),0,-rad(12)+rad(42)*s))
+            key_rot(arm,"lowerarm_l",f,(0,0,rad(80)-rad(15)*s))
+            key_rot(arm,"lowerarm_r",f,(0,0,-rad(80)+rad(15)*s))
+            key_loc(arm,"pelvis",f,(0,0,0.016*math.cos(2*t)))
+        linearize(a)
+        return a
+    def act_jump():
+        a=new_action(arm,"Jump_Loop")
+        keys = [
+            (1,  -32,  50,   8, -75, 45),
+            (4,  -18,  25, -25, -75, 60),
+            (7,   22,  55,  35, -75, 80),
+            (10, -12,  20,  15, -75, 50),
+            (12, -28,  45,   8, -75, 45),
+        ]
+        for f, th, cf, az, ax, el in keys:
+            clear_pose(arm)
+            key_rot(arm,"thigh_l",f,(rad(th),0,0))
+            key_rot(arm,"thigh_r",f,(rad(th),0,0))
+            key_rot(arm,"calf_l",f,(rad(cf),0,0))
+            key_rot(arm,"calf_r",f,(rad(cf),0,0))
+            key_rot(arm,"spine_01",f,(rad(10),0,0))
+            key_rot(arm,"upperarm_l",f,(rad(ax),0,rad(12)+rad(az)))
+            key_rot(arm,"upperarm_r",f,(rad(ax),0,-rad(12)-rad(az)))
+            key_rot(arm,"lowerarm_l",f,(0,0,rad(el)))
+            key_rot(arm,"lowerarm_r",f,(0,0,-rad(el)))
+            key_loc(arm,"pelvis",f,(0,0,0.04 if f==7 else 0.0))
         linearize(a)
         return a
     def act_crouch_idle():
@@ -679,9 +744,12 @@ def build_one_personagem(profile, out_path):
             key_rot(arm,"thigh_r",f,(rad(-46),0,0))
             key_rot(arm,"calf_l",f,(rad(68),0,0))
             key_rot(arm,"calf_r",f,(rad(68),0,0))
-            key_rot(arm,"spine_02",f,(rad(18)+rad(1.2)*math.sin(t),0,0))
-            key_rot(arm,"upperarm_l",f,(rad(-12),0,0))
-            key_rot(arm,"upperarm_r",f,(rad(-12),0,0))
+            key_rot(arm,"spine_01",f,(rad(16)+rad(1.0)*math.sin(t),0,0))
+            key_rot(arm,"spine_02",f,(rad(8),0,0))
+            key_rot(arm,"upperarm_l",f,(rad(-72),0,rad(16)))
+            key_rot(arm,"upperarm_r",f,(rad(-72),0,-rad(16)))
+            key_rot(arm,"lowerarm_l",f,(0,0,rad(70)))
+            key_rot(arm,"lowerarm_r",f,(0,0,-rad(70)))
         linearize(a)
         return a
     def act_crouch_fwd():
@@ -691,26 +759,22 @@ def build_one_personagem(profile, out_path):
             t=(f-1)/C*TAU
             s=math.sin(t); c=math.cos(t)
             clear_pose(arm)
-            key_rot(arm,"thigh_l",f,(rad(-42)+rad(14)*s,0,0))
-            key_rot(arm,"thigh_r",f,(rad(-42)-rad(14)*s,0,0))
-            key_rot(arm,"calf_l",f,(rad(60)+rad(12)*max(0, math.sin(t+0.7)),0,0))
-            key_rot(arm,"calf_r",f,(rad(60)+rad(12)*max(0, math.sin(t+0.7+math.pi)),0,0))
-            key_rot(arm,"upperarm_l",f,(rad(-18)*s,0,0))
-            key_rot(arm,"upperarm_r",f,(rad(18)*s,0,0))
-            key_loc(arm,"pelvis",f,(0,0,0.004*c))
+            key_rot(arm,"thigh_l",f,(rad(-42)+rad(16)*s,0,0))
+            key_rot(arm,"thigh_r",f,(rad(-42)-rad(16)*s,0,0))
+            key_rot(arm,"calf_l",f,(rad(60)+rad(14)*max(0, math.sin(t+0.7)),0,0))
+            key_rot(arm,"calf_r",f,(rad(60)+rad(14)*max(0, math.sin(t+0.7+math.pi)),0,0))
+            key_rot(arm,"spine_01",f,(rad(20),0,0))
+            key_rot(arm,"upperarm_l",f,(rad(-72),0,rad(16)-rad(20)*s))
+            key_rot(arm,"upperarm_r",f,(rad(-72),0,-rad(16)+rad(20)*s))
+            key_rot(arm,"lowerarm_l",f,(0,0,rad(75)-rad(10)*s))
+            key_rot(arm,"lowerarm_r",f,(0,0,-rad(75)+rad(10)*s))
+            key_loc(arm,"pelvis",f,(0,0,0.006*c))
         linearize(a)
         return a
     act_idle()
     act_walk()
     act_sprint()
-    a=new_action(arm,"Jump_Loop")
-    for f, cro in [(1,-28),(4,-44),(7,14),(10,-18)]:
-        clear_pose(arm)
-        key_rot(arm,"thigh_l",f,(rad(cro),0,0)); key_rot(arm,"thigh_r",f,(rad(cro),0,0))
-        key_rot(arm,"calf_l",f,(rad(-cro*1.25),0,0)); key_rot(arm,"calf_r",f,(rad(-cro*1.25),0,0))
-        key_rot(arm,"upperarm_l",f,(rad(22),0,0)); key_rot(arm,"upperarm_r",f,(rad(22),0,0))
-        key_loc(arm,"pelvis",f,(0,0,0.03 if f==7 else 0))
-    linearize(a)
+    act_jump()
     act_crouch_idle()
     act_crouch_fwd()
 

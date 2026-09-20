@@ -3468,7 +3468,7 @@ func _handle_tap(pos: Vector2) -> void:
             if hit >= 0:
                 _start_run(hit)
     elif screen == 2:
-        if Rect2(620, 36, 72, 58).has_point(pos):
+        if Rect2(610, 15, 95, 75).has_point(pos):
             run_mode = "playing" if run_mode == "paused" else "paused"
             _show_feedback("PAUSA" if run_mode == "paused" else "VAMOS!", "Controle seu ritmo", YELLOW if run_mode == "paused" else GREEN, "click")
         elif run_mode == "paused" and Rect2(80, 590, 560, 90).has_point(pos):

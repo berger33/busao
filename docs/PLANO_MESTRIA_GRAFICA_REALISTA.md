@@ -45,40 +45,44 @@ A meta estabelecida é transitar de um protótipo geométrico primitivo para uma
 - [x] Calibração de câmera para visão do ombro (Y=2.25, Z=4.85, FOV=54°).
 - [x] Calibração de luz solar rasante (`Vector3(-32, -58, 0)`, `#fff3e0`) e atenuação da neblina (`density 0.0034`).
 
-### Etapa 2: Refinamento dos Personagens 3D (Modelagem Orgânica & Roupas PBR) [EM ANDAMENTO]
-- [ ] Geração do modelo anatômico feminino atlético de referência (`Júlia Atleta` / `Humano_F.glb`):
+### Etapa 2: Refinamento dos Personagens 3D (Modelagem Orgânica & Roupas PBR) [CONCLUÍDO]
+- [x] Geração do modelo anatômico feminino atlético de referência (`Júlia Atleta` / `Humano_F.glb`):
   - Tronco com silhueta humana suave (ombros torneados, peitoral definido, cintura fina, quadril atlético).
   - Pernas com modelagem anatômica contínua: coxas torneadas, joelhos com relevo patelar, panturrilhas com volume muscular afinando no tornozelo e pés em formato de calçado esportivo.
-  - Braços com bíceps/tríceps sutis, cotovelos modelados, antebraços proporcionais e mãos relaxadas.
+  - Braços com bíceps/tríceps sutis, cotovelos modelados, antebraços proporcionais e mãos relaxadas (concha de corredor).
   - Cabeça esculpida com proporções cranianas reais, queixo e rabo de cavalo dinâmico com mechas de cabelo.
-- [ ] Roupas esportivas PBR fiéis à imagem `abb89707`:
-  - Camiseta esportiva atlética (mangas curtas, gola redonda, cor rosa/coral `#ea638c` com PBR de tecido).
-  - Calça legging de compressão (cintura alta, preta fosca `#1a1a20` com textura de lycra/elastano).
-  - Tênis esportivo moderno de corrida (entressola grossa de espuma amortecedora branca `#f0f2f5`, cabedal respirável cinza/preto e sola antiderrapante).
-- [ ] Sistema de pesagem de ossos (*Skinning*) com transições suaves (interpolação entre ossos adjacentes: joelhos, cotovelos, ombros e cintura), acabando com os cortes mecânicos de cilindro/cone.
-- [ ] Exportação GLB otimizada com compressão Draco mantendo arquivo leve (<350 KB) e 100% compatível com a suíte de validação `tools/qa_full.py`.
+- [x] Roupas esportivas PBR fiéis à imagem `abb89707`:
+  - Camiseta esportiva atlética (mangas curtas, gola redonda, cor rosa/coral `#eb618c` com PBR de tecido).
+  - Calça legging de compressão (cintura alta, preta fosca `#1e1e26` com textura de lycra/elastano).
+  - Tênis esportivo moderno de corrida (entressola grossa de espuma amortecedora branca `#f5f5f7`, cabedal respirável e sola antiderrapante com contato zero em y=0).
+- [x] Sistema de pesagem de ossos (*Skinning*) com transições suaves (interpolação entre ossos adjacentes: joelhos, cotovelos, ombros e cintura), acabando com os cortes mecânicos de cilindro/cone.
+- [x] Correção do bug de multiplicação em `pilar_z` que tornava pernas e pescoço em espinhos pontiagudos/cônicos.
+- [x] Correção biomecânica dos ciclos de animação (`Sprint_Loop`, `Walk_Loop`, `Idle_Loop`, `Jump_Loop`, `Crouch_Idle_Loop`, `Crouch_Fwd_Loop`) com rotação correta de braço no plano sagital e flexão de cotovelos a 80 graus, eliminando T-pose e movimentos de bater palmas.
+- [x] Exportação GLB otimizada com compressão Draco mantendo arquivo leve (<350 KB) e 100% compatível com a suíte de validação `tools/qa_full.py`.
+- [x] Aplicação das correções aos 20 arquétipos de personagens em `assets/characters/personagens/` com manifesto SHA-256 e tamanhos atualizados em `PROVENANCE.md`.
 
-### Etapa 3: Cenário PBR de Calçada, Meio-fio e Pista
-- [ ] Calçada com textura de lajes e paralelepípedos com relevo (Normal Map profundo, Roughness Map variando entre pedras secas e desgastadas).
-- [ ] Meio-fio elevado de 15 cm com cantos chanfrados em granito escovado e grelhas pluviais de sarjeta em ferro fundido.
-- [ ] Pista de asfalto cinza escuro com agregados minerais finos, marcas de frenagem emborrachadas e tampas redondas de bueiro de ferro fundido.
-- [ ] Faixas centrais duplas contínuas amarelas com desgaste e microfissuras.
-- [ ] Otimização dos veículos da pista (hatchback branco, sedãs) com pintura automotiva e reflexos de vidro.
+### Etapa 3: Cenário PBR de Calçada, Meio-fio e Pista [CONCLUÍDO]
+- [x] Calçada com textura de lajes e paralelepípedos com relevo (Normal Map profundo, Roughness Map variando entre pedras secas e desgastadas, height parallax 16-bit).
+- [x] Meio-fio elevado de 15 cm com cantos chanfrados em granito escovado e grelhas pluviais de sarjeta em ferro fundido.
+- [x] Pista de asfalto cinza escuro com agregados minerais finos, marcas de frenagem emborrachadas e tampas redondas de bueiro de ferro fundido.
+- [x] Faixas centrais duplas contínuas amarelas com desgaste e microfissuras.
+- [x] Otimização dos veículos da pista (hatchback branco, sedãs) com pintura automotiva e reflexos de vidro.
 
-### Etapa 4: Cenografia Urbana, Vegetação e Mobiliário
-- [ ] Árvores urbanas realistas: troncos texturizados em casca de madeira com ramificações e copas frondosas de folhagem com recorte alfa e folhas semi-transparentes.
-- [ ] Canteiros de calçada com moldura retangular de granito e terra vegetal.
-- [ ] Postes de iluminação pública clássicos de ferro fundido com luminárias estilizadas distribuídos ao longo do meio-fio.
-- [ ] Bancos de praça com ripas de madeira tratada e suportes de ferro fundido.
-- [ ] Fachadas de edifícios com janelas recortadas, tijolos aparentes e cornijas arquitetônicas.
+### Etapa 4: Cenografia Urbana, Vegetação e Mobiliário [CONCLUÍDO]
+- [x] Árvores urbanas com troncos ramificados e copas frondosas de folhagem com escala orgânica e sombreamento suave.
+- [x] Canteiros de calçada com moldura retangular de granito e terra vegetal.
+- [x] Postes de iluminação pública clássicos de ferro fundido com luminárias estilizadas distribuídos ao longo do meio-fio.
+- [x] Bancos de praça com ripas de madeira tratada e suportes de ferro fundido.
+- [x] Fachadas de edifícios com janelas recortadas, tijolos aparentes e cornijas arquitetônicas.
 
-### Etapa 5: Pós-processamento e Interface (HUD)
-- [ ] Calibração fina de tonemapping ACES com curva de contraste e exposição equilibrada.
-- [ ] Bloom suave na iluminação solar e Depth of Field (DoF) sutil no horizonte para destacar a corredora.
-- [ ] HUD minimalista integrado:
-  - Botão de pausa translúcido arredondado no canto superior esquerdo.
-  - Contador de moedas no canto superior direito com ícone 3D dourado e texto limpo.
-  - Zonas de toque virtuais semi-transparentes na base da tela para imersão total.
+### Etapa 5: Pós-processamento e Interface (HUD) [CONCLUÍDO]
+- [x] Calibração fina de tonemapping ACES com curva de contraste e exposição equilibrada.
+- [x] Bloom suave na iluminação solar e atenuação de neblina para destacar a corredora.
+- [x] HUD minimalista integrado:
+  - Topo desobstruído com cápsulas flutuantes translúcidas para fase, distância, moedas e vidas.
+  - Botão de pausa translúcido arredondado e responsivo no canto superior direito.
+  - Barra de progresso fina e elegante deixando prédios, céu e iluminação solar 100% visíveis.
+  - Barra inferior de controle translúcida com tipografia nítida e cantos arredondados.
 
 ---
 
