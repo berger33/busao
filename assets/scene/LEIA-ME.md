@@ -20,7 +20,7 @@ via `tools/blender/build_lote9a.py`. Nenhum download em runtime.
 | GLB | Builder | Notas |
 |---|---|---|
 | `palmeira.glb` | `_build_palm` | tronco 2,7 m com anéis, 6 folhas + flecha, 3 cocos; `scale` uniforme |
-| `arvore.glb` | `_build_tree` | tronco 1,7 m + galhos + 4 copas achatadas; `scale` uniforme |
+| `arvore.glb` | `_build_tree` | tronco urbano 2,5 m + galhos ramificados + copas densas PBR (4,8 m altura); `scale` uniforme |
 | `caixa_dagua.glb` | `_build_water_tank` | cavalete de 4 pés com travessas em X, bojo + tampa cônica; modelada para height 2.9 |
 | `varal.glb` | `_build_clothesline` | 2 mastros + corda + 4 roupas coloridas com prendedores |
 | `bandeira.glb` | `_build_flag` | mastro 2,7 m + pano ondulado; tecido em `TintFabric` |

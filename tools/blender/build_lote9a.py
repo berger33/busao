@@ -85,9 +85,9 @@ def ripa(nome, dims, centro, rot_x=0.0, rot_y=0.0, rot_z=0.0):
 # ============================================================================
 def mats():
     m = {}
-    m["casca"] = K.material("SceneCasca", (0.40, 0.27, 0.18), 0.95)
+    m["casca"] = K.material("SceneCasca", (0.38, 0.25, 0.16), 0.95)
     m["casca_palmeira"] = K.material("SceneCascaPalmeira", (0.50, 0.33, 0.22), 0.9)
-    m["folha"] = K.material("SceneFolha", (0.23, 0.61, 0.41), 0.86)
+    m["folha"] = K.material("SceneFolha", (0.24, 0.52, 0.22), 0.76)
     m["folha_palmeira"] = K.material("SceneFolhaPalmeira", (0.24, 0.67, 0.46), 0.84)
     m["coco"] = K.material("SceneCoco", (0.45, 0.30, 0.16), 0.8)
     m["azul_caixa"] = K.material("SceneAzulCaixa", (0.30, 0.47, 0.63), 0.62)
@@ -183,20 +183,32 @@ def build_palmeira(M):
 
 
 # ============================================================================
-# 2. ARVORE (tree): tronco 1,7 m + galhos + 4 copas achatadas
+# 2. ARVORE (tree): tronco urbano 2.5m + galhos ramificados + copas densas
 # ============================================================================
 def build_arvore(M):
     partes = []
-    tronco = pilar_em_pe("TreeTronco", 0.16, 0.75, 1.7, seg=12)
+    # Tronco de calcada com 2.5 m de altura livre para pedestres
+    tronco = pilar_em_pe("TreeTronco", 0.20, 0.70, 2.5, seg=16)
     K.pintar(tronco, M["casca"]); partes.append((tronco, "Scene"))
-    for sx in (1.0, -1.0):
-        galho = coluna_entre("TreeGalho%c" % ("D" if sx > 0 else "E"),
-                             (0, 0, 1.15), (sx * 0.42, 0.05 * sx, 1.62), 0.055, 0.6, seg=8)
-        K.pintar(galho, M["casca"]); partes.append((galho, "Scene"))
-    copas = [(-0.28, 0.0, 1.65, 0.62), (0.28, 0.05, 1.82, 0.75),
-             (0.0, -0.05, 2.20, 0.50), (0.05, 0.30, 1.95, 0.45)]
-    for i, (x, y, z, r) in enumerate(copas):
-        copa = K.elipsoide("TreeCopa%d" % i, (x, y, z), (r, r * 0.92, r * 0.72), nivel=1)
+    # Galhos principais ramificados
+    galhos = [
+        ((0, 0, 1.8), (0.55, 0.20, 2.7), 0.08, 0.6),
+        ((0, 0, 1.9), (-0.50, -0.25, 2.8), 0.075, 0.6),
+        ((0, 0, 2.1), (0.15, 0.55, 3.0), 0.07, 0.6),
+        ((0, 0, 2.2), (-0.20, -0.50, 2.9), 0.07, 0.6),
+    ]
+    for i, (A, B, r, rt) in enumerate(galhos):
+        g = coluna_entre("TreeGalho%d" % i, A, B, r, rt, seg=8)
+        K.pintar(g, M["casca"]); partes.append((g, "Scene"))
+    copas = [
+        (0.60, 0.25, 3.00, 1.10, 1.05, 0.85),
+        (-0.55, -0.30, 3.10, 1.05, 1.10, 0.82),
+        (0.18, 0.60, 3.30, 1.15, 1.10, 0.90),
+        (-0.20, -0.55, 3.20, 1.05, 1.02, 0.85),
+        (0.00, 0.00, 3.80, 1.25, 1.20, 1.05),
+    ]
+    for i, (x, y, z, rx, ry, rz) in enumerate(copas):
+        copa = K.elipsoide("TreeCopa%d" % i, (x, y, z), (rx, ry, rz), nivel=2)
         K.pintar(copa, M["folha"]); partes.append((copa, "Scene"))
     corpo = K.join_parts(partes)
     corpo.name = "Arvore"
@@ -453,6 +465,9 @@ if __name__ == "__main__":
         ("portao",       build_portao,       3.2, 0.90),
         ("barraca",      build_barraca,      3.8, 1.10),
     ]
+    alvo_nome = sys.argv[-1] if len(sys.argv) > 1 and not sys.argv[-1].startswith("-") and not sys.argv[-1].endswith(".py") else None
+    if alvo_nome:
+        jobs = [j for j in jobs if j[0] == alvo_nome]
     resumo = []
     for nome, fn, dist, h_alvo in jobs:
         nodes = fn(M)
