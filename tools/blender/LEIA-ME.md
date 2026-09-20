@@ -166,3 +166,21 @@ as normais para dentro) — o `pintar_face_vis()` da placa denunciou, pois a
 textura caiu na face oposta. Ordem correta e a do lote 7; os GLBs do 9A
 foram reconstruidos com a correcao (bytes identicos para as pecas sem
 caixa, o que confirma o determinismo do rebuild).
+
+## Fase 1 — Corredora atlética (julia.glb) de malha única
+
+```bash
+sh tools/blender/run_bpy.sh tools/blender/build_corredora_fase1.py            # exporta julia.glb
+CORREDORA_PREVIEW=1 sh tools/blender/run_bpy.sh tools/blender/build_corredora_fase1.py  # + 5 PNGs em out/ (~100 s)
+```
+
+Diferente de `build_personagens.py`, não usa `object.join`: `MeshBuilder` acumula
+vértices/faces/UV/pesos de todas as peças e cria UM mesh via `from_pydata`,
+soldando anéis coincidentes. Pesos de osso vêm declarados em cada anel do loft
+(transição suave em joelho/cotovelo/ombro/cintura/tornozelo). Tênis com 5
+materiais (`Sola/Entressola/Sapato/Cadarco/Meia`) e rabo de cavalo com ossos
+`Hair_Ponytail_01/02`. `CORREDORA_OUT=<glb>` muda o destino.
+
+Pegadinha corrigida aqui: `clear_pose(arm, f)` grava keyframe neutro em todos
+os ossos principais em cada frame chaveado — sem isso, um clipe que não anima
+uma perna herda a pose do clipe anterior (o Idle ficava com o pé a 4 cm do chão).

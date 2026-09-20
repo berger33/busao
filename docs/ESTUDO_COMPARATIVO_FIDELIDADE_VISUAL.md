@@ -246,6 +246,23 @@ Para transformar o visual de `image-1.png` em `abb89707-7fb0-4adc-a5f4-f3e4e81b4
 
 ---
 
+## 4.1. Registro de Execução — Fase 1 [CONCLUÍDA 2026-09-20]
+
+Script: `tools/blender/build_corredora_fase1.py` (Blender 4.5 headless) → `assets/characters/personagens/julia.glb` (260 KB).
+
+| Critério de aceitação | Resultado |
+| :--- | :--- |
+| Malha contínua | Um único `Mesh` gerado por construção (`MeshBuilder`, sem `object.join`): torso pelve→clavícula em 1 loft; cada perna quadril→maléolos em 1 loft de 16 anéis (glúteo, quadríceps, patela, gastrocnêmio, Aquiles, maléolos); cada braço deltoide→punho em 1 loft de 12 anéis (bíceps, olécrano). 4 411 vértices / 4 692 faces. |
+| Pesagem suave nos joelhos | Pesos por anel (`thigh`/`calf` 0.85→0.15 em 6 anéis, smoothstep); auditoria automática: 108/108 vértices da zona do joelho com 2+ ossos. Mesmo esquema em cotovelo, ombro, cintura, tornozelo. |
+| Tênis PBR com entressola grossa | 5 materiais dedicados: `Sola` (borracha preta 8 mm, ranhuras), `Entressola` (EVA branca, calcanhar 38 mm → antepé 20 mm, *toe rocker* 15 mm), `Sapato` (cabedal, tintável), `Cadarco` + `Ilhos`, `Meia` (cano curto 2 cm). Sola em z = 0,000 m (auditado). |
+| UV unwrap sem sobreposição | Atlas automático: 58 peças, célula própria por peça com padding 6 %; costuras dos lofts no lado interno das pernas/braços e na linha posterior das costas. |
+| Rabo de cavalo | Ossos `Hair_Ponytail_01/02` (filhos de `Head`) com inércia defasada em Sprint/Walk/Jump/Crouch. |
+| Compatibilidade Godot | 54 joints (mesmos nomes do rig `runner_character.gd` + ponytail), 6 clipes (`Idle/Walk/Sprint/Jump/Crouch_Idle/Crouch_Fwd_Loop`), materiais `QuaterniusSkin/Camisa/Calca/Sapato/Hair` preservados para `_apply_profile_palette`. Cada clipe grava keyframe neutro em todos os ossos principais (troca de clipe não herda pose). `tools/audit_personagens.py` OK. |
+
+Previews Cycles (regeneráveis, fora do Git): `CORREDORA_PREVIEW=1 sh tools/blender/run_bpy.sh tools/blender/build_corredora_fase1.py` → `tools/blender/out/julia_{frente34,costas,sprint_lado,sprint_costas34,tenis}.png`.
+
+Próximo: Fase 2 (materiais PBR/texturas 4K da personagem no Godot — `Entressola`/`Sola`/`Meia` ainda não recebem textura em `_apply_profile_palette`).
+
 ## 5. Conclusão
 
 O contraste evidente entre `image-1.png` e `abb89707-7fb0-4adc-a5f4-f3e4e81b48ef.jpg` decorre fundamentalmente de:
