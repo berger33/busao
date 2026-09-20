@@ -430,6 +430,7 @@ func _setup_world() -> void:
     environment.environment.background_energy_multiplier = 0.92
     environment.environment.tonemap_mode = Environment.TONE_MAPPER_ACES
     environment.environment.tonemap_exposure = 1.06
+    environment.environment.tonemap_white = 1.2
     environment.environment.glow_enabled = true
     environment.environment.glow_intensity = 0.42
     environment.environment.glow_bloom = 0.08
@@ -3545,10 +3546,10 @@ func _handle_tap(pos: Vector2) -> void:
         if Rect2(610, 15, 95, 75).has_point(pos):
             run_mode = "playing" if run_mode == "paused" else "paused"
             _show_feedback("PAUSA" if run_mode == "paused" else "VAMOS!", "Controle seu ritmo", YELLOW if run_mode == "paused" else GREEN, "click")
-        elif run_mode == "paused" and Rect2(80, 590, 560, 90).has_point(pos):
+        elif run_mode == "paused" and Rect2(70, 580, 580, 150).has_point(pos):
             run_mode = "playing"
             _show_feedback("VAMOS!", "O próximo obstáculo é seu", GREEN, "ui_confirm")
-        elif run_mode == "at_stop" and Rect2(70, 800, 580, 110).has_point(pos):
+        elif run_mode == "at_stop" and Rect2(70, 800, 580, 130).has_point(pos):
             _catch_bus()
     elif screen == 3:
         # Lote 11: rewarded buttons têm prioridade sobre navegação

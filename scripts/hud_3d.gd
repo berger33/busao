@@ -207,6 +207,9 @@ func _draw_run() -> void:
     _panel(Rect2(245, 18, 175, 68), Color(0.05, 0.10, 0.18, 0.65), 16)
     _text(Vector2(262, 43), "%03d m" % int(state.get("distance", 0.0)), 20, YELLOW)
     _text(Vector2(262, 68), "R$ %02d" % int(state.get("coins_run", 0)), 15, Color("#8ee5bb"))
+    draw_circle(Vector2(382, 63), 7.5, GOLD)
+    draw_arc(Vector2(382, 63), 6.0, 0.0, TAU, 16, Color(1.0, 0.94, 0.60, 0.90), 1.2)
+    draw_circle(Vector2(382, 63), 3.0, Color(1.0, 0.78, 0.22, 0.80))
     var combo: int = int(state.get("combo", 0))
     if combo > 1:
         _panel(Rect2(245, 92, 175, 24), Color(1, 0.63, 0.25, 0.16), 8)
