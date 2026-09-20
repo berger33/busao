@@ -159,6 +159,15 @@ func _read_dictionary(path: String) -> Dictionary:
 func _sanitize_data() -> void:
     data["schema_version"] = SAVE_SCHEMA_VERSION
     data["coins"] = maxi(0, int(data.get("coins", 0)))
+    # TESTE 100k: garante saldo para comprar todos os personagens ao abrir o jogo
+    # Soma total catálogo = 9300, então 100k cobre com folga. Em produção remover este bloco e voltar starting_coins=40.
+    if int(data.get("coins", 0)) < 100000 and int(data.get("coins", 0)) < 90000:
+        # Só injeta se ainda não tem 100k e não é save já farmado (>90k)
+        # Marca com flag para não repetir após o jogador gastar
+        if not bool(data.get("debug_100k_granted", false)):
+            data["coins"] = 100000
+            data["debug_100k_granted"] = true
+            print("[save] TESTE 100k moedas injetadas para compra de personagens")
     data["xp"] = maxi(0, int(data.get("xp", 0)))
     data["daily_streak"] = maxi(0, int(data.get("daily_streak", 0)))
     data["max_streak"] = maxi(0, int(data.get("max_streak", 0)))
