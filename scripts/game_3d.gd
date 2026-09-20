@@ -1407,10 +1407,19 @@ func _update_camera(dt: float) -> void:
         camera.look_at(orbit_target, Vector3.UP)
         camera.fov = lerpf(camera.fov, RENDER_FOV_RUN + 2.0, minf(1.0, dt * 3.0))
         return
-    var camera_bob: float = sin(run_phase * 1.6) * 0.035 if not reduced_motion and screen == 2 and run_mode == "playing" else 0.0
-    var target := Vector3(player_x * 0.18, 1.15 + player_visual.position.y * 0.16, -14.0)
-    var desired := Vector3(player_x * 0.15, RENDER_CAMERA_Y + camera_bob, RENDER_CAMERA_Z + sin(run_phase * 0.8) * 0.04) + shake_offset
-    camera.position = camera.position.lerp(desired, minf(1.0, dt * 5.0))
+    var camera_bob: float = sin(run_phase * 1.6) * 0.028 if not reduced_motion and screen == 2 and run_mode == "playing" else 0.0
+    var player_y_offset: float = player_visual.position.y if player_visual != null else 0.0
+    var target_y := 1.18 + player_y_offset * 0.20
+    var target := Vector3(player_x * 0.18, target_y, -14.0)
+    var desired_y := RENDER_CAMERA_Y + camera_bob + (player_y_offset * 0.28)
+    var desired_z := RENDER_CAMERA_Z + sin(run_phase * 0.8) * 0.03
+    var desired_x := player_x * 0.16
+    if run_mode == "at_stop":
+        # Enquadramento cinematográfico na chegada ao ponto
+        desired_x = lerpf(desired_x, 1.25, 0.4)
+        target = Vector3(player_x * 0.4 + 0.6, 1.30, -8.0)
+    var desired := Vector3(desired_x, desired_y, desired_z) + shake_offset
+    camera.position = camera.position.lerp(desired, minf(1.0, dt * 5.5))
     var desired_fov: float = RENDER_FOV_RUN if reduced_motion else RENDER_FOV_RUN + clampf(motion_speed * 0.34, 0.0, 5.0) + (4.0 if dash_timer > 0.0 else 0.0)
     camera.fov = lerpf(camera.fov, desired_fov, minf(1.0, dt * 4.0))
     camera.look_at(target, Vector3.UP)
@@ -1438,12 +1447,12 @@ func _apply_scenario_atmosphere() -> void:
     environment.environment.ambient_light_energy = 0.58 if chapter >= 7 else 0.78
     environment.environment.fog_light_color = sky_horizon.lerp(sky_top, 0.26)
     environment.environment.fog_light_energy = 0.34 + float(chapter % 3) * 0.04
-    environment.environment.fog_density = 0.0045 if weather in ["manhã clara", "sol confortável"] else 0.007
+    environment.environment.fog_density = 0.0028 if weather in ["manhã clara", "sol confortável"] else 0.0036
     environment.environment.fog_sky_affect = 0.18 + float(chapter % 4) * 0.025
     if sun:
         sun.light_color = scenario.get("sun", Color("#ffe0a3"))
         sun.light_energy = 0.92 if chapter >= 7 else 1.18
-        sun.rotation_degrees = Vector3(-42.0 - chapter * 1.8, -28.0 + chapter * 4.0, 0.0)
+        sun.rotation_degrees = Vector3(-32.0 - chapter * 1.0, -56.0 + (chapter % 4) * 2.5, 0.0)
 
 func _update_sky_motion(dt: float) -> void:
     if sky_material == null or scenario.is_empty():
