@@ -904,7 +904,11 @@ func _update_run(dt: float) -> void:
     course_root.position.z = distance
     step_timer -= dt
     if step_timer <= 0.0:
-        AudioManager.play_sfx("step", -13.0, 0.92 + fmod(run_phase, 0.4))
+        var step_sfx := "step_calcada"
+        if player_lane == 0:
+            var surface: String = str(scenario.get("street_surface", "asphalt"))
+            step_sfx = "step_terra" if surface == "dirt" else "step_asfalto"
+        AudioManager.play_sfx(step_sfx, -13.0, 0.92 + fmod(run_phase, 0.4))
         step_timer = maxf(0.18, 0.34 - motion_speed * 0.009)
     for entity in entities:
         if bool(entity["passed"]):
