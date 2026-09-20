@@ -683,7 +683,7 @@ func _attach_cap(node_name: String, crown_color: Color, visor_color: Color, with
         var visor := _creator_mesh(head, node_name + "Visor", visor_mesh, _batch_material(visor_color.darkened(0.25), 0.55))
         visor.position = Vector3(0.0, 0.105, 0.16)
 
-func _attach_hat(node_name: String, color: Color, brim_radius: float, crown_radius: float, crown_height: float) -> void:
+func _attach_hat(node_name: String, color: Color, _brim_radius: float, _crown_radius: float, crown_height: float) -> void:
     var head := _bone_attachment("Head", node_name + "Attachment")
     if head == null:
         return
@@ -694,7 +694,7 @@ func _attach_hat(node_name: String, color: Color, brim_radius: float, crown_radi
     var crown := _creator_mesh(head, node_name + "Crown", crown_mesh, _batch_material(color.darkened(0.12), 0.66))
     crown.position = Vector3(0.0, 0.135 + crown_height * 0.5, 0.0)
 
-func _attach_torus(node_name: String, bone_name: String, color: Color, inner_radius: float, outer_radius: float, offset: Vector3) -> void:
+func _attach_torus(node_name: String, bone_name: String, color: Color, _inner_radius: float, _outer_radius: float, offset: Vector3) -> void:
     var bone := _bone_attachment(bone_name, node_name + "Attachment")
     if bone == null:
         return

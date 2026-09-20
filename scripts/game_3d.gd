@@ -183,7 +183,6 @@ var _revive_pending: bool = false
 var _tutorial_arrow: Node3D = null
 var _double_used: bool = false
 var _rewarded_pending_placement: String = ""
-var _ads_banner_requested: bool = false
 var tutorial_hint := ""
 var tutorial_stage := -1
 var result: Dictionary = {}
@@ -1363,7 +1362,7 @@ func _update_player(dt: float) -> void:
     player_visual.rotation.x = lerpf(player_visual.rotation.x, -0.035 if is_running else 0.0, minf(1.0, dt * 7.0))
 
 # Lote23 — física Bullet: CharacterBody3D com gravidade 9.81, snap 0.4, e pothole Area3D friction 0.15
-func _physics_process(delta: float) -> void:
+func _physics_process(_delta: float) -> void:
     if not physics_realista_enabled or _player_physics_body == null:
         return
     # gravidade e snap já tratados em _update_player, aqui move_and_slide para colisão contínua
@@ -4314,13 +4313,13 @@ func _ensure_tutorial_arrow() -> void:
     _tutorial_arrow.visible = false
     add_child(_tutorial_arrow)
 
-func _update_tutorial_arrow(is_visible: bool, lane: int = 1) -> void:
+func _update_tutorial_arrow(target_visible: bool, lane: int = 1) -> void:
     if _tutorial_arrow == null:
         _ensure_tutorial_arrow()
     if _tutorial_arrow == null:
         return
-    _tutorial_arrow.visible = is_visible and not bool(GameSave.data.get("tutorial_seen", false))
-    if is_visible:
+    _tutorial_arrow.visible = target_visible and not bool(GameSave.data.get("tutorial_seen", false))
+    if target_visible:
         _tutorial_arrow.position.x = [-3.25, 0.0, 3.25][clampi(lane, 0, 2)]
         _tutorial_arrow.position.z = player_visual.position.z - 7.0 if player_visual else -6.0
         _tutorial_arrow.rotation.y += 0.04

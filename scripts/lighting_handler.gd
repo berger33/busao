@@ -21,23 +21,36 @@ const SSIL_ENABLED: bool = true
 const SSAO_INTENSITY: float = 0.4
 const SSIL_INTENSITY: float = 0.4
 
+static func _is_forward_plus() -> bool:
+    if OS.has_method("get_current_rendering_method"):
+        return str(OS.call("get_current_rendering_method")) == "forward_plus"
+    var method := String(ProjectSettings.get_setting("rendering/renderer/rendering_method", "forward_plus"))
+    return method == "forward_plus"
+
 static func setup_realista(environment: WorldEnvironment, sun: DirectionalLight3D, world_root: Node3D, enable: bool) -> void:
     if environment == null or environment.environment == null or sun == null:
         return
     var env: Environment = environment.environment
     if enable:
-        # SDFGI / VoxelGI — SDFGI para forward_plus, VoxelGI fallback; em gl_compatibility ignora mas não quebra
-        env.sdfgi_enabled = SDFGI_ENABLED
-        # SSAO / SSIL 0.4
-        env.ssao_enabled = SSAO_ENABLED
-        env.ssil_enabled = SSIL_ENABLED
-        if env.has_method("set_ssao_intensity"):
-            # Godot 4.4 usa ssao_intensity etc.
-            pass
-        # VolumetricFog já existente vira VolumetricFog node 64
-        env.volumetric_fog_enabled = true
-        env.volumetric_fog_density = VOLUMETRIC_FOG_DENSITY
-        env.volumetric_fog_albedo = VOLUMETRIC_FOG_ALBEDO
+        var forward_plus := _is_forward_plus()
+        # SDFGI / SSIL / VolumetricFog exigem renderer Forward+
+        if forward_plus:
+            env.sdfgi_enabled = SDFGI_ENABLED
+            env.ssil_enabled = SSIL_ENABLED
+            env.volumetric_fog_enabled = true
+            env.volumetric_fog_density = VOLUMETRIC_FOG_DENSITY
+            env.volumetric_fog_albedo = VOLUMETRIC_FOG_ALBEDO
+        else:
+            env.sdfgi_enabled = false
+            env.ssil_enabled = false
+            env.volumetric_fog_enabled = false
+
+        # SSAO suportado em Forward+ e compatível com rendering_device
+        if forward_plus or RenderingServer.get_rendering_device() != null:
+            env.ssao_enabled = SSAO_ENABLED
+        else:
+            env.ssao_enabled = false
+
         # sombra 4096 VSM nítida a 0.5 m
         sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
         sun.shadow_enabled = true
@@ -49,21 +62,12 @@ static func setup_realista(environment: WorldEnvironment, sun: DirectionalLight3
         sun.shadow_blur = 1.0 # L27 soft VSM blur
         sun.shadow_reverse_cull_face = false
         # L27: contact shadow via ssao/ssil já 0.4 + bias baixo garante contato 0.5m
-        # Sky PhysicalSky + sun disk + clouds 3D (substitui Panorama quando realista)
+        # Sky: calibra energia solar do panorama sem substituir o asset canônico
         var sky: Sky = environment.environment.sky
         if sky != null and sky.sky_material is PanoramaSkyMaterial:
-            var pano: PanoramaSkyMaterial = sky.sky_material as PanoramaSkyMaterial
-            # mantém panorama mas adiciona energia sun disk via light_angular_distance
+            var _pano: PanoramaSkyMaterial = sky.sky_material as PanoramaSkyMaterial
+            _pano.energy_multiplier = 0.96
             sun.light_angular_distance = 1.2
-            # se PhysicalSky disponível, troca
-            if ClassDB.class_exists("PhysicalSkyMaterial"):
-                var phys := PhysicalSkyMaterial.new()
-                phys.sky_energy_multiplier = 0.92
-                phys.ground_energy_multiplier = 1.1
-                phys.sun_disk_scale = 0.42
-                phys.sky_horizon_color = Color("#a8c8d8")
-                phys.sky_top_color = Color("#3a5a8a")
-                sky.sky_material = phys
         # ReflectionProbe por quarteirão (28 m) + VoxelGI
         if world_root != null:
             # evita duplicar
@@ -113,6 +117,6 @@ static func bake_lightmaps(world_root: Node3D) -> void:
         return
     for child in gi_root.get_children():
         if child is VoxelGI:
-            var voxel := child as VoxelGI
-            # em headless/editor faria voxel.bake()
+            var _voxel := child as VoxelGI
+            # em headless/editor faria _voxel.bake()
             pass
