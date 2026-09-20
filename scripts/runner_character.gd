@@ -117,6 +117,15 @@ var motion_clock := 0.0
 var bone_indices: Dictionary = {}
 var rest_rotations: Dictionary = {}
 
+# --- Física Secundária de Movimento (Hair Spring, Spine Dynamics & Body Lean) ---
+var _hair_pitch: float = 0.0
+var _hair_pitch_vel: float = 0.0
+var _hair_yaw: float = 0.0
+var _hair_yaw_vel: float = 0.0
+var _spine_roll: float = 0.0
+var _spine_roll_vel: float = 0.0
+var _last_jump_h: float = 0.0
+
 func _ready() -> void:
     set_character(character_id)
 
@@ -218,6 +227,13 @@ func _clear_character() -> void:
     primary_asset_loaded = false
     bone_indices.clear()
     rest_rotations.clear()
+    _hair_pitch = 0.0
+    _hair_pitch_vel = 0.0
+    _hair_yaw = 0.0
+    _hair_yaw_vel = 0.0
+    _spine_roll = 0.0
+    _spine_roll_vel = 0.0
+    _last_jump_h = 0.0
     if is_instance_valid(runner_shadow):
         runner_shadow.free()
     runner_shadow = null
@@ -1012,7 +1028,7 @@ func _apply_procedural_fallback_pose(stride: float, crouching: bool, jumping: bo
     _set_bone_extra("lowerarm_l", Quaternion(Vector3.FORWARD, 1.40))
     _set_bone_extra("lowerarm_r", Quaternion(Vector3.FORWARD, -1.40))
 
-func set_motion(run_phase: float, is_running: bool, is_crouching: bool, jump_height: float, lane_velocity: float, speed: float = 0.0) -> void:
+func set_motion(run_phase: float, is_running: bool, is_crouching: bool, jump_height: float, lane_velocity: float, speed: float = 0.0, dt: float = 0.016) -> void:
     motion_clock = run_phase
     var jumping := jump_height > 0.05
     var clip := "Sprint_Loop"
@@ -1035,15 +1051,57 @@ func set_motion(run_phase: float, is_running: bool, is_crouching: bool, jump_hei
         runner_shadow.position.y = 0.025 - position.y
         var shadow_factor := 1.0 - clampf(jump_height * 0.12, 0.0, 0.24)
         runner_shadow.scale = Vector3.ONE * shadow_factor
+
+    # --- Simulação de Física Secundária de Movimento (Hair Spring & Spine Dynamics) ---
+    var delta_t: float = clampf(dt, 0.005, 0.05)
+    var jump_v: float = (jump_height - _last_jump_h) / delta_t
+    _last_jump_h = jump_height
+
+    # 1. Pitch do rabo de cavalo e cabeça (cadência de passada, compressão de salto e aterrissagem)
+    var cadence_impulse := sin(run_phase * 2.0) * (0.045 if is_running and not is_crouching else 0.0)
+    var jump_inertia := -jump_v * 0.022
+    var target_hair_pitch := clampf(cadence_impulse + jump_inertia + (0.05 if is_crouching else 0.0), -0.22, 0.26)
+    var pitch_accel := 30.0 * (target_hair_pitch - _hair_pitch) - 7.5 * _hair_pitch_vel
+    _hair_pitch_vel += pitch_accel * delta_t
+    _hair_pitch += _hair_pitch_vel * delta_t
+
+    # 2. Yaw/Sway lateral do rabo de cavalo (inércia centrífuga na troca de faixa)
+    var target_hair_yaw := clampf(-lane_velocity * 0.055, -0.20, 0.20)
+    var yaw_accel := 26.0 * (target_hair_yaw - _hair_yaw) - 7.0 * _hair_yaw_vel
+    _hair_yaw_vel += yaw_accel * delta_t
+    _hair_yaw += _hair_yaw_vel * delta_t
+
+    # 3. Roll/Inclinação atlética da coluna vertebral (banca suave na curva e balanço sagital)
+    var target_spine_roll := clampf(-lane_velocity * 0.038, -0.14, 0.14) + sin(run_phase) * (0.012 if is_running else 0.0)
+    var roll_accel := 24.0 * (target_spine_roll - _spine_roll) - 8.0 * _spine_roll_vel
+    _spine_roll_vel += roll_accel * delta_t
+    _spine_roll += _spine_roll_vel * delta_t
+
+    # 4. Aplicação no pivô e na curvatura da coluna (spine_02, spine_03)
     if model_pivot != null:
-        var model_lean := clampf(lane_velocity * 0.018, -0.12, 0.12)
-        model_pivot.rotation.z = lerpf(model_pivot.rotation.z, -model_lean, 0.16)
+        var model_lean := clampf(_spine_roll * 0.50, -0.12, 0.12)
+        model_pivot.rotation.z = lerpf(model_pivot.rotation.z, model_lean, 0.18)
+
+    if skeleton != null:
+        if bone_indices.has("spine_02"):
+            var s2_base: Quaternion = rest_rotations.get("spine_02", Quaternion.IDENTITY)
+            var s2_lean := Quaternion(Vector3.FORWARD, _spine_roll * 0.35)
+            skeleton.set_bone_pose_rotation(int(bone_indices["spine_02"]), s2_base * s2_lean)
+        if bone_indices.has("spine_03"):
+            var s3_base: Quaternion = rest_rotations.get("spine_03", Quaternion.IDENTITY)
+            var s3_lean := Quaternion(Vector3.FORWARD, _spine_roll * 0.45)
+            var s3_pitch := Quaternion(Vector3.RIGHT, -_hair_pitch * 0.18)
+            skeleton.set_bone_pose_rotation(int(bone_indices["spine_03"]), s3_base * s3_lean * s3_pitch)
+
+    # 5. Cabeça dinâmica com look-at antecipatório e compensação elástica
     # L27 polimento: head look-at 12° na curva (suaviza imersão, audit 5.0→6.5)
     if skeleton != null and bone_indices.has("Head"):
         var look_yaw := clampf(lane_velocity * 0.04, -0.21, 0.21)
         var base_rot: Quaternion = rest_rotations.get("Head", Quaternion.IDENTITY)
-        var target := base_rot * Quaternion(Vector3.UP, look_yaw)
-        skeleton.set_bone_pose_rotation(int(bone_indices["Head"]), base_rot.slerp(target, 0.18))
+        var look_rot := Quaternion(Vector3.UP, look_yaw + _hair_yaw * 0.35)
+        var hair_pitch_rot := Quaternion(Vector3.RIGHT, _hair_pitch * 0.65)
+        var target_head := base_rot * look_rot * hair_pitch_rot
+        skeleton.set_bone_pose_rotation(int(bone_indices["Head"]), base_rot.slerp(target_head, 0.22))
     # L27: foot IK placeholder removido (evita drift); plantar garantido por heightmap_scale + cadence já faz foot lock
 
 ## O jogo avança o cenário na velocidade real da corrida; a animação de sprint
