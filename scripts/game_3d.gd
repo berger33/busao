@@ -86,7 +86,7 @@ const CYAN := Color("#63e6d2")
 const VIOLET := Color("#ac8cff")
 const UI_BG := Color("#0b1224")
 const UI_PANEL := Color("#14233f")
-const PLAYER_HEIGHT := 2.15
+const PLAYER_HEIGHT := 1.82 # sincronizado com runner (era 2.15)
 const WORLD_LENGTH_MARGIN := 80.0
 
 # --- Lote 2: constantes de render/câmera (roteiro game_3d_lote2_patch.gd) --
@@ -2326,12 +2326,12 @@ func _build_brazilian_car(parent: Node3D, variant: int, dark: Material, chrome: 
             _cylinder(parent, 0.035, 0.035, 1.40, Vector3(0.82, 1.74, 0.50), chrome, "UtilityRoofRack")
 
 const GLB_FIT := {
-    "car": Vector2(4.4, 1.55),
-    "motorcycle": Vector2(2.1, 1.15),
-    "truck": Vector2(6.4, 2.7),
-    "bus_traffic": Vector2(7.4, 3.0),
-    "onibus": Vector2(8.2, 3.0),
-    "carro": Vector2(4.4, 1.55),
+    "car": Vector2(4.2, 1.45) # 4.2x1.45 realista (era 4.4x1.55),
+    "motorcycle": Vector2(2.05, 1.05) # 2.05x1.05 compacta,
+    "truck": Vector2(6.2, 2.65),
+    "bus_traffic": Vector2(7.2, 2.95),
+    "onibus": Vector2(8.0, 2.95),
+    "carro": Vector2(4.2, 1.45),
 }
 # Lote 6: reserva variantes de veículo (cor/rodas com textura baked) — drop-in opcional.
 # Cada kind sorteia entre a base e as variantes se o arquivo existir; fallback seguro.
@@ -2473,9 +2473,15 @@ func _fit_model(node: Node3D, target_length: float, target_height: float) -> voi
     var bounds := _model_bounds(node)
     if not bounds.has_volume():
         return
+    # Auditoria proporção: considera largura também (veículos estavam 0.3m mais largos)
+    var target_width := target_height * 1.24 if target_length > 6.0 else (0.75 if target_length < 2.3 else 1.80)
+    if target_length > 7.0:
+        target_width = 2.55
+    elif target_length > 6.0:
+        target_width = 2.50
     var fit := minf(target_length / maxf(bounds.size.z, 0.001), target_height / maxf(bounds.size.y, 0.001))
+    fit = minf(fit, target_width / maxf(bounds.size.x, 0.001))
     node.scale = Vector3.ONE * fit
-    # assenta o modelo no chao e centraliza o comprimento no node pai
     var offset := Vector3(-bounds.position.x, -bounds.position.y, -bounds.position.z - bounds.size.z * 0.5) * fit
     node.position += offset
 
@@ -2573,7 +2579,7 @@ func _build_motoqueiro(parent: Node3D, assento: Vector3) -> void:
     rider.name = "Motoqueiro3D"
     rider.set("profile_id", "carlos")
     rider.set("role", "motoqueiro")
-    rider.set("avatar_scale", 0.80)
+    rider.set("avatar_scale", 0.92) # 0.92 realista (era 0.80)
     rider.position = assento
     rider.rotation.y = PI   # de frente para o sentido da moto (-Z)
     parent.add_child(rider)
@@ -2660,7 +2666,7 @@ func _build_sidewalk_obstacle(parent: Node3D, kind: String) -> void:
             # A velhinha alterna entre a Vovó Zilda (lote 2) e a Maria do
             # Bairro: variedade de calçada sem quebrar o contrato de obstáculo.
             var granny_profiles: Array[String] = ["zilda", "maria"]
-            _build_pedestrian_obstacle(parent, granny_profiles[abs(parent.name.hash()) % granny_profiles.size()], "old_lady", 0.80)
+            _build_pedestrian_obstacle(parent, granny_profiles[abs(parent.name.hash()) % granny_profiles.size()], "old_lady", 0.88)
         "hydrant":
             var hidrante_glb := _optional_prop("hidrante.glb")
             if hidrante_glb != null:
@@ -2805,10 +2811,26 @@ func _build_collectible(parent: Node3D, kind: String) -> void:
     var coletavel_glb := _optional_glb("collectibles/" + kind + ".glb")
     if coletavel_glb != null:
         coletavel_glb.name = "Collectible3D_" + kind
+        # Auditoria proporção realista: humano 1.82, coin real 0.05 vs 0.60 raw => escala 0.083
+        var _collect_scale := 0.45
+        match kind:
+            "coin": _collect_scale = 0.12  # 0.60*0.12=0.072 diam 7.2cm
+            "golden": _collect_scale = 0.15
+            "pass": _collect_scale = 0.16
+            "bread": _collect_scale = 0.32
+            "pastel": _collect_scale = 0.26
+            "coxinha": _collect_scale = 0.22
+            "coffee": _collect_scale = 0.30
+            "guarana": _collect_scale = 0.28
+            "pix": _collect_scale = 0.30
+            "sugarcane": _collect_scale = 0.35
+            "umbrella": _collect_scale = 0.75
+            _: _collect_scale = 0.30
+        coletavel_glb.scale = Vector3.ONE * _collect_scale
         parent.add_child(coletavel_glb)
         var glow_glb := _material(Color(color, 0.10), 0.0, 0.8, "glass")
         glow_glb.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-        _sphere(parent, 0.36, Vector3.ZERO, glow_glb, "Glow")
+        _sphere(parent, 0.14, Vector3.ZERO, glow_glb, "Glow") # 0.14 vs 0.36 proporcional
         return
     var mat := _material(color, 0.12 if kind in ["coin", "golden"] else 0.0, 0.28, "metal" if kind in ["coin", "golden"] else "paint")
     mat.emission_enabled = true
@@ -2864,7 +2886,7 @@ func _build_collectible(parent: Node3D, kind: String) -> void:
             _sphere(parent, 0.22, Vector3.ZERO, mat, "Bonus")
     var glow_material := _material(Color(color, 0.10), 0.0, 0.8, "glass")
     glow_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-    _sphere(parent, 0.36, Vector3.ZERO, glow_material, "Glow")
+    _sphere(parent, 0.14, Vector3.ZERO, glow_material, "Glow") # 0.14 proporcional
 
 func _wheels(parent: Node3D, material: Material, x_offset: float, z_offset: float) -> void:
     for x in [-x_offset, x_offset]:

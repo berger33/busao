@@ -55,15 +55,23 @@ def caixa(nome, centro, dims):
          (cx-dx, cy-dy, cz+dz),(cx+dx, cy-dy, cz+dz),(cx+dx, cy+dy, cz+dz),(cx-dx, cy+dy, cz+dz)]
     f = [(0,1,2,3),(7,6,5,4),(0,4,5,1),(3,2,6,7),(0,3,7,4),(1,5,6,2)]
     me = malha(nome, v, f)
-    # UV simples
     uv = me.uv_layers.new(name="UVMap")
     for poly in me.polygons:
         for li in poly.loop_indices:
             uv.data[li].uv = [(0,0),(1,0),(1,1),(0,1)][(li-poly.loop_start)%4]
     o = novo_obj(nome, me)
+    try:
+        sozinho(o)
+        bpy.ops.object.shade_smooth()
+        mm = o.modifiers.new("BevelMild", 'BEVEL')
+        mm.width = 0.012
+        mm.segments = 2
+        mm.limit_method = 'ANGLE'
+        mm.angle_limit = rad(45)
+    except: pass
     return o
 
-def pilar_z(nome, r_base, r_topo_rel, altura, seg=12):
+def pilar_z(nome, r_base, r_topo_rel, altura, seg=24): # refinado 24 segs (era 12 blocado)
     verts, faces = [], []
     rt = r_base * r_topo_rel
     for k in range(seg):
@@ -85,7 +93,7 @@ def pilar_z(nome, r_base, r_topo_rel, altura, seg=12):
     o = novo_obj(nome, me)
     return o
 
-def elipsoide_bl(nome, centro, raios, seg=2):
+def elipsoide_bl(nome, centro, raios, seg=3): # ico 3 niveis (era 2)
     bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=seg, radius=1.0, location=centro)
     o = bpy.context.active_object
     o.name = nome
@@ -107,6 +115,12 @@ def join_parts(partes):
     bpy.context.view_layer.objects.active=partes[0][0]
     bpy.ops.object.join()
     corpo=bpy.context.active_object
+    try:
+        sozinho(corpo)
+        bpy.ops.object.shade_smooth()
+        for poly in corpo.data.polygons:
+            poly.use_smooth = True
+    except: pass
     total=sum(contagens)
     assert len(corpo.data.vertices)==total, "join alterou vertices"
     print("VERTICES:", total)
@@ -225,7 +239,7 @@ def build_one(is_male, out_path):
         cor_calca=(0.32,0.28,0.55)
         cor_sapato=(0.85,0.72,0.22)
         largura_ombro=0.205
-        largura_quadril=0.185
+        largura_quadril=0.21 # quadril mais largo (era 0.185 quadrado)
         peito_extra=0.045
     # nomes: QuaterniusSkin para pele, hair para cabelo, etc para palette detectar
     m_pele=material("QuaterniusSkin", cor_pele, 0.62, 0.0)

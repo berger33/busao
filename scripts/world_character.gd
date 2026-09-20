@@ -11,13 +11,13 @@ const TEXTURE_PHONE = preload("res://assets/textures/vidro_azul.svg")
 
 var profile_id: String = "maria"
 var role: String = "pedestrian"
-var avatar_scale: float = 0.82
+var avatar_scale: float = 0.92 # 0.92*1.77=1.63 sentado realista (era 0.82)
 var avatar: Node3D
 var idle_time := 0.0
 var phone_attachment: BoneAttachment3D
 var world_clip := ""
 
-func configure(next_profile: String, next_role: String, next_scale: float = 0.82) -> void:
+func configure(next_profile: String, next_role: String, next_scale: float = 0.92) -> void:
     profile_id = next_profile
     role = next_role
     avatar_scale = next_scale

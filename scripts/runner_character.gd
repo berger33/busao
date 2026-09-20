@@ -33,7 +33,7 @@ const ORIGINAL_BODY_PATHS: Dictionary = {
     "M": ORIGINAL_ROOT + "/Humano_M.glb",
     "F": ORIGINAL_ROOT + "/Humano_F.glb",
 }
-const MODEL_SCALE := 1.18
+const MODEL_SCALE := 1.03  # 1.77*1.03=1.82 realista (era 1.18->2.09)
 const MODEL_FLOOR_OFFSET := 0.012
 const CLOTHING_INFLATE := 0.008
 const PLAYER_HEIGHT := 1.82 # L27 polimento: altura realista brasileira (era 2.15 gigante vs porta 2.4)
