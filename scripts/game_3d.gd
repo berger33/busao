@@ -2488,6 +2488,39 @@ func _fit_model(node: Node3D, target_length: float, target_height: float) -> voi
     node.scale = Vector3.ONE * fit
     var offset := Vector3(-bounds.position.x, -bounds.position.y, -bounds.position.z - bounds.size.z * 0.5) * fit
     node.position += offset
+    _enhance_vehicle_instance(node)
+
+func _enhance_vehicle_instance(node: Node3D) -> void:
+    for child in node.find_children("*", "MeshInstance3D"):
+        var mesh_inst := child as MeshInstance3D
+        if mesh_inst == null or mesh_inst.mesh == null:
+            continue
+        for s in mesh_inst.mesh.get_surface_count():
+            var mat := mesh_inst.get_surface_override_material(s)
+            if mat == null:
+                mat = mesh_inst.mesh.surface_get_material(s)
+            if mat is BaseMaterial3D:
+                var mat_name := str(mat.resource_name).to_lower()
+                var new_mat := mat.duplicate() as BaseMaterial3D
+                if mat_name.contains("pintura") or mat_name.contains("paint") or mat_name.contains("quadro"):
+                    new_mat.clearcoat_enabled = true
+                    new_mat.clearcoat = 0.65
+                    new_mat.clearcoat_roughness = 0.10
+                    new_mat.roughness = minf(new_mat.roughness, 0.28)
+                    new_mat.rim_enabled = true
+                    new_mat.rim = 0.15
+                    new_mat.rim_tint = 0.45
+                    mesh_inst.set_surface_override_material(s, new_mat)
+                elif mat_name.contains("vidro") or mat_name.contains("glass"):
+                    new_mat.clearcoat_enabled = true
+                    new_mat.clearcoat = 0.85
+                    new_mat.clearcoat_roughness = 0.05
+                    new_mat.roughness = 0.06
+                    mesh_inst.set_surface_override_material(s, new_mat)
+                elif mat_name.contains("cromo") or mat_name.contains("chrome"):
+                    new_mat.metallic = 0.92
+                    new_mat.roughness = 0.12
+                    mesh_inst.set_surface_override_material(s, new_mat)
 
 func _pick_vehicle_variant(kind: String) -> String:
     # Lote 6: sorteia drop-in entre as variantes se existirem; determinístico por seed da corrida.
@@ -3004,6 +3037,16 @@ func _material(color: Color, metallic: float, roughness: float, surface: String 
         material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
         material.refraction_enabled = true
         material.refraction_scale = 0.06
+        material.clearcoat_enabled = true
+        material.clearcoat = 0.85
+        material.clearcoat_roughness = 0.08
+    elif surface == "vehicle_paint":
+        material.clearcoat_enabled = true
+        material.clearcoat = 0.65
+        material.clearcoat_roughness = 0.12
+        material.rim_enabled = true
+        material.rim = 0.18
+        material.rim_tint = 0.45
     elif surface == "skin":
         material.subsurf_scatter_enabled = true
         material.subsurf_scatter_skin_mode = true

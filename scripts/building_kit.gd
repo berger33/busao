@@ -166,6 +166,13 @@ static func material(spec: Dictionary, chave: String) -> Material:
             mat.heightmap_enabled = true
             mat.heightmap_texture = height_tex2
             mat.heightmap_scale = float(cfg.get("height_scale", 0.025))
+    if chave == "vidro" and mat is StandardMaterial3D:
+        var sm := mat as StandardMaterial3D
+        sm.clearcoat_enabled = true
+        sm.clearcoat = 0.85
+        sm.clearcoat_roughness = 0.05
+        sm.metallic = 0.25
+        sm.roughness = 0.08
     _material_cache[cache_key] = mat
     return mat
 
