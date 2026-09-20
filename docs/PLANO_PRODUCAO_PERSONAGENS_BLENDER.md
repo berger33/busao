@@ -9,6 +9,10 @@ Relacionados: `docs/PLANO_PERSONAGENS_REALISTAS.md` (identidade/roupas de cada u
 
 ---
 
+> **Prioridade rebaixada em 20/09/2026** pelo [Blueprint de produção](BLUEPRINT_PRODUCAO_CORRE_PRO_PONTO.md) §2:
+> até o piloto (M4) ser aprovado, só a protagonista (Júlia) é produzida. Os outros 19 personagens
+> continuam com os GLBs atuais (já visíveis após a correção Draco). Este plano volta a valer em M6+.
+
 ## 0. Estado atual (atualizar a cada commit)
 
 | Data | Marco |

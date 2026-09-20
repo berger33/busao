@@ -161,6 +161,10 @@ Para gravar, rode no editor ou em um APK, escolha a fase no mapa e use a gravaç
 
 Consulte [`CREDITS.md`](CREDITS.md) e [`assets/characters/humanos_originais/PROVENANCE.md`](assets/characters/humanos_originais/PROVENANCE.md). Os assets de personagem são 100% originais do projeto (sem CC0 desde Lote 26); não há download em runtime.
 
+## Blueprint de produção
+
+Plano mestre (piloto de 336 m → 5 → 20 → 50 fases) e reconciliação com o código: [`docs/BLUEPRINT_PRODUCAO_CORRE_PRO_PONTO.md`](docs/BLUEPRINT_PRODUCAO_CORRE_PRO_PONTO.md).
+
 ## Produção de personagens (Blender)
 
 Progresso e checklist dos 20 personagens em malha única: [`docs/PLANO_PRODUCAO_PERSONAGENS_BLENDER.md`](docs/PLANO_PRODUCAO_PERSONAGENS_BLENDER.md) — fonte da verdade para retomar o trabalho.
