@@ -21,6 +21,11 @@ const TEXTURE_CREATOR_METAL_R = preload("res://assets/textures/metal_pintado_rea
 const TEXTURE_CREATOR_RUBBER = preload("res://assets/textures/borracha_realista.png")
 const TEXTURE_CREATOR_RUBBER_N = preload("res://assets/textures/borracha_realista_normal.png")
 const TEXTURE_CREATOR_RUBBER_R = preload("res://assets/textures/borracha_realista_roughness.png")
+# Lote 28 Passo 2 — PBR 4K pele/cabelo (acaba com aspecto plástico cru)
+const TEXTURE_SKIN = preload("res://assets/textures/pele_realista.png")
+const TEXTURE_SKIN_N = preload("res://assets/textures/pele_realista_normal.png")
+const TEXTURE_SKIN_R = preload("res://assets/textures/pele_realista_roughness.png")
+const TEXTURE_HAIR = preload("res://assets/textures/cabelo_realista.png")
 
 const MODEL_ROOT := "res://assets/characters/humanos_originais" # L26: alias legado (antes quaternius 86 MB) agora aponta para humanos originais; sem CC0
 const BASE_ROOT := MODEL_ROOT + "/base"
@@ -439,6 +444,16 @@ func _apply_skin_tint(skin_color: Color) -> void:
             if source_material is BaseMaterial3D:
                 var material := source_material.duplicate() as BaseMaterial3D
                 material.albedo_color = tint
+                # PBR 4K pele — acaba com plástico: poros via normal + variação de brilho
+                material.albedo_texture = TEXTURE_SKIN
+                material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+                material.normal_enabled = true
+                material.normal_texture = TEXTURE_SKIN_N
+                material.normal_scale = 0.52
+                material.roughness = 1.0
+                material.roughness_texture = TEXTURE_SKIN_R
+                material.uv1_scale = Vector3(2.2, 2.2, 2.2)
+                # mantém translucidez sutil da pele (Godot 4 subsurf not needed; roughness já resolve)
                 mesh.set_surface_override_material(surface_index, material)
 
 func _apply_profile_palette(profile: Dictionary) -> void:
@@ -462,26 +477,65 @@ func _apply_profile_palette(profile: Dictionary) -> void:
             if material_name.contains("quaterniusskin"):
                 continue
             var tint := Color.WHITE
+            var pbr_kind := "" # tecido / jeans / borracha / cabelo / metal
             # Original Blender humano usa nomes Camisa/Calca/Sapato/Hair nos materiais
             if material_name.contains("camisa"):
                 tint = shirt
+                pbr_kind = "tecido"
             elif material_name.contains("calca"):
                 tint = pants
+                pbr_kind = "jeans"
             elif material_name.contains("sapato"):
                 tint = shoes
+                pbr_kind = "borracha"
             elif material_name.contains("hair"):
                 tint = hair.lightened(0.10)
+                pbr_kind = "cabelo"
             elif mesh_name.contains("outfit"):
                 if mesh_name.contains("_body") or mesh_name.contains("_arms"):
                     tint = shirt
+                    pbr_kind = "tecido"
                 elif mesh_name.contains("_legs"):
                     tint = pants
+                    pbr_kind = "jeans"
                 elif mesh_name.contains("_feet"):
                     tint = shoes
+                    pbr_kind = "borracha"
             if tint == Color.WHITE:
                 continue
             var material := source_material.duplicate() as BaseMaterial3D
             material.albedo_color = tint
+            material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+            # PBR 4K Passo 2 — aplica textura realista por tipo (mantém <500KB pois textura é runtime, não bake no GLB)
+            match pbr_kind:
+                "tecido":
+                    material.albedo_texture = TEXTURE_CREATOR_TOP
+                    material.normal_enabled = true
+                    material.normal_texture = TEXTURE_CREATOR_TOP_N
+                    material.normal_scale = 0.50
+                    material.roughness = 1.0
+                    material.roughness_texture = TEXTURE_CREATOR_TOP_R
+                    material.uv1_scale = Vector3(3.0, 3.0, 3.0)
+                "jeans":
+                    material.albedo_texture = TEXTURE_CREATOR_DENIM
+                    material.normal_enabled = true
+                    material.normal_texture = TEXTURE_CREATOR_DENIM_N
+                    material.normal_scale = 0.60
+                    material.roughness = 1.0
+                    material.roughness_texture = TEXTURE_CREATOR_DENIM_R
+                    material.uv1_scale = Vector3(3.0, 3.0, 3.0)
+                "borracha":
+                    material.albedo_texture = TEXTURE_CREATOR_RUBBER
+                    material.normal_enabled = true
+                    material.normal_texture = TEXTURE_CREATOR_RUBBER_N
+                    material.normal_scale = 0.34
+                    material.roughness = 1.0
+                    material.roughness_texture = TEXTURE_CREATOR_RUBBER_R
+                    material.uv1_scale = Vector3(2.5, 2.5, 2.5)
+                "cabelo":
+                    material.albedo_texture = TEXTURE_HAIR
+                    material.roughness = 0.82
+                    material.uv1_scale = Vector3(1.8, 1.8, 1.8)
             mesh.set_surface_override_material(surface_index, material)
 
 func _attach_creator_details(profile: Dictionary) -> void:
