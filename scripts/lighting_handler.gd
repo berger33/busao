@@ -21,11 +21,18 @@ const SSIL_ENABLED: bool = true
 const SSAO_INTENSITY: float = 0.4
 const SSIL_INTENSITY: float = 0.4
 
+static func _get_rendering_method() -> String:
+    if RenderingServer.has_method("get_current_rendering_method"):
+        return String(RenderingServer.get_current_rendering_method())
+    return String(ProjectSettings.get_setting("rendering/renderer/rendering_method", "mobile"))
+
 static func _is_forward_plus() -> bool:
-    if OS.has_method("get_current_rendering_method"):
-        return str(OS.call("get_current_rendering_method")) == "forward_plus"
-    var method := String(ProjectSettings.get_setting("rendering/renderer/rendering_method", "forward_plus"))
-    return method == "forward_plus"
+    return _get_rendering_method() == "forward_plus"
+
+static func _supports_ssao() -> bool:
+    var method := _get_rendering_method()
+    # No Godot 4: Forward+ e gl_compatibility suportam SSAO; mobile não suporta
+    return method == "forward_plus" or method == "gl_compatibility"
 
 static func setup_realista(environment: WorldEnvironment, sun: DirectionalLight3D, world_root: Node3D, enable: bool) -> void:
     if environment == null or environment.environment == null or sun == null:
@@ -45,8 +52,8 @@ static func setup_realista(environment: WorldEnvironment, sun: DirectionalLight3
             env.ssil_enabled = false
             env.volumetric_fog_enabled = false
 
-        # SSAO suportado em Forward+ e compatível com rendering_device
-        if forward_plus or RenderingServer.get_rendering_device() != null:
+        # SSAO suportado apenas em Forward+ ou Compatibility
+        if _supports_ssao():
             env.ssao_enabled = SSAO_ENABLED
         else:
             env.ssao_enabled = false
@@ -65,8 +72,7 @@ static func setup_realista(environment: WorldEnvironment, sun: DirectionalLight3
         # Sky: calibra energia solar do panorama sem substituir o asset canônico
         var sky: Sky = environment.environment.sky
         if sky != null and sky.sky_material is PanoramaSkyMaterial:
-            var _pano: PanoramaSkyMaterial = sky.sky_material as PanoramaSkyMaterial
-            _pano.energy_multiplier = 0.96
+            (sky.sky_material as PanoramaSkyMaterial).energy_multiplier = 0.96
             sun.light_angular_distance = 1.2
         # ReflectionProbe por quarteirão (28 m) + VoxelGI
         if world_root != null:
@@ -117,6 +123,5 @@ static func bake_lightmaps(world_root: Node3D) -> void:
         return
     for child in gi_root.get_children():
         if child is VoxelGI:
-            var _voxel := child as VoxelGI
-            # em headless/editor faria _voxel.bake()
+            # Em headless/editor faria (child as VoxelGI).bake()
             pass
