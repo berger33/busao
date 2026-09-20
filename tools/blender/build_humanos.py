@@ -215,7 +215,28 @@ def new_action(arm, nome):
     return a
 
 def linearize(act):
-    for fc in act.fcurves:
+    # Blender 4.5: act.fcurves ; 5.0: action.layers -> strips -> channelbags -> fcurves
+    fcurves = []
+    if hasattr(act, "fcurves"):
+        try:
+            fcurves = list(act.fcurves)
+        except: fcurves = []
+    if not fcurves and hasattr(act, "layers"):
+        try:
+            for layer in act.layers:
+                for strip in layer.strips:
+                    # Blender 5: strip.channelbags
+                    if hasattr(strip, "channelbags"):
+                        for bag in strip.channelbags:
+                            fcurves.extend(list(bag.fcurves))
+                    elif hasattr(strip, "fcurves"):
+                        fcurves.extend(list(strip.fcurves))
+                    elif hasattr(strip, "action"):
+                        # fallback
+                        pass
+        except Exception as e:
+            print("linearize fallback layers failed", e)
+    for fc in fcurves:
         for kp in fc.keyframe_points:
             kp.interpolation='LINEAR'
 
