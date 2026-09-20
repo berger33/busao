@@ -435,11 +435,11 @@ func _setup_world() -> void:
     environment.environment.glow_bloom = 0.08
     environment.environment.glow_hdr_threshold = 1.15
     environment.environment.fog_enabled = true
-    environment.environment.fog_light_color = Color("#cadde6")
-    environment.environment.fog_light_energy = 0.48
-    environment.environment.fog_density = 0.0034 # névoa suave matinal na distância (ref abb89707, era 0.0072 parede cinza)
-    environment.environment.fog_aerial_perspective = 0.65
-    environment.environment.fog_sky_affect = 0.28
+    environment.environment.fog_light_color = Color("#ebd9be") # névoa dourada de fim de tarde (ref abb89707)
+    environment.environment.fog_light_energy = 0.52
+    environment.environment.fog_density = 0.0028 # névoa suave sem parede cinza (ref abb89707)
+    environment.environment.fog_aerial_perspective = 0.40
+    environment.environment.fog_sky_affect = 0.18
     sky = Sky.new()
     sky_material = PanoramaSkyMaterial.new()
     sky_material.panorama = TEXTURE_SKY_PANORAMA
@@ -461,15 +461,15 @@ func _setup_world() -> void:
 
     sun = DirectionalLight3D.new()
     sun.name = "WarmSun"
-    sun.rotation_degrees = Vector3(-32.0, -58.0, 0.0) # luz lateral da manhã/tarde (ref abb89707)
-    sun.light_color = Color("#fff3e0")
-    sun.light_energy = 1.32
+    sun.rotation_degrees = Vector3(-28.0, -56.0, 0.0) # Golden hour lateral (ref abb89707)
+    sun.light_color = Color("#fff2db")
+    sun.light_energy = 1.45
     sun.shadow_enabled = true
-    sun.directional_shadow_max_distance = 72.0
-    sun.shadow_bias = 0.045
-    sun.shadow_normal_bias = 1.2
-    sun.shadow_opacity = 0.72
-    sun.light_angular_distance = 0.6
+    sun.directional_shadow_max_distance = 68.0
+    sun.shadow_bias = 0.015
+    sun.shadow_normal_bias = 0.45
+    sun.shadow_opacity = 0.85
+    sun.light_angular_distance = 0.8
     world_root.add_child(sun)
     # Lote24 — Luz realista: SDFGI/VoxelGI + ReflectionProbe + 4096 VSM + VolumetricFog + PhysicalSky (F9 toggle)
     if LIGHTING_HANDLER != null:

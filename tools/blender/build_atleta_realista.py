@@ -1,29 +1,14 @@
-#!/usr/bin/env python3
-# Humano original Blender 4.5 headless — substitui Quaternius por modelo do zero.
-# Gera dois GLBs riggados/skinned (M/F) + animacoes, escala ~1.75m, skeleton
-# compativel com runner_character.gd (pelvis, spine_01..03, neck_01, Head,
-# clavicle, upperarm, lowerarm, hand, thigh, calf, foot, ball).
-# Uso: tools/blender/run_bpy.sh tools/blender/build_humanos.py
-import math, os
-from pathlib import Path
-import bpy
+import bpy, math, struct, json, os, pathlib
 
-D = bpy.data
-REPO = Path(__file__).resolve().parents[2]
-OUT_DIR = str(REPO / "tools" / "blender" / "out")
-OUT_HUMANOS = str(REPO / "assets" / "characters" / "humanos_originais")
-os.makedirs(OUT_DIR, exist_ok=True)
-os.makedirs(OUT_HUMANOS, exist_ok=True)
-
-TAU = math.tau
-def rad(d): return math.radians(d)
+TAU = 2.0 * math.pi
+def rad(d): return d * math.pi / 180.0
 
 def reset():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     return bpy.context.scene
 
 def material(nome, cor, rough=0.62, metal=0.0):
-    m = D.materials.get(nome) or D.materials.new(nome)
+    m = bpy.data.materials.get(nome) or bpy.data.materials.new(nome)
     m.use_nodes = True
     b = m.node_tree.nodes["Principled BSDF"]
     b.inputs["Base Color"].default_value = (*cor, 1.0)
@@ -37,7 +22,7 @@ def sozinho(o):
     bpy.context.view_layer.objects.active = o
 
 def loft_tube(nome, rings, mat=None, close_bottom=False, close_top=False):
-    me = D.meshes.new(nome)
+    me = bpy.data.meshes.new(nome)
     verts, faces = [], []
     seg = rings[0][5]
     n_rings = len(rings)
@@ -106,7 +91,7 @@ def loft_tube(nome, rings, mat=None, close_bottom=False, close_top=False):
             uv_data[poly.loop_indices[2]].uv = (k / seg, 1.0)
             face_idx += 1
 
-    o = D.objects.new(nome, me)
+    o = bpy.data.objects.new(nome, me)
     bpy.context.scene.collection.objects.link(o)
     if mat:
         o.data.materials.append(mat)
@@ -115,7 +100,7 @@ def loft_tube(nome, rings, mat=None, close_bottom=False, close_top=False):
     return o
 
 def loft_limb_x(nome, rings, mat=None, close_start=False, close_end=False):
-    me = D.meshes.new(nome)
+    me = bpy.data.meshes.new(nome)
     verts, faces = [], []
     seg = rings[0][5]
     n_rings = len(rings)
@@ -168,7 +153,7 @@ def loft_limb_x(nome, rings, mat=None, close_start=False, close_end=False):
             uv_data[poly.loop_indices[3]].uv = (u_low, v_high)
             face_idx += 1
 
-    o = D.objects.new(nome, me)
+    o = bpy.data.objects.new(nome, me)
     bpy.context.scene.collection.objects.link(o)
     if mat:
         o.data.materials.append(mat)
@@ -177,7 +162,7 @@ def loft_limb_x(nome, rings, mat=None, close_start=False, close_end=False):
     return o
 
 def elipsoide_uv(nome, centro, raios, mat=None, u_seg=16, v_seg=12):
-    me = D.meshes.new(nome)
+    me = bpy.data.meshes.new(nome)
     verts, faces = [], []
     cx, cy, cz = centro
     rx, ry, rz = raios
@@ -186,33 +171,31 @@ def elipsoide_uv(nome, centro, raios, mat=None, u_seg=16, v_seg=12):
     for j in range(1, v_seg):
         phi = -math.pi/2.0 + math.pi * j / v_seg
         z = cz + rz * math.sin(phi)
-        cos_phi = math.cos(phi)
+        r_xy = math.cos(phi)
         for i in range(u_seg):
             theta = i / u_seg * TAU
-            x = cx + rx * cos_phi * math.cos(theta)
-            y = cy + ry * cos_phi * math.sin(theta)
+            x = cx + rx * r_xy * math.cos(theta)
+            y = cy + ry * r_xy * math.sin(theta)
             verts.append((x, y, z))
     verts.append((cx, cy, cz + rz))
+    south_idx = 0
+    north_idx = len(verts) - 1
     
-    # Polo sul
     for i in range(u_seg):
         i_next = (i + 1) % u_seg
-        faces.append((0, 1 + i_next, 1 + i))
+        faces.append((south_idx, 1 + i, 1 + i_next))
         
-    # Aneis intermediarios
     for j in range(v_seg - 2):
-        r0 = 1 + j * u_seg
-        r1 = 1 + (j + 1) * u_seg
+        row0 = 1 + j * u_seg
+        row1 = 1 + (j + 1) * u_seg
         for i in range(u_seg):
             i_next = (i + 1) % u_seg
-            faces.append((r0 + i, r0 + i_next, r1 + i_next, r1 + i))
+            faces.append((row0 + i, row1 + i, row1 + i_next, row0 + i_next))
             
-    # Polo norte
-    top_idx = len(verts) - 1
-    r_last = 1 + (v_seg - 2) * u_seg
+    top_row = 1 + (v_seg - 2) * u_seg
     for i in range(u_seg):
         i_next = (i + 1) % u_seg
-        faces.append((top_idx, r_last + i, r_last + i_next))
+        faces.append((north_idx, top_row + i_next, top_row + i))
 
     me.from_pydata(verts, [], faces)
     me.update()
@@ -220,35 +203,32 @@ def elipsoide_uv(nome, centro, raios, mat=None, u_seg=16, v_seg=12):
     uv_layer = me.uv_layers.new(name="UVMap")
     uv_data = uv_layer.data
     face_idx = 0
-    # Polo sul UV
     for i in range(u_seg):
         poly = me.polygons[face_idx]
-        uv_data[poly.loop_indices[0]].uv = (0.5, 0.0)
-        uv_data[poly.loop_indices[1]].uv = ((i + 1) / u_seg, 1.0 / v_seg)
-        uv_data[poly.loop_indices[2]].uv = (i / u_seg, 1.0 / v_seg)
+        uv_data[poly.loop_indices[0]].uv = ((i + 0.5) / u_seg, 0.0)
+        uv_data[poly.loop_indices[1]].uv = (i / u_seg, 1.0 / v_seg)
+        uv_data[poly.loop_indices[2]].uv = ((i + 1) / u_seg, 1.0 / v_seg)
         face_idx += 1
         
     for j in range(v_seg - 2):
         v_low = (j + 1) / v_seg
         v_high = (j + 2) / v_seg
         for i in range(u_seg):
-            u_low = i / u_seg
-            u_high = (i + 1) / u_seg
             poly = me.polygons[face_idx]
-            uv_data[poly.loop_indices[0]].uv = (u_low, v_low)
-            uv_data[poly.loop_indices[1]].uv = (u_high, v_low)
-            uv_data[poly.loop_indices[2]].uv = (u_high, v_high)
-            uv_data[poly.loop_indices[3]].uv = (u_low, v_high)
+            uv_data[poly.loop_indices[0]].uv = (i / u_seg, v_low)
+            uv_data[poly.loop_indices[1]].uv = (i / u_seg, v_high)
+            uv_data[poly.loop_indices[2]].uv = ((i + 1) / u_seg, v_high)
+            uv_data[poly.loop_indices[3]].uv = ((i + 1) / u_seg, v_low)
             face_idx += 1
             
     for i in range(u_seg):
         poly = me.polygons[face_idx]
-        uv_data[poly.loop_indices[0]].uv = (0.5, 1.0)
-        uv_data[poly.loop_indices[1]].uv = (i / u_seg, (v_seg - 1) / v_seg)
-        uv_data[poly.loop_indices[2]].uv = ((i + 1) / u_seg, (v_seg - 1) / v_seg)
+        uv_data[poly.loop_indices[0]].uv = ((i + 0.5) / u_seg, 1.0)
+        uv_data[poly.loop_indices[1]].uv = ((i + 1) / u_seg, 1.0 - 1.0 / v_seg)
+        uv_data[poly.loop_indices[2]].uv = (i / u_seg, 1.0 - 1.0 / v_seg)
         face_idx += 1
 
-    o = D.objects.new(nome, me)
+    o = bpy.data.objects.new(nome, me)
     bpy.context.scene.collection.objects.link(o)
     if mat:
         o.data.materials.append(mat)
@@ -326,8 +306,8 @@ def _blend_joint_weights(corpo):
                 vg_spine1.add([v.index], t, 'ADD')
 
 def armature_humano(nome):
-    arm_data = D.armatures.new(nome + "Rig")
-    arm = D.objects.new("Armature", arm_data)
+    arm_data = bpy.data.armatures.new(nome + "Rig")
+    arm = bpy.data.objects.new("Armature", arm_data)
     bpy.context.scene.collection.objects.link(arm)
     sozinho(arm)
     bpy.ops.object.mode_set(mode='EDIT')
@@ -398,7 +378,7 @@ def clear_pose(arm):
     bpy.ops.object.mode_set(mode='OBJECT')
 
 def new_action(arm, nome):
-    a = D.actions.new(nome)
+    a = bpy.data.actions.new(nome)
     arm.animation_data_create()
     arm.animation_data.action = a
     return a
@@ -422,112 +402,109 @@ def linearize(act):
         for kp in fc.keyframe_points:
             kp.interpolation = 'LINEAR'
 
-def build_one(is_male, out_path):
+def build_atleta(out_path):
     scene = reset()
-    if is_male:
-        cor_pele = (0.82, 0.62, 0.48)
-        cor_cabelo = (0.14, 0.10, 0.08)
-        cor_camisa = (0.85, 0.22, 0.22)
-        cor_calca = (0.15, 0.18, 0.26)
-        cor_sapato = (0.18, 0.16, 0.15)
-        largura_ombro = 0.225
-        largura_quadril = 0.168
-        peito_extra = 0.015
-    else:
-        # Atleta feminina com proporcoes e cores identicas a abb89707
-        cor_pele = (0.82, 0.64, 0.52)
-        cor_cabelo = (0.14, 0.10, 0.08)
-        cor_camisa = (0.92, 0.38, 0.55) # rosa/coral esportivo
-        cor_calca = (0.12, 0.12, 0.15)  # legging de compressao preta
-        cor_sapato = (0.96, 0.96, 0.97) # tenis esportivo branco
-        largura_ombro = 0.190
-        largura_quadril = 0.195
-        peito_extra = 0.035
-
-    m_pele = material("QuaterniusSkin", cor_pele, 0.60, 0.0); m_pele.name = "QuaterniusSkin"
-    m_cabelo = material("Hair", cor_cabelo, 0.75, 0.0); m_cabelo.name = "Hair"
-    m_camisa = material("Camisa", cor_camisa, 0.72, 0.0); m_camisa.name = "Camisa"
-    m_calca = material("Calca", cor_calca, 0.65, 0.0); m_calca.name = "Calca"
-    m_sapato = material("Sapato", cor_sapato, 0.48, 0.0); m_sapato.name = "Sapato"
+    cor_pele = (0.78, 0.58, 0.46)
+    cor_cabelo = (0.10, 0.08, 0.07)
+    cor_camisa = (0.90, 0.40, 0.54) # rosa/coral atletico (ref abb89707)
+    cor_calca = (0.09, 0.09, 0.12)  # legging compressao preta
+    cor_sapato = (0.96, 0.96, 0.97) # tenis esportivo branco com entressola
+    
+    m_pele = material("QuaterniusSkin", cor_pele, 0.60, 0.0)
+    m_cabelo = material("Hair", cor_cabelo, 0.75, 0.0)
+    m_camisa = material("Camisa", cor_camisa, 0.72, 0.0)
+    m_calca = material("Calca", cor_calca, 0.65, 0.0)
+    m_sapato = material("Sapato", cor_sapato, 0.48, 0.0)
     m_olho_branco = material("OlhoBranco", (0.96, 0.96, 0.94), 0.25)
     m_olho_iris = material("OlhoIris", (0.35, 0.22, 0.12), 0.15)
-
+    
     partes = []
-
-    # 1. Pelvis e Torso
+    
+    # --- 1. TORSO ATLETICO UNIFICADO E SUAVE ---
+    # Segmento 1A: Pelvis / Quadril (Legging)
     rings_pelvis = [
-        (0, 0.005, 0.90, largura_quadril * 0.90, 0.125, 16),
-        (0, 0.005, 0.98, largura_quadril, 0.132, 16),
-        (0, 0.000, 1.05, largura_quadril * 0.88, 0.118, 16),
+        (0, 0.005, 0.90, 0.165, 0.125, 16),
+        (0, 0.005, 0.98, 0.180, 0.132, 16),
+        (0, 0.000, 1.05, 0.162, 0.118, 16),
     ]
     o_pelvis = loft_tube("Pelvis", rings_pelvis, m_calca, close_bottom=True)
     partes.append((o_pelvis, "pelvis"))
-
+    
+    # Segmento 1B: Cintura e Tronco (Camiseta tecnica)
     rings_torso = [
-        (0, 0.000, 1.05, largura_quadril * 0.88, 0.118, 16),
-        (0, 0.000, 1.13, largura_quadril * 0.80 if not is_male else 0.165, 0.106, 16),
-        (0, -0.005, 1.22, largura_ombro * 0.85, 0.116, 16),
-        (0, -0.015 if not is_male else -0.005, 1.30, largura_ombro * 0.92 + peito_extra, 0.128 if not is_male else 0.118, 16),
-        (0, -0.005, 1.38, largura_ombro, 0.118, 16),
-        (0, 0.000, 1.44, largura_ombro * 0.70, 0.095, 16),
+        (0, 0.000, 1.05, 0.162, 0.118, 16),
+        (0, 0.000, 1.13, 0.148, 0.106, 16), # cintura fina
+        (0, -0.005, 1.22, 0.165, 0.116, 16), # caixa toracica
+        (0, -0.015, 1.30, 0.178, 0.128, 16), # busto feminino sutil
+        (0, -0.005, 1.38, 0.188, 0.118, 16), # peitoral / ombros
+        (0, 0.000, 1.44, 0.135, 0.095, 16), # clavicula
     ]
     o_torso = loft_tube("CamisetaCorpo", rings_torso, m_camisa, close_top=True)
     partes.append((o_torso, "spine_02"))
-
-    # Pescoco
+    
+    # Segmento 1C: Pescoco
     rings_neck = [
         (0, 0.005, 1.44, 0.052, 0.052, 16),
         (0, 0.005, 1.53, 0.046, 0.046, 16),
     ]
     o_neck = loft_tube("Pescoco", rings_neck, m_pele)
     partes.append((o_neck, "neck_01"))
-
-    # Cabeca
+    
+    # --- 2. CABECA E CABELO ---
     o_head = elipsoide_uv("Cabeca", (0, -0.015, 1.62), (0.105, 0.115, 0.122), m_pele, 16, 12)
     partes.append((o_head, "Head"))
-
-    # Olhos
+    
+    # Olhos expressivos
     for sx in (-0.038, 0.038):
         oo = elipsoide_uv(f"OlhoBranco_{sx}", (sx, -0.110, 1.635), (0.022, 0.010, 0.014), m_olho_branco, 12, 8)
         partes.append((oo, "Head"))
         oo2 = elipsoide_uv(f"Iris_{sx}", (sx, -0.117, 1.635), (0.011, 0.005, 0.011), m_olho_iris, 12, 8)
         partes.append((oo2, "Head"))
-
-    # Cabelo
-    if is_male:
-        o_hair_cap = elipsoide_uv("CabeloTouca", (0, 0.005, 1.66), (0.115, 0.124, 0.090), m_cabelo, 16, 12)
-        partes.append((o_hair_cap, "Head"))
-    else:
-        # Rabo de cavalo atletico com elastico (identico a ref abb89707)
-        o_hair_cap = elipsoide_uv("CabeloTouca", (0, 0.005, 1.66), (0.115, 0.124, 0.095), m_cabelo, 16, 12)
-        partes.append((o_hair_cap, "Head"))
-        rings_tie = [(0, 0.105, 1.64, 0.026, 0.026, 12), (0, 0.115, 1.64, 0.028, 0.028, 12)]
-        o_tie = loft_tube("ElasticoCabelo", rings_tie, m_camisa)
-        partes.append((o_tie, "Head"))
-        rings_ponytail = [
-            (0, 0.115, 1.64, 0.028, 0.028, 12),
-            (0, 0.145, 1.62, 0.038, 0.040, 12),
-            (0, 0.170, 1.57, 0.036, 0.036, 12),
-            (0, 0.185, 1.50, 0.030, 0.028, 12),
-            (0, 0.190, 1.42, 0.020, 0.018, 12),
-            (0, 0.185, 1.35, 0.008, 0.008, 12),
-        ]
-        o_ponytail = loft_tube("RaboCavalo", rings_ponytail, m_cabelo, close_top=True)
-        partes.append((o_ponytail, "Head"))
-
-    # 2. Bracos e Maos
+        
+    # Touca capilar ajustada ao cranio
+    o_hair_cap = elipsoide_uv("CabeloTouca", (0, 0.005, 1.66), (0.115, 0.124, 0.095), m_cabelo, 16, 12)
+    partes.append((o_hair_cap, "Head"))
+    
+    # Elastico de cabelo (hair scrunchie)
+    rings_tie = [
+        (0, 0.105, 1.64, 0.026, 0.026, 12),
+        (0, 0.115, 1.64, 0.028, 0.028, 12),
+    ]
+    o_tie = loft_tube("ElasticoCabelo", rings_tie, m_camisa)
+    partes.append((o_tie, "Head"))
+    
+    # Rabo de cavalo dinamico (ponytail drape)
+    rings_ponytail = [
+        (0, 0.115, 1.64, 0.028, 0.028, 12),
+        (0, 0.145, 1.62, 0.038, 0.040, 12), # expansao logo apos o elastico
+        (0, 0.170, 1.57, 0.036, 0.036, 12),
+        (0, 0.185, 1.50, 0.030, 0.028, 12), # arco curvado para tras
+        (0, 0.190, 1.42, 0.020, 0.018, 12),
+        (0, 0.185, 1.35, 0.008, 0.008, 12), # ponta final afinada
+    ]
+    o_ponytail = loft_tube("RaboCavalo", rings_ponytail, m_cabelo, close_top=True)
+    partes.append((o_ponytail, "Head"))
+    
+    # --- 3. BRACOS ATLETICOS E MAOS EM CONCHA ---
     for sx, lado in ((-1, "l"), (1, "r")):
-        o_deltoid = elipsoide_uv(f"OmbroManga_{lado}", (sx * (largura_ombro - 0.01), 0, 1.40), (0.058, 0.058, 0.062), m_camisa, 14, 10)
+        # Deltoide do ombro (manga curta da camiseta)
+        o_deltoid = elipsoide_uv(f"OmbroManga_{lado}", (sx * 0.185, 0, 1.40), (0.058, 0.058, 0.062), m_camisa, 14, 10)
         partes.append((o_deltoid, f"clavicle_{lado}"))
         
+        # Braco superior (biceps / triceps)
         rings_upperarm = [
-            (sx * (largura_ombro - 0.01), 0, 1.40, 0.044, 0.044, 12),
-            (sx * (largura_ombro + 0.09), 0, 1.40, 0.042, 0.042, 12),
+            (sx * 0.18, 0, 1.40, 0.044, 0.044, 12),
+            (sx * 0.28, 0, 1.40, 0.042, 0.042, 12),
+            (sx * 0.38, 0, 1.40, 0.038, 0.038, 12),
+        ] if sx > 0 else [
+            (sx * 0.18, 0, 1.40, 0.044, 0.044, 12),
+            (sx * 0.28, 0, 1.40, 0.042, 0.042, 12),
             (sx * 0.38, 0, 1.40, 0.038, 0.038, 12),
         ]
         o_upper = loft_limb_x(f"BracoSup_{lado}", rings_upperarm, m_camisa)
         partes.append((o_upper, f"upperarm_{lado}"))
         
+        # Antebraco atletico (pele)
         rings_lowerarm = [
             (sx * 0.38, 0, 1.40, 0.038, 0.038, 12),
             (sx * 0.48, 0, 1.40, 0.034, 0.034, 12),
@@ -536,29 +513,37 @@ def build_one(is_male, out_path):
         o_lower = loft_limb_x(f"Antebraco_{lado}", rings_lowerarm, m_pele)
         partes.append((o_lower, f"lowerarm_{lado}"))
         
+        # Mao relaxada de corredora (punho semi-aberto concha)
         o_hand = elipsoide_uv(f"Mao_{lado}", (sx * 0.63, -0.015, 1.40), (0.038, 0.026, 0.032), m_pele, 12, 8)
         partes.append((o_hand, f"hand_{lado}"))
+        # Polegar dobrado sobre indicador
         o_thumb = elipsoide_uv(f"Polegar_{lado}", (sx * 0.62, -0.035, 1.405), (0.016, 0.020, 0.016), m_pele, 10, 6)
         partes.append((o_thumb, f"hand_{lado}"))
 
-    # 3. Pernas continuas e Tenis de Corrida
+    # --- 4. PERNAS ANATOMICAS CONTINUAS (LEGGINGS) ---
     for sx, lado in ((-1, "l"), (1, "r")):
-        cx = sx * (largura_quadril * 0.52 if not is_male else 0.10)
+        cx = sx * 0.098
         rings_leg = [
+            # Coxa superior
             (cx, 0.000, 0.92, 0.076, 0.082, 16),
             (cx, 0.000, 0.82, 0.071, 0.076, 16),
             (cx, 0.000, 0.70, 0.063, 0.066, 16),
-            (cx, -0.003, 0.58, 0.055, 0.056, 16),
+            (cx, -0.003, 0.58, 0.055, 0.056, 16), # suprapatelar
+            # Joelho com contorno patelar anterior
             (cx, -0.010, 0.50, 0.052, 0.052, 16),
-            (cx, -0.004, 0.44, 0.048, 0.048, 16),
+            (cx, -0.004, 0.44, 0.048, 0.048, 16), # infrapatelar
+            # Panturrilha com volume posterior (gastrocnemio)
             (cx, 0.012, 0.36, 0.058, 0.064, 16),
             (cx, 0.008, 0.26, 0.050, 0.054, 16),
+            # Distal / Tendao de Aquiles
             (cx, 0.003, 0.16, 0.041, 0.044, 16),
+            # Tornozelo
             (cx, 0.000, 0.095, 0.043, 0.043, 16),
         ]
         o_leg = loft_tube(f"Perna_{lado}", rings_leg, m_calca)
         partes.append((o_leg, f"thigh_{lado}"))
         
+        # Meia esportiva branca cano curto (cobre do tornozelo ao tenis)
         rings_sock = [
             (cx, 0.000, 0.095, 0.044, 0.044, 16),
             (cx, 0.000, 0.070, 0.045, 0.045, 16),
@@ -566,36 +551,43 @@ def build_one(is_male, out_path):
         o_sock = loft_tube(f"Meia_{lado}", rings_sock, m_sapato)
         partes.append((o_sock, f"foot_{lado}"))
         
+        # --- 5. TENIS DE CORRIDA MODERNO ESCULPIDO ---
+        # Cabedal do tenis (instep / toe box)
         rings_shoe_upper = [
-            (cx, 0.035, 0.070, 0.044, 0.046, 16),
-            (cx, -0.020, 0.062, 0.046, 0.052, 16),
-            (cx, -0.080, 0.048, 0.047, 0.058, 16),
-            (cx, -0.145, 0.036, 0.042, 0.046, 16),
-            (cx, -0.170, 0.032, 0.026, 0.026, 16),
+            (cx, 0.035, 0.070, 0.044, 0.046, 16), # calcanhar traseiro
+            (cx, -0.020, 0.062, 0.046, 0.052, 16), # dorso do pe / peito
+            (cx, -0.080, 0.048, 0.047, 0.058, 16), # metatarso
+            (cx, -0.145, 0.036, 0.042, 0.046, 16), # ponta dos dedos
+            (cx, -0.170, 0.032, 0.026, 0.026, 16), # biqueira frontal
         ]
         o_shoe_upper = loft_tube(f"TenisCabedal_{lado}", rings_shoe_upper, m_sapato, close_bottom=True, close_top=True)
         partes.append((o_shoe_upper, f"foot_{lado}"))
         
+        # Entressola grossa de amortecimento branca em EVA (cushion midsole wedge)
+        # Sola comeca exatamente em z = 0.000 m (contato com o chao auditado)
         rings_midsole = [
+            # Base inferior plana no chao (z = 0.000 m)
             (cx, -0.050, 0.000, 0.048, 0.125, 16),
             (cx, -0.050, 0.015, 0.050, 0.128, 16),
+            # Chanfro superior que conecta ao cabedal
             (cx, -0.050, 0.032, 0.048, 0.126, 16),
         ]
         o_midsole = loft_tube(f"TenisEntressola_{lado}", rings_midsole, m_sapato, close_bottom=True, close_top=True)
         partes.append((o_midsole, f"foot_{lado}"))
         
+        # Ponta de apoio do pe (ball of foot)
         o_ball = elipsoide_uv(f"TenisBiqueira_{lado}", (cx, -0.155, 0.022), (0.044, 0.040, 0.022), m_sapato, 12, 8)
         partes.append((o_ball, f"ball_{lado}"))
 
-    # Unifica
+    # Unifica todas as partes
     corpo = join_parts(partes)
     arm = armature_humano("Humano")
     skin(arm, corpo)
-
-    # 6 Animacoes
+    
+    # 6 Animacoes Biomecanicas
     scene.frame_start = 1
     scene.frame_end = 48
-
+    
     def act_idle():
         a = new_action(arm, "Idle_Loop")
         for f in (1, 12, 24, 36, 48):
@@ -616,7 +608,7 @@ def build_one(is_male, out_path):
     def act_walk():
         a = new_action(arm, "Walk_Loop")
         C = 24
-        for f in range(1, C + 2):
+        for f in range(1, C + 1):
             t = (f - 1) / C * TAU
             s = math.sin(t); c = math.cos(t)
             clear_pose(arm)
@@ -639,23 +631,27 @@ def build_one(is_male, out_path):
     def act_sprint():
         a = new_action(arm, "Sprint_Loop")
         C = 16
-        for f in range(1, C + 2):
+        for f in range(1, C + 1):
             t = (f - 1) / C * TAU
             s = math.sin(t); c = math.cos(t)
             clear_pose(arm)
+            # Inclinacao atletica para a frente (8 graus)
             key_rot(arm, "spine_01", f, (rad(7.5), 0, 0))
             key_rot(arm, "spine_02", f, (rad(3.0) * c, rad(2.5) * s, 0))
             key_rot(arm, "spine_03", f, (0, rad(1.5) * s, 0))
+            # Pernas: ciclo de passada fluido
             key_rot(arm, "thigh_l", f, (rad(42) * s, 0, 0))
             key_rot(arm, "thigh_r", f, (rad(-42) * s, 0, 0))
             key_rot(arm, "calf_l", f, (rad(65) * max(0, math.sin(t + 0.85)), 0, 0))
             key_rot(arm, "calf_r", f, (rad(65) * max(0, math.sin(t + 0.85 + math.pi)), 0, 0))
             key_rot(arm, "foot_l", f, (rad(-18) * max(0, math.sin(t + 0.85)), 0, 0))
             key_rot(arm, "foot_r", f, (rad(-18) * max(0, math.sin(t + 0.85 + math.pi)), 0, 0))
+            # Bracos: cotovelos flexionados a ~80 graus bombeando no plano sagital
             key_rot(arm, "upperarm_l", f, (rad(-75), 0, rad(12) - rad(42) * s))
             key_rot(arm, "upperarm_r", f, (rad(-75), 0, -rad(12) + rad(42) * s))
             key_rot(arm, "lowerarm_l", f, (0, 0, rad(80) - rad(15) * s))
             key_rot(arm, "lowerarm_r", f, (0, 0, -rad(80) + rad(15) * s))
+            # Cadencia vertical da pelve
             key_loc(arm, "pelvis", f, (0, 0, 0.016 * math.cos(2 * t)))
         linearize(a)
         return a
@@ -663,11 +659,11 @@ def build_one(is_male, out_path):
     def act_jump():
         a = new_action(arm, "Jump_Loop")
         keys = [
-            (1,  -32,  50,   8, -75, 45),
-            (4,  -18,  25, -25, -75, 60),
-            (7,   22,  55,  35, -75, 80),
-            (10, -12,  20,  15, -75, 50),
-            (12, -28,  45,   8, -75, 45),
+            (1, -32, 50, 8, -75, 45),
+            (4, -18, 25, -25, -75, 60),
+            (7, 22, 55, 35, -75, 80),
+            (10, -12, 20, 15, -75, 50),
+            (12, -28, 45, 8, -75, 45),
         ]
         for f, th, cf, az, ax, el in keys:
             clear_pose(arm)
@@ -705,7 +701,7 @@ def build_one(is_male, out_path):
     def act_crouch_fwd():
         a = new_action(arm, "Crouch_Fwd_Loop")
         C = 20
-        for f in range(1, C + 2):
+        for f in range(1, C + 1):
             t = (f - 1) / C * TAU
             s = math.sin(t); c = math.cos(t)
             clear_pose(arm)
@@ -728,31 +724,30 @@ def build_one(is_male, out_path):
     act_jump()
     act_crouch_idle()
     act_crouch_fwd()
-
-    # export Draco-compressed
-    bpy.ops.object.select_all(action='DESELECT')
-    corpo.select_set(True); arm.select_set(True)
+    
+    sozinho(arm)
+    corpo.select_set(True)
     bpy.context.view_layer.objects.active = arm
+    
+    os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
     bpy.ops.export_scene.gltf(
         filepath=out_path,
         export_format='GLB',
-        export_apply=True,
-        export_animations=True,
-        export_skins=True,
+        use_selection=True,
         export_yup=True,
-        export_materials='EXPORT',
-        export_cameras=False,
-        export_lights=False,
+        export_apply=False,
+        export_skins=True,
+        export_animations=True,
         export_animation_mode='ACTIONS',
+        export_materials='EXPORT',
         export_draco_mesh_compression_enable=True,
-        use_selection=True
+        export_draco_mesh_compression_level=6,
+        export_draco_position_quantization=14,
+        export_draco_normal_quantization=10,
+        export_draco_texcoord_quantization=12,
     )
-    print("PRONTO:", out_path, os.path.getsize(out_path))
-    blend_path = os.path.join(OUT_DIR, ("humano_%s.blend" % ("M" if is_male else "F")))
-    bpy.ops.wm.save_as_mainfile(filepath=blend_path)
-    return out_path
+    print("Export OK:", out_path, "Size:", os.path.getsize(out_path))
 
 if __name__ == "__main__":
-    for is_male, nome in [(True, "Humano_M.glb"), (False, "Humano_F.glb")]:
-        build_one(is_male, os.path.join(OUT_HUMANOS, nome))
-    print("HUMANOS OK")
+    out = "test_atleta.glb"
+    build_atleta(out)

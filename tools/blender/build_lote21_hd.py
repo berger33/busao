@@ -106,9 +106,9 @@ def texto_emissivo_hd(nome, texto):
     return m
 
 # ===== HATCH HD =====
-def build_hatch_hd():
+def build_hatch_hd(cor_pintura=(0.93, 0.94, 0.95)):
     K.reset_scene()
-    pintura=mat_pintura_hd("hatch_hd_pintura",(0.615,0.143,0.158))
+    pintura=mat_pintura_hd("hatch_hd_pintura", cor_pintura)
     vidro=K.material("hatch_hd_vidro",(0.08,0.11,0.15),0.05,0.15)
     borracha=K.material("hatch_hd_borracha",(0.06,0.07,0.09),0.92,0.0)
     cromo=K.material("hatch_hd_cromo",(0.82,0.84,0.86),0.18,0.88)
@@ -202,9 +202,9 @@ def build_sedan_hd():
         r=roda_hd(nome,0.30,0.20,borracha,cromo,escuro); r.location=(sx*0.78,py,0.30); K.sozinho(r); bpy.ops.object.transform_apply(location=True, rotation=False, scale=False); rodas.append(r)
     return [corpo_junto]+rodas
 
-def build_moto_hd():
+def build_moto_hd(cor_pintura=(0.13, 0.13, 0.13)):
     K.reset_scene()
-    pintura=mat_pintura_hd("moto_hd_pintura",(0.13,0.13,0.13))
+    pintura=mat_pintura_hd("moto_hd_pintura", cor_pintura)
     vidro=K.material("moto_hd_vidro",(0.08,0.11,0.15),0.06,0.18)
     borracha=K.material("moto_hd_borracha",(0.06,0.07,0.09),0.92,0.0)
     cromo=K.material("moto_hd_cromo",(0.82,0.84,0.86),0.18,0.88)
@@ -234,9 +234,9 @@ def build_moto_hd():
         r=roda_hd(nome,0.30,0.12,borracha,cromo,escuro); r.location=(0,py,0.30); K.sozinho(r); bpy.ops.object.transform_apply(location=True, rotation=False, scale=False); rodas.append(r)
     return [corpo]+rodas
 
-def build_caminhao_hd():
+def build_caminhao_hd(cor_pintura=(0.13, 0.34, 0.55)):
     K.reset_scene()
-    pintura=mat_pintura_hd("truck_hd_pintura",(0.13,0.34,0.55))
+    pintura=mat_pintura_hd("truck_hd_pintura", cor_pintura)
     vidro=K.material("truck_hd_vidro",(0.08,0.11,0.15),0.06,0.18)
     borracha=K.material("truck_hd_borracha",(0.06,0.07,0.09),0.92,0.0)
     cromo=K.material("truck_hd_cromo",(0.82,0.84,0.86),0.18,0.88)
@@ -384,12 +384,29 @@ def bbox_z_len(nodes):
             bt=mathutils.Vector((max(bt.x,p.x),max(bt.y,p.y),max(bt.z,p.z)))
     return bt-bb
 def render_veiculo(nodes, nome, distancia, altura_alvo=0.9):
-    cena=bpy.context.scene; K.setup_preview(fundo=(0.42,0.50,0.62,1.0), energia_fundo=0.42)
-    for o in list(cena.collection.objects):
-        if o.name=="Piso": o.scale=(distancia*2.2, distancia*2.2,1)
-    cam=cena.camera; cam.data.lens=42; K.render_de(cam, (distancia*0.82, distancia*1.05, distancia*0.52),(0,0,altura_alvo), os.path.join(K.OUT_DIR, "lote21_"+nome+".png"))
+    try:
+        cena=bpy.context.scene; K.setup_preview(fundo=(0.42,0.50,0.62,1.0), energia_fundo=0.42)
+        if hasattr(cena, "cycles"):
+            cena.cycles.samples = 4
+        for o in list(cena.collection.objects):
+            if o.name=="Piso": o.scale=(distancia*2.2, distancia*2.2,1)
+        cam=cena.camera; cam.data.lens=42; K.render_de(cam, (distancia*0.82, distancia*1.05, distancia*0.52),(0,0,altura_alvo), os.path.join(K.OUT_DIR, "lote21_"+nome+".png"))
+    except Exception as e:
+        print("Render skip:", e)
 if __name__=="__main__":
-    jobs=[("car",build_hatch_hd,(4.4,1.55),6.4,0.7),("carro",build_sedan_hd,(4.4,1.55),6.6,0.7),("motorcycle",build_moto_hd,(2.1,1.15),3.4,0.6),("truck",build_caminhao_hd,(6.4,2.7),9.5,1.2),("bus_traffic",lambda: build_onibus_hd(7.4,(0.86,0.68,0.20),(0.12,0.42,0.25),"CIRCULAR","BusTrafego"),(7.4,3.0),11.0,1.4),("onibus",lambda: build_onibus_hd(8.2,(0.957,0.749,0.239),(0.929,0.388,0.298),"PONTO FINAL","Onibus"),(8.2,3.0),11.5,1.4),("bicycle",build_bicicleta_hd,(1.85,1.15),2.6,0.55)]
+    jobs=[
+        ("car",lambda: build_hatch_hd((0.93, 0.94, 0.95)),(4.4,1.55),6.4,0.7),
+        ("car_azul",lambda: build_hatch_hd((0.14, 0.32, 0.62)),(4.4,1.55),6.4,0.7),
+        ("car_prata",lambda: build_hatch_hd((0.74, 0.76, 0.78)),(4.4,1.55),6.4,0.7),
+        ("carro",build_sedan_hd,(4.4,1.55),6.6,0.7),
+        ("motorcycle",lambda: build_moto_hd((0.13, 0.13, 0.13)),(2.1,1.15),3.4,0.6),
+        ("motorcycle_verde",lambda: build_moto_hd((0.14, 0.58, 0.32)),(2.1,1.15),3.4,0.6),
+        ("truck",lambda: build_caminhao_hd((0.13, 0.34, 0.55)),(6.4,2.7),9.5,1.2),
+        ("truck_vermelho",lambda: build_caminhao_hd((0.78, 0.14, 0.16)),(6.4,2.7),9.5,1.2),
+        ("bus_traffic",lambda: build_onibus_hd(7.4,(0.86,0.68,0.20),(0.12,0.42,0.25),"CIRCULAR","BusTrafego"),(7.4,3.0),11.0,1.4),
+        ("onibus",lambda: build_onibus_hd(8.2,(0.957,0.749,0.239),(0.929,0.388,0.298),"PONTO FINAL","Onibus"),(8.2,3.0),11.5,1.4),
+        ("bicycle",build_bicicleta_hd,(1.85,1.15),2.6,0.55)
+    ]
     resumo=[]
     for nome,fn,alvo,dist,h_alvo in jobs:
         nodes=fn()
@@ -400,19 +417,5 @@ if __name__=="__main__":
         caminho=K.export_glb(os.path.join(VEIC, nome+".glb"), nodes)
         render_veiculo(nodes, nome, dist, h_alvo)
         print("EXPORT", caminho, os.path.getsize(caminho))
-    # variantes HD: recolore base HD (copia + re-export com cor diferente seria ideal, mas copia mantém HD)
-    import shutil
-    variantes = [
-        ("car.glb", "car_azul.glb"),
-        ("car.glb", "car_prata.glb"),
-        ("truck.glb", "truck_vermelho.glb"),
-        ("motorcycle.glb", "motorcycle_verde.glb"),
-    ]
-    for base, var in variantes:
-        src = os.path.join(VEIC, base)
-        dst = os.path.join(VEIC, var)
-        if os.path.exists(src):
-            shutil.copy(src, dst)
-            print(f"VAR HD {var} <- {base} {os.path.getsize(dst)}")
     print("RESUMO_LOTE21:", resumo)
     print("LOTE21_OK")

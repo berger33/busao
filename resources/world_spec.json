@@ -130,7 +130,7 @@
     "piso_central": {
       "pbr": "calcada_laje",
       "uv_escala": 0.55,
-      "triplanar": false,
+      "triplanar": true,
       "cor": [
         0.71,
         0.7,
@@ -139,12 +139,12 @@
       "height_map": "calcada_laje_height.png",
       "height_scale": 0.025,
       "normal_scale": 1.25,
-      "triplanar_sharpness": 0.0
+      "triplanar_sharpness": 8.0
     },
     "calcada_lateral": {
       "pbr": "calcada_mosaico",
       "uv_escala": 0.85,
-      "triplanar": false,
+      "triplanar": true,
       "cor": [
         0.63,
         0.62,
@@ -153,12 +153,12 @@
       "height_map": "calcada_mosaico_height.png",
       "height_scale": 0.025,
       "normal_scale": 1.15,
-      "triplanar_sharpness": 0.0
+      "triplanar_sharpness": 8.0
     },
     "guia": {
       "pbr": "calcada_laje",
       "uv_escala": 1.4,
-      "triplanar": false,
+      "triplanar": true,
       "cor": [
         0.6,
         0.59,
@@ -167,7 +167,7 @@
       "height_map": "calcada_laje_height.png",
       "height_scale": 0.025,
       "normal_scale": 1.2,
-      "triplanar_sharpness": 0.0
+      "triplanar_sharpness": 8.0
     },
     "pista": {
       "pbr": "asfalto",
