@@ -8,14 +8,15 @@ extends RefCounted
 ##   LOW         silhueta baixa (cone): pulo resolve; deslize não.
 ##   GROUND      buraco/vala curta: pulo resolve.
 ##   FULL        volume sólido (banco, hidrante, orelhão, bicicleta,
-##               lixeira, carrinho de entrega): só trocar de corredor
-##               resolve; deslize não resolve.
-##   VEHICLE     carro/caminhão/ônibus/moto/van parada: só trocar de
-##               corredor; pulo não atravessa ônibus ou caminhão.
-##   SOFT        pessoas e animais (inclui pedestre em travessia):
-##               sem dano; esbarrão/tropeço com lentidão.
-##   SLIDE_UNDER barra suspensa com vão inferior: só deslize resolve
-##               (reservada para os IDs futuros de obra/toldo do §6).
+##               lixeira, carrinho de entrega, floreira, ciclista): só
+##               trocar de corredor resolve; deslize não resolve.
+##   VEHICLE     carro/caminhão/ônibus/moto/van parada/moto em
+##               cruzamento: só trocar de corredor; pulo não atravessa
+##               ônibus ou caminhão.
+##   SOFT        pessoas, animais e poças (inclui pedestre em
+##               travessia): sem dano; esbarrão/tropeço com lentidão.
+##   SLIDE_UNDER barra suspensa com vão inferior (barreira de obra,
+##               andaime/toldo): só deslize resolve.
 
 enum Classe { LOW, GROUND, FULL, VEHICLE, SOFT, SLIDE_UNDER }
 
@@ -40,6 +41,13 @@ const CLASSES: Dictionary = {
     "crosser": Classe.SOFT,
     "cart": Classe.FULL,
     "van": Classe.VEHICLE,
+    # ETAPA 9 — lote 11-15 (blueprint S6): andaime (SLIDE_UNDER), poca
+    # (SOFT), floreira (FULL), ciclista (FULL) e moto em cruzamento (VEHICLE).
+    "scaffold": Classe.SLIDE_UNDER,
+    "puddle": Classe.SOFT,
+    "planter": Classe.FULL,
+    "cyclist": Classe.FULL,
+    "moto_cross": Classe.VEHICLE,
 }
 
 ## Limite lateral de colisão (m): meia largura da personagem + meia do
@@ -64,6 +72,11 @@ const HIT_WIDTHS: Dictionary = {
     "crosser": 0.9,
     "cart": 1.3,
     "van": 1.3,
+    "scaffold": 1.3,
+    "puddle": 1.2,
+    "planter": 1.3,
+    "cyclist": 1.1,
+    "moto_cross": 1.0,
 }
 
 const DEFAULT_WIDTH := 1.2

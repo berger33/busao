@@ -441,7 +441,208 @@ const FASE_10: Dictionary = {
     ],
 }
 
-const LEVELS: Array = [FASE_1, FASE_2, PILOT, FASE_4, FASE_5, FASE_6, FASE_7, FASE_8, FASE_9, FASE_10]
+## Fase 11 — "Sob o andaime" (PLANO_50_FASES): andaime com vão para
+## deslize e apoios laterais; buracos conhecidos. Clímax: barra suspensa
+## seguida de desvio, nunca salto obrigatório sob a barra.
+const FASE_11: Dictionary = {
+    "id": "bairro_11",
+    "version": 1,
+    "name": "Sob o andaime",
+    "phase_index": 10,
+    "distance_m": 392.0,
+    "chunk_length_m": 28.0,
+    "chunks": 14,
+    "base_speed_mps": 6.6,
+    "deadline_seconds": 72.0,
+    "layout_seed": 111,
+    "scenery": CENARIO_TRES_CALCADAS,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "scaffold", "lane": 1, "at_m": 72.0},
+        {"kind": "pothole", "lane": 2, "at_m": 100.0},
+        {"kind": "scaffold", "lane": 0, "at_m": 128.0},
+        {"kind": "cone", "lane": 2, "at_m": 156.0},
+        {"kind": "scaffold", "lane": 0, "at_m": 184.0},
+        {"kind": "cone", "lane": 2, "at_m": 184.0},
+        {"kind": "scaffold", "lane": 1, "at_m": 266.0},
+        {"kind": "bench", "lane": 1, "at_m": 282.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 240.0},
+        {"kind": "coin", "lane": 1, "at_m": 246.0},
+        {"kind": "coin", "lane": 1, "at_m": 252.0},
+        {"kind": "coin", "lane": 1, "at_m": 344.0},
+        {"kind": "coin", "lane": 1, "at_m": 352.0},
+        {"kind": "coin", "lane": 1, "at_m": 360.0},
+    ],
+}
+
+## Fase 12 — "Poças da manhã": poças bem delimitadas; atravessar molha o
+## pé (lentidão determinística, sem dano); pular resolve. Clímax: rota seca
+## simples versus moedas com salto sobre a poça.
+const FASE_12: Dictionary = {
+    "id": "bairro_12",
+    "version": 1,
+    "name": "Poças da manhã",
+    "phase_index": 11,
+    "distance_m": 392.0,
+    "chunk_length_m": 28.0,
+    "chunks": 14,
+    "base_speed_mps": 6.6,
+    "deadline_seconds": 72.0,
+    "layout_seed": 112,
+    "scenery": CENARIO_TRES_CALCADAS,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "puddle", "lane": 1, "at_m": 72.0},
+        {"kind": "bench", "lane": 0, "at_m": 100.0},
+        {"kind": "puddle", "lane": 2, "at_m": 128.0},
+        {"kind": "scaffold", "lane": 1, "at_m": 156.0},
+        {"kind": "puddle", "lane": 0, "at_m": 184.0},
+        {"kind": "puddle", "lane": 1, "at_m": 184.0},
+        {"kind": "puddle", "lane": 1, "at_m": 266.0},
+        {"kind": "bench", "lane": 2, "at_m": 266.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 2, "at_m": 122.0},
+        {"kind": "coin", "lane": 2, "at_m": 128.0},
+        {"kind": "coin", "lane": 1, "at_m": 240.0},
+        {"kind": "coin", "lane": 1, "at_m": 246.0},
+        {"kind": "coin", "lane": 1, "at_m": 252.0},
+        {"kind": "coin", "lane": 1, "at_m": 344.0},
+        {"kind": "coin", "lane": 1, "at_m": 352.0},
+        {"kind": "coin", "lane": 1, "at_m": 360.0},
+    ],
+}
+
+## Fase 13 — "Ciclovia na praça": ciclista cruza à frente com aviso visível
+## (travessia rápida, 3,0 m/s); floreiras limitam um corredor. Clímax:
+## ciclista em janela fixa, seguido de trecho livre e cone baixo.
+const FASE_13: Dictionary = {
+    "id": "bairro_13",
+    "version": 1,
+    "name": "Ciclovia na praça",
+    "phase_index": 12,
+    "distance_m": 420.0,
+    "chunk_length_m": 28.0,
+    "chunks": 15,
+    "base_speed_mps": 6.8,
+    "deadline_seconds": 72.0,
+    "layout_seed": 113,
+    "scenery": CENARIO_TRES_CALCADAS,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "planter", "lane": 0, "at_m": 72.0},
+        {"kind": "cyclist", "lane": 2, "at_m": 100.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 3.0, "lead_m": 18.5},
+        {"kind": "cone", "lane": 2, "at_m": 128.0},
+        {"kind": "planter", "lane": 1, "at_m": 156.0},
+        {"kind": "cyclist", "lane": 0, "at_m": 184.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 3.0, "lead_m": 18.5},
+        {"kind": "bench", "lane": 0, "at_m": 212.0},
+        {"kind": "cyclist", "lane": 2, "at_m": 296.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 3.0, "lead_m": 18.5},
+        {"kind": "planter", "lane": 1, "at_m": 296.0},
+        {"kind": "cone", "lane": 1, "at_m": 322.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 368.0},
+        {"kind": "coin", "lane": 1, "at_m": 376.0},
+        {"kind": "coin", "lane": 1, "at_m": 384.0},
+    ],
+}
+
+## Fase 14 — "Olha a moto": moto atravessa no cruzamento (4,5 m/s) com som
+## + sinal visual antes da passagem; caminho seguro explícito. Clímax: dois
+## cruzamentos com comportamentos ensinados separadamente.
+const FASE_14: Dictionary = {
+    "id": "bairro_14",
+    "version": 1,
+    "name": "Olha a moto",
+    "phase_index": 13,
+    "distance_m": 420.0,
+    "chunk_length_m": 28.0,
+    "chunks": 15,
+    "base_speed_mps": 6.8,
+    "deadline_seconds": 73.0,
+    "layout_seed": 114,
+    "scenery": CENARIO_TRES_CALCADAS,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "moto_cross", "lane": 2, "at_m": 72.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 4.5, "lead_m": 12.3},
+        {"kind": "hydrant", "lane": 2, "at_m": 100.0},
+        {"kind": "cyclist", "lane": 0, "at_m": 128.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 3.0, "lead_m": 18.5},
+        {"kind": "moto_cross", "lane": 0, "at_m": 156.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 4.5, "lead_m": 12.3},
+        {"kind": "bench", "lane": 1, "at_m": 184.0},
+        {"kind": "moto_cross", "lane": 2, "at_m": 296.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 4.5, "lead_m": 12.3},
+        {"kind": "cone", "lane": 2, "at_m": 296.0},
+        {"kind": "moto_cross", "lane": 0, "at_m": 312.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 4.5, "lead_m": 12.3},
+        {"kind": "bench", "lane": 1, "at_m": 312.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 368.0},
+        {"kind": "coin", "lane": 1, "at_m": 376.0},
+        {"kind": "coin", "lane": 1, "at_m": 384.0},
+    ],
+}
+
+## Fase 15 — "Desvio de obra": combina andaime, buraco, poça e passagem
+## dinâmica; nada novo. Pulo → trecho livre → deslize → escolha de corredor
+## no cruzamento.
+const FASE_15: Dictionary = {
+    "id": "bairro_15",
+    "version": 1,
+    "name": "Desvio de obra",
+    "phase_index": 14,
+    "distance_m": 448.0,
+    "chunk_length_m": 28.0,
+    "chunks": 16,
+    "base_speed_mps": 7.0,
+    "deadline_seconds": 73.0,
+    "layout_seed": 115,
+    "scenery": CENARIO_TRES_CALCADAS,
+    "patterns": [
+        {"kind": "pothole", "lane": 1, "at_m": 44.0},
+        {"kind": "scaffold", "lane": 1, "at_m": 100.0},
+        {"kind": "puddle", "lane": 2, "at_m": 128.0},
+        {"kind": "cyclist", "lane": 2, "at_m": 156.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 3.0, "lead_m": 19.0},
+        {"kind": "bench", "lane": 0, "at_m": 184.0},
+        {"kind": "moto_cross", "lane": 0, "at_m": 212.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 4.5, "lead_m": 12.7},
+        {"kind": "cone", "lane": 1, "at_m": 240.0},
+        {"kind": "scaffold", "lane": 1, "at_m": 296.0},
+        {"kind": "cyclist", "lane": 2, "at_m": 296.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 3.0, "lead_m": 19.0},
+        {"kind": "pothole", "lane": 1, "at_m": 312.0},
+        {"kind": "puddle", "lane": 2, "at_m": 312.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 400.0},
+        {"kind": "coin", "lane": 1, "at_m": 408.0},
+        {"kind": "coin", "lane": 1, "at_m": 416.0},
+    ],
+}
+
+const LEVELS: Array = [FASE_1, FASE_2, PILOT, FASE_4, FASE_5, FASE_6, FASE_7, FASE_8, FASE_9, FASE_10, FASE_11, FASE_12, FASE_13, FASE_14, FASE_15]
 
 
 static func for_phase(index: int) -> Dictionary:

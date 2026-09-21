@@ -108,12 +108,15 @@ válidas e teste de passagem.
 (fase 6), pedestre em travessia/SOFT com trajetória anunciada (7), carrinho
 de entrega/FULL com travessia lenta (8), van parada/VEHICLE (9).
 
-⏭️ Famílias cuja **introdução pertence aos próximos lotes** (o blueprint
-marca a fase de introdução de cada uma): andaime/toldo (11), poça (12),
-ciclista (13), moto em cruzamento (14), cachorro cruzando (16),
-caminhão/ônibus em janela (18). O mecanismo de famílias gated
-(`SIDEWALK_OBSTACLES_GATED` + `GATED_INTRO_PHASE`, ETAPA 3) é o caminho
-aprovado para cada uma entrar na sua fase de introdução.
+✅ Famílias introduzidas na ETAPA 9: andaime/SLIDE_UNDER (fase 11),
+poça/SOFT com lentidão determinística (12), floreira/FULL (13),
+ciclista/FULL em travessia rápida (13), moto em cruzamento/VEHICLE com som
++ sinal visual (14).
+
+⏭️ Famílias cuja **introdução pertence aos próximos lotes**: cachorro
+cruzando (16), caminhão/ônibus em janela (18). O mecanismo de famílias
+gated (`SIDEWALK_OBSTACLES_GATED` + `GATED_INTRO_PHASE`, ETAPA 3) é o
+caminho aprovado para cada uma entrar na sua fase de introdução.
 
 Regras transversais do §6 atendidas: veículos decorativos não colidem;
 props fora da rota não têm collider de gameplay; espaçamento procedural em

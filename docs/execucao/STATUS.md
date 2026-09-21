@@ -16,6 +16,7 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
 | 6 | Auditoria de conformidade com o blueprint antes das 50 fases: matriz completa em `docs/execucao/AUDITORIA_BLUEPRINT.md` + fechamento dos gaps verificáveis (segundos faltando no atraso, estrelas por objetivo em tentativas diferentes, collider visível em modo de teste) | concluída | `tools/qa_etapa6_auditoria.gd`: 6/6 verificações verdes (A–F, idempotente); save schema v3→v4 com migração; regressões 1–5 verdes |
 | 7 | 50 fases, lote 1: fases 1, 2, 4 e 5 autorais ("Saiu atrasada", "A praça do bairro", "Remendo na calçada", "Primeiro compromisso") conforme PLANO_50_FASES; visual de calçada nos três corredores; buraco como obstáculo de calçada | concluída | `tools/qa_etapa7_lote1.gd`: 6/6 verificações verdes (G–L); validador aprova as 5 fases do bairro (base e impulso); ordem de aprendizagem preservada; regressões 1–6 verdes |
 | 8 | 50 fases, lote 2 (comércio e praça): fases 6–10 autorais ("Na porta da padaria", "Passagem de pedestres", "Hora da entrega", "A van da esquina", "Feira de sábado") + 4 famílias (lixeira, pedestre em travessia, carrinho de entrega, van parada); travessias laterais com aviso; validador com posições temporais | concluída | `tools/qa_etapa8_lote2.gd`: 6/6 verificações verdes (M–R); validador aprova as 10 fases (base e impulso); colisão de travessia pela posição real; regressões 1–7 verdes |
+| 9 | 50 fases, lote 3: fases 11–15 autorais ("Sob o andaime", "Poças da manhã", "Ciclovia na praça", "Olha a moto", "Desvio de obra") + 5 famílias (andaime, poça, floreira, ciclista, moto em cruzamento); travessias rápidas, rumo do modelo e som de aviso da moto | concluída | `tools/qa_etapa9_lote3.gd`: 6/6 verificações verdes (S–X); validador aprova as 15 fases (base e impulso); regressões 1–8 verdes |
 
 ## Diário
 
@@ -210,6 +211,27 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
 - Ambiente reconstruído após reprovisionamento do sandbox: swap de 8G,
   venv de ferramentas (scons/gdtoolkit/pkgconf), Godot 4.7-stable
   (5b4e0cb) recompilado headless (`x11=no wayland=no`), `--import` limpo.
+- ETAPA 9 (21/09): lote 3 das 50 fases. Fases 11–15 autorais em `LevelData`
+  (bairro_11–15) com números do PLANO_50_FASES (392/6,6/72; 392/6,6/72;
+  420/6,8/72; 420/6,8/73; 448/7,0/73). Cinco famílias pelo mecanismo
+  gated, cada uma na sua fase de introdução do §6: andaime/SLIDE_UNDER
+  (11, barra alta com vão + apoios laterais), poça/SOFT (12, atravessar
+  molha o pé com lentidão determinística), floreira/FULL (13, mesma regra
+  do banco), ciclista/FULL (13, travessia rápida a 3,0 m/s) e moto em
+  cruzamento/VEHICLE (14, 4,5 m/s com som + sinal visual antes da
+  passagem); fase 15 é revisão sem novidade.
+- Travessias rápidas usam o mesmo sistema da ETAPA 8 (validador temporal
+  sem mudanças: na base bloqueiam o corredor-alvo, no impulso ficam no
+  vão). Modelos em travessia agora encaram o rumo no spawn (giro genérico
+  para cart/crosser/cyclist/moto_cross, com hitbox de teste
+  contra-girada); a moto toca buzina aguda ao arrancar. Reações de desvio
+  completadas para as 9 famílias dos lotes 2–3.
+- QA etapa 9 (6/6): dados do plano + matriz + gates, validador nas 15
+  fases, montagem exata, comportamentos (andaime deslize/pulo, poça
+  pulo/molhar, ciclista FULL, moto VEHICLE nem com pulo, rumos),
+  ordem de aprendizagem + novas famílias seguras paradas (pool
+  procedural) e determinismo. Regressões 1–8 verdes (QA1 H e QA5 X2 agora
+  usam fases ainda procedurais, índice 15).
 
 ## Regras de engenharia desta execução
 

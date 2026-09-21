@@ -132,11 +132,13 @@ const SIDEWALK_OBSTACLES: Array[String] = [
 ]
 # ETAPA 3 — famílias com fase de introdução (blueprint §6): não entram no
 # ciclo base; o _build_course as acrescenta quando a fase já as apresentou.
-const SIDEWALK_OBSTACLES_GATED: Array[String] = ["barrier", "trash", "crosser", "cart", "van"]
+const SIDEWALK_OBSTACLES_GATED: Array[String] = ["barrier", "trash", "crosser", "cart", "van",
+        "scaffold", "puddle", "planter", "cyclist", "moto_cross"]
 # Fase (índice) em que cada família gated passa a aparecer.
 # ETAPA 8 — introducao do blueprint S6: lixeira na fase 6, pedestre em
 # travessia na 7, carrinho na 8 e van parada na 9 (indices 5-8).
-const GATED_INTRO_PHASE: Dictionary = {"barrier": 2, "trash": 5, "crosser": 6, "cart": 7, "van": 8}
+const GATED_INTRO_PHASE: Dictionary = {"barrier": 2, "trash": 5, "crosser": 6, "cart": 7, "van": 8,
+        "scaffold": 10, "puddle": 11, "planter": 12, "cyclist": 12, "moto_cross": 13}
 const COLLECTIBLES: Dictionary = {
     "coin": "R$ 0,25",
     "coffee": "CAFÉ",
@@ -882,6 +884,15 @@ func _spawn_entity(kind: String, lane: int, entity_distance: float, collectible:
         # mobiliario usa o visual de calcada ate no indice 0 (o deck da
         # ETAPA 5 cobre os tres corredores).
         _build_sidewalk_obstacle(node, kind)
+    # ETAPA 9 — travessia lateral: o modelo encara o rumo do movimento
+    # (frente -Z: indo para -X gira +90 graus, para +X gira -90). O hitbox
+    # de teste e contra-girado para seguir alinhado aos eixos.
+    if not crossing.is_empty() and kind in ["cart", "crosser", "cyclist", "moto_cross"]:
+        var _rumo: float = PI / 2.0 if float(crossing.get("to_x", 0.0)) < float(crossing.get("from_x", 0.0)) else -PI / 2.0
+        node.rotation.y = _rumo
+        var _hb := node.get_node_or_null("DebugHitbox") as Node3D
+        if _hb != null:
+            _hb.rotation.y = -_rumo
     # Lote 23 — Física: RigidBody/Static/Area por kind (freeze, massa, fricção)
     if PHYSICS_HANDLER != null and not collectible:
         var _pb := PHYSICS_HANDLER.setup_obstacle_physics(node, kind)
@@ -1228,6 +1239,10 @@ func _update_crossing(entity: Dictionary, node: Node3D) -> void:
         return
     if distance >= float(crossing.get("start_d", 0.0)) and float(crossing.get("t_start", -1.0)) < 0.0:
         crossing["t_start"] = elapsed
+        # ETAPA 9 — moto em cruzamento: som + sinal visual antes da passagem
+        # (blueprint S6; o som nunca e o unico aviso — a moto espera visivel).
+        if str(entity.get("kind", "")) == "moto_cross":
+            AudioManager.play_sfx("horn", -6.0, 1.4)
     node.position.x = _crossing_x(crossing, distance, elapsed)
 
 
@@ -1617,7 +1632,16 @@ func _reaction_for(kind: String) -> String:
         "cone": "Obra vencida!",
         "vendor": "Camelô abriu passagem!",
         "bench": "Banco de praça não segura o Zé!",
-        "barrier": "Por baixo da barra, sem medo!"
+        "barrier": "Por baixo da barra, sem medo!",
+        "trash": "Lixeira desviada!",
+        "crosser": "Pedestre atravessou em paz!",
+        "cart": "Entrega passou direto!",
+        "van": "Van da esquina vencida!",
+        "scaffold": "Por baixo do andaime!",
+        "puddle": "Poça saltada, pé seco!",
+        "planter": "Floreira contornada!",
+        "cyclist": "Ciclista passou voando!",
+        "moto_cross": "Moto cruzou longe!",
     }
     return str(reactions.get(kind, "Boa, Zé!"))
 
@@ -3199,6 +3223,56 @@ func _build_sidewalk_obstacle(parent: Node3D, kind: String) -> void:
             for side in [-0.56, 0.56]:
                 _box(parent, Vector3(0.10, 0.75, 0.12), Vector3(side, 0.37, 0.0), bench_metal, "BenchLeg")
                 _box(parent, Vector3(0.18, 0.34, 0.10), Vector3(side, 0.86, 0.04), bench_metal, "BenchArm")
+        "scaffold":
+            # ETAPA 9 — andaime (fase 11): barra alta com vao para deslize e
+            # apoios laterais; mesma regra da barreira (SLIDE_UNDER).
+            var scaf_post := _material(Color("#7a6a55"), 0.0, 0.7, "wood")
+            for side in [-1.15, 1.15]:
+                _cylinder(parent, 0.07, 0.08, 2.6, Vector3(side, 1.3, 0.0), scaf_post, "ScaffoldPost")
+                _box(parent, Vector3(0.4, 0.07, 0.4), Vector3(side, 0.035, 0.0), scaf_post, "ScaffoldFoot")
+            var scaf_orange := _material(Color("#f07818"), 0.0, 0.55, "paint")
+            var scaf_white := _material(Color("#e8edf2"), 0.0, 0.5, "paint")
+            _box(parent, Vector3(2.5, 0.38, 0.09), Vector3(0.0, 1.31, 0.0), scaf_orange, "ScaffoldBar")
+            for stripe_i in range(4):
+                _box(parent, Vector3(0.26, 0.38, 0.095), Vector3(-1.0 + float(stripe_i) * 0.67, 1.31, 0.0), scaf_white, "ScaffoldStripe")
+            _box(parent, Vector3(2.7, 0.09, 0.7), Vector3(0.0, 2.2, 0.0), _material(Color("#9a7653"), 0.0, 0.75, "wood"), "ScaffoldPlank")
+            for brace_i in [-1.0, 1.0]:
+                var brace := _box(parent, Vector3(0.09, 1.5, 0.09), Vector3(brace_i * 1.15, 1.9, 0.0), scaf_post, "ScaffoldBrace")
+                brace.rotation.z = brace_i * 0.5
+        "puddle":
+            # ETAPA 9 — poca (fase 12): superficie distinta; pular ou
+            # contornar — atravessar molha o pe (lentidao, SOFT).
+            _cylinder(parent, 1.25, 1.25, 0.02, Vector3(0.0, 0.015, 0.0), _material(Color("#3d4a5c"), 0.0, 0.35, "wet"), "PuddleRim")
+            _cylinder(parent, 1.05, 1.05, 0.03, Vector3(0.0, 0.03, 0.0), _material(Color("#7fb6d9"), 0.0, 0.15, "water"), "Puddle")
+        "planter":
+            # ETAPA 9 — floreira (fase 13): mesma familia/regra do banco.
+            _box(parent, Vector3(1.4, 0.6, 0.6), Vector3(0.0, 0.3, 0.0), _material(Color("#8d8d94"), 0.0, 0.8, "concrete"), "PlanterBox")
+            _box(parent, Vector3(1.24, 0.08, 0.44), Vector3(0.0, 0.58, 0.0), _material(Color("#4a3526"), 0.0, 0.9, "soil"), "PlanterSoil")
+            _sphere(parent, 0.45, Vector3(0.0, 1.0, 0.0), _material(Color("#3f7d4a"), 0.0, 0.85, "leaf"), "PlanterShrub")
+        "cyclist":
+            # ETAPA 9 — ciclista (fase 13): cruza a frente com aviso visivel;
+            # volume em movimento (FULL). O no gira para o rumo no spawn.
+            var cyc_tire := _material(Color("#1d232e"), 0.15, 0.78, "rubber")
+            for roda_z in [-0.55, 0.55]:
+                var cyc_pneu := _torus(parent, 0.26, 0.34, Vector3(0.0, 0.34, roda_z), cyc_tire, "CycWheel")
+                cyc_pneu.rotation.z = PI / 2.0
+            var cyc_tube := _box(parent, Vector3(0.06, 1.15, 0.06), Vector3(0.0, 0.62, 0.0), _material(Color("#c8452e"), 0.35, 0.42, "metal"), "CycFrame")
+            cyc_tube.rotation.x = 1.1
+            _box(parent, Vector3(0.44, 0.05, 0.05), Vector3(0.0, 1.02, -0.5), _material(Color("#3e4d59"), 0.55, 0.52, "metal"), "CycHandlebar")
+            _box(parent, Vector3(0.4, 0.5, 0.24), Vector3(0.0, 1.25, 0.15), _material(Color("#e8b93c"), 0.0, 0.8, "fabric"), "CycRider")
+            _sphere(parent, 0.15, Vector3(0.0, 1.68, 0.15), _material(Color("#c98d64"), 0.0, 0.7, "skin"), "CycHead")
+        "moto_cross":
+            # ETAPA 9 — moto em cruzamento (fase 14): VEHICLE, respeitar a
+            # janela; som + farol antes da passagem (nunca so audio).
+            var moto_tire := _material(Color("#1d232e"), 0.15, 0.78, "rubber")
+            for moto_z in [-0.62, 0.62]:
+                var moto_wheel := _cylinder(parent, 0.3, 0.3, 0.12, Vector3(0.0, 0.3, moto_z), moto_tire, "MotoWheel")
+                moto_wheel.rotation.z = PI / 2.0
+            _box(parent, Vector3(0.42, 0.42, 1.35), Vector3(0.0, 0.62, 0.0), _material(Color("#b03a2e"), 0.35, 0.4, "paint"), "MotoBody")
+            _box(parent, Vector3(0.36, 0.12, 0.5), Vector3(0.0, 0.88, 0.3), _material(Color("#182331"), 0.0, 0.6, "rubber"), "MotoSeat")
+            _box(parent, Vector3(0.4, 0.48, 0.24), Vector3(0.0, 1.28, 0.3), _material(Color("#2d3a55"), 0.0, 0.8, "fabric"), "MotoRider")
+            _sphere(parent, 0.16, Vector3(0.0, 1.68, 0.3), _material(Color("#e8edf2"), 0.0, 0.4, "paint"), "MotoHelmet")
+            _box(parent, Vector3(0.2, 0.16, 0.06), Vector3(0.0, 0.78, -0.72), _material(Color("#fff2b0"), 0.0, 0.2, "glass"), "MotoHeadlight")
         "trash":
             # ETAPA 8 — lixeira de rua (fase 6): volume solido, desvio lateral.
             var lixeira_glb := _optional_prop("lixeira.glb")
@@ -3216,13 +3290,14 @@ func _build_sidewalk_obstacle(parent: Node3D, kind: String) -> void:
         "cart":
             # ETAPA 8 — carrinho de entrega (fase 8): travessia lenta com
             # aviso; volume solido (FULL). Gira 90 graus: atravessa de lado.
+            # ETAPA 9 — o giro para o rumo e generico no _spawn_entity (vale
+            # para o GLB e o fallback); fallback com as proporcoes do GLB.
             var cart_glb := _optional_prop("carrinho.glb")
             if cart_glb != null:
-                cart_glb.rotation.y = PI / 2.0
                 parent.add_child(cart_glb)
                 return
-            _box(parent, Vector3(1.6, 0.9, 0.8), Vector3(0.0, 0.75, 0.0), _material(Color("#8a5a33"), 0.0, 0.7, "wood"), "CartBody")
-            _box(parent, Vector3(1.7, 0.08, 0.9), Vector3(0.0, 1.6, 0.0), _material(Color("#c8452e"), 0.0, 0.6, "paint"), "CartAwning")
+            _box(parent, Vector3(1.7, 0.9, 2.1), Vector3(0.0, 0.75, 0.0), _material(Color("#8a5a33"), 0.0, 0.7, "wood"), "CartBody")
+            _box(parent, Vector3(1.8, 0.08, 2.2), Vector3(0.0, 1.6, 0.0), _material(Color("#c8452e"), 0.0, 0.6, "paint"), "CartAwning")
         "van":
             # ETAPA 8 — van parada na borda (fase 9): VEHICLE, sem pulo por
             # cima do teto; desvio pelo corredor livre.
