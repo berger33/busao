@@ -115,6 +115,22 @@ const CENARIO_LARGO: Dictionary = {
     "marco": "igreja",
 }
 
+## ETAPA 12 — feira livre do lote 26-30: mesmo deck dos três corredores,
+## árvore comum (16 m) de volta no lugar do ipê, banco na rotina do kit,
+## lixeira densa (12 m), galpões e lojas no fundo; barracas dos dois lados
+## a cada 56 m, pulando as que caem sobre travessias (bloco "feira", lido
+## por _spawn_feira; visual puro, sem colisão).
+const CENARIO_FEIRA: Dictionary = {
+    "faixas": {"piso_central_m": 9.9, "piso_borda_esq_m": 4.95},
+    "props": {
+        "arvore": {"glb": "arvore", "espacamento_m": 16.0},
+        "banco": {"espacamento_m": 18.0},
+        "lixeira": {"espacamento_m": 12.0},
+    },
+    "predios": {"tipo_pesos": {"tijolo": 3, "reboco": 3, "loja": 3, "obra": 1}},
+    "feira": {"passo_m": 56.0, "x_m": 6.4, "margem_cruzamento_m": 6.0},
+}
+
 ## Fase 1 — "Saiu atrasada" (PLANO_50_FASES): aprender troca de corredor e
 ## pulo; cones baixos isolados; moedas guiam uma rota ampla. Clímax: dois
 ## cones em estações separadas, sempre com desvio disponível.
@@ -1095,7 +1111,212 @@ const FASE_25: Dictionary = {
     ],
 }
 
-const LEVELS: Array = [FASE_1, FASE_2, PILOT, FASE_4, FASE_5, FASE_6, FASE_7, FASE_8, FASE_9, FASE_10, FASE_11, FASE_12, FASE_13, FASE_14, FASE_15, FASE_16, FASE_17, FASE_18, FASE_19, FASE_20, FASE_21, FASE_22, FASE_23, FASE_24, FASE_25]
+## Fase 26 — "Abertura do mercado" (PLANO_50_FASES): reentrada tranquila
+## no capítulo do Mercado; caixas puláveis e bancos sólidos entre barracas.
+## Clímax: caixa em C com banco em D, E livre.
+const FASE_26: Dictionary = {
+    "id": "bairro_26",
+    "version": 1,
+    "name": "Abertura do mercado",
+    "phase_index": 25,
+    "distance_m": 476.0,
+    "chunk_length_m": 28.0,
+    "chunks": 17,
+    "base_speed_mps": 7.6,
+    "deadline_seconds": 74.0,
+    "layout_seed": 126,
+    "scenery": CENARIO_FEIRA,
+    "patterns": [
+        {"kind": "crate", "lane": 1, "at_m": 44.0},
+        {"kind": "bench", "lane": 0, "at_m": 72.0},
+        {"kind": "crate", "lane": 2, "at_m": 100.0},
+        {"kind": "cone", "lane": 1, "at_m": 128.0},
+        {"kind": "bench", "lane": 2, "at_m": 184.0},
+        {"kind": "crate", "lane": 0, "at_m": 212.0},
+        {"kind": "cone", "lane": 0, "at_m": 240.0},
+        {"kind": "bench", "lane": 1, "at_m": 296.0},
+        {"kind": "crate", "lane": 2, "at_m": 324.0},
+        {"kind": "cone", "lane": 1, "at_m": 352.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 428.0},
+        {"kind": "coin", "lane": 1, "at_m": 436.0},
+        {"kind": "coin", "lane": 1, "at_m": 444.0},
+    ],
+}
+
+## Fase 27 — "Corredor de entregas" (PLANO_50_FASES): carrinhos em intervalos
+## regulares (112 m), sentidos alternados; caixas e bancos como revisão.
+## Clímax: carrinho E→D com caixa pulável em D, C livre.
+const FASE_27: Dictionary = {
+    "id": "bairro_27",
+    "version": 1,
+    "name": "Corredor de entregas",
+    "phase_index": 26,
+    "distance_m": 504.0,
+    "chunk_length_m": 28.0,
+    "chunks": 18,
+    "base_speed_mps": 7.7,
+    "deadline_seconds": 76.0,
+    "layout_seed": 127,
+    "scenery": CENARIO_FEIRA,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "crate", "lane": 0, "at_m": 72.0},
+        {"kind": "cart", "lane": 2, "at_m": 140.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.0, "lead_m": 60.4},
+        {"kind": "cone", "lane": 2, "at_m": 168.0},
+        {"kind": "bench", "lane": 1, "at_m": 196.0},
+        {"kind": "cart", "lane": 0, "at_m": 252.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.0, "lead_m": 60.4},
+        {"kind": "crate", "lane": 2, "at_m": 280.0},
+        {"kind": "cone", "lane": 0, "at_m": 308.0},
+        {"kind": "bench", "lane": 2, "at_m": 336.0},
+        {"kind": "crate", "lane": 1, "at_m": 364.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 456.0},
+        {"kind": "coin", "lane": 1, "at_m": 464.0},
+        {"kind": "coin", "lane": 1, "at_m": 472.0},
+    ],
+}
+
+## Fase 28 — "Toldos da feira" (PLANO_50_FASES): barreiras altas (toldos) e
+## caixas puláveis; deslize e salto alternados, sem travessia.
+## Clímax: barreira em C com caixa em D, E livre.
+const FASE_28: Dictionary = {
+    "id": "bairro_28",
+    "version": 1,
+    "name": "Toldos da feira",
+    "phase_index": 27,
+    "distance_m": 504.0,
+    "chunk_length_m": 28.0,
+    "chunks": 18,
+    "base_speed_mps": 7.8,
+    "deadline_seconds": 75.0,
+    "layout_seed": 128,
+    "scenery": CENARIO_FEIRA,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "barrier", "lane": 2, "at_m": 72.0},
+        {"kind": "crate", "lane": 0, "at_m": 100.0},
+        {"kind": "barrier", "lane": 1, "at_m": 128.0},
+        {"kind": "cone", "lane": 2, "at_m": 156.0},
+        {"kind": "crate", "lane": 1, "at_m": 184.0},
+        {"kind": "barrier", "lane": 0, "at_m": 212.0},
+        {"kind": "bench", "lane": 2, "at_m": 240.0},
+        {"kind": "crate", "lane": 0, "at_m": 268.0},
+        {"kind": "barrier", "lane": 1, "at_m": 296.0},
+        {"kind": "cone", "lane": 2, "at_m": 324.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 456.0},
+        {"kind": "coin", "lane": 1, "at_m": 464.0},
+        {"kind": "coin", "lane": 1, "at_m": 472.0},
+    ],
+}
+
+## Fase 29 — "A esquina do mercado" (PLANO_50_FASES): van parada, pedestres e
+## carrinhos num cruzamento; travessias separadas, nunca simultâneas.
+## Clímax: van em D com pedestre D→E, C livre.
+const FASE_29: Dictionary = {
+    "id": "bairro_29",
+    "version": 1,
+    "name": "A esquina do mercado",
+    "phase_index": 28,
+    "distance_m": 532.0,
+    "chunk_length_m": 28.0,
+    "chunks": 19,
+    "base_speed_mps": 7.8,
+    "deadline_seconds": 78.0,
+    "layout_seed": 129,
+    "scenery": CENARIO_FEIRA,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "trash", "lane": 2, "at_m": 72.0},
+        {"kind": "van", "lane": 0, "at_m": 100.0},
+        {"kind": "cart", "lane": 2, "at_m": 100.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.0, "lead_m": 62.3},
+        {"kind": "crosser", "lane": 1, "at_m": 156.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.3, "lead_m": 48.9},
+        {"kind": "bench", "lane": 0, "at_m": 184.0},
+        {"kind": "van", "lane": 2, "at_m": 212.0},
+        {"kind": "crosser", "lane": 2, "at_m": 212.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.3, "lead_m": 29.0},
+        {"kind": "crate", "lane": 0, "at_m": 240.0},
+        {"kind": "cone", "lane": 1, "at_m": 268.0},
+        {"kind": "cart", "lane": 0, "at_m": 296.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.0, "lead_m": 37.7},
+        {"kind": "cone", "lane": 2, "at_m": 324.0},
+        {"kind": "crosser", "lane": 0, "at_m": 352.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.3, "lead_m": 48.9},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 484.0},
+        {"kind": "coin", "lane": 1, "at_m": 492.0},
+        {"kind": "coin", "lane": 1, "at_m": 500.0},
+    ],
+}
+
+## Fase 30 — "Fechou a feira" (PLANO_50_FASES): revisão do capítulo sem fechar
+## a visão; respiro antes do ônibus (sem moeda dourada: não é final).
+## Clímax: ciclista E→D com cone em D, C livre.
+const FASE_30: Dictionary = {
+    "id": "bairro_30",
+    "version": 1,
+    "name": "Fechou a feira",
+    "phase_index": 29,
+    "distance_m": 532.0,
+    "chunk_length_m": 28.0,
+    "chunks": 19,
+    "base_speed_mps": 8.0,
+    "deadline_seconds": 75.0,
+    "layout_seed": 130,
+    "scenery": CENARIO_FEIRA,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "barrier", "lane": 2, "at_m": 72.0},
+        {"kind": "crate", "lane": 0, "at_m": 100.0},
+        {"kind": "bench", "lane": 1, "at_m": 128.0},
+        {"kind": "cart", "lane": 2, "at_m": 156.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.0, "lead_m": 63.6},
+        {"kind": "crosser", "lane": 0, "at_m": 184.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.3, "lead_m": 50.2},
+        {"kind": "van", "lane": 1, "at_m": 212.0},
+        {"kind": "cone", "lane": 2, "at_m": 240.0},
+        {"kind": "bench", "lane": 0, "at_m": 268.0},
+        {"kind": "cyclist", "lane": 1, "at_m": 296.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 3.0, "lead_m": 21.3},
+        {"kind": "cone", "lane": 0, "at_m": 324.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 484.0},
+        {"kind": "coin", "lane": 1, "at_m": 492.0},
+        {"kind": "coin", "lane": 1, "at_m": 500.0},
+    ],
+}
+
+const LEVELS: Array = [FASE_1, FASE_2, PILOT, FASE_4, FASE_5, FASE_6, FASE_7, FASE_8, FASE_9, FASE_10, FASE_11, FASE_12, FASE_13, FASE_14, FASE_15, FASE_16, FASE_17, FASE_18, FASE_19, FASE_20, FASE_21, FASE_22, FASE_23, FASE_24, FASE_25, FASE_26, FASE_27, FASE_28, FASE_29, FASE_30]
 
 
 static func for_phase(index: int) -> Dictionary:

@@ -812,6 +812,35 @@ func _spawn_cross_zone(at_m: float) -> void:
         stripe.rotation.y = 0.6
 
 
+## ETAPA 12 — feira do nível (fases 26-30): barracas dos dois lados a
+## cada passo, pulando as que caem sobre travessias (o cruzante anda
+## até x=±6; visual puro, sem colisão nem entrada em entities).
+func _spawn_feira(level: Dictionary, total: float) -> void:
+    var feira: Dictionary = level.get("scenery", {}).get("feira", {})
+    if feira.is_empty():
+        return
+    var passo: float = float(feira.get("passo_m", 56.0))
+    var desloc: float = float(feira.get("desloc_m", passo * 0.5))
+    var x_lado: float = float(feira.get("x_m", 6.4))
+    var margem: float = float(feira.get("margem_cruzamento_m", 6.0))
+    var cruzamentos: Array = []
+    for p in level.get("patterns", []):
+        if p.has("cross_mps"):
+            cruzamentos.append(float(p.get("at_m", 0.0)))
+    var z := desloc
+    var i := 0
+    while z < total - 10.0:
+        var livre := true
+        for at in cruzamentos:
+            if absf(z - at) < margem:
+                livre = false
+        if livre:
+            for lado in [-1.0, 1.0]:
+                _build_market_stall(Vector3(lado * x_lado, 0.0, -z), i)
+        z += passo
+        i += 1
+
+
 func _build_course_from_level(level: Dictionary, total: float) -> void:
     var level_patterns: Array = level.get("patterns", [])
     for p in level_patterns:
@@ -835,6 +864,7 @@ func _build_course_from_level(level: Dictionary, total: float) -> void:
     var level_coins: Array = level.get("coins", [])
     for c in level_coins:
         _spawn_entity(str(c.get("kind", "coin")), int(c.get("lane", 1)), float(c.get("at_m", 0.0)), true, true)
+    _spawn_feira(level, total)
     _create_bus_stop(total)
     call_deferred("_audit_world_geometry")
 
@@ -2423,15 +2453,23 @@ func _build_terminal_facade(pos: Vector3, _index: int) -> void:
     _box(decor_root, Vector3(3.5, 0.12, 0.72), pos + Vector3(0.0, 3.25, 0.0), _material(_scenario_color("accent", CYAN), 0.0, 0.42, "metal"), "TerminalRoof")
 
 func _build_market_stall(pos: Vector3, _index: int) -> void:
+    # ETAPA 12 — marca decor_kind=barraca (uma por barraca) para o QA
+    # contar peças no decor sem depender de nome (vide @Node3D@N).
     var barraca_glb := _optional_glb("scene/barraca.glb")
     if barraca_glb != null:
         barraca_glb.position = pos
+        barraca_glb.set_meta("decor_kind", "barraca")
         decor_root.add_child(barraca_glb)
         _tint_glb(barraca_glb, _scenario_color("accent", RED))
         return
-    _box(decor_root, Vector3(1.5, 1.1, 1.0), pos + Vector3(0.0, 0.56, 0.0), _material(Color("#d88c43"), 0.0, 0.76, "wood"), "MarketCart")
-    _box(decor_root, Vector3(1.75, 0.10, 1.15), pos + Vector3(0.0, 1.34, 0.0), _material(_scenario_color("accent", RED), 0.0, 0.62, "fabric"), "MarketAwning")
-    _sphere(decor_root, 0.23, pos + Vector3(0.0, 1.52, -0.08), _material(Color("#b8785a"), 0.0, 0.78), "MarketSeller")
+    var barraca := Node3D.new()
+    barraca.name = "Barraca"
+    barraca.position = pos
+    barraca.set_meta("decor_kind", "barraca")
+    decor_root.add_child(barraca)
+    _box(barraca, Vector3(1.5, 1.1, 1.0), Vector3(0.0, 0.56, 0.0), _material(Color("#d88c43"), 0.0, 0.76, "wood"), "MarketCart")
+    _box(barraca, Vector3(1.75, 0.10, 1.15), Vector3(0.0, 1.34, 0.0), _material(_scenario_color("accent", RED), 0.0, 0.62, "fabric"), "MarketAwning")
+    _sphere(barraca, 0.23, Vector3(0.0, 1.52, -0.08), _material(Color("#b8785a"), 0.0, 0.78), "MarketSeller")
 
 func _build_colonial_facade(pos: Vector3, index: int) -> void:
     var colonial_glb := _optional_glb("scene/colonial.glb")

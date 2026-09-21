@@ -281,6 +281,24 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
   no ponto, 12 toldos na rua, 15 ipês), reuso sem estreia e
   determinismo. Regressões 1–10 verdes (QA1 H e QA5 X2 migrados para
   o índice 25, primeira fase ainda procedural).
+- ETAPA 12 (21/09): lote 6 das 50 fases (Mercado, reuso).
+  Fases 26–30 autorais em `LevelData` (bairro_26–30) com números do
+  PLANO_50_FASES (476/7,6/74; 504/7,7/76; 504/7,8/75; 532/7,8/78;
+  532/8,0/75), só com famílias já apresentadas (caixa, banco, cone,
+  carrinho, barreira, van, pedestre, lixeira, ciclista). Cenário pelo
+  building_kit (camada viva): árvore comum e bancos de volta, lixeira
+  densa, galpões e lojas no fundo; `_spawn_feira` planta barracas
+  (`barraca.glb` + reserva procedural, x=±6,4 m a cada 56 m dos dois
+  lados, pulando as que caem sobre travessias) — visual puro, sem
+  colisão nem entrada em `entities`. Fase 30 sem moeda dourada (não é
+  final de campanha).
+- QA etapa 12 (6/6): dados do plano + gates intactos + cenário da
+  feira, validador nas 30 fases, montagem exata, comportamentos
+  (carrinhos a 112 m em sentidos alternados, esquina van+cruzante,
+  toldo/caixa, 16/14/18/18/18 barracas fora das pistas e travessias,
+  galpões no fundo, só árvore comum), reuso sem estreia e
+  determinismo. Regressões 1–11 verdes (QA1 H e QA5 X2 migrados para
+  o índice 30, primeira fase ainda procedural).
 
 ## Regras de engenharia desta execução
 
