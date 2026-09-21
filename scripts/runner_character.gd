@@ -38,7 +38,11 @@ const ORIGINAL_BODY_PATHS: Dictionary = {
     "M": ORIGINAL_ROOT + "/Humano_M.glb",
     "F": ORIGINAL_ROOT + "/Humano_F.glb",
 }
-const PERSONAGENS_ROOT := "res://assets/characters/personagens" # Lote 28: 20 GLBs dedicados (ze/motoboy/.../cida) — bakeado Blender
+const PERSONAGENS_ROOT := "res://assets/characters/personagens" # Lote 28: 20 GLBs dedicados
+# Primeiro marco do novo pipeline: a heroína terá um asset dedicado, sem
+# compartilhar a malha simplificada do elenco. O fallback mantém o jogo jogável
+# enquanto o GLB passa pela validação visual.
+const HERO_ASSET_PATH := PERSONAGENS_ROOT + "/hero_julia.glb"
 const MODEL_SCALE := 1.03  # 1.77*1.03=1.82 realista (era 1.18->2.09)
 const MODEL_FLOOR_OFFSET := 0.012
 const CLOTHING_INFLATE := 0.008
@@ -158,7 +162,7 @@ func set_character(next_id: String) -> void:
     _clear_character()
     _build_shadow()
     # Lote 28: tenta GLB dedicado por personagem (assets/characters/personagens/<id>.glb) — bakeado Blender com paleta + props.
-    var personalized_path := PERSONAGENS_ROOT + "/" + character_id + ".glb"
+    var personalized_path := HERO_ASSET_PATH if character_id == "julia" and ResourceLoader.exists(HERO_ASSET_PATH) else PERSONAGENS_ROOT + "/" + character_id + ".glb"
     var is_personalized := false
     var body_scene: PackedScene = null
     var body_path: String = personalized_path
