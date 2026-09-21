@@ -63,6 +63,25 @@ static var _avisou_textura := false
 # Especificacao e paleta
 # ---------------------------------------------------------------------------
 
+## ETAPA 5 — spec base com overrides profundos (fase autoral referencia o
+## proprio perfil de cenario, ex.: Rua do Ipe com deck de tres corredores e
+## ipe amarelo). O spec em disco nao muda; nada e mutado no cache.
+static func spec_with_overrides(base: Dictionary, overrides: Dictionary) -> Dictionary:
+    if overrides.is_empty():
+        return base
+    var resultado: Dictionary = base.duplicate(true)
+    _mesclar_spec(resultado, overrides)
+    return resultado
+
+
+static func _mesclar_spec(alvo: Dictionary, fonte: Dictionary) -> void:
+    for chave in fonte:
+        if typeof(fonte[chave]) == TYPE_DICTIONARY and typeof(alvo.get(chave)) == TYPE_DICTIONARY:
+            _mesclar_spec(alvo[chave], fonte[chave])
+        else:
+            alvo[chave] = fonte[chave]
+
+
 static func load_spec(path: String = SPEC_PATH) -> Dictionary:
     if _spec_cache.has(path):
         return _spec_cache[path]
@@ -707,7 +726,8 @@ static func _build_arvores(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
     while z < comprimento:
         var x := x_dir if lado > 0.0 else x_esq
         var base := Vector3(x, 0.15, -z)
-        var arvore_glb := _scene_glb("arvore")
+        # ETAPA 5 — o nome do GLB da arvore vem do spec (piloto: ipe_amarelo).
+        var arvore_glb := _scene_glb(str(cfg.get("glb", "arvore")))
         if arvore_glb != null:
             arvore_glb.position = base
             var s_var := rng.randf_range(0.92, 1.14)
@@ -962,9 +982,9 @@ class ChunkStreamer extends Node3D:
     var _chunks: Array = []
     var _proximo: int = 0
 
-    func setup(caminho_spec: String = "res://resources/world_spec.json") -> void:
+    func setup(caminho_spec: String = "res://resources/world_spec.json", overrides: Dictionary = {}) -> void:
         name = "Cenario"
-        spec = BuildingKit.load_spec(caminho_spec)
+        spec = BuildingKit.spec_with_overrides(BuildingKit.load_spec(caminho_spec), overrides)
         comprimento_m = float(spec.get("quarteirao", {}).get("comprimento_m", 28.0))
         visiveis = int(spec.get("quarteirao", {}).get("quarteiroes_visiveis", 5))
         horizonte = BuildingKit.build_horizon(spec)

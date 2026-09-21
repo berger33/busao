@@ -29,7 +29,16 @@ python3 tools/blender/build_lote7.py   # requer: pip install bpy==4.5.14
 | `lixeira.glb`  | Lixeira de rua: tambor verde suspenso em poste de aço                   | 0,37 × 0,54 × 1,04 m     |
 | `poste.glb`    | Poste de iluminação com braço para `+X` e luminária emissiva            | 1,09 × 0,56 × 3,65 m     |
 | `ponto.glb`    | Abrigo de ponto de ônibus: colunas, teto, vidros, banco e placa         | 2,74 × 1,23 × 3,21 m     |
-| `carrinho.glb` | Carrinho de camelô com vitrine, rodas e toldo listrado                  | 1,74 × 1,23 × 2,15 m     |
+| `carrinho.glb` | Carrinho de camelô com vitrine, rodas e toldo listrado | 1,74 × 1,23 × 2,15 m |
+| `barreira.glb` | Barreira suspensa de obra: 2 postes zincados + barra listrada com vão inferior livre (deslize) | 2,44 × 0,10 × 1,90 m (barra entre 1,12 e 1,50 m) |
+
+A `barreira.glb` (ETAPA 5) foi gerada sem bpy por `tools/glb/build_etapa5.py`
+(escritor GLB em Python puro, `tools/glb/glb_writer.py`) — mesmo contrato
+acima, modelada direto no espaço do Godot. Para regenerar:
+
+```
+python3 tools/glb/build_etapa5.py
+```
 
 ## Integração (drop-in)
 

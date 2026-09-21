@@ -21,6 +21,7 @@ via `tools/blender/build_lote9a.py`. Nenhum download em runtime.
 |---|---|---|
 | `palmeira.glb` | `_build_palm` | tronco 2,7 m com anéis, 6 folhas + flecha, 3 cocos; `scale` uniforme |
 | `arvore.glb` | `_build_tree` | tronco urbano 2,5 m + galhos ramificados + copas densas PBR (4,8 m altura); `scale` uniforme |
+| `ipe_amarelo.glb` | `_build_arvores` (building_kit) | ipê-amarelo em florada: tronco + galhos de apoio + 6 cachos amarelos achatados (4,83 m); `scale` uniforme; usado na fase piloto via spec `props.arvore.glb` (ETAPA 5, sem bpy: `tools/glb/build_etapa5.py`) |
 | `caixa_dagua.glb` | `_build_water_tank` | cavalete de 4 pés com travessas em X, bojo + tampa cônica; modelada para height 2.9 |
 | `varal.glb` | `_build_clothesline` | 2 mastros + corda + 4 roupas coloridas com prendedores |
 | `bandeira.glb` | `_build_flag` | mastro 2,7 m + pano ondulado; tecido em `TintFabric` |

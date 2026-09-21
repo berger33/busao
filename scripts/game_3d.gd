@@ -4108,7 +4108,14 @@ func _setup_world_kit() -> void:
     # distance em _update_run), entao a rua rola junto, em sincronia com os
     # obstaculos; a reciclagem dos quarteiroes usa a propria `distance`.
     course_root.add_child(kit)
-    kit.setup()
+    # ETAPA 5 — fase autoral referencia o proprio perfil de cenario (blueprint
+    # S7: camadas independentes; aqui o cenario segue o nivel, nao o codigo).
+    var scenery_overrides: Dictionary = {}
+    if not endless_mode:
+        var level_scenery: Dictionary = LevelData.for_phase(phase_index)
+        if not level_scenery.is_empty():
+            scenery_overrides = level_scenery.get("scenery", {})
+    kit.setup(BuildingKit.SPEC_PATH, scenery_overrides)
     _world_kit = kit
     # O horizonte e silhueta fixa (como o HORIZON_Z antigo): nao pode rolar,
     # senao ele "passa" pelo corredor no meio da corrida.

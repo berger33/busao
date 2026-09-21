@@ -26,6 +26,14 @@ const PILOT: Dictionary = {
     "base_speed_mps": 6.0,
     "deadline_seconds": 66.0,
     "layout_seed": 103,
+    # ETAPA 5 — camada de cenario (independente do desafio): perfil que o
+    # building_kit aplica so nesta fase. Deck de 9,9 m cobrindo os tres
+    # corredores de corrida (bordas a 4,95 m) e ipe amarelo no lugar da
+    # arvore comum — a Rua do Ipe le como rua de calcada larga.
+    "scenery": {
+        "faixas": {"piso_central_m": 9.9, "piso_borda_esq_m": 4.95},
+        "props": {"arvore": {"glb": "ipe_amarelo"}},
+    },
     # Roteiro fixo do blueprint §8 (módulo, situação, intenção).
     "patterns": [
         # M2 — cone baixo em C (~42 m): pular ou sair para E/D.

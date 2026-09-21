@@ -12,6 +12,7 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
 | 2 | Controle preciso e colisões compreensíveis (blueprint §4/§6): matriz ação x família por classe de altura/volume, colisão pela posição real, buffer de entrada, dash sem imunidade | concluída | `tools/qa_etapa2_colisao.gd`: 10/10 verificações verdes (A–J); suíte da etapa 1 segue 9/9 (sem regressão) |
 | 3 | Primeira família SLIDE_UNDER: barreira suspensa de obra com fase de introdução (fase 3), dando função ao deslize no percurso | concluída | `tools/qa_etapa3_barreira.gd`: 5/5 verificações verdes (K–O); fases 1-2 sem barreira, fase 3 com 2; percurso determinístico |
 | 4 | Estrutura de fase piloto (blueprint §7/§8): módulos editáveis em dados, validador de caminho com estado do jogador, fase 3 autoral "Rua do Ipê" (336 m, 12 módulos) | concluída | `tools/qa_etapa4_piloto.gd`: 10/10 verificações verdes (P–T); validador aprova o piloto na velocidade base e no impulso 1,22x e rejeita estação sem saída; fase 3 montada só com os dados do nível (`scripts/level_data.gd`), sem loop procedural |
+| 5 | Frente de conteúdo/arte do piloto: `barreira.glb` (fecha o drop-in da ETAPA 3), deck cobrindo os três corredores na fase 3, `ipe_amarelo.glb` na Rua do Ipê — tudo gerado sem bpy (`tools/glb/`) | concluída | `tools/qa_etapa5_arte.gd`: 8/8 verificações verdes (V–X); barreiras da fase 3 instanciam o GLB (0 fallbacks), deck cobre -3,25/0/+3,25 só na fase 3, 16 ipês no cenário do piloto; fases sem nível preservam o leiaute padrão |
 
 ## Diário
 
@@ -110,6 +111,35 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
   etapa 1 9/9, etapa 2 10/10, etapa 3 5/5.
 - Cadastro de `class_name` novo exige `--import` para atualizar
   `.godot/global_script_class_cache.cfg` antes dos QAs headless.
+- ETAPA 5 (21/09): frente de conteúdo/arte do piloto, sem bpy (indisponível
+  neste sandbox). `tools/glb/glb_writer.py` — escritor de GLB binário
+  (glTF 2.0) em Python puro: caixas, cilindros e icosferas achatadas,
+  materiais PBR (cor/roughness/metallic), modelado direto no espaço do
+  Godot (Y para cima, frente -Z, origem no chão, escala real — contrato de
+  assets/props/LEIA-ME.md). `tools/glb/build_etapa5.py` gera os dois assets
+  e se auto-verifica (releitura do GLB + limites de altura/origem).
+- `assets/props/barreira.glb`: mesmo desenho do fallback procedural da
+  ETAPA 3 (postes zincados, barra listrada entre 1,12 e 1,50 m com vão
+  livre, topo a 1,90 m). O drop-in já existia no código — as duas barreiras
+  da fase 3 agora instanciam o GLB (QA V3: 2 com GLB, 0 fallbacks).
+- Corredores legíveis na fase 3: o nível referencia o próprio perfil de
+  cenário (`LevelData.PILOT.scenery`) e o `ChunkStreamer` aplica overrides
+  profundos no spec (`BuildingKit.spec_with_overrides`): deck de 9,9 m
+  cobrindo os três corredores (bordas ±4,95 m), guia e rua deslocadas junto
+  (tudo derivado do spec, nenhuma medida nova no código de geometria).
+  Fases sem nível seguem com o leiaute padrão (QA X2).
+- `assets/scene/ipe_amarelo.glb` (4,83 m): tronco com galhos de apoio e
+  copa em seis cachos amarelos achatados. `_build_arvores` agora lê o nome
+  do GLB do spec (`props.arvore.glb`), então o piloto usa ipês e as demais
+  fases seguem com `arvore.glb` (QA W3/W4: 16 ipês na fase 3; fase 1
+  intacta).
+- QA etapa 5 (8/8): contratos dos dois assets (origem no chão, alturas),
+  drop-ins ativos só onde devem, deck dos três corredores. Regressões:
+  etapas 1–4 todas verdes.
+- Analisador: `static var` (GDScript 4.4+) é limitação conhecida do
+  check_gdscript.py (marca uso como UNDECLARED) — reproduzido em teste
+  isolado; falsos positivos de classe interna em game_3d já registrados
+  na ETAPA 4. Nenhuma questão real nova.
 
 ## Regras de engenharia desta execução
 
