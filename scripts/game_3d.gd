@@ -71,7 +71,10 @@ const TEXTURE_RUBBER_REAL_R = preload("res://assets/textures/borracha_realista_r
 const TEXTURE_SKIN_REAL = preload("res://assets/textures/pele_realista.png")
 const TEXTURE_SKIN_REAL_N = preload("res://assets/textures/pele_realista_normal.png")
 const TEXTURE_SKIN_REAL_R = preload("res://assets/textures/pele_realista_roughness.png")
-const LANE_X: Array[float] = [-3.25, 0.0, 3.25]
+# A pista real do BuildingKit ocupa x=-8.3..-1.7; o centro da faixa de
+# tráfego é -5.0. Antes a rua usava -3.25, encostando os veículos no meio-fio
+# e fazendo parecer que subiam na calçada.
+const LANE_X: Array[float] = [-5.0, 0.0, 3.25]
 # ETAPA 1 — margens de prazo (s) por fase, transcritas do catálogo de
 # PLANO_50_FASES_CORRE_PRO_PONTO.md: prazo = tempo de referência da rota + margem.
 const DEADLINE_MARGINS: Array = [
@@ -3005,7 +3008,7 @@ func _create_bus_stop(total: float) -> void:
     # A rua fica a oeste da calçada: desloca 6,5 m para o centro da pista
     # (x=-3,25 no mundo). O nariz aponta para +Z, de frente para quem chega
     # ao ponto, como um ônibus parado aguardando embarque.
-    bus_node.position = Vector3(-6.5, 0.9, 2.2)
+    bus_node.position = Vector3(-8.25, 0.9, 2.2)
     bus_node.rotation.y = PI
     bus_stop_node.add_child(bus_node)
     _build_bus_mesh(bus_node)
@@ -3271,6 +3274,26 @@ func _fit_model(node: Node3D, target_length: float, target_height: float) -> voi
     node.position += offset
     _enhance_vehicle_instance(node)
     _pivot_wheels(node, fit)
+    _align_wheel_caps(node)
+
+func _align_wheel_caps(root: Node3D) -> void:
+    # Calotas são discos com eixo local Y. Nos veículos importados algumas
+    # superfícies chegavam com roll diferente, deixando a face torta ou
+    # inclinada em relação ao pneu. Padroniza a face no eixo do cubo X.
+    for child in root.find_children("*", "MeshInstance3D", true, false):
+        var mesh := child as MeshInstance3D
+        if mesh == null:
+            continue
+        var nome := str(mesh.name).to_lower()
+        if not (nome.contains("hub") or nome.contains("calota") or nome.contains("rim")):
+            continue
+        var parent := mesh.get_parent() as Node3D
+        if parent == null:
+            continue
+        var parent_name := str(parent.name).to_lower()
+        if parent_name.contains("wheel") or parent_name.contains("roda"):
+            mesh.rotation = Vector3(0.0, 0.0, PI * 0.5)
+
 
 func _pivot_wheels(root: Node3D, fit: float) -> void:
     # Nos GLBs originais (build_lote5/6) a roda vem com a geometria "assada" na
