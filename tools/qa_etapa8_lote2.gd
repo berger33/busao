@@ -235,12 +235,14 @@ func _scenario_p() -> void:
 # Q. Ordem de aprendizagem (introduções do blueprint §6).
 func _scenario_q() -> void:
     var base := ["cone", "hydrant", "payphone", "trash"]
+    # Rua à esquerda: a faixa 0 usa carro (fase 2+) e moto (fase 6+) no lugar
+    # do mobiliário — mesma classe de desvio, mesma largura; parados no tutorial.
     var familias := {
-        5: base,
-        6: base + ["bench", "crosser"],
-        7: base + ["bench", "crosser", "cart"],
+        5: base + ["motorcycle"],
+        6: base + ["bench", "crosser", "car"],
+        7: base + ["bench", "crosser", "cart", "motorcycle"],
         8: base + ["bench", "crosser", "cart", "van", "barrier"],
-        9: base + ["bench", "crosser", "cart", "van", "barrier"],
+        9: base + ["bench", "crosser", "cart", "van", "barrier", "motorcycle"],
     }
     var ok := true
     for index in [5, 6, 7, 8, 9]:
@@ -250,7 +252,7 @@ func _scenario_q() -> void:
                 ok = false
                 print("  fase %d usa %s fora da ordem" % [index + 1, str(p["kind"])])
     # Nenhuma família nova aparece antes da sua fase de introdução.
-    var intros := {"trash": 5, "crosser": 6, "cart": 7, "van": 8}
+    var intros := {"trash": 5, "crosser": 6, "cart": 7, "van": 8, "car": 1, "motorcycle": 5}
     for index in range(10):
         for p in LevelData.for_phase(index)["patterns"]:
             var kind := str(p["kind"])

@@ -457,6 +457,36 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
   base); recuperado via `fetch origin` + `reset` — diff confirmou zero
   perda (worktree = d1b604b + round 2 exato).
 
+### 2026-09-21 (round 3 — braços, texturas, rua à esquerda)
+
+- Overlay de braços no sprint/walk (`runner_character.gd`): substitui o
+  baked "bater asa" por bombeio sagital em antifase com as pernas, fase
+  vinda da posição exata do clipe + rampa de entrada 0,12 s.
+- Correção crítica pós-FK: eixo `FORWARD`(-Z) → `BACK`(+Z, frente do
+  esqueleto — modelo olha +Z, yaw PI leva a -Z no mundo). Com FORWARD o
+  ombro ia para trás e o cotovelo hiperestendia (mão 0,20 atrás do
+  cotovelo, ângulo impossível). Fracs corrigidos para pico−0,25 do seno:
+  sprint 0,30 → 0,06, walk 0,28 → 0,04 (picos peD-frente medidos no GLB
+  com nlerp de caminho mínimo: u=0,312/0,292). Prova fim-a-fim: 4/4
+  alinhamentos braço↔perna com erro 0,000 ciclo (N=480).
+- Achado pré-existente (fora do escopo, sem correção): os clipes
+  `Sprint_Loop`/`Walk_Loop` não fecham o loop (coxa 16,1°/6,7°,
+  panturrilha-E 20,1°/7,5° de salto no wrap; pelve quase estática, sem
+  bob). Recomendado reexportar loops contínuos.
+- Texturas: triplanar ligado nas fachadas/telhado (`world_spec.json`) —
+  antes o `uv_escala` era ignorado e o tijolo esticava por face; agora
+  vira tiles/metro (fiada ~8 cm + 1,4 cm argamassa). Regen
+  (`generate_textures.py`) = no-op determinístico (zero diffs em PNG).
+- Rua à esquerda: chão/asfalto −15 cm com guia suave (`_ground_y_for_x`
+  em game_3d + espelho no runner p/ sombra), faixas 1-2 forçam visual
+  de calçada, faixa 0 usa builder de rua, veículos parados fases 1-6,
+  travessias sobem a guia; QAs lote1-3 atualizados (car/moto na faixa 0).
+- Portões (sem engine na sandbox): PRE-FLIGHT OK, `qa_full` 133/0/0,
+  parse gdtoolkit 6/6 tocados, `check_gdscript` 0 achados novos (só os 7
+  UNKNOWN pré-existentes + ruído UNDECLARED sem doc), réplica
+  `tools/validate_routes.py` (NOVA, lê os .gd reais): 50/50 fases com
+  rota legal em 1,0x e 1,22x. Suítes `qa_etapa*` rodam no engine do usuário.
+
 ## Regras de engenharia desta execução
 
 - Uma etapa por vez; cada etapa fecha com demonstração reproduzível

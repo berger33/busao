@@ -11,9 +11,10 @@ extends RefCounted
 ##   base_speed_mps, deadline_seconds, layout_seed,
 ##   patterns: [{kind, lane, at_m}], coins: [{kind, lane, at_m}]
 ##
-## Corredores: E=0, C=1, D=2 (LANE_X). O piloto usa os três corredores
-## existentes; a conversão visual para três corredores de calçada é trabalho
-## de mundo/arte (M2+), não muda contratos de colisão.
+## Corredores: E=0 (rua), C=1 e D=2 (calçadas) — LANE_X. O nível usa os três
+## corredores existentes; a faixa 0 leva obstáculos de rua (veículos, obras,
+## buracos) e as faixas 1-2 o mobiliário de calçada. Contratos de colisão
+## (ObstacleRules) não mudam: a troca preserva classe e largura por padrão.
 
 const PILOT: Dictionary = {
     "id": "bairro_03",
@@ -27,11 +28,9 @@ const PILOT: Dictionary = {
     "deadline_seconds": 66.0,
     "layout_seed": 103,
     # ETAPA 5 — camada de cenario (independente do desafio): perfil que o
-    # building_kit aplica so nesta fase. Deck de 9,9 m cobrindo os tres
-    # corredores de corrida (bordas a 4,95 m) e ipe amarelo no lugar da
-    # arvore comum — a Rua do Ipe le como rua de calcada larga.
+    # building_kit aplica so nesta fase. Rua à esquerda + calçadas no
+    # padrão do spec, com ipe amarelo no lugar da arvore comum.
     "scenery": {
-        "faixas": {"piso_central_m": 9.9, "piso_borda_esq_m": 4.95},
         "props": {"arvore": {"glb": "ipe_amarelo"}},
     },
     # Roteiro fixo do blueprint §8 (módulo, situação, intenção).
@@ -44,8 +43,9 @@ const PILOT: Dictionary = {
         {"kind": "barrier", "lane": 1, "at_m": 98.0},
         # M5 — bloqueio alto em D (~126 m): praticar sem ações simultâneas.
         {"kind": "hydrant", "lane": 2, "at_m": 126.0},
-        # M6 — banco em E (~154 m): desvio lateral contra volume sólido.
-        {"kind": "bench", "lane": 0, "at_m": 154.0},
+        # M6 — carro em E (~154 m): desvio lateral contra volume sólido
+        # (estacionado nas fases 1-6; tráfego a partir da fase 7).
+        {"kind": "car", "lane": 0, "at_m": 154.0},
         # M7 — cone em C e banco em D na mesma estação (~182 m): escolher E
         # ou pular em C; nunca bloquear as três opções.
         {"kind": "cone", "lane": 1, "at_m": 182.0},
@@ -76,25 +76,23 @@ const PILOT: Dictionary = {
     ],
 }
 
-## ETAPA 7 — cenario compartilhado das fases do bairro: deck cobrindo os
-## tres corredores de corrida (a fase 3 soma o ipe amarelo por conta propria).
-const CENARIO_TRES_CALCADAS: Dictionary = {
-    "faixas": {"piso_central_m": 9.9, "piso_borda_esq_m": 4.95},
+## ETAPA 7 — cenario compartilhado das fases do bairro: rua à esquerda +
+## calçadas no padrão do spec, sem overrides (a fase 3 soma o ipe amarelo
+## por conta propria).
+const CENARIO_BAIRRO: Dictionary = {
 }
 
-## ETAPA 10 — avenida do lote 16-20: mesmo deck dos tres corredores, com
+## ETAPA 10 — avenida do lote 16-20: rua à esquerda + calçadas (padrão do spec), com
 ## palmeiras no lugar da arvore comum (identidade do capitulo).
 const CENARIO_AVENIDA: Dictionary = {
-    "faixas": {"piso_central_m": 9.9, "piso_borda_esq_m": 4.95},
     "props": {"arvore": {"glb": "palmeira"}},
 }
 
-## ETAPA 11 — centro histórico do lote 21-25: mesmo deck dos três
-## corredores, com ipês na praça, bancos e postes de ferro mais densos e
+## ETAPA 11 — centro histórico do lote 21-25: rua à esquerda + calçadas (padrão do spec),
+## com ipês na praça, bancos e postes de ferro mais densos e
 ## rua de comércio antigo (pesos do kit: loja e reboco dominam; vitrines
 ## com toldo e molduras vêm do building_kit, camada viva do cenário).
 const CENARIO_CENTRO: Dictionary = {
-    "faixas": {"piso_central_m": 9.9, "piso_borda_esq_m": 4.95},
     "props": {
         "arvore": {"glb": "ipe_amarelo"},
         "banco": {"espacamento_m": 10.0},
@@ -105,7 +103,6 @@ const CENARIO_CENTRO: Dictionary = {
 
 ## ETAPA 11 — largo da fase 25: o centro + a igreja ao lado do ponto.
 const CENARIO_LARGO: Dictionary = {
-    "faixas": {"piso_central_m": 9.9, "piso_borda_esq_m": 4.95},
     "props": {
         "arvore": {"glb": "ipe_amarelo"},
         "banco": {"espacamento_m": 10.0},
@@ -115,13 +112,12 @@ const CENARIO_LARGO: Dictionary = {
     "marco": "igreja",
 }
 
-## ETAPA 12 — feira livre do lote 26-30: mesmo deck dos três corredores,
+## ETAPA 12 — feira livre do lote 26-30: rua à esquerda + calçadas (padrão do spec);
 ## árvore comum (16 m) de volta no lugar do ipê, banco na rotina do kit,
 ## lixeira densa (12 m), galpões e lojas no fundo; barracas dos dois lados
 ## a cada 56 m, pulando as que caem sobre travessias (bloco "feira", lido
 ## por _spawn_feira; visual puro, sem colisão).
 const CENARIO_FEIRA: Dictionary = {
-    "faixas": {"piso_central_m": 9.9, "piso_borda_esq_m": 4.95},
     "props": {
         "arvore": {"glb": "arvore", "espacamento_m": 16.0},
         "banco": {"espacamento_m": 18.0},
@@ -131,7 +127,7 @@ const CENARIO_FEIRA: Dictionary = {
     "feira": {"passo_m": 56.0, "x_m": 6.4, "margem_cruzamento_m": 6.0},
 }
 
-## ETAPA 13 — parque e orla do lote 31-35: mesmo deck dos três corredores,
+## ETAPA 13 — parque e orla do lote 31-35: rua à esquerda + calçadas (padrão do spec);
 ## palmeiras em alameda (8 m, cada uma com o canteiro do kit), bancos de
 ## praça, lixeira esparsa, casas baixas no fundo (1-2 pisos: horizonte
 ## aberto); quiosques dos dois lados a cada 112 m, pulando as que caem
@@ -139,7 +135,6 @@ const CENARIO_FEIRA: Dictionary = {
 ## paleta "orla" fixa a luz aberta do capítulo (lida por
 ## _render_profile_world; sombras de contato preservadas).
 const CENARIO_PARQUE: Dictionary = {
-    "faixas": {"piso_central_m": 9.9, "piso_borda_esq_m": 4.95},
     "props": {
         "arvore": {"glb": "palmeira", "espacamento_m": 8.0},
         "banco": {"espacamento_m": 12.0},
@@ -168,7 +163,6 @@ const CENARIO_PARQUE: Dictionary = {
 
 ## ETAPA 13 — orla da fase 35: o parque + a guarita ao lado do ponto.
 const CENARIO_ORLA: Dictionary = {
-    "faixas": {"piso_central_m": 9.9, "piso_borda_esq_m": 4.95},
     "props": {
         "arvore": {"glb": "palmeira", "espacamento_m": 8.0},
         "banco": {"espacamento_m": 12.0},
@@ -196,7 +190,7 @@ const CENARIO_ORLA: Dictionary = {
     "marco": "guarita",
 }
 
-## ETAPA 14 — rua molhada do lote 36-40: mesmo deck dos três corredores,
+## ETAPA 14 — rua molhada do lote 36-40: rua à esquerda + calçadas (padrão do spec);
 ## árvore comum, bancos e lixeiras na rotina, casas e lojas no fundo; o
 ## clima fixo do nível ("chuva": garoa de 700 partículas, sem relâmpago;
 ## poças do ambiente aparecem com o molhado) carrega o capítulo — sem
@@ -206,7 +200,6 @@ const CENARIO_ORLA: Dictionary = {
 ## (transição de estado + secagem). 37–39 usam o rodízio (manhã, tarde
 ## dourada e nublado sobre a chuva).
 const CENARIO_CHUVA: Dictionary = {
-    "faixas": {"piso_central_m": 9.9, "piso_borda_esq_m": 4.95},
     "props": {
         "arvore": {"glb": "arvore", "espacamento_m": 12.0},
         "banco": {"espacamento_m": 14.0},
@@ -230,7 +223,6 @@ const CENARIO_CHUVA: Dictionary = {
     },
 }
 const CENARIO_CHUVA_CICLO: Dictionary = {
-    "faixas": {"piso_central_m": 9.9, "piso_borda_esq_m": 4.95},
     "props": {
         "arvore": {"glb": "arvore", "espacamento_m": 12.0},
         "banco": {"espacamento_m": 14.0},
@@ -240,7 +232,6 @@ const CENARIO_CHUVA_CICLO: Dictionary = {
     "clima": "chuva",
 }
 const CENARIO_SOL: Dictionary = {
-    "faixas": {"piso_central_m": 9.9, "piso_borda_esq_m": 4.95},
     "props": {
         "arvore": {"glb": "arvore", "espacamento_m": 12.0},
         "banco": {"espacamento_m": 14.0},
@@ -278,7 +269,7 @@ const FASE_1: Dictionary = {
     "base_speed_mps": 5.5,
     "deadline_seconds": 55.0,
     "layout_seed": 101,
-    "scenery": CENARIO_TRES_CALCADAS,
+    "scenery": CENARIO_BAIRRO,
     "patterns": [
         {"kind": "cone", "lane": 1, "at_m": 40.0},
         {"kind": "cone", "lane": 0, "at_m": 68.0},
@@ -312,10 +303,10 @@ const FASE_2: Dictionary = {
     "base_speed_mps": 5.8,
     "deadline_seconds": 61.0,
     "layout_seed": 102,
-    "scenery": CENARIO_TRES_CALCADAS,
+    "scenery": CENARIO_BAIRRO,
     "patterns": [
         {"kind": "cone", "lane": 1, "at_m": 40.0},
-        {"kind": "bench", "lane": 0, "at_m": 68.0},
+        {"kind": "car", "lane": 0, "at_m": 68.0},
         {"kind": "cone", "lane": 2, "at_m": 96.0},
         {"kind": "bench", "lane": 1, "at_m": 124.0},
         {"kind": "cone", "lane": 0, "at_m": 150.0},
@@ -350,7 +341,7 @@ const FASE_4: Dictionary = {
     "base_speed_mps": 6.0,
     "deadline_seconds": 68.0,
     "layout_seed": 104,
-    "scenery": CENARIO_TRES_CALCADAS,
+    "scenery": CENARIO_BAIRRO,
     "patterns": [
         {"kind": "pothole", "lane": 1, "at_m": 42.0},
         {"kind": "pothole", "lane": 2, "at_m": 70.0},
@@ -390,12 +381,12 @@ const FASE_5: Dictionary = {
     "base_speed_mps": 6.2,
     "deadline_seconds": 69.0,
     "layout_seed": 105,
-    "scenery": CENARIO_TRES_CALCADAS,
+    "scenery": CENARIO_BAIRRO,
     "patterns": [
         {"kind": "cone", "lane": 1, "at_m": 40.0},
         {"kind": "barrier", "lane": 1, "at_m": 68.0},
         {"kind": "pothole", "lane": 2, "at_m": 96.0},
-        {"kind": "bench", "lane": 0, "at_m": 124.0},
+        {"kind": "car", "lane": 0, "at_m": 124.0},
         {"kind": "cone", "lane": 2, "at_m": 152.0},
         {"kind": "cone", "lane": 0, "at_m": 178.0},
         {"kind": "bench", "lane": 1, "at_m": 178.0},
@@ -432,17 +423,17 @@ const FASE_6: Dictionary = {
     "base_speed_mps": 6.2,
     "deadline_seconds": 71.0,
     "layout_seed": 106,
-    "scenery": CENARIO_TRES_CALCADAS,
+    "scenery": CENARIO_BAIRRO,
     "patterns": [
-        {"kind": "trash", "lane": 0, "at_m": 44.0},
+        {"kind": "motorcycle", "lane": 0, "at_m": 44.0},
         {"kind": "hydrant", "lane": 2, "at_m": 72.0},
         {"kind": "cone", "lane": 1, "at_m": 100.0},
-        {"kind": "payphone", "lane": 0, "at_m": 128.0},
-        {"kind": "hydrant", "lane": 0, "at_m": 156.0},
+        {"kind": "payphone", "lane": 1, "at_m": 128.0},
+        {"kind": "motorcycle", "lane": 0, "at_m": 156.0},
         {"kind": "cone", "lane": 2, "at_m": 156.0},
         {"kind": "trash", "lane": 2, "at_m": 184.0},
         {"kind": "cone", "lane": 0, "at_m": 184.0},
-        {"kind": "hydrant", "lane": 0, "at_m": 260.0},
+        {"kind": "motorcycle", "lane": 0, "at_m": 260.0},
         {"kind": "trash", "lane": 2, "at_m": 274.0},
     ],
     "coins": [
@@ -473,9 +464,9 @@ const FASE_7: Dictionary = {
     "base_speed_mps": 6.3,
     "deadline_seconds": 70.0,
     "layout_seed": 107,
-    "scenery": CENARIO_TRES_CALCADAS,
+    "scenery": CENARIO_BAIRRO,
     "patterns": [
-        {"kind": "bench", "lane": 0, "at_m": 44.0},
+        {"kind": "car", "lane": 0, "at_m": 44.0},
         {"kind": "crosser", "lane": 2, "at_m": 72.0, "from_x": 4.9, "to_x": -3.25, "cross_mps": 1.3, "lead_m": 40.0},
         {"kind": "cone", "lane": 1, "at_m": 100.0},
         {"kind": "crosser", "lane": 0, "at_m": 128.0, "from_x": -4.9, "to_x": 3.25, "cross_mps": 1.3, "lead_m": 40.0},
@@ -512,7 +503,7 @@ const FASE_8: Dictionary = {
     "base_speed_mps": 6.4,
     "deadline_seconds": 73.0,
     "layout_seed": 108,
-    "scenery": CENARIO_TRES_CALCADAS,
+    "scenery": CENARIO_BAIRRO,
     "patterns": [
         {"kind": "trash", "lane": 2, "at_m": 44.0},
         {"kind": "crosser", "lane": 2, "at_m": 72.0, "from_x": 4.9, "to_x": -3.25, "cross_mps": 1.3, "lead_m": 40.0},
@@ -521,7 +512,7 @@ const FASE_8: Dictionary = {
         {"kind": "cart", "lane": 0, "at_m": 156.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.0, "lead_m": 52.0},
         {"kind": "bench", "lane": 1, "at_m": 184.0},
         {"kind": "cart", "lane": 2, "at_m": 186.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.0, "lead_m": 52.0},
-        {"kind": "trash", "lane": 0, "at_m": 212.0},
+        {"kind": "motorcycle", "lane": 0, "at_m": 212.0},
         {"kind": "crosser", "lane": 0, "at_m": 212.0, "from_x": -4.9, "to_x": 3.25, "cross_mps": 1.3, "lead_m": 40.0},
         {"kind": "cart", "lane": 2, "at_m": 266.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.0, "lead_m": 52.0},
         {"kind": "cone", "lane": 2, "at_m": 266.0},
@@ -555,7 +546,7 @@ const FASE_9: Dictionary = {
     "base_speed_mps": 6.5,
     "deadline_seconds": 72.0,
     "layout_seed": 109,
-    "scenery": CENARIO_TRES_CALCADAS,
+    "scenery": CENARIO_BAIRRO,
     "patterns": [
         {"kind": "cone", "lane": 1, "at_m": 44.0},
         {"kind": "van", "lane": 0, "at_m": 72.0},
@@ -595,15 +586,15 @@ const FASE_10: Dictionary = {
     "base_speed_mps": 6.5,
     "deadline_seconds": 75.0,
     "layout_seed": 110,
-    "scenery": CENARIO_TRES_CALCADAS,
+    "scenery": CENARIO_BAIRRO,
     "patterns": [
         {"kind": "cone", "lane": 1, "at_m": 44.0},
-        {"kind": "trash", "lane": 0, "at_m": 72.0},
+        {"kind": "motorcycle", "lane": 0, "at_m": 72.0},
         {"kind": "cart", "lane": 2, "at_m": 100.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.0, "lead_m": 53.0},
         {"kind": "crosser", "lane": 0, "at_m": 128.0, "from_x": -4.9, "to_x": 3.25, "cross_mps": 1.3, "lead_m": 40.0},
         {"kind": "bench", "lane": 1, "at_m": 156.0},
         {"kind": "cart", "lane": 0, "at_m": 184.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.0, "lead_m": 53.0},
-        {"kind": "hydrant", "lane": 0, "at_m": 212.0},
+        {"kind": "motorcycle", "lane": 0, "at_m": 212.0},
         {"kind": "crosser", "lane": 2, "at_m": 240.0, "from_x": 4.9, "to_x": -3.25, "cross_mps": 1.3, "lead_m": 40.0},
         {"kind": "cone", "lane": 1, "at_m": 240.0},
         {"kind": "cart", "lane": 2, "at_m": 296.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.0, "lead_m": 53.0},
@@ -637,14 +628,14 @@ const FASE_11: Dictionary = {
     "base_speed_mps": 6.6,
     "deadline_seconds": 72.0,
     "layout_seed": 111,
-    "scenery": CENARIO_TRES_CALCADAS,
+    "scenery": CENARIO_BAIRRO,
     "patterns": [
         {"kind": "cone", "lane": 1, "at_m": 44.0},
         {"kind": "scaffold", "lane": 1, "at_m": 72.0},
         {"kind": "pothole", "lane": 2, "at_m": 100.0},
-        {"kind": "scaffold", "lane": 0, "at_m": 128.0},
+        {"kind": "barrier", "lane": 0, "at_m": 128.0},
         {"kind": "cone", "lane": 2, "at_m": 156.0},
-        {"kind": "scaffold", "lane": 0, "at_m": 184.0},
+        {"kind": "barrier", "lane": 0, "at_m": 184.0},
         {"kind": "cone", "lane": 2, "at_m": 184.0},
         {"kind": "scaffold", "lane": 1, "at_m": 266.0},
         {"kind": "bench", "lane": 1, "at_m": 282.0},
@@ -676,11 +667,11 @@ const FASE_12: Dictionary = {
     "base_speed_mps": 6.6,
     "deadline_seconds": 72.0,
     "layout_seed": 112,
-    "scenery": CENARIO_TRES_CALCADAS,
+    "scenery": CENARIO_BAIRRO,
     "patterns": [
         {"kind": "cone", "lane": 1, "at_m": 44.0},
         {"kind": "puddle", "lane": 1, "at_m": 72.0},
-        {"kind": "bench", "lane": 0, "at_m": 100.0},
+        {"kind": "car", "lane": 0, "at_m": 100.0},
         {"kind": "puddle", "lane": 2, "at_m": 128.0},
         {"kind": "scaffold", "lane": 1, "at_m": 156.0},
         {"kind": "puddle", "lane": 0, "at_m": 184.0},
@@ -717,15 +708,15 @@ const FASE_13: Dictionary = {
     "base_speed_mps": 6.8,
     "deadline_seconds": 72.0,
     "layout_seed": 113,
-    "scenery": CENARIO_TRES_CALCADAS,
+    "scenery": CENARIO_BAIRRO,
     "patterns": [
         {"kind": "cone", "lane": 1, "at_m": 44.0},
-        {"kind": "planter", "lane": 0, "at_m": 72.0},
+        {"kind": "van", "lane": 0, "at_m": 72.0},
         {"kind": "cyclist", "lane": 2, "at_m": 100.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 3.0, "lead_m": 18.5},
         {"kind": "cone", "lane": 2, "at_m": 128.0},
         {"kind": "planter", "lane": 1, "at_m": 156.0},
         {"kind": "cyclist", "lane": 0, "at_m": 184.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 3.0, "lead_m": 18.5},
-        {"kind": "bench", "lane": 0, "at_m": 212.0},
+        {"kind": "car", "lane": 0, "at_m": 212.0},
         {"kind": "cyclist", "lane": 2, "at_m": 296.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 3.0, "lead_m": 18.5},
         {"kind": "planter", "lane": 1, "at_m": 296.0},
         {"kind": "cone", "lane": 1, "at_m": 322.0},
@@ -757,7 +748,7 @@ const FASE_14: Dictionary = {
     "base_speed_mps": 6.8,
     "deadline_seconds": 73.0,
     "layout_seed": 114,
-    "scenery": CENARIO_TRES_CALCADAS,
+    "scenery": CENARIO_BAIRRO,
     "patterns": [
         {"kind": "cone", "lane": 1, "at_m": 44.0},
         {"kind": "moto_cross", "lane": 2, "at_m": 72.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 4.5, "lead_m": 12.3},
@@ -797,13 +788,13 @@ const FASE_15: Dictionary = {
     "base_speed_mps": 7.0,
     "deadline_seconds": 73.0,
     "layout_seed": 115,
-    "scenery": CENARIO_TRES_CALCADAS,
+    "scenery": CENARIO_BAIRRO,
     "patterns": [
         {"kind": "pothole", "lane": 1, "at_m": 44.0},
         {"kind": "scaffold", "lane": 1, "at_m": 100.0},
         {"kind": "puddle", "lane": 2, "at_m": 128.0},
         {"kind": "cyclist", "lane": 2, "at_m": 156.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 3.0, "lead_m": 19.0},
-        {"kind": "bench", "lane": 0, "at_m": 184.0},
+        {"kind": "car", "lane": 0, "at_m": 184.0},
         {"kind": "moto_cross", "lane": 0, "at_m": 212.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 4.5, "lead_m": 12.7},
         {"kind": "cone", "lane": 1, "at_m": 240.0},
         {"kind": "scaffold", "lane": 1, "at_m": 296.0},
@@ -846,7 +837,7 @@ const FASE_16: Dictionary = {
         {"kind": "crosser", "lane": 0, "at_m": 128.0, "from_x": -4.9, "to_x": 3.25, "cross_mps": 1.3, "lead_m": 44.0},
         {"kind": "dog_cross", "lane": 0, "at_m": 156.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 2.5, "lead_m": 22.8},
         {"kind": "cone", "lane": 1, "at_m": 184.0},
-        {"kind": "bench", "lane": 0, "at_m": 212.0},
+        {"kind": "car", "lane": 0, "at_m": 212.0},
         {"kind": "dog_cross", "lane": 2, "at_m": 296.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 2.5, "lead_m": 22.8},
         {"kind": "bench", "lane": 1, "at_m": 296.0},
         {"kind": "cone", "lane": 2, "at_m": 312.0},
@@ -887,7 +878,7 @@ const FASE_17: Dictionary = {
         {"kind": "crate", "lane": 0, "at_m": 156.0},
         {"kind": "van", "lane": 2, "at_m": 156.0},
         {"kind": "cone", "lane": 1, "at_m": 184.0},
-        {"kind": "bench", "lane": 0, "at_m": 212.0},
+        {"kind": "car", "lane": 0, "at_m": 212.0},
         {"kind": "crate", "lane": 1, "at_m": 296.0},
         {"kind": "van", "lane": 2, "at_m": 296.0},
         {"kind": "crate", "lane": 0, "at_m": 312.0},
@@ -928,9 +919,9 @@ const FASE_18: Dictionary = {
         {"kind": "cone", "lane": 1, "at_m": 156.0},
         {"kind": "truck_cross", "lane": 0, "at_m": 184.0, "from_x": -8.0, "to_x": 8.0, "cross_mps": 2.0, "lead_m": 17.1},
         {"kind": "cone", "lane": 2, "at_m": 184.0},
-        {"kind": "bench", "lane": 0, "at_m": 212.0},
+        {"kind": "car", "lane": 0, "at_m": 212.0},
         {"kind": "bus_cross", "lane": 0, "at_m": 296.0, "from_x": -8.0, "to_x": 8.0, "cross_mps": 2.0, "lead_m": 28.8},
-        {"kind": "hydrant", "lane": 0, "at_m": 296.0},
+        {"kind": "motorcycle", "lane": 0, "at_m": 296.0},
         {"kind": "truck_cross", "lane": 0, "at_m": 312.0, "from_x": -8.0, "to_x": 8.0, "cross_mps": 2.0, "lead_m": 17.1},
         {"kind": "bench", "lane": 1, "at_m": 312.0},
     ],
@@ -967,7 +958,7 @@ const FASE_19: Dictionary = {
         {"kind": "scaffold", "lane": 1, "at_m": 100.0},
         {"kind": "cart", "lane": 2, "at_m": 128.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.0, "lead_m": 60.0},
         {"kind": "cone", "lane": 2, "at_m": 156.0},
-        {"kind": "bench", "lane": 0, "at_m": 184.0},
+        {"kind": "car", "lane": 0, "at_m": 184.0},
         {"kind": "cone", "lane": 1, "at_m": 240.0},
         {"kind": "crosser", "lane": 2, "at_m": 296.0, "from_x": 4.9, "to_x": -3.25, "cross_mps": 1.3, "lead_m": 47.0},
         {"kind": "bench", "lane": 1, "at_m": 296.0},
@@ -1006,7 +997,7 @@ const FASE_20: Dictionary = {
     "scenery": CENARIO_AVENIDA,
     "patterns": [
         {"kind": "cone", "lane": 1, "at_m": 44.0},
-        {"kind": "bench", "lane": 0, "at_m": 72.0},
+        {"kind": "car", "lane": 0, "at_m": 72.0},
         {"kind": "pothole", "lane": 2, "at_m": 100.0},
         {"kind": "barrier", "lane": 1, "at_m": 128.0},
         {"kind": "crosser", "lane": 0, "at_m": 184.0, "from_x": -4.9, "to_x": 3.25, "cross_mps": 1.3, "lead_m": 48.0},
@@ -1055,11 +1046,11 @@ const FASE_21: Dictionary = {
     "scenery": CENARIO_CENTRO,
     "patterns": [
         {"kind": "cone", "lane": 1, "at_m": 44.0},
-        {"kind": "bench", "lane": 0, "at_m": 72.0},
+        {"kind": "car", "lane": 0, "at_m": 72.0},
         {"kind": "planter", "lane": 2, "at_m": 100.0},
         {"kind": "crosser", "lane": 0, "at_m": 128.0, "from_x": -4.9, "to_x": 3.25, "cross_mps": 1.3, "lead_m": 46.4},
         {"kind": "bench", "lane": 1, "at_m": 156.0},
-        {"kind": "planter", "lane": 0, "at_m": 184.0},
+        {"kind": "van", "lane": 0, "at_m": 184.0},
         {"kind": "cone", "lane": 2, "at_m": 212.0},
         {"kind": "crosser", "lane": 2, "at_m": 240.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.3, "lead_m": 46.4},
         {"kind": "bench", "lane": 1, "at_m": 240.0},
@@ -1100,7 +1091,7 @@ const FASE_22: Dictionary = {
         {"kind": "crate", "lane": 1, "at_m": 72.0},
         {"kind": "cart", "lane": 2, "at_m": 100.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.0, "lead_m": 61.1},
         {"kind": "crate", "lane": 2, "at_m": 128.0},
-        {"kind": "bench", "lane": 0, "at_m": 156.0},
+        {"kind": "car", "lane": 0, "at_m": 156.0},
         {"kind": "crate", "lane": 1, "at_m": 184.0},
         {"kind": "cone", "lane": 2, "at_m": 212.0},
         {"kind": "cart", "lane": 0, "at_m": 240.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.0, "lead_m": 61.1},
@@ -1138,7 +1129,7 @@ const FASE_23: Dictionary = {
     "scenery": CENARIO_CENTRO,
     "patterns": [
         {"kind": "cone", "lane": 1, "at_m": 44.0},
-        {"kind": "bench", "lane": 0, "at_m": 72.0},
+        {"kind": "car", "lane": 0, "at_m": 72.0},
         {"kind": "planter", "lane": 1, "at_m": 100.0},
         {"kind": "crosser", "lane": 0, "at_m": 128.0, "from_x": -4.9, "to_x": 3.25, "cross_mps": 1.3, "lead_m": 47.6},
         {"kind": "cone", "lane": 0, "at_m": 156.0},
@@ -1181,8 +1172,8 @@ const FASE_24: Dictionary = {
         {"kind": "scaffold", "lane": 1, "at_m": 72.0},
         {"kind": "pothole", "lane": 2, "at_m": 128.0},
         {"kind": "cone", "lane": 1, "at_m": 156.0},
-        {"kind": "bench", "lane": 0, "at_m": 184.0},
-        {"kind": "scaffold", "lane": 0, "at_m": 212.0},
+        {"kind": "car", "lane": 0, "at_m": 184.0},
+        {"kind": "barrier", "lane": 0, "at_m": 212.0},
         {"kind": "cone", "lane": 2, "at_m": 212.0},
         {"kind": "pothole", "lane": 1, "at_m": 240.0},
         {"kind": "scaffold", "lane": 2, "at_m": 296.0},
@@ -1220,7 +1211,7 @@ const FASE_25: Dictionary = {
         {"kind": "cone", "lane": 1, "at_m": 44.0},
         {"kind": "bench", "lane": 2, "at_m": 44.0},
         {"kind": "crosser", "lane": 2, "at_m": 100.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.3, "lead_m": 29.0},
-        {"kind": "planter", "lane": 0, "at_m": 128.0},
+        {"kind": "van", "lane": 0, "at_m": 128.0},
         {"kind": "scaffold", "lane": 1, "at_m": 156.0},
         {"kind": "bench", "lane": 2, "at_m": 184.0},
         {"kind": "cart", "lane": 0, "at_m": 212.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.0, "lead_m": 37.7},
@@ -1261,7 +1252,7 @@ const FASE_26: Dictionary = {
     "scenery": CENARIO_FEIRA,
     "patterns": [
         {"kind": "crate", "lane": 1, "at_m": 44.0},
-        {"kind": "bench", "lane": 0, "at_m": 72.0},
+        {"kind": "car", "lane": 0, "at_m": 72.0},
         {"kind": "crate", "lane": 2, "at_m": 100.0},
         {"kind": "cone", "lane": 1, "at_m": 128.0},
         {"kind": "bench", "lane": 2, "at_m": 184.0},
@@ -1386,7 +1377,7 @@ const FASE_29: Dictionary = {
         {"kind": "van", "lane": 0, "at_m": 100.0},
         {"kind": "cart", "lane": 2, "at_m": 100.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.0, "lead_m": 62.3},
         {"kind": "crosser", "lane": 1, "at_m": 156.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.3, "lead_m": 48.9},
-        {"kind": "bench", "lane": 0, "at_m": 184.0},
+        {"kind": "car", "lane": 0, "at_m": 184.0},
         {"kind": "van", "lane": 2, "at_m": 212.0},
         {"kind": "crosser", "lane": 2, "at_m": 212.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.3, "lead_m": 29.0},
         {"kind": "crate", "lane": 0, "at_m": 240.0},
@@ -1432,7 +1423,7 @@ const FASE_30: Dictionary = {
         {"kind": "crosser", "lane": 0, "at_m": 184.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.3, "lead_m": 50.2},
         {"kind": "van", "lane": 1, "at_m": 212.0},
         {"kind": "cone", "lane": 2, "at_m": 240.0},
-        {"kind": "bench", "lane": 0, "at_m": 268.0},
+        {"kind": "car", "lane": 0, "at_m": 268.0},
         {"kind": "cyclist", "lane": 1, "at_m": 296.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 3.0, "lead_m": 21.3},
         {"kind": "cone", "lane": 0, "at_m": 324.0},
     ],
@@ -1466,16 +1457,16 @@ const FASE_31: Dictionary = {
     "scenery": CENARIO_PARQUE,
     "patterns": [
         {"kind": "cone", "lane": 1, "at_m": 44.0},
-        {"kind": "bench", "lane": 0, "at_m": 72.0},
+        {"kind": "car", "lane": 0, "at_m": 72.0},
         {"kind": "planter", "lane": 2, "at_m": 100.0},
         {"kind": "cone", "lane": 2, "at_m": 128.0},
         {"kind": "bench", "lane": 1, "at_m": 156.0},
-        {"kind": "planter", "lane": 0, "at_m": 184.0},
+        {"kind": "van", "lane": 0, "at_m": 184.0},
         {"kind": "cone", "lane": 0, "at_m": 212.0},
         {"kind": "bench", "lane": 2, "at_m": 240.0},
         {"kind": "planter", "lane": 1, "at_m": 268.0},
         {"kind": "cone", "lane": 2, "at_m": 296.0},
-        {"kind": "bench", "lane": 0, "at_m": 324.0},
+        {"kind": "car", "lane": 0, "at_m": 324.0},
         {"kind": "planter", "lane": 2, "at_m": 352.0},
     ],
     "coins": [
@@ -1508,7 +1499,7 @@ const FASE_32: Dictionary = {
     "scenery": CENARIO_PARQUE,
     "patterns": [
         {"kind": "cone", "lane": 1, "at_m": 44.0},
-        {"kind": "bench", "lane": 0, "at_m": 72.0},
+        {"kind": "car", "lane": 0, "at_m": 72.0},
         {"kind": "dog_cross", "lane": 2, "at_m": 100.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 2.5, "lead_m": 26.1},
         {"kind": "planter", "lane": 1, "at_m": 128.0},
         {"kind": "crosser", "lane": 0, "at_m": 156.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.3, "lead_m": 50.2},
@@ -1550,12 +1541,12 @@ const FASE_33: Dictionary = {
     "scenery": CENARIO_PARQUE,
     "patterns": [
         {"kind": "cone", "lane": 1, "at_m": 44.0},
-        {"kind": "planter", "lane": 0, "at_m": 72.0},
+        {"kind": "van", "lane": 0, "at_m": 72.0},
         {"kind": "bench", "lane": 2, "at_m": 100.0},
         {"kind": "cyclist", "lane": 2, "at_m": 128.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 3.0, "lead_m": 21.7},
         {"kind": "cone", "lane": 0, "at_m": 156.0},
         {"kind": "planter", "lane": 1, "at_m": 184.0},
-        {"kind": "bench", "lane": 0, "at_m": 212.0},
+        {"kind": "car", "lane": 0, "at_m": 212.0},
         {"kind": "cyclist", "lane": 0, "at_m": 240.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 3.0, "lead_m": 21.7},
         {"kind": "cone", "lane": 2, "at_m": 268.0},
         {"kind": "planter", "lane": 2, "at_m": 296.0},
@@ -1637,7 +1628,7 @@ const FASE_35: Dictionary = {
     "scenery": CENARIO_ORLA,
     "patterns": [
         {"kind": "cone", "lane": 1, "at_m": 44.0},
-        {"kind": "bench", "lane": 0, "at_m": 72.0},
+        {"kind": "car", "lane": 0, "at_m": 72.0},
         {"kind": "planter", "lane": 2, "at_m": 100.0},
         {"kind": "cyclist", "lane": 2, "at_m": 128.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 3.0, "lead_m": 22.3},
         {"kind": "cone", "lane": 0, "at_m": 156.0},
@@ -1646,7 +1637,7 @@ const FASE_35: Dictionary = {
         {"kind": "crosser", "lane": 0, "at_m": 240.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.3, "lead_m": 51.4},
         {"kind": "bench", "lane": 1, "at_m": 268.0},
         {"kind": "dog_cross", "lane": 2, "at_m": 296.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 2.5, "lead_m": 26.7},
-        {"kind": "planter", "lane": 0, "at_m": 324.0},
+        {"kind": "van", "lane": 0, "at_m": 324.0},
         {"kind": "barrier", "lane": 1, "at_m": 352.0},
         {"kind": "cone", "lane": 2, "at_m": 380.0},
     ],
@@ -1663,15 +1654,14 @@ const FASE_35: Dictionary = {
     ],
 }
 
-## ETAPA 15 — centro movimentado do lote 41-45: mesmo deck dos três
-## corredores, árvores esparsas, bancos espaçados, lixeiras e postes de
+## ETAPA 15 — centro movimentado do lote 41-45: rua à esquerda + calçadas (padrão do spec);
+## árvores esparsas, bancos espaçados, lixeiras e postes de
 ## avenida, lojas dominando com prédios altos (3-5 pisos); tempo seco
 ## fixo (volta da chuva); multidão de fundo nas calçadas (bloco
 ## "multidao", lido por _rebuild_multidao) e outdoors dos dois lados a
 ## cada 140 m, pulando os que caem sobre travessias (bloco "outdoors",
 ## lido por _spawn_outdoors) — visual puro, sem colisão.
 const CENARIO_CENTRO_MOV: Dictionary = {
-    "faixas": {"piso_central_m": 9.9, "piso_borda_esq_m": 4.95},
     "props": {
         "arvore": {"glb": "arvore", "espacamento_m": 24.0},
         "banco": {"espacamento_m": 18.0},
@@ -1688,8 +1678,8 @@ const CENARIO_CENTRO_MOV: Dictionary = {
 }
 
 
-## ETAPA 16 — caminho do terminal final (lote 46-50): mesmo deck dos três
-## corredores, árvores e bancos espaçados, lixeiras e postes de avenida,
+## ETAPA 16 — caminho do terminal final (lote 46-50): rua à esquerda + calçadas (padrão do spec);
+## árvores e bancos espaçados, lixeiras e postes de avenida,
 ## lojas com prédios médios; tempo seco fixo; multidão de fundo (14
 ## figuras); placas para o terminal dos dois lados a cada 56 m, pulando
 ## as que caem sobre travessias (bloco "placas", lido por _spawn_placas);
@@ -1698,7 +1688,6 @@ const CENARIO_CENTRO_MOV: Dictionary = {
 ## urbana ao grande evento); as demais usam o rodízio (tarde, nublado,
 ## manhã, tarde).
 const CENARIO_TERMINAL: Dictionary = {
-    "faixas": {"piso_central_m": 9.9, "piso_borda_esq_m": 4.95},
     "props": {
         "arvore": {"glb": "arvore", "espacamento_m": 24.0},
         "banco": {"espacamento_m": 18.0},
@@ -1715,7 +1704,6 @@ const CENARIO_TERMINAL: Dictionary = {
     "marco": "terminal",
 }
 const CENARIO_TERMINAL_DIA: Dictionary = {
-    "faixas": {"piso_central_m": 9.9, "piso_borda_esq_m": 4.95},
     "props": {
         "arvore": {"glb": "arvore", "espacamento_m": 24.0},
         "banco": {"espacamento_m": 18.0},
@@ -1805,7 +1793,7 @@ const FASE_37: Dictionary = {
     "patterns": [
         {"kind": "cone", "lane": 1, "at_m": 44.0},
         {"kind": "puddle", "lane": 2, "at_m": 72.0},
-        {"kind": "bench", "lane": 0, "at_m": 100.0},
+        {"kind": "car", "lane": 0, "at_m": 100.0},
         {"kind": "puddle", "lane": 1, "at_m": 128.0},
         {"kind": "cone", "lane": 0, "at_m": 156.0},
         {"kind": "puddle", "lane": 0, "at_m": 184.0},
@@ -1976,17 +1964,17 @@ const FASE_41: Dictionary = {
     "scenery": CENARIO_CENTRO_MOV,
     "patterns": [
         {"kind": "cone", "lane": 1, "at_m": 44.0},
-        {"kind": "bench", "lane": 0, "at_m": 72.0},
+        {"kind": "car", "lane": 0, "at_m": 72.0},
         {"kind": "crosser", "lane": 2, "at_m": 100.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.3, "lead_m": 51.4},
         {"kind": "bench", "lane": 1, "at_m": 100.0},
-        {"kind": "planter", "lane": 0, "at_m": 128.0},
+        {"kind": "van", "lane": 0, "at_m": 128.0},
         {"kind": "cone", "lane": 2, "at_m": 156.0},
         {"kind": "cone", "lane": 0, "at_m": 184.0},
         {"kind": "bench", "lane": 2, "at_m": 212.0},
         {"kind": "crosser", "lane": 0, "at_m": 240.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.3, "lead_m": 51.4},
         {"kind": "planter", "lane": 1, "at_m": 240.0},
         {"kind": "cone", "lane": 1, "at_m": 268.0},
-        {"kind": "bench", "lane": 0, "at_m": 296.0},
+        {"kind": "car", "lane": 0, "at_m": 296.0},
         {"kind": "cone", "lane": 2, "at_m": 324.0},
     ],
     "coins": [
@@ -2064,7 +2052,7 @@ const FASE_43: Dictionary = {
     "scenery": CENARIO_CENTRO_MOV,
     "patterns": [
         {"kind": "cone", "lane": 1, "at_m": 44.0},
-        {"kind": "bench", "lane": 0, "at_m": 72.0},
+        {"kind": "car", "lane": 0, "at_m": 72.0},
         {"kind": "moto_cross", "lane": 2, "at_m": 128.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 4.5, "lead_m": 15.2},
         {"kind": "cone", "lane": 2, "at_m": 156.0},
         {"kind": "planter", "lane": 1, "at_m": 184.0},
@@ -2074,7 +2062,7 @@ const FASE_43: Dictionary = {
         {"kind": "bus_cross", "lane": 0, "at_m": 352.0, "from_x": -8.0, "to_x": 8.0, "cross_mps": 2.0, "lead_m": 33.6},
         {"kind": "planter", "lane": 2, "at_m": 380.0},
         {"kind": "cone", "lane": 1, "at_m": 408.0},
-        {"kind": "bench", "lane": 0, "at_m": 436.0},
+        {"kind": "car", "lane": 0, "at_m": 436.0},
     ],
     "coins": [
         {"kind": "coin", "lane": 1, "at_m": 8.0},
@@ -2110,13 +2098,13 @@ const FASE_44: Dictionary = {
         {"kind": "pothole", "lane": 0, "at_m": 100.0},
         {"kind": "hydrant", "lane": 1, "at_m": 128.0},
         {"kind": "cone", "lane": 2, "at_m": 156.0},
-        {"kind": "scaffold", "lane": 0, "at_m": 184.0},
+        {"kind": "barrier", "lane": 0, "at_m": 184.0},
         {"kind": "pothole", "lane": 1, "at_m": 212.0},
         {"kind": "hydrant", "lane": 2, "at_m": 240.0},
         {"kind": "cone", "lane": 0, "at_m": 268.0},
         {"kind": "scaffold", "lane": 1, "at_m": 296.0},
         {"kind": "pothole", "lane": 2, "at_m": 324.0},
-        {"kind": "hydrant", "lane": 0, "at_m": 352.0},
+        {"kind": "motorcycle", "lane": 0, "at_m": 352.0},
         {"kind": "cone", "lane": 1, "at_m": 380.0},
     ],
     "coins": [
@@ -2149,14 +2137,14 @@ const FASE_45: Dictionary = {
     "scenery": CENARIO_CENTRO_MOV,
     "patterns": [
         {"kind": "cone", "lane": 1, "at_m": 44.0},
-        {"kind": "hydrant", "lane": 0, "at_m": 72.0},
+        {"kind": "motorcycle", "lane": 0, "at_m": 72.0},
         {"kind": "cart", "lane": 2, "at_m": 128.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.0, "lead_m": 70.1},
         {"kind": "scaffold", "lane": 1, "at_m": 156.0},
         {"kind": "pothole", "lane": 2, "at_m": 184.0},
         {"kind": "crosser", "lane": 0, "at_m": 240.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.3, "lead_m": 53.9},
         {"kind": "van", "lane": 2, "at_m": 268.0},
-        {"kind": "bench", "lane": 0, "at_m": 296.0},
-        {"kind": "scaffold", "lane": 0, "at_m": 324.0},
+        {"kind": "car", "lane": 0, "at_m": 296.0},
+        {"kind": "barrier", "lane": 0, "at_m": 324.0},
         {"kind": "pothole", "lane": 1, "at_m": 352.0},
         {"kind": "cone", "lane": 2, "at_m": 380.0},
         {"kind": "hydrant", "lane": 1, "at_m": 408.0},
@@ -2190,16 +2178,16 @@ const FASE_46: Dictionary = {
     "layout_seed": 146,
     "scenery": CENARIO_TERMINAL,
     "patterns": [
-        {"kind": "trash", "lane": 0, "at_m": 44.0},
+        {"kind": "motorcycle", "lane": 0, "at_m": 44.0},
         {"kind": "bench", "lane": 2, "at_m": 72.0},
         {"kind": "crosser", "lane": 0, "at_m": 100.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.3, "lead_m": 53.3},
         {"kind": "trash", "lane": 1, "at_m": 128.0},
         {"kind": "bench", "lane": 1, "at_m": 156.0},
         {"kind": "crosser", "lane": 2, "at_m": 212.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.3, "lead_m": 53.3},
         {"kind": "trash", "lane": 2, "at_m": 240.0},
-        {"kind": "bench", "lane": 0, "at_m": 268.0},
+        {"kind": "car", "lane": 0, "at_m": 268.0},
         {"kind": "crosser", "lane": 1, "at_m": 296.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.3, "lead_m": 32.0},
-        {"kind": "trash", "lane": 0, "at_m": 324.0},
+        {"kind": "motorcycle", "lane": 0, "at_m": 324.0},
         {"kind": "bench", "lane": 2, "at_m": 352.0},
         {"kind": "trash", "lane": 1, "at_m": 380.0},
     ],
@@ -2275,7 +2263,7 @@ const FASE_48: Dictionary = {
     "scenery": CENARIO_TERMINAL_DIA,
     "patterns": [
         {"kind": "cone", "lane": 1, "at_m": 44.0},
-        {"kind": "bench", "lane": 0, "at_m": 72.0},
+        {"kind": "car", "lane": 0, "at_m": 72.0},
         {"kind": "hydrant", "lane": 2, "at_m": 100.0},
         {"kind": "cone", "lane": 0, "at_m": 128.0},
         {"kind": "bus_cross", "lane": 0, "at_m": 184.0, "from_x": -8.0, "to_x": 8.0, "cross_mps": 2.0, "lead_m": 34.8},

@@ -210,7 +210,7 @@
     "fachada_tijolo": {
       "pbr": "tijolo",
       "uv_escala": 0.42,
-      "triplanar": false,
+      "triplanar": true,
       "cor": [
         0.56,
         0.33,
@@ -218,12 +218,12 @@
       ],
       "height_map": "tijolo_height.png",
       "height_scale": 0.025,
-      "triplanar_sharpness": 0.0
+      "triplanar_sharpness": 8.0
     },
     "fachada_reboco": {
       "pbr": "reboco",
       "uv_escala": 0.5,
-      "triplanar": false,
+      "triplanar": true,
       "cor": [
         0.84,
         0.8,
@@ -231,12 +231,12 @@
       ],
       "height_map": "reboco_height.png",
       "height_scale": 0.025,
-      "triplanar_sharpness": 0.0
+      "triplanar_sharpness": 8.0
     },
     "telhado": {
       "pbr": "laje_cobertura",
       "uv_escala": 0.45,
-      "triplanar": false,
+      "triplanar": true,
       "cor": [
         0.42,
         0.41,
@@ -244,7 +244,7 @@
       ],
       "height_map": "laje_cobertura_height.png",
       "height_scale": 0.025,
-      "triplanar_sharpness": 0.0
+      "triplanar_sharpness": 8.0
     },
     "estrutura_metalica": {
       "pbr": "metal_pintado",

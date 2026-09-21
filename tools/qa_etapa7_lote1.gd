@@ -131,8 +131,10 @@ func _scenario_i() -> void:
 
 # J. Ordem de aprendizagem (introduções do blueprint §6).
 func _scenario_j() -> void:
-    var familias := {0: ["cone"], 1: ["cone", "bench"], 3: ["cone", "bench", "barrier", "pothole"],
-            4: ["cone", "bench", "barrier", "pothole"]}
+    # Rua à esquerda: a faixa 0 usa carro (estacionado no tutorial) no lugar
+    # do banco a partir da fase 2 — mesma classe de desvio, mesma largura.
+    var familias := {0: ["cone"], 1: ["cone", "bench", "car"], 3: ["cone", "bench", "barrier", "pothole"],
+            4: ["cone", "bench", "barrier", "pothole", "car"]}
     var ok := true
     for index in [0, 1, 3, 4]:
         var permitidas: Array = familias[index]
@@ -146,7 +148,7 @@ func _scenario_j() -> void:
             if str(p["kind"]) == "barrier":
                 barreira_cedo = true
     _check(ok and not barreira_cedo,
-            "J. ordem de aprendizagem: fase 1 só cone; fase 2 cone+banco; barreira só após a fase 3")
+            "J. ordem de aprendizagem: fase 1 só cone; fase 2 cone+banco+carro (rua); barreira só após a fase 3")
 
 
 # K. Visual de calçada nos três corredores (buraco e mobiliário).

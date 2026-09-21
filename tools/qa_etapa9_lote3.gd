@@ -278,12 +278,14 @@ func _scenario_v() -> void:
 # W. Ordem de aprendizagem + famílias novas seguras fora do nível.
 func _scenario_w() -> void:
     var base := ["cone", "pothole", "scaffold", "bench"]
+    # Rua à esquerda: a faixa 0 usa barreira (fase 11+), carro (fase 12+) e
+    # van (fase 13+) no lugar do mobiliário — mesma classe, mesma largura.
     var familias := {
-        10: base,
-        11: base + ["puddle"],
-        12: base + ["puddle", "planter", "cyclist"],
+        10: base + ["barrier"],
+        11: base + ["puddle", "car"],
+        12: base + ["puddle", "planter", "cyclist", "car", "van"],
         13: base + ["puddle", "planter", "cyclist", "moto_cross", "hydrant"],
-        14: base + ["puddle", "planter", "cyclist", "moto_cross", "hydrant"],
+        14: base + ["puddle", "planter", "cyclist", "moto_cross", "hydrant", "car"],
     }
     var ok := true
     for index in [10, 11, 12, 13, 14]:

@@ -117,6 +117,8 @@ const RENDER_CAMERA_FAR := 380.0            # deixa a serra/skyline entrar
 # --- Lote 3: rua construída pelo building_kit.gd --------------------------
 const WORLD_KIT_ATIVO := true          # false desliga a rua nova
 const WORLD_Y_OFFSET := -0.15          # deixa a calçada no nível do chão do jogo
+const STREET_GROUND_Y := -0.15        # asfalto 15 cm abaixo da calçada (topo da guia)
+const CURB_X := -1.525                # guia entre rua (E) e calçada (faixas padrão do spec)
 const WORLD_INVERTER := false          # true se a rua aparecer virada (correndo ao contrário)
 const WORLD_SPEED_PADRAO := 18.0       # só para reciclar o quarteirão na hora certa
 
@@ -817,11 +819,17 @@ func _spawn_cross_zone(at_m: float) -> void:
     zone.name = "CrossZone_%03d" % int(at_m)
     zone.position = Vector3(0.0, 0.0, -at_m)
     entity_root.add_child(zone)
-    _box(zone, Vector3(7.6, 0.03, 5.0), Vector3(0.0, 0.035, 0.0),
-            _material(Color("#3a3f45"), 0.0, 0.9, "asphalt"), "CrossZoneBase")
+    var zone_mat := _material(Color("#3a3f45"), 0.0, 0.9, "asphalt")
+    # Placa em degrau: metade da rua 15 cm abaixo da metade da calçada (a
+    # metade da calçada mantém o nome exato que as suítes procuram).
+    _box(zone, Vector3(2.275, 0.03, 5.0), Vector3(-2.6625, 0.035 + STREET_GROUND_Y, 0.0), zone_mat, "CrossZoneBaseRua")
+    _box(zone, Vector3(5.325, 0.03, 5.0), Vector3(1.1375, 0.035, 0.0), zone_mat, "CrossZoneBase")
     var zone_yellow := _material(Color("#e8c93c"), 0.0, 0.6, "paint")
     for i in range(5):
-        var stripe := _box(zone, Vector3(0.35, 0.035, 4.6), Vector3(-3.0 + float(i) * 1.5, 0.045, 0.0),
+        var stripe_x := -3.0 + float(i) * 1.5
+        # Faixa sobre a guia pinta por cima dela; as outras seguem o piso.
+        var stripe_y := 0.02 if absf(stripe_x - CURB_X) < 0.3 else 0.045 + _ground_y_for_x(stripe_x)
+        var stripe := _box(zone, Vector3(0.35, 0.035, 4.6), Vector3(stripe_x, stripe_y, 0.0),
                 zone_yellow, "CrossZoneStripe")
         stripe.rotation.y = 0.6
 
@@ -976,7 +984,10 @@ func _build_course_from_level(level: Dictionary, total: float) -> void:
                 "cross_mps": float(p.get("cross_mps", 1.0)),
                 "t_start": -1.0,
             }
-        _spawn_entity(str(p.get("kind", "")), int(p.get("lane", 1)), float(p.get("at_m", 0.0)), false, true, crossing_data)
+        var pattern_lane: int = int(p.get("lane", 1))
+        # Rua à esquerda: só as faixas 1-2 forçam o visual de calçada; o
+        # corredor 0 (rua) usa o builder de rua (veículos + delegação).
+        _spawn_entity(str(p.get("kind", "")), pattern_lane, float(p.get("at_m", 0.0)), false, pattern_lane != ROAD_LANE, crossing_data)
         # ETAPA 10 — caminhao/onibus cruzam area sinalizada (fase 18): faixa
         # zebrada no chao, visual puro sem colisao.
         if str(p.get("kind", "")) in ["truck_cross", "bus_cross"]:
@@ -1027,14 +1038,24 @@ func _spawn_forced_gags(total: float) -> void:
 func _bonus_kind_for_phase() -> String:
     return WorldSpawner.bonus_kind_for_phase(phase_index, distance)
 
+## Rua à esquerda: o chão do corredor 0 (asfalto) fica 15 cm abaixo da
+## calçada; a guia vira um degrau suave para o corredor e as travessias.
+func _ground_y_for_x(x: float) -> float:
+    var t := clampf((x - (CURB_X - 0.25)) / 0.5, 0.0, 1.0)
+    var s := t * t * (3.0 - 2.0 * t)
+    return lerpf(STREET_GROUND_Y, 0.0, s)
+
+
 func _spawn_entity(kind: String, lane: int, entity_distance: float, collectible: bool, sidewalk_style: bool = false, crossing: Dictionary = {}) -> void:
     var node := Node3D.new()
     node.name = "%s_%03d" % [kind, entities.size()]
-    node.position = Vector3(LANE_X[clampi(lane, 0, 2)], 0.0, -entity_distance)
+    var lane_ground_y := STREET_GROUND_Y if lane == ROAD_LANE else 0.0
+    node.position = Vector3(LANE_X[clampi(lane, 0, 2)], lane_ground_y, -entity_distance)
     # ETAPA 8 — travessia lateral: nasce no ponto de espera (fora do corredor
     # de passagem); _update_crossing mantem a posicao a cada frame.
     if not crossing.is_empty():
         node.position.x = float(crossing.get("from_x", node.position.x))
+        node.position.y = _ground_y_for_x(node.position.x)
     entity_root.add_child(node)
     # ETAPA 6 — blueprint S4: colisor visivel em modo de teste.
     if debug_hitboxes and not collectible:
@@ -1054,9 +1075,9 @@ func _spawn_entity(kind: String, lane: int, entity_distance: float, collectible:
     elif lane == ROAD_LANE and not sidewalk_style:
         _build_road_obstacle(node, kind)
     else:
-        # ETAPA 7 — fases autorais: os tres corredores sao calcada, entao o
-        # mobiliario usa o visual de calcada ate no indice 0 (o deck da
-        # ETAPA 5 cobre os tres corredores).
+        # Rua à esquerda: o corredor 0 usa o visual de rua (o builder de rua
+        # delega obras/travessias ao mobiliário); fases autorais passam
+        # sidewalk_style=false no índice 0.
         _build_sidewalk_obstacle(node, kind)
     # ETAPA 9 — travessia lateral: o modelo encara o rumo do movimento
     # (frente -Z: indo para -X gira +90 graus, para +X gira -90). O hitbox
@@ -1140,6 +1161,10 @@ func _audit_3d_entity(node: Node3D, kind: String, collectible: bool) -> void:
         push_warning("3D asset contract: cachorro sem Animal3D_caramelo")
 
 func _traffic_speed_for(kind: String, seed_index: int) -> float:
+    # Fases 1-6 (autoral): veículos da rua estacionados — o tutorial ensina
+    # desvio contra volume parado; o tráfego alcança por trás da fase 7 em diante.
+    if not endless_mode and phase_index < 6:
+        return 0.0
     return WorldSpawner.traffic_speed_for(kind, seed_index, player_speed)
 
 func _animate_traffic(node: Node3D, speed: float, dt: float) -> void:
@@ -1447,6 +1472,7 @@ func _update_crossing(entity: Dictionary, node: Node3D) -> void:
         if _aviso_som.has(str(entity.get("kind", ""))):
             AudioManager.play_sfx("horn", -6.0, float(_aviso_som[str(entity.get("kind", ""))]))
     node.position.x = _crossing_x(crossing, distance, elapsed)
+    node.position.y = _ground_y_for_x(node.position.x)
 
 
 func _resolve_entity(entity: Dictionary) -> void:
@@ -1928,8 +1954,9 @@ func _update_player(dt: float) -> void:
         if not _is_on_floor_physics:
             _player_velocity_y -= PHYSICS_HANDLER.GRAVITY * dt
         var next_y: float = player_visual.position.y + _player_velocity_y * dt
-        if next_y <= 0.0:
-            next_y = 0.0
+        var floor_y := _ground_y_for_x(player_x)
+        if next_y <= floor_y:
+            next_y = floor_y
             _player_velocity_y = 0.0
             _is_on_floor_physics = true
             jump_timer = 0.0
@@ -1946,14 +1973,15 @@ func _update_player(dt: float) -> void:
     var is_running: bool = screen == 2 and run_mode == "playing"
     var is_crouching: bool = slide_timer > 0.0
     var bob: float = sin(run_phase * 1.6) * 0.045 if is_running and not is_crouching else 0.0
-    player_visual.position.y = jump_height + bob - (0.16 if is_crouching else 0.0)
+    var ground_y := _ground_y_for_x(player_x)
+    player_visual.position.y = ground_y + jump_height + bob - (0.16 if is_crouching else 0.0)
     # The authored crouch clip handles the silhouette. A small root compression
     # preserves the arcade read without flattening the imported skeleton.
     var squash: float = 0.94 if is_crouching else 1.0
     player_visual.scale = Vector3(1.02 if is_crouching else 1.0, squash, 1.02 if is_crouching else 1.0)
     var shadow := player_visual.get_node_or_null("RunnerShadow") as Node3D
     if shadow:
-        shadow.position.y = 0.025 - player_visual.position.y
+        shadow.position.y = ground_y + 0.025 - player_visual.position.y
         var shadow_factor: float = 1.0 - clampf(jump_height * 0.12, 0.0, 0.24)
         shadow.scale = Vector3.ONE * shadow_factor
     if player_visual.has_method("set_motion"):
@@ -2983,13 +3011,13 @@ func _create_bus_stop(total: float) -> void:
     if not endless_mode and not _level_marcado.is_empty():
         _marco_nivel = str(_level_marcado.get("scenery", {}).get("marco", ""))
     if _marco_nivel == "igreja":
-        _build_church(Vector3(-6.0, 0.0, -total - 14.0), phase_index)
+        _build_church(Vector3(-6.0, STREET_GROUND_Y, -total - 14.0), phase_index)
     elif _marco_nivel == "guarita":
         # ETAPA 13 — a guarita marca o ponto na orla (fase 35).
-        _build_guard_post(Vector3(-6.0, 0.0, -total - 14.0), phase_index)
+        _build_guard_post(Vector3(-6.0, STREET_GROUND_Y, -total - 14.0), phase_index)
     elif _marco_nivel == "terminal":
         # ETAPA 16 — o terminal recebe no ponto (fases 46-50).
-        _build_terminal_facade(Vector3(-6.0, 0.0, -total - 14.0), phase_index, true)
+        _build_terminal_facade(Vector3(-6.0, STREET_GROUND_Y, -total - 14.0), phase_index, true)
 
 func _build_bus_mesh(parent: Node3D) -> void:
     var bus_glb := _optional_model("onibus.glb")
@@ -3338,7 +3366,6 @@ func _build_road_obstacle(parent: Node3D, kind: String) -> void:
             if kind == "motorcycle":
                 _build_motoqueiro(parent, Vector3(0.0, 0.42, 0.05))
             return
-    var body := _material(Color("#d9584e"), 0.05, 0.48, "paint")
     var dark := _material(Color("#202c3c"), 0.15, 0.38, "rubber")
     var chrome := _material(Color("#aebdc0"), 0.72, 0.24, "chrome")
     var glass := _material(Color("#71bcc7"), 0.0, 0.25, "glass")
@@ -3390,7 +3417,9 @@ func _build_road_obstacle(parent: Node3D, kind: String) -> void:
         "pothole":
             _build_pothole_visual(parent)
         _:
-            _box(parent, Vector3(2.0, 0.8, 2.0), Vector3(0.0, 0.5, 0.0), body, "RoadHazard")
+            # Obras, poças e travessias na rua usam o mesmo visual da calçada
+            # (cone é cone em qualquer piso); o audit acusa família desconhecida.
+            _build_sidewalk_obstacle(parent, kind)
 
 func _build_motoqueiro(parent: Node3D, assento: Vector3) -> void:
     # Motoqueiro de verdade: o mesmo humanoide skinned do corredor (Quaternius,

@@ -53,6 +53,8 @@ const MODEL_FACING_YAW := PI
 ## equivalente a ~4 m/s. A cadência da animação é escalada pela velocidade real
 ## do jogo para o pé não patinar no asfalto.
 const LOCOMOTION_CLIP_SPEED := 4.0
+const RUN_CURB_X := -1.525   # guia rua/calcada (espelha game_3d; sombra no chao certo)
+const RUN_STREET_Y := -0.15
 const LOCOMOTION_MAX_PLAYBACK := 2.2
 
 const BODY_PATHS: Dictionary = {
@@ -125,6 +127,12 @@ var _hair_yaw_vel: float = 0.0
 var _spine_roll: float = 0.0
 var _spine_roll_vel: float = 0.0
 var _last_jump_h: float = 0.0
+
+# --- Overlay de bracos (sprint/walk): rampa, pose capturada e comprimentos ---
+var _arm_w := 0.0
+var _arm_have_from := false
+var _arm_from: Dictionary = {}
+var _arm_len_cache: Dictionary = {}
 
 func _ready() -> void:
     set_character(character_id)
@@ -1048,7 +1056,7 @@ func set_motion(run_phase: float, is_running: bool, is_crouching: bool, jump_hei
         _apply_procedural_fallback_pose(stride, is_crouching, jumping)
     _match_playback_to_speed(speed, is_running, is_crouching, jumping)
     if runner_shadow != null:
-        runner_shadow.position.y = 0.025 - position.y
+        runner_shadow.position.y = _run_ground_y(global_position.x) + 0.025 - position.y
         var shadow_factor := 1.0 - clampf(jump_height * 0.12, 0.0, 0.24)
         runner_shadow.scale = Vector3.ONE * shadow_factor
 
@@ -1102,11 +1110,85 @@ func set_motion(run_phase: float, is_running: bool, is_crouching: bool, jump_hei
         var hair_pitch_rot := Quaternion(Vector3.RIGHT, _hair_pitch * 0.65)
         var target_head := base_rot * look_rot * hair_pitch_rot
         skeleton.set_bone_pose_rotation(int(bone_indices["Head"]), base_rot.slerp(target_head, 0.22))
+    # --- Overlay de bracos (sprint/walk): bombeio sagital alternado; fora
+    # desses clipes solta no ato (a pose volta ao baked do pulo/agacho/idle).
+    if using_external_animation and skeleton != null \
+            and (current_clip == "Sprint_Loop" or current_clip == "Walk_Loop"):
+        _apply_arm_swing_overlay(delta_t)
+    elif _arm_have_from:
+        _arm_have_from = false
+        _arm_w = 0.0
     # L27: foot IK placeholder removido (evita drift); plantar garantido por heightmap_scale + cadence já faz foot lock
 
 ## O jogo avança o cenário na velocidade real da corrida; a animação de sprint
 ## sozinha cobre ~4 m/s. Escalar a cadência mantém o pé plantado no chão (sem
 ## patinação) durante o dash e os capítulos rápidos.
+## Overlay de bracos no sprint/walk (FK validado offline no julia.glb): o
+## clipe baked gira o ombro no proprio eixo (twist) e varre o antebraco no
+## plano lateral, com os dois bracos em fase (efeito "bater asa"). Aqui o
+## ombro (eixo Z local = transversal) bombeia no plano sagital em antifase
+## com a perna oposta, e o cotovelo fecha a frente / abre atras. A fase vem
+## da posicao exata do clipe (imune a speed_scale); a entrada faz rampa de
+## 0,12 s a partir da pose baked capturada.
+func _apply_arm_swing_overlay(dt: float) -> void:
+    if skeleton == null or animation_player == null:
+        return
+    var is_walk := current_clip == "Walk_Loop"
+    var anim_name := _resolve_clip_name(current_clip)
+    var clip_len := 0.667
+    if anim_name != "":
+        if not _arm_len_cache.has(anim_name):
+            var anim := animation_player.get_animation(anim_name)
+            _arm_len_cache[anim_name] = anim.length if anim != null else 0.667
+        clip_len = float(_arm_len_cache[anim_name])
+    var pos := 0.0
+    if anim_name != "" and animation_player.current_animation == anim_name:
+        pos = animation_player.current_animation_position
+    # +1 = braco E a frente (perna D a frente): fracoes medidas no GLB.
+    var phase := TAU * (pos / maxf(clip_len, 0.01) - (0.28 if is_walk else 0.30))
+    var s := sin(phase)
+    if not _arm_have_from:
+        _arm_have_from = true
+        _arm_w = 0.0
+        _arm_from.clear()
+        for bone_name in ["upperarm_l", "upperarm_r", "lowerarm_l", "lowerarm_r"]:
+            if bone_indices.has(bone_name):
+                var idx: int = int(bone_indices[bone_name])
+                var rest_q: Quaternion = rest_rotations.get(bone_name, Quaternion.IDENTITY)
+                _arm_from[bone_name] = rest_q.inverse() * skeleton.get_bone_pose_rotation(idx)
+    _arm_w = minf(1.0, _arm_w + dt / 0.12)
+    var w := _arm_w * _arm_w * (3.0 - 2.0 * _arm_w)
+    var mid := -5.0 if is_walk else -7.5
+    var amp := 14.0 if is_walk else 22.5
+    var ez_base := 32.0 if is_walk else 65.0
+    var ez_pump := 4.0 if is_walk else 10.0
+    _apply_arm_bone("upperarm_l", -78.0, mid + amp * s, w)
+    _apply_arm_bone("upperarm_r", -78.0, -mid + amp * s, w)
+    _apply_arm_bone("lowerarm_l", 0.0, ez_base - ez_pump * s, w)
+    _apply_arm_bone("lowerarm_r", 0.0, -(ez_base + ez_pump * s), w)
+
+
+func _apply_arm_bone(bone_name: String, x_deg: float, z_deg: float, w: float) -> void:
+    if not bone_indices.has(bone_name):
+        return
+    var idx: int = int(bone_indices[bone_name])
+    var rest_q: Quaternion = rest_rotations.get(bone_name, Quaternion.IDENTITY)
+    # BACK (+Z = frente do esqueleto: modelo olha +Z, yaw PI leva a -Z no
+    # mundo). FORWARD (-Z) invertia tudo: ombro para tras e cotovelo em
+    # hiperextensao (mao 0,20 atras da linha do cotovelo, angulo impossivel).
+    var target := Quaternion(Vector3.RIGHT, deg_to_rad(x_deg)) * Quaternion(Vector3.BACK, deg_to_rad(z_deg))
+    var from_extra: Quaternion = _arm_from.get(bone_name, target)
+    skeleton.set_bone_pose_rotation(idx, rest_q * from_extra.slerp(target, w))
+
+
+## Chao sob o corredor (espelha game_3d._ground_y_for_x): a sombra acompanha
+## o asfalto quando ele corre na faixa 0.
+func _run_ground_y(x: float) -> float:
+    var t := clampf((x - (RUN_CURB_X - 0.25)) / 0.5, 0.0, 1.0)
+    var s := t * t * (3.0 - 2.0 * t)
+    return lerpf(RUN_STREET_Y, 0.0, s)
+
+
 func _match_playback_to_speed(speed: float, is_running: bool, is_crouching: bool, jumping: bool) -> void:
     if animation_player == null:
         return
