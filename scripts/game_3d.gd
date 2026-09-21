@@ -2982,6 +2982,9 @@ func _build_tree(pos: Vector3, object_scale: float) -> void:
 func _create_bus_stop(total: float) -> void:
     bus_stop_node = Node3D.new()
     bus_stop_node.name = "BusStop"
+    # Destino final: o abrigo fica na calçada, enquanto o ônibus ocupa a
+    # faixa da rua em frente a ele. Antes ambos compartilhavam a posição
+    # lateral da calçada e o ônibus parecia estacionado no passeio.
     bus_stop_node.position = Vector3(3.25, 0.0, -total - 14.0)
     decor_root.add_child(bus_stop_node)
     var stop_accent: Color = _scenario_color("accent", Color("#e8c45b"))
@@ -2999,7 +3002,11 @@ func _create_bus_stop(total: float) -> void:
     _box(bus_stop_node, Vector3(0.45, 0.62, 0.08), Vector3(-1.05, 2.65, -0.08), _material(stop_accent.lightened(0.16), 0.0, 0.6), "StopSign")
     bus_node = Node3D.new()
     bus_node.name = "YellowBus"
-    bus_node.position = Vector3(-1.1, 0.9, 2.2)
+    # A rua fica a oeste da calçada: desloca 6,5 m para o centro da pista
+    # (x=-3,25 no mundo). O nariz aponta para +Z, de frente para quem chega
+    # ao ponto, como um ônibus parado aguardando embarque.
+    bus_node.position = Vector3(-6.5, 0.9, 2.2)
+    bus_node.rotation.y = PI
     bus_stop_node.add_child(bus_node)
     _build_bus_mesh(bus_node)
     bus_node.visible = false
