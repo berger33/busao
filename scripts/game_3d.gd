@@ -1262,9 +1262,8 @@ func _update_tutorial_hint() -> void:
         GameSave.data["tutorial_seen"] = true
         GameSave.flush()
         tutorial_hint = ""
-    # Lote 16: seta 3D
-    var _show_arrow: bool = not bool(GameSave.data.get("tutorial_seen", false)) and distance < float(BALANCE.first_session_hint_distance) and screen == 2 and run_mode == "playing"
-    _update_tutorial_arrow(_show_arrow, player_lane)
+    # A faixa é legível pelo próprio personagem e pela geometria da rua;
+    # não adicionamos uma seta sobre o corredor, evitando poluição visual.
 
 func _update_run(dt: float) -> void:
     if run_mode == "paused":
