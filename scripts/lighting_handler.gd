@@ -4,10 +4,10 @@ extends Node
 
 class_name LightingHandler
 
-const SHADOW_RESOLUTION_MOBILE: int = 1024
+const SHADOW_RESOLUTION_MOBILE: int = 2048
 const SHADOW_RESOLUTION_REALISTA: int = 4096
 const SHADOW_MAX_DISTANCE_REALISTA: float = 96.0
-const SHADOW_BIAS_REALISTA: float = 0.015 # L27 polimento: contact 0.5m nitida (era 0.02 pantanal)
+const SHADOW_BIAS_REALISTA: float = 0.012 # sombra de contato mais firme, sem peter-panning
 const SHADOW_NORMAL_BIAS_REALISTA: float = 0.45 # L27: peter-panning 1.2→0.45
 const SHADOW_OPACITY_REALISTA: float = 0.82
 const SDFGI_ENABLED: bool = true
@@ -54,8 +54,20 @@ static func setup_realista(environment: WorldEnvironment, sun: DirectionalLight3
         # SSAO suportado apenas em Forward+ ou Compatibility
         if _supports_ssao():
             env.ssao_enabled = SSAO_ENABLED
+            # Oclusão curta e concentrada: dá peso às juntas da calçada,
+            # rodas e encontros parede/piso sem escurecer o cenário inteiro.
+            env.ssao_radius = 2.0
+            env.ssao_intensity = SSAO_INTENSITY
+            env.ssao_direct_light_affect = 0.28
         else:
             env.ssao_enabled = false
+
+        # Contraste físico mais natural: preserva detalhes nas altas luzes
+        # enquanto mantém as sombras azuladas do céu.
+        env.adjustment_enabled = true
+        env.adjustment_brightness = 1.0
+        env.adjustment_contrast = 1.08
+        env.adjustment_saturation = 0.96
 
         # sombra 4096 VSM nítida a 0.5 m
         sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
@@ -64,9 +76,14 @@ static func setup_realista(environment: WorldEnvironment, sun: DirectionalLight3
         sun.shadow_bias = SHADOW_BIAS_REALISTA
         sun.shadow_normal_bias = SHADOW_NORMAL_BIAS_REALISTA
         sun.shadow_opacity = SHADOW_OPACITY_REALISTA
-        # evita peter-panning
-        sun.shadow_blur = 1.0 # L27 soft VSM blur
+        # A luz de contato ancora rodas, pés e mobiliário no piso; o blur
+        # continua suave o suficiente para não parecer uma sombra recortada.
+        sun.shadow_blur = 1.25
         sun.shadow_reverse_cull_face = false
+        sun.distance_fade_enabled = true
+        sun.distance_fade_begin = 72.0
+        sun.distance_fade_shadow = 0.92
+        sun.light_angular_distance = 0.55
         # L27: contact shadow via ssao/ssil já 0.4 + bias baixo garante contato 0.5m
         # Sky: calibra energia solar do panorama sem substituir o asset canônico
         var sky: Sky = environment.environment.sky
