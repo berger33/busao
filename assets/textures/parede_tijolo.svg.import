@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/parede_tijolo.svg-33e24ca24dfdaeb890ce45510e5
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

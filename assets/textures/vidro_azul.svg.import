@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/vidro_azul.svg-cc7dcb8ac6253e0cb2a3d9dea3fb24
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

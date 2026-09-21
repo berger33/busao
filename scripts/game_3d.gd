@@ -204,6 +204,7 @@ var rain_guard_timer := 0.0
 # ETAPA 1 — RunDirector: máquina de estados, relógio e regra do prazo.
 var run_director: RunDirector = RUN_DIRECTOR.new()
 var boarding_left := 0.0
+var _countdown_beep_last := -1
 # ETAPA 2 — segundos de buffer restantes do último pedido de pulo/deslize.
 var buffered_jump_left := 0.0
 var buffered_slide_left := 0.0
@@ -1248,7 +1249,13 @@ func _update_run(dt: float) -> void:
     if run_mode == "countdown":
         # Contagem regressiva: mundo parado; o relógio do prazo vive no RunDirector.
         var ev_cd: Array = run_director.update(dt, 0.0)
+        var sec := int(ceilf(maxf(run_director.countdown_left, 0.0) / 0.8))
+        if sec != _countdown_beep_last and sec >= 1 and sec <= 3:
+            _countdown_beep_last = sec
+            AudioManager.play_sfx("count_beep")
         if "countdown_done" in ev_cd:
+            _countdown_beep_last = -1
+            AudioManager.play_sfx("count_go")
             run_mode = "playing"
         return
     if run_mode == "boarding":
@@ -1316,9 +1323,10 @@ func _update_run(dt: float) -> void:
                 bus_stop_node.visible = true
             if bus_node:
                 bus_node.visible = true
-            _show_feedback("PEGUEI O PONTO!", "As portas fecham...", GREEN, "horn")
+            _show_feedback("PEGUEI O PONTO!", "As portas fecham...", GREEN, "bus_doors")
+            Haptics.boarding()
         else:
-            _show_feedback("O ÔNIBUS PARTIU", "Faltava pouco, mas ele não espera", RED, "impact_heavy")
+            _show_feedback("O ÔNIBUS PARTIU", "Faltava pouco, mas ele não espera", RED, "")
             _finish_run(false, true)
         return
     if not endless_mode:
@@ -1335,7 +1343,7 @@ func _update_run(dt: float) -> void:
         if "deadline" in ev_run:
             # O ônibus partiu: a tentativa termina aqui, causa na tela de resultado.
             _show_feedback("O ÔNIBUS PARTIU", "Faltavam %d m (%d s) para o ponto" % [
-                    int(run_director.shortfall_m), int(ceilf(run_director.shortfall_s))], RED, "impact_heavy")
+                    int(run_director.shortfall_m), int(ceilf(run_director.shortfall_s))], RED, "")
             _finish_run(false, true)
             return
     step_timer -= dt
@@ -1556,6 +1564,7 @@ func _hit_player(kind: String) -> void:
     var sound := "shout" if kind == "motorcycle" else "impact_heavy"
     var penalty_note: String = "  •  +%0.0fs de atraso" % penalty if penalty > 0.0 else ""
     _show_feedback("AI!", heart_label + " restante" + penalty_note, RED, sound)
+    Haptics.damage()
     _spawn_3d_burst(player_root.position + Vector3(0, 1.0, 0), RED, 18)
     # Lote23 — ragdoll quando hearts==0 via PhysicalBone3D
     if hearts <= 0 and physics_realista_enabled and player_visual != null:
@@ -1661,7 +1670,8 @@ func _apply_levelup_rewards(level_before: int) -> Dictionary:
         if em and em.has_method("add_rubi"):
             em.call("add_rubi", rubi, "levelup")
     GameSave.record_event("level_up", level_after - level_before)
-    AudioManager.play_sfx("streak")
+    AudioManager.play_sfx("levelup")
+    Haptics.milestone()
     info["levels"] = level_after - level_before
     info["coins"] = coins
     info["rubi"] = rubi
@@ -1737,7 +1747,8 @@ func _finish_run(success: bool, game_over := false) -> void:
                 "distance": int(distance),
                 "xp": 0
             }
-            _show_feedback("MAIS UM!", "Seu melhor corre ainda está aí", RED, "impact_heavy")
+            _show_feedback("MAIS UM!", "Seu melhor corre ainda está aí", RED, "defeat")
+        Haptics.defeat()
         GameSave.flush()
         _push_play_progress()
         _maybe_request_review()
@@ -1827,7 +1838,8 @@ func _finish_run(success: bool, game_over := false) -> void:
             "levelup": levelup,
             "award_note": _award_note_for_run()
         }
-        _show_feedback("PEGUEI O BUSÃO!", "%d estrelas • +R$ %d de bônus" % [stars, reward], YELLOW, "streak")
+        _show_feedback("PEGUEI O BUSÃO!", "%d estrelas • +R$ %d de bônus" % [stars, reward], YELLOW, "victory")
+        Haptics.milestone()
         _spawn_3d_burst(Vector3(player_x, 1.4, -8.0), YELLOW, 28)
         if GameSave.owns("confete"):
             _spawn_3d_burst(Vector3(player_x, 1.8, -8.0), RED, 10)
@@ -1848,9 +1860,10 @@ func _finish_run(success: bool, game_over := false) -> void:
         }
         if run_director.fail_reason == "atraso":
             _show_feedback("O BUSÃO FOI EMBORA", "Faltavam %d m (%d s) para o ponto" % [
-                    int(run_director.shortfall_m), int(ceilf(run_director.shortfall_s))], RED, "impact_heavy")
+                    int(run_director.shortfall_m), int(ceilf(run_director.shortfall_s))], RED, "defeat")
         else:
-            _show_feedback("O BUSÃO FOI EMBORA", "O fôlego acabou antes do ponto", RED, "impact_heavy")
+            _show_feedback("O BUSÃO FOI EMBORA", "O fôlego acabou antes do ponto", RED, "defeat")
+        Haptics.defeat()
     GameSave.flush()
     _push_play_progress()
     _maybe_request_review()
@@ -4523,7 +4536,8 @@ func _handle_tap(pos: Vector2) -> void:
             if _em_daily2 and _em_daily2.has_method("claim_daily_chest"):
                 var _rew2: Dictionary = _em_daily2.call("claim_daily_chest")
                 if not _rew2.is_empty():
-                    _show_feedback("BAÚ ABERTO!", "+%d R$ +%d Rubi" % [int(_rew2.get("soft",0)), int(_rew2.get("hard",0))], GOLD, "reward")
+                    _show_feedback("BAÚ ABERTO!", "+%d R$ +%d Rubi" % [int(_rew2.get("soft",0)), int(_rew2.get("hard",0))], GOLD, "chest")
+                    Haptics.milestone()
                     _sync_hud()
                 else:
                     _show_feedback("BAÚ JÁ ABERTO", "Volte amanhã", MUTED, "ui_back")
@@ -4605,7 +4619,8 @@ func _shop_tap(pos: Vector2) -> void:
                 elif GameSave.unlock(id, price):
                     GameSave.equip_character(id)
                     _rebuild_player_visual(id)
-                    _show_feedback("DESBLOQUEADO!", str(chars[i].get("name", id)), GOLD, "reward")
+                    _show_feedback("DESBLOQUEADO!", str(chars[i].get("name", id)), GOLD, "purchase")
+                    Haptics.milestone()
                 else:
                     _show_feedback("FALTAM MOEDAS", "Continue correndo", RED, "ui_back")
                 return
@@ -4621,7 +4636,8 @@ func _shop_tap(pos: Vector2) -> void:
                 if GameSave.owns(id):
                     _show_feedback("JÁ ADQUIRIDO", "cosmético • sem vantagem" if cosmetic else "efeito aplicado na próxima corrida", MUTED, "ui_back")
                 elif GameSave.unlock(id, price):
-                    _show_feedback("ITEM ADQUIRIDO!", id.to_upper(), GOLD, "reward")
+                    _show_feedback("ITEM ADQUIRIDO!", id.to_upper(), GOLD, "purchase")
+                    Haptics.milestone()
                 else:
                     _show_feedback("FALTAM MOEDAS", "Junte mais R$", RED, "ui_back")
                 return
@@ -4788,8 +4804,13 @@ func _setup_clima() -> void:
 
 func _update_clima(_delta: float) -> void:
     if _clima == null:
+        AudioManager.stop_ambient()
         return
     _clima.update_head(_world_travel)
+    if _clima.is_raining():
+        AudioManager.start_ambient("rain_loop")
+    else:
+        AudioManager.stop_ambient()
 
 
 func _trocar_clima_do_capitulo(indice: int) -> void:

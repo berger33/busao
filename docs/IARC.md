@@ -10,7 +10,7 @@
 - **Medo:** Nenhum (runner colorido, humor brasileiro)
 - **Linguagem:** Nenhuma (PT-BR/EN-US sem palavrão)
 - **Conteúdo sexual / drogas / álcool / tabaco:** Não
-- **Apostas / loot box com odds:** Não — sem gacha; compras são diretas (120/550/1400, remove ads, skins 80 Rubi, reroll 40 R$), sem caixa aleatória
+- **Apostas / loot box com odds:** Não — sem gacha; compras são diretas (300/1000/2200, remove ads, skins 15 Rubi, reroll 40 R$), sem caixa aleatória
 - **Compras no app:** Sim, opcionais, não bloqueiam F1-F5 (audit `audit_balance.py` SEM PAYWALL)
 - **Anúncios:** Sim, AdMob banner/interstitial/rewarded (consentido via UMP, Data Safety declara `ID publicidade, compras, diagnóstico`, criptografado, não compartilhado)
 - **Localização:** Aproximada não coletada; apenas eventos anônimos `run_start/hit_car/ad_rewarded` quando consentido

@@ -1,0 +1,74 @@
+# CI — Corre pro Ponto: portões Python + QA headless Godot a cada push/PR.
+name: qa
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  gates:
+    name: portões (validate + qa_full + manifests + VRAM)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: pre-flight
+        run: python3 tools/validate_project.py
+      - name: qa_full
+        run: python3 tools/qa_full.py
+      - name: provenance sync
+        run: python3 tools/rebaseline_provenance.py --check
+      - name: vram imports sync
+        run: python3 tools/fix_texture_imports.py --check
+
+  gdscript:
+    name: gdscript (parse + estática)
+    runs-on: ubuntu-latest
+    needs: gates
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: instala gdtoolkit
+        run: pip install gdtoolkit
+      - name: selftest do analisador
+        run: python3 tools/check_gdscript.py --selftest
+      - name: scan (fixture intencional excluída)
+        run: python3 tools/check_gdscript.py . --exclude 'lote2/tests/fixtures/*' | tee gdscan.txt
+      - name: falha só em parse error real
+        # Sem doc/classes do Godot o scan emite UNDECLARED de ruído (engine);
+        # o portão aqui é: nenhum erro de parse e nenhum achado novo de lógica
+        # (DUPLICATE, TOO_MANY/FEW_ARGS, MISSING_RETURN, ASSIGN_CONST).
+        run: |
+          ! grep -E "DUPLICATE|TOO_MANY_ARGS|TOO_FEW_ARGS|MISSING_RETURN|ASSIGN_CONST|UnexpectedToken|ParseError" gdscan.txt
+
+  godot:
+    name: godot headless (import + suítes)
+    runs-on: ubuntu-latest
+    needs: gates
+    steps:
+      - uses: actions/checkout@v4
+      - name: baixa Godot (fallback de versão)
+        run: |
+          for v in 4.7 4.3 4.2; do
+            url="https://github.com/godotengine/godot/releases/download/${v}-stable/Godot_v${v}-stable_linux.x86_64.zip"
+            echo "tentando $url"
+            if curl -sfL -o /tmp/godot.zip "$url"; then
+              echo "GODOT_VERSION=$v" >> "$GITHUB_ENV"
+              break
+            fi
+          done
+          test -f /tmp/godot.zip || { echo "nenhum binário Godot disponível"; exit 1; }
+          unzip -o /tmp/godot.zip -d /tmp && mv /tmp/Godot_v*-stable_linux.x86_64 /tmp/godot
+          chmod +x /tmp/godot && /tmp/godot --version
+      - name: import headless
+        run: /tmp/godot --headless --path . --import
+      - name: 16 suítes de etapa
+        run: |
+          for s in tools/qa_etapa*.gd; do
+            echo "== $s"
+            /tmp/godot --headless --path . --script "$s" || exit 1
+          done

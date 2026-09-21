@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/reboco_colorido.svg-09d3e7aeb0c8c9fa6335f4a1d
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

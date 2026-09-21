@@ -41,6 +41,7 @@ Uso:
 
 from __future__ import annotations
 
+import fnmatch
 import re
 import sys
 import xml.etree.ElementTree as ET
@@ -392,15 +393,23 @@ class Problem:
 
 
 class Analyzer:
-    def __init__(self, project: Path, docs: Path):
+    def __init__(self, project: Path, docs: Path, exclude: list[str] | None = None):
         self.project = project
         self.engine = EngineDB(docs)
         self.scripts: dict[Path, ScriptInfo] = {}
         self.by_cls: dict[str, ScriptInfo] = {}
         self.autoloads = parse_autoloads(project)
         self.problems: list[Problem] = []
-        self.script_dirs = sorted({p.parent for p in project.rglob("*.gd")})
+        self.exclude = list(exclude or [])
+
+        def _kept(path: Path) -> bool:
+            rel = path.relative_to(project).as_posix()
+            return not any(fnmatch.fnmatch(rel, pat) for pat in self.exclude)
+
+        self.script_dirs = sorted({p.parent for p in project.rglob("*.gd") if _kept(p)})
         for path in sorted(project.rglob("*.gd")):
+            if not _kept(path):
+                continue
             info = load_script(path)
             self.scripts[path] = info
             if info.cls:
@@ -1447,6 +1456,8 @@ def main() -> int:
     parser.add_argument("project", nargs="?", default=".", help="raiz do projeto Godot")
     parser.add_argument("--godot-doc", default="", help="pasta doc/classes do Godot (opcional)")
     parser.add_argument("--selftest", action="store_true", help="auto-verificacao das regras do analisador")
+    parser.add_argument("--exclude", action="append", default=[], metavar="GLOB",
+                        help="ignora .gd por glob relativo (ex.: tools/qa_*.gd). Repetivel.")
     ns = parser.parse_args()
 
     try:
@@ -1463,7 +1474,9 @@ def main() -> int:
     if docs is None:
         docs = Path("/nonexistent")  # checagens do engine ficam desativadas
 
-    analyzer = Analyzer(project, docs)
+    if ns.exclude:
+        print(f"excluindo: {', '.join(ns.exclude)}")
+    analyzer = Analyzer(project, docs, exclude=ns.exclude)
     problems = analyzer.run()
     problems.sort(key=lambda p: (str(p.path), p.line))
     for problem in problems:

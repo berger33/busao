@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/pintura_carro_realista.png-6e19534754c2f3bb07
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

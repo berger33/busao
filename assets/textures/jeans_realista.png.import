@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/jeans_realista.png-28a1020d804f8ef628629813c7
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

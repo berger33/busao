@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/tijolo_orm.png-e012b10ccf84564c78d4c2111ef822
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

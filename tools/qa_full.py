@@ -250,7 +250,7 @@ def check_gameplay():
     # save_data
     sd2=ROOT/"scripts/save_data.gd"
     txt2=sd2.read_text(encoding="utf-8")
-    for tok in ["SAVE_SCHEMA_VERSION := 3","BACKUP_PATH","record_phase_attempt","weekly_distance_target"]:
+    for tok in ["SAVE_SCHEMA_VERSION := 4","BACKUP_PATH","record_phase_attempt","weekly_distance_target"]:
         if tok in txt2: ok(f"save {tok}")
         else: fail(f"save sem {tok}")
     # shop_data
@@ -261,8 +261,8 @@ def check_gameplay():
     # obstacle_data 13
     od=(ROOT/"scripts/obstacle_data.gd").read_text(encoding="utf-8")
     cnt=od.count('"id":')
-    if cnt==13: ok("obstacle 13")
-    else: warn(f"obstacle count {cnt} !=13")
+    if cnt==27: ok("obstacle 27")
+    else: warn(f"obstacle count {cnt} !=27")
 
 def check_procedural():
     print("\n== Fase 6 — Zero procedural (L29) ==")

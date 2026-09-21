@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/09_20_corredores_1080x1920.png-2743ff7904232d
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

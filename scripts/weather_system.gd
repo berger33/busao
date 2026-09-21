@@ -482,6 +482,12 @@ func get_wetness() -> float:
     return _molhado
 
 
+func is_raining() -> bool:
+    if _chuva == null:
+        return _quantidade_de_chuva() > 0
+    return _chuva.emitting and _chuva.amount > 0
+
+
 func _quantidade_de_chuva() -> int:
     var cfg: Dictionary = spec.get("chuva", {}).get("estados", {})
     return int(cfg.get(_estado, {}).get("quantidade", 0))

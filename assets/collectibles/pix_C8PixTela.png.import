@@ -18,7 +18,7 @@ dest_files=["res://.godot/imported/pix_C8PixTela.png-7b766ce69ba8ec95985341b3a26
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

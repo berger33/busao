@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/vehicle_hd_car.png-79356e1c3bb7e3a15922b74d8f
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

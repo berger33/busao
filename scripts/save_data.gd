@@ -9,6 +9,10 @@ const SAVE_PATH := "user://corre_pro_ponto.json"
 const BACKUP_PATH := "user://corre_pro_ponto.bak.json"
 const TEMP_PATH := "user://corre_pro_ponto.tmp.json"
 const SAVE_SCHEMA_VERSION := 4
+# Auditoria (2026-09-21): envelope HMAC-SHA256 anti-tamper. Chave = id do
+# aparelho + sal do app. Dificulta edicao casual do JSON (nao e DRM: sem
+# servidor nao ha segredo real — ver docs/PLUGINS_NATIVOS.md M7).
+const SAVE_HMAC_SALT := "corre-pro-ponto.v4.hmac" 
 const CLOUD_SNAPSHOT_KEYS: Array = ["schema_version","coins","hard_currency","remove_ads","phase_stars","best_times","achievements","inventory","owned_items","pet_skins","equipped_character","xp","daily_streak","max_streak","metrics","endless_best","endless_unlocked"]
 # Retenção D0–D30: conquistas e badges pagam moedas ao desbloquear (fonte
 # única de nomes/recompensas — game_3d.gd monta o catálogo daqui).
@@ -27,6 +31,7 @@ var data: Dictionary = {}
 var dirty := false
 var autosave_timer := 0.0
 var skip_backup_once := false
+var _last_read_bad_sig := false
 
 func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
@@ -116,13 +121,18 @@ func _set_defaults() -> void:
 func _load_data() -> void:
     var primary_exists := FileAccess.file_exists(SAVE_PATH)
     var primary := _read_dictionary(SAVE_PATH)
+    var primary_bad_sig := _last_read_bad_sig
     var parsed := primary
     var recovered := false
     if parsed.is_empty():
         # Um JSON interrompido não pode apagar o progresso: tenta o último
         # snapshot íntegro antes de voltar ao estado inicial.
         parsed = _read_dictionary(BACKUP_PATH)
+        var backup_bad_sig := _last_read_bad_sig
         recovered = not parsed.is_empty()
+        if primary_bad_sig or backup_bad_sig:
+            push_warning("[save] assinatura HMAC invalida — progresso pode ter sido adulterado")
+            record_event("save_integrity_fail")
     var source_version := int(parsed.get("schema_version", 1)) if not parsed.is_empty() else SAVE_SCHEMA_VERSION
     if not parsed.is_empty():
         for key in data.keys():
@@ -171,14 +181,55 @@ func _migrate_data(source_version: int) -> void:
         data["phase_goals"] = goals_antigos
     data["schema_version"] = SAVE_SCHEMA_VERSION
 
+func _hmac_key() -> PackedByteArray:
+    return (OS.get_unique_id() + SAVE_HMAC_SALT).to_utf8_buffer()
+
+func _hmac_sha256(key: PackedByteArray, msg: PackedByteArray) -> PackedByteArray:
+    var block := key
+    if block.size() > 64:
+        var pre := HashingContext.new()
+        pre.start(HashingContext.HASH_SHA256)
+        pre.update(block)
+        block = pre.finish()
+    block.resize(64)
+    var ipad := PackedByteArray()
+    var opad := PackedByteArray()
+    ipad.resize(64)
+    opad.resize(64)
+    for i in 64:
+        ipad[i] = block[i] ^ 0x36
+        opad[i] = block[i] ^ 0x5C
+    var inner := HashingContext.new()
+    inner.start(HashingContext.HASH_SHA256)
+    inner.update(ipad)
+    inner.update(msg)
+    var outer := HashingContext.new()
+    outer.start(HashingContext.HASH_SHA256)
+    outer.update(opad)
+    outer.update(inner.finish())
+    return outer.finish()
+
+func _sign_payload(payload: String) -> String:
+    return _hmac_sha256(_hmac_key(), payload.to_utf8_buffer()).hex_encode()
+
 func _read_dictionary(path: String) -> Dictionary:
+    _last_read_bad_sig = false
     if not FileAccess.file_exists(path):
         return {}
     var file := FileAccess.open(path, FileAccess.READ)
     if file == null:
         return {}
     var parsed = JSON.parse_string(file.get_as_text())
-    return parsed if parsed is Dictionary else {}
+    if not (parsed is Dictionary):
+        return {}
+    if parsed.has("sig") and parsed.has("data") and parsed["data"] is Dictionary:
+        var payload := JSON.stringify(parsed["data"])
+        if _sign_payload(payload) != str(parsed.get("sig", "")):
+            _last_read_bad_sig = true
+            return {}
+        return parsed["data"]
+    # Legado sem envelope (v4 pre-HMAC): carrega normal, migra no flush.
+    return parsed
 
 func _sanitize_data() -> void:
     data["schema_version"] = SAVE_SCHEMA_VERSION
@@ -358,6 +409,8 @@ func save() -> void:
 func flush() -> void:
     data["schema_version"] = SAVE_SCHEMA_VERSION
     var payload := JSON.stringify(data)
+    var envelope := JSON.stringify({"v": SAVE_SCHEMA_VERSION, "data": data, "sig": _sign_payload(payload)})
+    payload = envelope
     var temp := FileAccess.open(TEMP_PATH, FileAccess.WRITE)
     if temp == null:
         return

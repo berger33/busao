@@ -99,8 +99,8 @@ Data: 2026-09-19 · Branch: `arena/01a0baf3-busao` (`c18dcac` Lote 6) · Godot 4
 | Lote | Semana | Nome | P0? | Escopo em 1 frase | Critério de aceite |
 |---|---|---|---|---|---|
 | **11** | 1 | **Margem — Ads MVP + Remove Ads** | P0 | Plugin Godot AdMob + banner menu + interstitial pós-derrota (1 a cada 2) + rewarded revive 1× + consent UMP + `Data Safety` rascunho | `adb logcat` sem `ads: fail`, AAB internal testing mostra ads de teste, `Data Safety` preenchido |
-| **12** | 1–2 | **Caixa — Billing MVP** | P0 | Play Billing 6 + `coin_pack_120/550/1400` + `remove_ads 9.90` + validação local + `internet=true` | compra teste `android.test.purchased` credita `coins` e persiste após reinstall |
-| **13** | 2 | **Chave — Release & Cloud** | P0 | `keytool` release fora do repo + AAB assinado + Play Games Sign-In + `cloud_save` (snapshot `save_data.json`) + `In-App Review` após 3 clears | `build/corre-pro-ponto.aab` sobe, `load` após desinstalar restaura 150★ |
+| **12** | 1–2 | **Caixa — Billing MVP** | P0 | Play Billing 6 + `coin_pack_300/1000/2200` + `remove_ads 9.90` + validação local + `internet=true` | compra teste `android.test.purchased` credita `coins` e persiste após reinstall |
+| **13** | 2 | **Chave — Release & Cloud** | P0 | `keytool` release fora do repo + AAB assinado + Play Games Sign-In + `cloud_save` (snapshot `save_data.json`) + `In-App Review` após 10 clears + 2º dia | `build/corre-pro-ponto.aab` sobe, `load` após desinstalar restaura 150★ |
 | **14** | 3 | **Vidro — Loading + LOD + Tamanho** | P1 | Splash Godot + `LoadingScreen` + LOD `arvore/palmeira` (impostor) + compressão PNG→KTX2/ASTC + WAV→OGG + `pck` filtrado → AAB ≤ 85 MB | `du -sh build/*.aab` ≤85 MB, cold start <2.8 s em Moto G84, FPS p50 ≥56 |
 | **15** | 3–4 | **Espelho — Analytics & Crash** | P1 | Firebase Analytics/GameAnalytics (consentido) + Crashlytics + RemoteConfig (`price_motoboy`, `ad_freq`) + `metrics→event` espelhado | dashboard mostra `run_start`, `hit_car`, `ad_rewarded`, crash forçado aparece em 5 min |
 | **16** | 4–5 | **Língua — i18n + SafeArea + Revive UX** | P1 | `en-US` (CSV + `tr()`), `SafeArea` HUD, tela `Reviver?` com timer 5 s, tutorial 3D | `pt-BR`/`en-US` trocável em runtime, HUD não corta em Pixel 7, revive via rewarded funciona |
@@ -121,14 +121,14 @@ Data: 2026-09-19 · Branch: `arena/01a0baf3-busao` (`c18dcac` Lote 6) · Godot 4
 
 ### Lote 12 — Billing MVP (3 dias)
 - **Billing:** `GodotGooglePlayBilling` 6.x, `acknowledge` + `consume`.
-- **Catálogo:** `coin_pack_s 120 R$ 4,90`, `m 550 R$ 14,90 (10% bonus)`, `l 1400 R$ 29,90 (20% bonus)`, `remove_ads R$ 9,90 (não consumível)`, `starter_pack (motoboy+120 R$ 3,90)`.
+- **Catálogo:** `coin_pack_s 300 R$ 4,90`, `m 1000 R$ 14,90 (10% bonus)`, `l 2200 R$ 29,90 (20% bonus)`, `remove_ads R$ 9,90 (não consumível)`, `starter_pack (motoboy+300 R$ 3,90, compra única)`.
 - **Economia:** `save_data.gd` `add_hard_currency()` + `spend_hard()`, `shop_data.gd` aceita `price_hard`.
 - **Anti-fraude leve:** `spend()` verifica `Billing.isPurchased` + `receipt` hash; save criptografado `AES+base64` (sem servidor ainda).
 
 ### Lote 13 — Release Chave (2 dias)
 - `keytool -genkeypair -validity 10000 -keysize 4096` fora do repo; `export_presets.cfg` `keystore/release` preenchido via `EDITOR_SETTINGS`.
 - Play Console `internal testing` AAB; `play_games` plugin; `cloud_save` usa `Snapshots` (payload `save_data.json` < 50 KB).
-- `In-App Review` `ReviewManager.requestReview()` após `first_clears==3`.
+- `In-App Review` `ReviewManager.requestReview()` após `first_clears>=10` + 2º dia (retenção D0–D30; era 3).
 
 ### Lote 14 — Tamanho & Performance (4 dias)
 - **Compressão:** `generate_textures.py` exporta também `.ktx2` (Basis Universal) com `import` `VRAM Compressed + Mipmaps + Filter Linear`; `generate_audio.py` `WAV→OGG Vorbis q5`.
@@ -176,7 +176,7 @@ Data: 2026-09-19 · Branch: `arena/01a0baf3-busao` (`c18dcac` Lote 6) · Godot 4
 **Proposta L17 (conservadora, ARPDAU R$ 0,12 alvo):**
 - Soft `R$` continua ganho por corrida e diárias; Rubi só por compra/evento.
 - Preço `motoboy 260` vira `180 R$ + 20 Rubi` — teste A/B via Remote Config.
-- Sink: `re-roll cor da moto 40 R$`, `skin extra 80 Rubi`, `remove_ads 9,90` remove interstitial mas mantém rewarded (jogador escolhe).
+- Sink: `re-roll cor da moto 40 R$`, `skin extra 15 Rubi`, `remove_ads 9,90` remove interstitial mas mantém rewarded (jogador escolhe).
 - Simulação `audit_balance.py` 50 fases + Endless mostra `coins_earned / coins_spent` 1.35 sem assistir ads, 0.95 assistindo 1 rewarded/dia → retenção sem inflação.
 
 ---

@@ -3,6 +3,8 @@ extends Node
 ## Wrapper AdMob com fallback mock para editor/teste.
 ## Contrato: banner no menu/mapa/loja, interstitial pós-derrota (cooldown 90 s, 1 a cada 2), rewarded revive 1× e 2× moedas.
 ## Sem SDK nativo o manager simula carregamento e recompensa com timers (editor não quebra).
+## Auditoria (2026-09-21): UMP-ready sem autoconcessao — default NPA
+## (nao personalizado) ate decisao; flags PG/idade declaradas.
 
 signal banner_loaded
 @warning_ignore("unused_signal")
@@ -26,8 +28,14 @@ const MOCK_LOAD_INTERSTITIAL := 1.2
 const MOCK_LOAD_REWARDED := 1.0
 const MOCK_SHOW_REWARDED := 2.2  # tempo de vídeo simulado
 
+const MAX_AD_CONTENT_RATING := "PG"
+const TAG_FOR_CHILD_DIRECTED := false
+const TAG_FOR_UNDER_AGE_OF_CONSENT := true
+
 var _consent_granted := false
+var _consent_decided := false
 var _consent_required := false
+var _npa_mode := true
 var _initialized := false
 var _banner_ready := false
 var _banner_visible := false
@@ -44,6 +52,8 @@ func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
     _native_available = _detect_native_ads()
     _consent_granted = bool(GameSave.data.get("ads_consent_granted", false)) if GameSave else false
+    _consent_decided = bool(GameSave.data.get("ads_consent_decided", false)) if GameSave else false
+    _npa_mode = not _consent_granted
     _remove_ads_cache = bool(GameSave.data.get("remove_ads", false)) if GameSave else false
     print("[ads] manager pronto | nativo=%s consent=%s remove_ads=%s" % [str(_native_available), str(_consent_granted), str(_remove_ads_cache)])
     # Auto-init no próximo frame para garantir GameSave já carregado; mock não quebra editor
@@ -65,8 +75,7 @@ func initialize() -> void:
     # Em produção real aqui chamaria MobileAds.initialize()
     if _native_available:
         print("[ads] inicializando SDK nativo…")
-        # Exemplo: MobileAds.initialize()
-        # Conecta sinais nativos quando disponíveis
+        _apply_native_flags()
         _try_connect_native_signals()
     else:
         print("[ads] SDK nativo ausente — modo mock (editor)")
@@ -77,21 +86,69 @@ func initialize() -> void:
     request_consent_if_required()
 
 func request_consent_if_required() -> void:
-    # Lote 11: UMP simplificado — em produção usa ConsentInformation.requestConsentInfoUpdate()
-    # Aqui apenas respeita flag persistida; se nunca perguntado, assume consent implícito (mock).
-    if GameSave and not GameSave.data.has("ads_consent_granted"):
-        # Mock: supõe consentido após 0.5 s para não bloquear teste interno
-        _consent_granted = true
+    # UMP-ready: nunca autoconcede. Nativo abre o fluxo real do Google UMP;
+    # mock/editor resolve como NPA (nao personalizado) para nao travar teste.
+    if _consent_decided:
         _consent_required = false
-        GameSave.data["ads_consent_granted"] = true
-        GameSave.flush()
-        consent_updated.emit(true)
-        print("[ads] consent mock concedido (interno)")
-    elif _consent_granted:
-        _consent_required = false
-        consent_updated.emit(true)
-    else:
+        consent_updated.emit(_consent_granted)
+        return
+    if _native_available and _ump_available():
+        print("[ads] UMP nativo: aguardando decisao do usuario…")
         _consent_required = true
+        _ump_request_info_update()
+        return
+    _npa_mode = true
+    _consent_granted = false
+    _consent_decided = true
+    _consent_required = false
+    _persist_consent()
+    consent_updated.emit(false)
+    print("[ads] consent mock: NPA padrao (sem personalizacao)")
+
+func grant_consent_via_ump(granted: bool) -> void:
+    # Callback do fluxo UMP nativo (e gancho de teste). Personalizado so com opt-in.
+    _consent_granted = granted
+    _npa_mode = not granted
+    _consent_decided = true
+    _consent_required = false
+    _persist_consent()
+    consent_updated.emit(granted)
+    print("[ads] UMP decisao: granted=%s npa=%s" % [str(granted), str(_npa_mode)])
+
+func _persist_consent() -> void:
+    if GameSave:
+        GameSave.data["ads_consent_granted"] = _consent_granted
+        GameSave.data["ads_consent_decided"] = _consent_decided
+        GameSave.flush()
+
+func _ump_available() -> bool:
+    return Engine.has_singleton("UserMessagingPlatform") or Engine.has_singleton("UMP")
+
+func _ump_request_info_update() -> void:
+    # Contrato (docs/PLUGINS_NATIVOS.md): singleton UMP com
+    # request_consent_info_update() + sinal consent_info_updated(granted).
+    var ump = null
+    if Engine.has_singleton("UserMessagingPlatform"):
+        ump = Engine.get_singleton("UserMessagingPlatform")
+    elif Engine.has_singleton("UMP"):
+        ump = Engine.get_singleton("UMP")
+    if ump == null:
+        return
+    if ump.has_signal("consent_info_updated"):
+        var cb := Callable(self, "_on_ump_result")
+        if not ump.is_connected("consent_info_updated", cb):
+            ump.connect("consent_info_updated", cb)
+    if ump.has_method("request_consent_info_update"):
+        ump.call("request_consent_info_update")
+
+func _on_ump_result(granted: bool) -> void:
+    grant_consent_via_ump(granted)
+
+func is_personalized_allowed() -> bool:
+    return _consent_decided and _consent_granted and not _npa_mode
+
+func is_npa_mode() -> bool:
+    return _npa_mode
 
 func is_consent_required() -> bool:
     return _consent_required
@@ -216,6 +273,26 @@ func _on_mock_rewarded_completed(placement: String) -> void:
         GameSave.record_event("ad_rewarded_complete")
         GameSave.data["metrics"]["event_counts"]["ad_rewarded_complete"] = int(GameSave.data["metrics"]["event_counts"].get("ad_rewarded_complete", 0)) + 1
 
+func _apply_native_flags() -> void:
+    # Contrato (docs/PLUGINS_NATIVOS.md): MobileAds com set_request_configuration
+    # {max_ad_content_rating, tag_for_child_directed_treatment,
+    # tag_for_under_age_of_consent, tag_for_npa}. Mock apenas registra.
+    print("[ads] flags rating=%s child=%s under_age=%s npa=%s" % [
+        MAX_AD_CONTENT_RATING, str(TAG_FOR_CHILD_DIRECTED),
+        str(TAG_FOR_UNDER_AGE_OF_CONSENT), str(_npa_mode)])
+    var plugin = null
+    if Engine.has_singleton("MobileAds"):
+        plugin = Engine.get_singleton("MobileAds")
+    elif Engine.has_singleton("AdMob"):
+        plugin = Engine.get_singleton("AdMob")
+    if plugin != null and plugin.has_method("set_request_configuration"):
+        plugin.call("set_request_configuration", {
+            "max_ad_content_rating": MAX_AD_CONTENT_RATING,
+            "tag_for_child_directed_treatment": TAG_FOR_CHILD_DIRECTED,
+            "tag_for_under_age_of_consent": TAG_FOR_UNDER_AGE_OF_CONSENT,
+            "tag_for_npa": _npa_mode,
+        })
+
 func _try_connect_native_signals() -> void:
     # Quando plugin nativo existir, conecta sinais reais aqui.
     # Ex.: MobileAds.interstitial_closed.connect(_on_native_interstitial_closed)
@@ -256,4 +333,7 @@ func can_show_interstitial_now(run_count: int) -> bool:
     # 1 a cada 2 derrotas (run_count % 2 == 1)
     if run_count % 2 != 1:
         return false
-    return _consent_granted
+    # NPA serve nao-personalizado apos decisao; personalizado exige opt-in.
+    if not _consent_decided:
+        return false
+    return true

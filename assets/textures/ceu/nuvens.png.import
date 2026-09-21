@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/nuvens.png-5a8839ca96b7db34f514acbe987d9436.c
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

@@ -13,13 +13,13 @@ Corre pro Ponto é um runner 3D em terceira pessoa no coração do Brasil. Escol
 • **50 fases** em 5 capítulos (de 400 m a 792 m, 5→18 m/s) + **Endless** liberado com 120★
 • **13 obstáculos** + 10 animais + 20 corredores com habilidade (motoboy, professora, etc) + pets caramelo
 • **Economia justa:** R$ soft + Rubi premium, baú diário (5-15 R$ +1-3 Rubi) e evento semanal (Semana do Motoboy +30% motos)
-• **Sinks LiveOps:** reroll cor da moto 40 R$, skins extras 80 Rubi, sem loot box, sem paywall em F1-F5
+• **Sinks LiveOps:** reroll cor da moto 40 R$, skins extras 15 Rubi, sem loot box, sem paywall em F1-F5
 • **Progressão:** estrelas 150, dailies, marco semanal, streak 7 dias, XP/nível, conquistas e badges
 • **Tech:** Mobile Vulkan + GL compat, sombra 1024, LOD árvore 35 m, AAB 27.9 MB, 56-61 fps em Adreno 610, cold <2.5 s
-• **Plataforma:** Play Games (nuvem <50 KB, conquistas, leaderboard), In-App Review após 3 clears, In-App Update flexível, Billing (120/550/1400 + remove R$9,90), AdMob consentido (UMP/Data Safety)
+• **Plataforma:** Play Games (nuvem <50 KB, conquistas, leaderboard), In-App Review após 10 clears + 2º dia, In-App Update flexível, Billing (300/1000/2200 + remove R$9,90), AdMob consentido (UMP/Data Safety)
 
 **EN-US (full):**
-Run through Brazilian streets in this third-person 3D runner. Street (left) vs sidewalks (center/right), dash, jump, slide — catch the yellow bus! 50 stages (5 chapters) + Endless, 13 obstacles, 20 runners, pets, fair economy (no loot boxes, no paywall on stages 1-5), daily chest, weekly events, 60 fps on mid devices, AAB 27.9 MB, Play Games cloud, In-App Review/Update, Billing & AdMob (consent).
+Run through Brazilian streets in this third-person 3D runner. Street (left) vs sidewalks (center/right), dash, jump, slide — catch the yellow bus! 50 stages (5 chapters) + Endless, 27 obstacles, 20 runners, pets, fair economy (no loot boxes, no paywall on stages 1-5), daily chest, weekly events, 60 fps on mid devices, AAB 27.9 MB, Play Games cloud, In-App Review/Update, Billing & AdMob (consent).
 
 ## Novidades (changelog v1.0.0, PT-BR)
 • Lançamento: 50 fases + Endless

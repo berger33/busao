@@ -18,7 +18,7 @@ dest_files=["res://.godot/imported/pass_C8ValeT.png-6d199e0131fdc3e6a0d818318ea5
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

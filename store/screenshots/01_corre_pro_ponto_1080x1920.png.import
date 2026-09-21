@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/01_corre_pro_ponto_1080x1920.png-7bb3db8b792e
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

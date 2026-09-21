@@ -18,7 +18,7 @@ dest_files=["res://.godot/imported/loja_lote9b_placa.png-6b2bc8fe4a3b7851fba87c7
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

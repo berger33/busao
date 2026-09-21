@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/madeira_height.png-925c52e0bd6e769c8d4c5c2c14
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

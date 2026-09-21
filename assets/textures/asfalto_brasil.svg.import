@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/asfalto_brasil.svg-0e1ca4ebb73fc97212b8ac109c
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/calcada_laje_height.png-078bc3f6f159baa21bd0e
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

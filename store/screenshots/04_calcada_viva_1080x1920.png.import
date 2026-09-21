@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/04_calcada_viva_1080x1920.png-b82fd4dac8e5926
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

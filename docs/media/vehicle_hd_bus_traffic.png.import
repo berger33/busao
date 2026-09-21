@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/vehicle_hd_bus_traffic.png-3d2e9e195e07a1390a
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/metal_pintado.svg-db0b4ff78d2d848693b3383c318
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

@@ -10,7 +10,7 @@ Este documento fecha a entrega técnica dos dois lotes aprovados em **2026-05-11
 ## 1. Objetivo
 
 - **Lote 11 (Ads MVP)**: monetização sem quebrar editor. Banner em `menu/mapa/loja`, interstitial pós-derrota `1 a cada 2 derrotas + cooldown 90 s`, rewarded `revive 1× por corrida` e `2× moedas` na vitória. Respeita `remove_ads`, UMP consent e Data Safety, com fallback mock quando o SDK não está presente.
-- **Lote 12 (Billing MVP)**: Play Billing 6 com consumíveis `120 / 550 / 1400 moedas` e não-consumível `remove_ads R$ 9,90`, `internet permission` e `restore pós-reinstall`. Validação local; validação servidor fica para o Lote 17.
+- **Lote 12 (Billing MVP)**: Play Billing 6 com consumíveis `300 / 1000 / 2200 moedas` (rebalance 2026-09-21; era 120/550/1400) e não-consumível `remove_ads R$ 9,90`, `internet permission` e `restore pós-reinstall`. Validação local; validação servidor fica para o Lote 17.
 
 **Decisão de compatibilidade combinada**: manter `SAVE_SCHEMA_VERSION := 3` e `ITEM_CATALOG` com os 6 itens ordenados `["tenis","mochila","fone","cafe","confete","placa"]` para passar `tools/validate_project.py`. Packs de billing vivem em constante separada (`BILLING_PACKS` / `BILLING_CATALOG`) e novos campos do save têm defaults, sem migração para 4.
 
@@ -80,11 +80,11 @@ Em internal testing o mock cobre o editor; em `build/` com plugin AdMob habilita
 
 - `scripts/billing_manager.gd` — autoload `BillingManager`. Wrapper Billing Library 6 com detecção `Engine.has_singleton("GodotGooglePlayBilling")`.
   - `const BILLING_CATALOG` autoritativo (5 entradas):
-    - `coin_pack_s` 120  • R$ 4,90 consumable
-    - `coin_pack_m` 550  • R$ 14,90 consumable (+10% bônus)
-    - `coin_pack_l` 1400 • R$ 29,90 consumable (+20% bônus)
+    - `coin_pack_s` 300  • R$ 4,90 consumable
+    - `coin_pack_m` 1000 • R$ 14,90 consumable (+10% bônus)
+    - `coin_pack_l` 2200 • R$ 29,90 consumable (+20% bônus)
     - `remove_ads`   0   • R$ 9,90 non_consumable (sem interstitial/banner, rewarded continua)
-    - `starter_pack` 120 + motoboy • R$ 3,90 consumable
+    - `starter_pack` 300 + motoboy • R$ 3,90 one-time
   - Sinais: `products_loaded`, `purchase_success(pid)`, `purchase_failed(pid, reason)`, `purchase_pending`, `owned_restored(ids)`.
   - `initialize()` cacheia catálogo, mock emite `products_loaded` após 0.6 s.
   - `purchase(pid)`: valida `already_owned` para `remove_ads`, guarda `_purchases_pending`, mock sucede após 1.2 s via `_mock_complete_purchase(pid, true)` que chama `_apply_reward(product)` (fonte canônica). `_apply_reward` dá `add_coins`, seta `remove_ads=true` + `AdsManager.set_remove_ads(true)`, libera `motoboy` em `inventory` + `equip_character` para starter.
@@ -124,7 +124,7 @@ python tools/validate_project.py   # deve dar PRE-FLIGHT OK
 #          2ª derrota pula (1/2), 3ª mostra novamente se 90 s passaram
 # Resultado fail: botão REVIVER COM ANÚNCIO (1×) → 2.2 s mock → revive com 1 ♥
 # Resultado success: botão 2× MOEDAS → dobra bônus
-# Loja PACOTES: Comprar 120/550/1400/remove_ads/starter via mock (1.2 s) → coins sobe, remove_ads esconde banners
+# Loja PACOTES: Comprar 300/1000/2200/remove_ads/starter via mock (1.2 s) → coins sobe, remove_ads esconde banners
 # Restaurar: já com remove_ads no save → RESTAURAR mostra "COMPRAS RESTAURADAS"
 ```
 

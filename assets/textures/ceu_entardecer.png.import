@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/ceu_entardecer.png-b7ffd034084e8384e5207d5015
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

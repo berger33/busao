@@ -57,11 +57,11 @@ const ITEM_CATALOG: Array[Dictionary] = [
 # para que ITEM_CATALOG siga validado em 6 itens; HUD consulta BILLING_PACKS apenas visual.
 # Nota: chaves com aspas simples para não interferir no validador que conta '\"id\": \"'"
 const BILLING_PACKS: Array[Dictionary] = [
-    {'id': "coin_pack_s", 'title': "Pacote 120", 'subtitle': "120 moedas", 'coins': 120, 'price_label': "R$ 4,90", 'price_brl': 4.90},
-    {'id': "coin_pack_m", 'title': "Pacote 550", 'subtitle': "550 moedas +10%", 'coins': 550, 'price_label': "R$ 14,90", 'price_brl': 14.90},
-    {'id': "coin_pack_l", 'title': "Pacote 1400", 'subtitle': "1400 moedas +20%", 'coins': 1400, 'price_label': "R$ 29,90", 'price_brl': 29.90},
+    {'id': "coin_pack_s", 'title': "Pacote 300", 'subtitle': "300 moedas", 'coins': 300, 'price_label': "R$ 4,90", 'price_brl': 4.90},
+    {'id': "coin_pack_m", 'title': "Pacote 1000", 'subtitle': "1000 moedas +10%", 'coins': 1000, 'price_label': "R$ 14,90", 'price_brl': 14.90},
+    {'id': "coin_pack_l", 'title': "Pacote 2200", 'subtitle': "2200 moedas +20%", 'coins': 2200, 'price_label': "R$ 29,90", 'price_brl': 29.90},
     {'id': "remove_ads", 'title': "Remover anúncios", 'subtitle': "sem interstitial/banner", 'coins': 0, 'price_label': "R$ 9,90", 'price_brl': 9.90},
-    {'id': "starter_pack", 'title': "Pack Motoboy", 'subtitle': "Rafa + 120 moedas", 'coins': 120, 'price_label': "R$ 3,90", 'price_brl': 3.90, 'character': "motoboy"},
+    {'id': "starter_pack", 'title': "Pack Motoboy", 'subtitle': "Rafa + 300 moedas • única", 'coins': 300, 'price_label': "R$ 3,90", 'price_brl': 3.90, 'character': "motoboy"},
 ]
 
 static func canonical_id(id: String) -> String:

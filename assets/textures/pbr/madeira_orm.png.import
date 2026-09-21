@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/madeira_orm.png-d42b3a82431a37eba73fb2cfb726f
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

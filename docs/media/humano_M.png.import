@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/humano_M.png-46ab73f9db8693a6ef0b680172f6a4c2
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

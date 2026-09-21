@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/reboco_height.png-e2da3350d3e6e9b435a28f0c049
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

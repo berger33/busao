@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/cobblestone.svg-065626b8a8244a75bbc35cee2d5fe
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

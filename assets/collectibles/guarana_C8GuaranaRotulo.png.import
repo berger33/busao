@@ -18,7 +18,7 @@ dest_files=["res://.godot/imported/guarana_C8GuaranaRotulo.png-f3147f6f38387ad69
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

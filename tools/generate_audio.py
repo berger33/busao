@@ -111,4 +111,28 @@ def music(bpm, root_freq, flavor):
     return out
 for idx,(bpm,freq,flavor) in enumerate([(112,220,0),(124,196,1),(118,247,2),(108,174,3)]):
     write(['music_city.wav','music_commerce.wav','music_beach.wav','music_terminal.wav'][idx],music(bpm,freq,flavor))
+# Auditoria Infra/Audio/Negocios (2026-09-21) — 9 SFX novos, append-only:
+# arquivos antigos seguem byte-identicos (mesma seed, mesma ordem anterior).
+write('count_beep.wav', tone(880,.12,.30))
+write('count_go.wav', concat(tone(880,.09,.30),tone(1320,.28,.34)))
+write('victory.wav', concat(tone(523,.12,.30),tone(659,.12,.30),tone(784,.12,.32),tone(1047,.34,.34)))
+write('defeat.wav', concat(tone(392,.20,.30),tone(330,.20,.30),tone(262,.22,.30),tone(196,.44,.28)))
+write('levelup.wav', concat(tone(660,.07,.26),tone(880,.07,.26),tone(1320,.07,.28),tone(1760,.22,.28)))
+write('chest.wav', concat(tone(140,.22,.30,'noise',bend=-0.5),tone(660,.09,.24),tone(990,.20,.24)))
+write('purchase.wav', concat(tone(1568,.07,.28),tone(2093,.16,.26),tone(880,.08,.20),tone(1320,.14,.22)))
+# portas do busao: jato pneumatico + batida grave
+_doors = concat(tone(1200,.28,.20,'noise',bend=-0.7),tone(90,.18,.40,'noise'),tone(65,.24,.30,'sine'))
+write('bus_doors.wav', _reverb(_doors, 90, 0.20))
+# chuva: 4 s com crossfade nas bordas para loop sem clique
+def _rain_loop(dur=4.0):
+    n = int(RATE*dur)
+    base = [ (random.uniform(-1,1)*0.5 + random.uniform(-1,1)*0.3)*0.16*(0.75+0.25*math.sin(2*math.pi*0.4*i/RATE)) for i in range(n) ]
+    xf = int(RATE*0.4)
+    out = base[:]
+    for i in range(xf):
+        k = i/xf
+        out[i] = base[n-xf+i]*(1-k) + base[i]*k
+    return out
+write('rain_loop.wav', _reverb(_rain_loop(), 60, 0.12))
+
 print('generated',len(os.listdir(root)),'wav files')

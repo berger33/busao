@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/madeira_brasil.svg-60ef9798a63a0968c11b0d72dd
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

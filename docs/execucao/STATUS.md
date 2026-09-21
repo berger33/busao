@@ -405,6 +405,24 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
   neste sandbox); `validate_project.py` quebra em `check_paths` por bug
   pré-existente (conteúdo de QA tratado como path).
 
+### 2026-09-21 (auditoria infra/áudio/negócios + hardening)
+
+- Auditoria dos três eixos em `docs/AUDITORIA_INFRA_AUDIO_NEGOCIOS.md`
+  (veredito: tecnicamente rico, comercialmente desligado).
+- Infra/QA: `validate_project.py` ressuscitado (crash `check_paths` + tokens
+  v4/27/pacing/julia) → PRE-FLIGHT OK; `qa_full.py` → 133/0/0; CI real
+  (`.github/workflows/qa.yml`); `tools/build_aab.sh`, `tools/build_trailer.sh`,
+  `tools/rebaseline_provenance.py`; 157 imports em VRAM; `game.gd` fora do AAB.
+- Áudio: 9 SFX novos (antigos byte-idênticos); `audio_manager.gd` com canal
+  de alertas, ducking, buses, unmute fix e ambientes; `haptics.gd`; fiação
+  (contagem, vitória/derrota, level-up, baú, compra, portas, chuva).
+- Negócios: billing com ledger grant→ack→consume + reconcile (rebalance
+  S 300/M 1000/L 2200, starter one-time); ads UMP-ready + NPA + flags PG;
+  save com HMAC (legado migra sem perda); `PLUGINS_NATIVOS.md`, `ROADMAP_LIVEOPS.md`.
+- Validação: PRE-FLIGHT OK; qa_full TUDO OK; `check_gdscript.py` sem achados
+  novos vs base (diff em worktree limpa); QA headless + 1º AAB + Test Lab
+  pendentes (scripts prontos, exigem engine/aparelho).
+
 ## Regras de engenharia desta execução
 
 - Uma etapa por vez; cada etapa fecha com demonstração reproduzível

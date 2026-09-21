@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/tijolo_height.png-79b8f40c2394838c38915477f2c
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
