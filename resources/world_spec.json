@@ -8,7 +8,7 @@
   },
   "quarteirao": {
     "comprimento_m": 28.0,
-    "variacao_comprimento_m": 3.0,
+    "variacao_comprimento_m": 0.0,
     "quarteiroes_visiveis": 5
   },
   "faixas": {

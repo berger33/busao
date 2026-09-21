@@ -1159,13 +1159,15 @@ func _apply_arm_swing_overlay(dt: float) -> void:
     _arm_w = minf(1.0, _arm_w + dt / 0.12)
     var w := _arm_w * _arm_w * (3.0 - 2.0 * _arm_w)
     var mid := -5.0 if is_walk else -7.5
-    var amp := 14.0 if is_walk else 22.5
-    var ez_base := 32.0 if is_walk else 65.0
-    var ez_pump := 4.0 if is_walk else 10.0
+    # O balanço é em antifase: enquanto uma mão avança, a outra recua.
+    # Antes ambas recebiam o mesmo sinal e pareciam bater asas juntas.
+    var amp := 9.0 if is_walk else 14.0
+    var ez_base := 28.0 if is_walk else 48.0
+    var ez_pump := 3.0 if is_walk else 6.0
     _apply_arm_bone("upperarm_l", -78.0, mid + amp * s, w)
-    _apply_arm_bone("upperarm_r", -78.0, -mid + amp * s, w)
+    _apply_arm_bone("upperarm_r", -78.0, -mid - amp * s, w)
     _apply_arm_bone("lowerarm_l", 0.0, ez_base - ez_pump * s, w)
-    _apply_arm_bone("lowerarm_r", 0.0, -(ez_base + ez_pump * s), w)
+    _apply_arm_bone("lowerarm_r", 0.0, -(ez_base - ez_pump * s), w)
 
 
 func _apply_arm_bone(bone_name: String, x_deg: float, z_deg: float, w: float) -> void:
