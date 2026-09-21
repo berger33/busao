@@ -358,12 +358,19 @@ func _notification(what: int) -> void:
 
 func _phase_speed_for(index: int) -> float:
     var safe_index := clampi(index, 0, BALANCE.phase_count - 1)
+    var level_speed: Dictionary = LevelData.for_phase(safe_index)
+    if not level_speed.is_empty() and level_speed.has("base_speed_mps"):
+        return float(level_speed["base_speed_mps"])
     if safe_index <= BALANCE.chapter_unlock_phase:
         return lerpf(BALANCE.base_speed, BALANCE.chapter_one_final_speed, float(safe_index) / float(maxi(1, BALANCE.chapter_unlock_phase)))
     return lerpf(BALANCE.chapter_one_final_speed, BALANCE.final_speed, float(safe_index - BALANCE.chapter_unlock_phase) / float(maxi(1, BALANCE.phase_count - BALANCE.chapter_unlock_phase - 1)))
 
 func _phase_deadline_for(index: int) -> float:
-    # ETAPA 1 — prazo = tempo de referência da rota + margem do catálogo.
+    # ETAPA 4 - nivel autoral: o prazo vem dos dados do nivel.
+    var level_deadline: Dictionary = LevelData.for_phase(clampi(index, 0, BALANCE.phase_count - 1))
+    if not level_deadline.is_empty() and level_deadline.has("deadline_seconds"):
+        return float(level_deadline["deadline_seconds"])
+    # ETAPA 1 - prazo = tempo de referencia da rota + margem do catalogo.
     # Quando as velocidades forem reequilibradas (M5+), substituir o tempo
     # de referência pelo tempo medido de uma rota válida.
     var safe_index := clampi(index, 0, BALANCE.phase_count - 1)
@@ -567,6 +574,11 @@ func _start_run(index: int) -> void:
     distance = 0.0
     elapsed = 0.0
     run_total = float(phase["distance"])
+    # ETAPA 4 - nivel autoral (blueprint S7/S8): a distancia do nivel e a
+    # autoridade; o cenario procedural continua com a propria escala.
+    var level_override: Dictionary = LevelData.for_phase(phase_index)
+    if not level_override.is_empty():
+        run_total = float(level_override.get("distance_m", run_total))
     player_lane = SIDEWALK_CENTER
     player_x = LANE_X[player_lane]
     player_speed = _phase_speed_for(phase_index)
@@ -715,6 +727,13 @@ func _build_course() -> void:
     _rebuild_sky_fx()
     _rebuild_ambient_fx()
     var total: float = run_total
+    # ETAPA 4 - camada de desafio autoral: quando a fase tem nivel, os
+    # modulos (blueprint S7/S8) substituem os loops procedurais e as gags
+    # forcadas; a camada de cenario acima permanece intocada.
+    var level_course: Dictionary = LevelData.for_phase(phase_index)
+    if not level_course.is_empty() and not endless_mode:
+        _build_course_from_level(level_course, total)
+        return
     var obstacle_count: int = int(phase.get("obstacles", 6))
     # `obstacles` é uma intensidade de design, não uma contagem literal.
     # A curva começa espaçada para ensinar rota e chega a intervalos curtos
@@ -765,6 +784,20 @@ func _audit_world_geometry() -> void:
             continue
         if root.find_children("*", "MeshInstance3D", true, false).is_empty():
             push_warning("3D asset contract: raiz %s sem MeshInstance3D" % label)
+
+## ETAPA 4 - monta o percurso a partir dos modulos do nivel (blueprint
+## S7/S8): so a camada de desafio e autoral (padroes + moedas), o cenario
+## continua procedural e independente. Entidades nascem exatamente nas
+## distancias e corredores dos dados; nada procedural entra aqui.
+func _build_course_from_level(level: Dictionary, total: float) -> void:
+    var level_patterns: Array = level.get("patterns", [])
+    for p in level_patterns:
+        _spawn_entity(str(p.get("kind", "")), int(p.get("lane", 1)), float(p.get("at_m", 0.0)), false)
+    var level_coins: Array = level.get("coins", [])
+    for c in level_coins:
+        _spawn_entity(str(c.get("kind", "coin")), int(c.get("lane", 1)), float(c.get("at_m", 0.0)), true)
+    _create_bus_stop(total)
+    call_deferred("_audit_world_geometry")
 
 func _spawn_forced_gags(total: float) -> void:
     var forced: Array[String] = []

@@ -11,6 +11,7 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
 | 1 | Regra de prazo real (RunDirector): largada com contagem, relógio durante a corrida, impacto +2 s, ônibus parte no prazo | concluída | `tools/qa_etapa1_deadline.gd`: 9/9 verificações verdes (A–H, incluindo limite exato e pausa do relógio); `ETAPA1_QA_OK`, exit 0 |
 | 2 | Controle preciso e colisões compreensíveis (blueprint §4/§6): matriz ação x família por classe de altura/volume, colisão pela posição real, buffer de entrada, dash sem imunidade | concluída | `tools/qa_etapa2_colisao.gd`: 10/10 verificações verdes (A–J); suíte da etapa 1 segue 9/9 (sem regressão) |
 | 3 | Primeira família SLIDE_UNDER: barreira suspensa de obra com fase de introdução (fase 3), dando função ao deslize no percurso | concluída | `tools/qa_etapa3_barreira.gd`: 5/5 verificações verdes (K–O); fases 1-2 sem barreira, fase 3 com 2; percurso determinístico |
+| 4 | Estrutura de fase piloto (blueprint §7/§8): módulos editáveis em dados, validador de caminho com estado do jogador, fase 3 autoral "Rua do Ipê" (336 m, 12 módulos) | concluída | `tools/qa_etapa4_piloto.gd`: 10/10 verificações verdes (P–T); validador aprova o piloto na velocidade base e no impulso 1,22x e rejeita estação sem saída; fase 3 montada só com os dados do nível (`scripts/level_data.gd`), sem loop procedural |
 
 ## Diário
 
@@ -88,6 +89,27 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
 - QA etapa 3 (5/5): desvio limpo deslizando, dano pulando ou sem ação,
   gate por fase (0/0/2 barreiras nas fases 1/2/3) e percurso determinístico
   sob a mesma semente.
+- ETAPA 4 (21/09): estrutura de fase piloto (blueprint §7/§8).
+  `scripts/level_data.gd` — nível autoral `bairro_03` ("Rua do Ipê", fase 3):
+  336 m em 12 módulos de 28 m, 6,0 m/s, prazo 66 s, 9 padrões + 12 moedas
+  com posição longitudinal e corredor explícitos (roteiro fixo do §8).
+  `scripts/pattern_validator.gd` — validador de caminho que modela o estado
+  do jogador (corredor, tempo da troca lateral 0,25 s por corredor, pulo
+  0,9 s, deslize 0,72 s cobrindo estações seguintes dentro da mesma ação)
+  e revalida na velocidade base e no impulso máximo (1,22x), como pede o §7.
+  Integração em `game_3d.gd`: fase com nível substitui os loops procedurais
+  e as gags forçadas na camada de desafio; cenário (pista, kit de rua,
+  decals, ponto de ônibus, auditoria) permanece procedural e independente —
+  as duas camadas do §7 ficam separadas de verdade. Velocidade, prazo e
+  distância da corrida passam a vir dos dados do nível quando ele existe.
+- QA etapa 4 (10/10, P–T): dados do piloto corretos e usados pela fase 3;
+  validador aprova o piloto (base e 1,22x) e rejeita estação sem corredor
+  livre; controle negativo exige pulo e deslize quando as saídas laterais
+  fecham; fase 3 montada com exatamente as 21 entidades dos dados (nada
+  procedural); percurso do nível não depende de semente. Regressões:
+  etapa 1 9/9, etapa 2 10/10, etapa 3 5/5.
+- Cadastro de `class_name` novo exige `--import` para atualizar
+  `.godot/global_script_class_cache.cfg` antes dos QAs headless.
 
 ## Regras de engenharia desta execução
 
