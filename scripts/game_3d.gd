@@ -15,6 +15,7 @@ const SHOP_DATA = preload("res://scripts/shop_data.gd")
 const OBSTACLE_DATA = preload("res://scripts/obstacle_data.gd")
 const RUNNER_CHARACTER_SCRIPT = preload("res://scripts/runner_character.gd")
 const WORLD_CHARACTER_SCRIPT = preload("res://scripts/world_character.gd")
+const RUN_DIRECTOR = preload("res://scripts/run_director.gd")
 const WORLD_ANIMAL_SCRIPT = preload("res://scripts/world_animal.gd")
 const PHYSICS_HANDLER = preload("res://scripts/physics_handler.gd")
 const LIGHTING_HANDLER = preload("res://scripts/lighting_handler.gd")
@@ -70,6 +71,17 @@ const TEXTURE_SKIN_REAL = preload("res://assets/textures/pele_realista.png")
 const TEXTURE_SKIN_REAL_N = preload("res://assets/textures/pele_realista_normal.png")
 const TEXTURE_SKIN_REAL_R = preload("res://assets/textures/pele_realista_roughness.png")
 const LANE_X: Array[float] = [-3.25, 0.0, 3.25]
+# ETAPA 1 — margens de prazo (s) por fase, transcritas do catálogo de
+# PLANO_50_FASES_CORRE_PRO_PONTO.md: prazo = tempo de referência da rota + margem.
+const DEADLINE_MARGINS: Array = [
+    14, 12, 10, 12, 10, 12, 12, 11, 11, 10,
+    12, 12, 10, 11, 9, 11, 10, 10, 9, 8,
+    11, 10, 10, 9, 8, 11, 10, 10, 9, 8,
+    11, 10, 10, 9, 8, 12, 11, 10, 9, 8,
+    10, 9, 9, 8, 8, 9, 8, 8, 7, 6
+]
+# Um impacto válido retira um ponto e acrescenta 2 s ao tempo consumido.
+const IMPACT_TIME_PENALTY := 2.0
 const ROAD_LANE := 0
 const SIDEWALK_CENTER := 1
 const SIDEWALK_RIGHT := 2
@@ -137,7 +149,7 @@ var phase_index := 0
 var phase: Dictionary = {}
 var scenario: Dictionary = {}
 var endless_mode := false
-var run_mode := "playing" # playing, paused, at_stop, results
+var run_mode := "playing" # playing, paused, countdown, boarding, results
 var distance := 0.0
 var elapsed := 0.0
 var run_total := 400.0
@@ -171,8 +183,9 @@ var speed_boost_timer := 0.0
 var slow_motion_timer := 0.0
 var magnet_timer := 0.0
 var rain_guard_timer := 0.0
-var stop_wait := 0.0
-var stop_wait_total := 0.0
+# ETAPA 1 — RunDirector: máquina de estados, relógio e regra do prazo.
+var run_director: RunDirector = RUN_DIRECTOR.new()
+var boarding_left := 0.0
 var wall_run_count := 0
 var dog_chase_timer := 0.0
 # --- Lote 11/12: Ads/Billing estado ----------------------------------------
@@ -321,8 +334,6 @@ func _notification(what: int) -> void:
                 screen = 1
                 run_mode = "playing"
                 _show_feedback("CORRIDA ENCERRADA", "Seu progresso já está seguro", BLUE, "ui_back")
-            elif run_mode == "at_stop":
-                _catch_bus()
         elif screen != 0:
             screen = 0
             _show_feedback("MENU", "Escolha o próximo corre", BLUE, "ui_back")
@@ -338,12 +349,17 @@ func _phase_speed_for(index: int) -> float:
         return lerpf(BALANCE.base_speed, BALANCE.chapter_one_final_speed, float(safe_index) / float(maxi(1, BALANCE.chapter_unlock_phase)))
     return lerpf(BALANCE.chapter_one_final_speed, BALANCE.final_speed, float(safe_index - BALANCE.chapter_unlock_phase) / float(maxi(1, BALANCE.phase_count - BALANCE.chapter_unlock_phase - 1)))
 
-func _phase_wait_for(index: int) -> float:
+func _phase_deadline_for(index: int) -> float:
+    # ETAPA 1 — prazo = tempo de referência da rota + margem do catálogo.
+    # Quando as velocidades forem reequilibradas (M5+), substituir o tempo
+    # de referência pelo tempo medido de uma rota válida.
     var safe_index := clampi(index, 0, BALANCE.phase_count - 1)
-    if safe_index <= BALANCE.chapter_unlock_phase:
-        var progress := float(safe_index) / float(maxi(1, BALANCE.chapter_unlock_phase))
-        return lerpf(BALANCE.first_wait_seconds, BALANCE.final_wait_seconds, progress)
-    return BALANCE.final_wait_seconds
+    var p: Dictionary = PhaseData.get_phase(safe_index)
+    var route_time: float = float(p.get("distance", 0.0)) / _phase_speed_for(safe_index)
+    return route_time + _deadline_margin_for(safe_index)
+
+func _deadline_margin_for(index: int) -> float:
+    return float(DEADLINE_MARGINS[clampi(index, 0, DEADLINE_MARGINS.size() - 1)])
 
 func _process(delta: float) -> void:
     var dt: float = minf(delta, 0.05)
@@ -534,7 +550,7 @@ func _start_run(index: int) -> void:
     _rebuild_sky_fx()
     screen = 2
     previous_screen = 1
-    run_mode = "playing"
+    run_mode = "countdown"
     distance = 0.0
     elapsed = 0.0
     run_total = float(phase["distance"])
@@ -571,8 +587,7 @@ func _start_run(index: int) -> void:
     slow_motion_timer = 0.0
     magnet_timer = 0.0
     rain_guard_timer = 0.0
-    stop_wait = 0.0
-    stop_wait_total = 0.0
+    boarding_left = 0.0
     wall_run_count = 0
     dog_chase_timer = 0.0
     tutorial_stage = -1
@@ -630,6 +645,10 @@ func _start_run(index: int) -> void:
         magnet_timer = 9999.0
     if GameSave.owns("cafe"):
         slow_motion_timer = 2.0
+    # ETAPA 1 — o prazo começa na largada (fim da contagem), não no ponto.
+    run_director.setup(run_total, _phase_speed_for(phase_index),
+            _phase_deadline_for(phase_index), bus_wait_bonus)
+    run_director.begin_countdown()
     _clear_course()
     _build_course()
     _apply_render_quality()              # Lote 2: clima do capítulo instantâneo
@@ -929,11 +948,16 @@ func _update_tutorial_hint() -> void:
 func _update_run(dt: float) -> void:
     if run_mode == "paused":
         return
-    if run_mode == "at_stop":
-        stop_wait = maxf(0.0, stop_wait - dt)
-        if stop_wait <= 0.0:
-            # Chegar ao ponto é a vitória; o toque apenas embarca antes do
-            # fim da contagem, em vez de transformar uma vitória em punição.
+    if run_mode == "countdown":
+        # Contagem regressiva: mundo parado; o relógio do prazo vive no RunDirector.
+        var ev_cd: Array = run_director.update(dt, 0.0)
+        if "countdown_done" in ev_cd:
+            run_mode = "playing"
+        return
+    if run_mode == "boarding":
+        # Embarque é a conclusão (2-3 s); a vitória já foi decidida no RunDirector.
+        boarding_left -= dt
+        if boarding_left <= 0.0:
             _finish_run(true)
         return
     elapsed += dt
@@ -966,6 +990,40 @@ func _update_run(dt: float) -> void:
     _update_tutorial_hint()
     motion_speed = lerpf(motion_speed, speed, minf(1.0, dt * 7.0))
     course_root.position.z = distance
+    # ETAPA 1 — chegada avaliada antes da expiração (ordem determinística).
+    if not endless_mode and distance >= run_total and not run_director.finished:
+        distance = run_total
+        course_root.position.z = distance
+        if run_director.crossed_boarding():
+            # Zona de embarque cruzada dentro do prazo: vitória certa.
+            # A personagem embarca (conclusão de 2 s, pulável por toque).
+            run_mode = "boarding"
+            boarding_left = 2.0
+            if bus_stop_node:
+                bus_stop_node.visible = true
+            if bus_node:
+                bus_node.visible = true
+            _show_feedback("PEGUEI O PONTO!", "As portas fecham...", GREEN, "horn")
+        else:
+            _show_feedback("O ÔNIBUS PARTIU", "Faltava pouco, mas ele não espera", RED, "impact_heavy")
+            _finish_run(false, true)
+        return
+    if not endless_mode:
+        var ev_run: Array = run_director.update(dt, distance)
+        if "approach" in ev_run:
+            if bus_stop_node:
+                bus_stop_node.visible = true
+            if bus_node:
+                bus_node.visible = true
+            AudioManager.play_sfx("horn", -6.0, 1.0)
+            _show_feedback("O PONTO ESTÁ AÍ", "O ônibus te espera", YELLOW, "horn")
+        if "approach_near" in ev_run:
+            _show_feedback("QUASE LÁ", "Segura firme até a porta", YELLOW, "horn")
+        if "deadline" in ev_run:
+            # O ônibus partiu: a tentativa termina aqui, causa na tela de resultado.
+            _show_feedback("O ÔNIBUS PARTIU", "Faltavam %d m para o ponto" % int(run_director.shortfall_m), RED, "impact_heavy")
+            _finish_run(false, true)
+            return
     step_timer -= dt
     if step_timer <= 0.0:
         var step_sfx := "step_calcada"
@@ -1016,21 +1074,12 @@ func _update_run(dt: float) -> void:
         if crossed_forward or crossed_from_behind:
             entity["passed"] = true
             _resolve_entity(entity)
-    if distance >= run_total:
+    if endless_mode and distance >= run_total:
+        # Endless mantém o comportamento antigo: alvo atingido encerra.
         distance = run_total
         course_root.position.z = distance
-        if endless_mode:
-            _finish_run(true)
-            return
-        run_mode = "at_stop"
-        stop_wait_total = _phase_wait_for(phase_index) if not endless_mode else 0.0
-        stop_wait_total += bus_wait_bonus
-        stop_wait = stop_wait_total
-        if bus_stop_node:
-            bus_stop_node.visible = true
-        if bus_node:
-            bus_node.visible = true
-        _show_feedback("CHEGOU NO PONTO!", "SEGURA O BUSÃO!" if bus_wait_bonus <= 0.0 else "MOTORISTA ACIONADA: +2s", YELLOW, "horn")
+        _finish_run(true)
+        return
     if hearts <= 0:
         # Lote 16: tela Reviver? 5 s (ASSISTIR -30s vs DESISTIR) antes de _finish_run
         if not _revive_used and not _revive_pending:
@@ -1135,9 +1184,12 @@ func _hit_player(kind: String) -> void:
     invulnerability = 1.15
     camera_shake = 0.38
     flash_alpha = 0.22
+    # ETAPA 1 — impacto válido retira um ponto e soma 2 s ao tempo consumido.
+    var penalty: float = run_director.register_impact(IMPACT_TIME_PENALTY)
     var heart_label: String = "1 coração" if hearts == 1 else "%d corações" % hearts
     var sound := "shout" if kind == "motorcycle" else "impact_heavy"
-    _show_feedback("AI!", heart_label + " restante", RED, sound)
+    var penalty_note: String = "  •  +%0.0fs de atraso" % penalty if penalty > 0.0 else ""
+    _show_feedback("AI!", heart_label + " restante" + penalty_note, RED, sound)
     _spawn_3d_burst(player_root.position + Vector3(0, 1.0, 0), RED, 18)
     # Lote23 — ragdoll quando hearts==0 via PhysicalBone3D
     if hearts <= 0 and physics_realista_enabled and player_visual != null:
@@ -1210,14 +1262,13 @@ func _dash() -> void:
     _show_feedback("DASH!", "Invencível por um instante", YELLOW, "whoosh")
     _spawn_3d_burst(player_root.position + Vector3(0, 1.0, 0), YELLOW, 18)
 
-func _catch_bus() -> void:
-    if run_mode == "at_stop":
-        _finish_run(true)
-
 func _finish_run(success: bool, game_over := false) -> void:
     # P2 EconomyHandler disponível para reward/XP (cálculo espelhado)
     if screen != 2:
         return
+    # ETAPA 1 — causa da derrota registrada no diretor (uma vez).
+    if not success and not endless_mode and not run_director.finished:
+        run_director.fail_out_of_breath(distance)
     var date_key := Time.get_date_string_from_system()
     GameSave.record_daily_progress(date_key, int(distance), collected_coins, success and no_damage)
     GameSave.record_weekly_progress(GameSave.weekly_key(), int(distance), collected_coins, success and no_damage)
@@ -1354,9 +1405,14 @@ func _finish_run(success: bool, game_over := false) -> void:
             "coins": collected_coins,
             "game_over": game_over,
             "record": false,
-            "xp": 0
+            "xp": 0,
+            "fail_reason": run_director.fail_reason,
+            "shortfall_m": int(run_director.shortfall_m)
         }
-        _show_feedback("O BUSÃO FOI EMBORA", "Use as três faixas a seu favor", RED, "impact_heavy")
+        if run_director.fail_reason == "atraso":
+            _show_feedback("O BUSÃO FOI EMBORA", "Faltavam %d m para o ponto" % int(run_director.shortfall_m), RED, "impact_heavy")
+        else:
+            _show_feedback("O BUSÃO FOI EMBORA", "O fôlego acabou antes do ponto", RED, "impact_heavy")
     GameSave.flush()
     _push_play_progress()
     _maybe_request_review()
@@ -1501,8 +1557,8 @@ func _update_camera(dt: float) -> void:
     var desired_y := RENDER_CAMERA_Y + camera_bob + (player_y_offset * 0.28)
     var desired_z := RENDER_CAMERA_Z + sin(run_phase * 0.8) * 0.03
     var desired_x := player_x * 0.16
-    if run_mode == "at_stop":
-        # Enquadramento cinematográfico na chegada ao ponto
+    if run_mode == "boarding":
+        # Enquadramento cinematográfico durante o embarque
         desired_x = lerpf(desired_x, 1.25, 0.4)
         target = Vector3(player_x * 0.4 + 0.6, 1.30, -8.0)
     var desired := Vector3(desired_x, desired_y, desired_z) + shake_offset
@@ -3443,8 +3499,12 @@ func _sync_hud() -> void:
         "coins_run": collected_coins,
         "dash_cooldown": dash_cooldown,
         "run_mode": run_mode,
-        "stop_wait": stop_wait,
-        "stop_wait_total": stop_wait_total,
+        "deadline": run_director.deadline,
+        "time_used": run_director.time_used,
+        "time_left": run_director.time_left(),
+        "countdown_left": run_director.countdown_left,
+        "in_approach": run_director.state >= RUN_DIRECTOR.State.APROXIMACAO,
+        "boarding": run_mode == "boarding",
         "endless": endless_mode,
         "map_page": map_page,
         "cards": cards,
@@ -3532,8 +3592,6 @@ func _handle_key(event: InputEventKey) -> void:
             _slide()
         elif event.is_action_pressed("dash") or event.keycode == KEY_X:
             _dash()
-        elif event.keycode == KEY_ENTER and run_mode == "at_stop":
-            _catch_bus()
     elif event.keycode == KEY_ENTER or event.keycode == KEY_SPACE:
         if screen == 0:
             _start_run(0)
@@ -3649,14 +3707,15 @@ func _handle_tap(pos: Vector2) -> void:
             if hit >= 0:
                 _start_run(hit)
     elif screen == 2:
-        if Rect2(610, 15, 95, 75).has_point(pos):
+        if run_mode == "boarding":
+            # O embarque é pulável por qualquer toque (blueprint §4).
+            _finish_run(true)
+        elif Rect2(610, 15, 95, 75).has_point(pos):
             run_mode = "playing" if run_mode == "paused" else "paused"
             _show_feedback("PAUSA" if run_mode == "paused" else "VAMOS!", "Controle seu ritmo", YELLOW if run_mode == "paused" else GREEN, "click")
         elif run_mode == "paused" and Rect2(70, 580, 580, 150).has_point(pos):
             run_mode = "playing"
             _show_feedback("VAMOS!", "O próximo obstáculo é seu", GREEN, "ui_confirm")
-        elif run_mode == "at_stop" and Rect2(70, 800, 580, 130).has_point(pos):
-            _catch_bus()
     elif screen == 3:
         # Lote 11: rewarded buttons têm prioridade sobre navegação
         var rewarded_ready: bool = false

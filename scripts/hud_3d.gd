@@ -196,6 +196,10 @@ func _draw_map() -> void:
     _text_center(Vector2(360, 1205), "ESQUERDA = RUA   •   CENTRO/DIREITA = CALÇADA", 14, Color("#f9c8ae"))
     _draw_banner_if_needed(1215)
 
+func _fmt_time(t: float) -> String:
+    var s := int(maxf(0.0, t))
+    return "%02d:%02d" % [int(s / 60.0), s % 60]
+
 func _draw_run() -> void:
     # Topo translúcido moderno (deixa o céu, prédios e iluminação solar visíveis)
     draw_rect(Rect2(0, 0, 720, 108), Color(0.02, 0.04, 0.08, 0.38))
@@ -220,6 +224,12 @@ func _draw_run() -> void:
     var max_hearts: int = int(state.get("max_hearts", 3))
     _text(Vector2(446, 46), "♥".repeat(hearts) + "♡".repeat(maxi(0, max_hearts - hearts)), 22, RED)
     _text(Vector2(446, 68), "FAIXA RUA/CALÇADA", 10, Color("#d9e3f0"))
+    # ETAPA 1 — prazo de partida do ônibus (o relógio que era a "espera no ponto").
+    if not bool(state.get("endless", false)):
+        var time_left: float = float(state.get("time_left", 0.0))
+        var urgent: bool = time_left < 10.0
+        _panel(Rect2(18, 112, 215, 30), Color(1, 0.25, 0.2, 0.25) if urgent else Color(0.05, 0.10, 0.18, 0.65), 10)
+        _text_center(Vector2(125, 132), "ÔNIBUS " + _fmt_time(time_left), 14, RED if urgent else YELLOW)
     # Botão de pausa translúcido arredondado
     _panel(Rect2(616, 18, 80, 68), Color(0.12, 0.22, 0.38, 0.70), 16)
     _text_center(Vector2(656, 56), "Ⅱ" if str(state.get("run_mode", "playing")) == "paused" else "▮▮", 20, WHITE)
@@ -237,26 +247,27 @@ func _draw_run() -> void:
     if str(state.get("tutorial_hint", "")) != "" and float(state.get("distance", 0.0)) < float(state.get("first_session_hint_distance", 70.0)):
         _panel(Rect2(55, 180, 610, 58), Color(0.05, 0.16, 0.25, 0.93), 15)
         _text_center(Vector2(360, 216), str(state.get("tutorial_hint", "")), 15, CYAN)
-    if str(state.get("run_mode", "playing")) == "at_stop":
-        _draw_stop_card()
-    elif str(state.get("run_mode", "playing")) == "paused":
+    var _mode_run: String = str(state.get("run_mode", "playing"))
+    if _mode_run == "countdown":
+        draw_rect(Rect2(0, 0, 720, 1280), Color(0.02, 0.04, 0.08, 0.42))
+        var cd_left: float = float(state.get("countdown_left", 0.0))
+        var cd_num: int = clampi(int(ceilf(cd_left / 0.8)), 1, 3)
+        _text_center(Vector2(360, 560), str(cd_num), 130, YELLOW)
+        _text_center(Vector2(360, 655), "o ônibus sai em", 20, MUTED)
+        _text_center(Vector2(360, 708), _fmt_time(float(state.get("deadline", 0.0))), 34, WHITE)
+    elif _mode_run == "boarding":
+        draw_rect(Rect2(0, 0, 720, 1280), Color(0.02, 0.04, 0.08, 0.30))
+        _panel(Rect2(75, 480, 570, 210), Color("#122945"), 22)
+        _text_center(Vector2(360, 555), "PEGUEI O PONTO!", 36, GREEN)
+        _text_center(Vector2(360, 605), "as portas fecham...", 18, MUTED)
+        _text_center(Vector2(360, 655), "toque para pular", 13, CYAN)
+    elif _mode_run == "paused":
         draw_rect(Rect2(0, 0, 720, 1280), Color(0.02, 0.04, 0.08, 0.62))
         _panel(Rect2(65, 470, 590, 285), PANEL, 24)
         _text_center(Vector2(360, 545), "PAUSA NO PONTO", 34, YELLOW)
         _text_center(Vector2(360, 590), "Respira. A rua continua lá.", 19, MUTED)
         _button(Rect2(80, 635, 560, 82), "CONTINUAR", GREEN, 24)
 
-func _draw_stop_card() -> void:
-    draw_rect(Rect2(0, 190, 720, 860), Color(0.03, 0.06, 0.11, 0.48))
-    _panel(Rect2(45, 650, 630, 300), Color("#122945"), 22)
-    _text_center(Vector2(360, 710), "CHEGOU NO PONTO!", 31, YELLOW)
-    _text_center(Vector2(360, 752), "o ônibus sai em", 18, MUTED)
-    var wait: float = float(state.get("stop_wait", 0.0))
-    _text_center(Vector2(360, 806), "%0.1f s" % wait, 42, RED if wait < 3.0 else WHITE)
-    draw_rect(Rect2(105, 820, 510, 5), Color("#2b3c58"))
-    var wait_total: float = maxf(0.01, float(state.get("stop_wait_total", 1.0)))
-    draw_rect(Rect2(105, 820, 510 * clampf(wait / wait_total, 0.0, 1.0), 5), YELLOW if wait > 3.0 else RED)
-    _button(Rect2(70, 835, 580, 86), "PEGAR O BUSÃO", YELLOW, 25)
 
 func _draw_results() -> void:
     _draw_gradient(Color("#08132b"), Color("#1c3c5a"))
@@ -299,8 +310,14 @@ func _draw_results() -> void:
                 star_progress = "★ %d acumuladas • próximo marco ★ %d" % [stars_now, next_unlock]
             _text_center(Vector2(360, 738), star_progress, 13, CYAN)
     else:
+        var fail_reason: String = str(result_data.get("fail_reason", "folego"))
+        var fail_line: String = "Use rua e calçada como rotas diferentes."
+        if fail_reason == "atraso":
+            fail_line = "Faltavam %d m para o ponto quando o ônibus partiu." % int(result_data.get("shortfall_m", 0))
+        elif fail_reason == "folego":
+            fail_line = "O fôlego acabou antes do ponto."
         _text_center(Vector2(360, 180), "O BUSÃO FOI EMBORA", 34, RED)
-        _text_center(Vector2(360, 220), "Use rua e calçada como rotas diferentes.", 18, WHITE)
+        _text_center(Vector2(360, 220), fail_line, 18, WHITE)
         _panel(Rect2(65, 330, 590, 220), Color("#2b223a"), 20)
         _text_center(Vector2(360, 390), "DICA 3D", 20, Color("#ffbf8b"))
         _text_center(Vector2(360, 438), "Rua = mais obstáculos e mais moedas", 18, WHITE)
