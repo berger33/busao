@@ -205,12 +205,15 @@ func _draw_run() -> void:
     draw_rect(Rect2(0, 0, 720, 108), Color(0.02, 0.04, 0.08, 0.38))
     # Cápsula de fase e cenário
     _panel(Rect2(18, 18, 215, 68), Color(0.05, 0.10, 0.18, 0.65), 16)
-    _text(Vector2(32, 42), "%02d  %s" % [int(state.get("phase_index", 0)) + 1, str(state.get("phase_name", "CORRE")).to_upper()], 16, WHITE)
-    _text(Vector2(32, 64), "%s • %s" % [str(state.get("location", "Brasil")), str(state.get("scenario_weather", "sol")).to_upper()], 11, CYAN)
+    _hud_icon(Vector2(39, 42), "route", CYAN)
+    _text(Vector2(58, 42), "%02d  %s" % [int(state.get("phase_index", 0)) + 1, str(state.get("phase_name", "CORRE")).to_upper()], 16, WHITE)
+    _text(Vector2(58, 64), "%s • %s" % [str(state.get("location", "Brasil")), str(state.get("scenario_weather", "sol")).to_upper()], 11, CYAN)
     # Cápsula de distância e moedas
     _panel(Rect2(245, 18, 175, 68), Color(0.05, 0.10, 0.18, 0.65), 16)
-    _text(Vector2(262, 43), "%03d m" % int(state.get("distance", 0.0)), 20, YELLOW)
-    _text(Vector2(262, 68), "R$ %02d" % int(state.get("coins_run", 0)), 15, Color("#8ee5bb"))
+    _hud_icon(Vector2(260, 43), "distance", YELLOW)
+    _text(Vector2(278, 43), "%03d m" % int(state.get("distance", 0.0)), 20, YELLOW)
+    _hud_icon(Vector2(260, 68), "coin", GOLD)
+    _text(Vector2(278, 68), "R$ %02d" % int(state.get("coins_run", 0)), 15, Color("#8ee5bb"))
     draw_circle(Vector2(382, 63), 7.5, GOLD)
     draw_arc(Vector2(382, 63), 6.0, 0.0, TAU, 16, Color(1.0, 0.94, 0.60, 0.90), 1.2)
     draw_circle(Vector2(382, 63), 3.0, Color(1.0, 0.78, 0.22, 0.80))
@@ -222,8 +225,9 @@ func _draw_run() -> void:
     _panel(Rect2(432, 18, 172, 68), Color(0.05, 0.10, 0.18, 0.65), 16)
     var hearts: int = int(state.get("hearts", 3))
     var max_hearts: int = int(state.get("max_hearts", 3))
-    _text(Vector2(446, 46), "♥".repeat(hearts) + "♡".repeat(maxi(0, max_hearts - hearts)), 22, RED)
-    _text(Vector2(446, 68), "VIDA • ROTA SEGURA", 10, Color("#d9e3f0"))
+    _hud_icon(Vector2(446, 45), "heart", RED)
+    _text(Vector2(463, 46), "♥".repeat(hearts) + "♡".repeat(maxi(0, max_hearts - hearts)), 22, RED)
+    _text(Vector2(463, 68), "VIDA • ROTA SEGURA", 10, Color("#d9e3f0"))
     # ETAPA 1 — prazo de partida do ônibus (o relógio que era a "espera no ponto").
     if not bool(state.get("endless", false)):
         var time_left: float = float(state.get("time_left", 0.0))
@@ -640,6 +644,31 @@ func _header(title: String, right: String) -> void:
     _text(Vector2(92, 76), "CORRE PRO PONTO 3D", 13, MUTED)
     _panel(Rect2(492, 28, 205, 54), Color("#152a49"), 18)
     _text_center(Vector2(594, 62), right, 17, YELLOW)
+
+func _hud_icon(center: Vector2, kind: String, color: Color) -> void:
+    # Ícones vetoriais pequenos e consistentes: mantêm a leitura mesmo sem
+    # depender de emoji/fonte externa no Android.
+    draw_circle(center, 10.0, Color(color, 0.16))
+    draw_arc(center, 9.0, 0.0, TAU, 18, Color(color, 0.65), 1.2)
+    match kind:
+        "heart":
+            draw_circle(center + Vector2(-3, -1), 2.8, color)
+            draw_circle(center + Vector2(3, -1), 2.8, color)
+            var heart := PackedVector2Array([center + Vector2(-6, 0), center + Vector2(6, 0), center + Vector2(0, 6)])
+            draw_colored_polygon(heart, color)
+        "coin":
+            draw_circle(center, 4.0, color)
+            draw_line(center + Vector2(-2, 0), center + Vector2(2, 0), Color("#8b5b18"), 1.0)
+        "distance":
+            draw_line(center + Vector2(-5, 3), center + Vector2(5, 3), color, 1.5)
+            draw_line(center + Vector2(-4, 3), center + Vector2(-1, -3), color, 1.5)
+            draw_line(center + Vector2(1, -3), center + Vector2(4, 3), color, 1.5)
+        "route":
+            draw_line(center + Vector2(-5, 5), center + Vector2(5, -5), color, 1.6)
+            draw_circle(center + Vector2(-5, 5), 2.0, color)
+            draw_circle(center + Vector2(5, -5), 2.0, color)
+        _:
+            draw_circle(center, 3.0, color)
 
 func _panel(rect: Rect2, color: Color, radius: float = 12.0) -> void:
     # Painel de vidro fumê: sombra curta, borda fina e reflexo superior dão
