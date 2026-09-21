@@ -9,7 +9,7 @@ extends SceneTree
 ##   E. fôlego zerado                -> derrota "folego"
 ##   F. pausa suspende o relógio     -> time_used inalterado
 ##   G. impacto acrescenta +2 s      -> penalty_total
-##   H. prazo da fase 0 = distância/velocidade + margem do catálogo
+##   H. prazo autoral nas 50 + tabela de margens íntegra + clamp na final
 ## Código de saída 0 = OK, 1 = falha.
 
 var _failures: Array = []
@@ -158,14 +158,32 @@ func _scenario_g() -> void:
             "G. impacto acrescenta +2 s ao tempo consumido")
 
 
-# H. Conta do prazo bate com o catálogo (fase 46: primeira procedural).
+# H. Prazo autoral nas 50 + tabela de margens íntegra + clamp na final.
 func _scenario_h() -> void:
-    # ETAPA 15 — fases autorais (0–44) trazem o próprio prazo nos dados do
-    # nível (blueprint §8); a fórmula do catálogo vale para as procedurais.
-    var p: Dictionary = PhaseData.get_phase(45)
-    var esperado: float = float(p.get("distance", 0.0)) / _game._phase_speed_for(45) \
-            + _game._deadline_margin_for(45)
-    var prazo: float = _game._phase_deadline_for(45)
-    print("prazo fase 46 = ", prazo, " s (esperado ", esperado, ")")
-    _check(absf(prazo - esperado) < 0.001,
-            "H. prazo = distância/velocidade + margem do catálogo")
+    # ETAPA 16 — as 50 fases são autorais: o prazo vem dos dados do nível
+    # (blueprint §8) em todas; a tabela de margens segue íntegra para o
+    # modo procedural e o índice 50 fixa na final.
+    var ok := true
+    for i in range(50):
+        var prazo: float = _game._phase_deadline_for(i)
+        var dado: float = float(LevelData.for_phase(i).get("deadline_seconds", -1.0))
+        if absf(prazo - dado) > 0.001:
+            ok = false
+            print("  fase %d: prazo %.2f diverge do dado %.2f" % [i + 1, prazo, dado])
+    var margens: Array = _game.DEADLINE_MARGINS
+    if margens.size() != 50:
+        ok = false
+        print("  tabela de margens com %d entradas (esperado 50)" % margens.size())
+    for i in range(50):
+        var margem: float = _game._deadline_margin_for(i)
+        if absf(margem - float(margens[i])) > 0.001 or margem <= 0.0:
+            ok = false
+            print("  margem %d fora da tabela: %s" % [i, str(margem)])
+    var fixo: float = _game._phase_deadline_for(50)
+    var final: float = _game._phase_deadline_for(49)
+    var pressa_fixa: float = _game._phase_speed_for(50)
+    print("prazo índice 50 = %s s (final = %s, velocidade = %s)" % [str(fixo), str(final), str(pressa_fixa)])
+    if absf(fixo - final) > 0.001 or absf(pressa_fixa - 9.0) > 0.001:
+        ok = false
+        print("  índice 50 deveria fixar na final")
+    _check(ok, "H. prazo autoral nas 50, margens íntegras e clamp na final")

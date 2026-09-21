@@ -7,7 +7,7 @@ extends SceneTree
 ##   W. ipe_amarelo.glb: contrato de asset e árvores do piloto usando o ipê
 ##      (fases sem nível seguem com a árvore comum).
 ##   X. corredores legíveis: na fase 3 o deck cobre os três corredores
-##      (-3,25 / 0 / +3,25); na fase 1 o leiaute padrão permanece.
+##      (-3,25 / 0 / +3,25); o índice 50 fixa na final (deck cobre E/C/D).
 ## Código de saída 0 = OK, 1 = falha.
 
 var _failures: Array = []
@@ -49,9 +49,9 @@ func _unlock_up_to_phase_3() -> void:
     save.call("record_phase", 1, 3, 10.0)
 
 
-func _unlock_up_to_phase_46() -> void:
+func _unlock_all_phases() -> void:
     var save: Node = _game.get_node("/root/GameSave")
-    for i in range(2, 45):
+    for i in range(2, 50):
         save.call("record_phase", i, 3, 10.0)
 
 
@@ -171,12 +171,14 @@ func _scenario_x() -> void:
     print("deck fase3: E=%s C=%s D=%s" % [str(cobre_e), str(cobre_c), str(cobre_d)])
     _check(cobre_e and cobre_c and cobre_d,
             "X1. fase 3: deck cobre os três corredores de corrida")
-    # ETAPA 15 — fases 1-45 viraram níveis autorais; o leiaute padrão fica nas
-    # fases ainda procedurais (ex.: fase 46, índice 45).
-    _unlock_up_to_phase_46()
-    _start_phase(45)
-    var sem_nivel_e: bool = _deck_cobre(-3.25)
-    var sem_nivel_c: bool = _deck_cobre(0.0)
-    print("deck fase46: E=%s C=%s (leiaute padrão)" % [str(sem_nivel_e), str(sem_nivel_c)])
-    _check(not sem_nivel_e and sem_nivel_c,
-            "X2. fases sem nível mantêm o leiaute padrão (rua à esquerda)")
+    # ETAPA 16 — as 50 fases são autorais; o índice 50 fixa na final
+    # (_start_run limita a phase_count - 1) e o deck cobre E/C/D.
+    _unlock_all_phases()
+    _start_phase(50)
+    var fixa_e: bool = _deck_cobre(-3.25)
+    var fixa_c: bool = _deck_cobre(0.0)
+    var fixa_d: bool = _deck_cobre(3.25)
+    print("deck índice50: fase=%d E=%s C=%s D=%s" % [_game.phase_index + 1,
+            str(fixa_e), str(fixa_c), str(fixa_d)])
+    _check(_game.phase_index == 49 and fixa_e and fixa_c and fixa_d,
+            "X2. índice 50 fixa na final (deck cobre E/C/D)")

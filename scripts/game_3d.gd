@@ -909,6 +909,55 @@ func _spawn_outdoors(level: Dictionary, total: float) -> void:
         i += 1
 
 
+## ETAPA 16 — placa de sinalização para o terminal (só procedural):
+## poste fino + painel azul alto + seta branca para a esquerda (o
+## terminal fica no lado E, x=-6). Estreita e fora das pistas: nunca
+## esconde os perigos.
+func _build_placa_terminal(pos: Vector3, _index: int) -> void:
+    var placa := Node3D.new()
+    placa.name = "PlacaTerminal"
+    placa.position = pos
+    placa.set_meta("decor_kind", "placa")
+    decor_root.add_child(placa)
+    _cylinder(placa, 0.05, 0.05, 2.4, Vector3(0.0, 1.2, 0.0),
+            _material(Color("#39404d"), 0.15, 0.5, "metal"), "PlacaPoste")
+    _box(placa, Vector3(1.1, 0.55, 0.06), Vector3(0.0, 2.2, 0.0),
+            _material(Color("#1f5fa8"), 0.0, 0.42, "paint"), "PlacaPainel")
+    var seta := _material(Color("#f2f5f7"), 0.0, 0.35, "paint")
+    _box(placa, Vector3(0.5, 0.09, 0.02), Vector3(0.08, 2.2, 0.04), seta, "PlacaSetaHaste")
+    var ponta := _cone(placa, 0.11, 0.22, Vector3(-0.28, 2.2, 0.04), seta, "PlacaSetaCabeca")
+    ponta.rotation.z = PI * 0.5
+
+
+## ETAPA 16 — placas do caminho do terminal (fases 46-50): dos dois
+## lados a cada passo, pulando as que caem sobre travessias; visual
+## puro, sem colisão nem entrada em entities.
+func _spawn_placas(level: Dictionary, total: float) -> void:
+    var placas: Dictionary = level.get("scenery", {}).get("placas", {})
+    if placas.is_empty():
+        return
+    var passo: float = float(placas.get("passo_m", 56.0))
+    var desloc: float = float(placas.get("desloc_m", passo * 0.5))
+    var x_lado: float = float(placas.get("x_m", 5.8))
+    var margem: float = float(placas.get("margem_cruzamento_m", 6.0))
+    var cruzamentos: Array = []
+    for p in level.get("patterns", []):
+        if p.has("cross_mps"):
+            cruzamentos.append(float(p.get("at_m", 0.0)))
+    var z := desloc
+    var i := 0
+    while z < total - 10.0:
+        var livre := true
+        for at in cruzamentos:
+            if absf(z - at) < margem:
+                livre = false
+        if livre:
+            for lado in [-1.0, 1.0]:
+                _build_placa_terminal(Vector3(lado * x_lado, 0.0, -z), i)
+        z += passo
+        i += 1
+
+
 func _build_course_from_level(level: Dictionary, total: float) -> void:
     var level_patterns: Array = level.get("patterns", [])
     for p in level_patterns:
@@ -935,6 +984,7 @@ func _build_course_from_level(level: Dictionary, total: float) -> void:
     _spawn_feira(level, total)
     _spawn_quiosques(level, total)
     _spawn_outdoors(level, total)
+    _spawn_placas(level, total)
     _create_bus_stop(total)
     call_deferred("_audit_world_geometry")
 
@@ -2593,16 +2643,28 @@ func _build_tourist_kiosk(pos: Vector3, _index: int) -> void:
     _cone(quiosque, 1.05, 0.52, Vector3(0.0, 1.82, 0.0), _material(_scenario_color("accent", CYAN), 0.0, 0.62, "fabric"), "KioskRoof")
     _box(quiosque, Vector3(0.72, 0.22, 0.05), Vector3(0.0, 0.98, -0.8), _material(Color("#f5e6bc"), 0.0, 0.45, "wood"), "KioskCounter")
 
-func _build_terminal_facade(pos: Vector3, _index: int) -> void:
+func _build_terminal_facade(pos: Vector3, _index: int, face_runner: bool = false) -> void:
+    # ETAPA 16 — marca decor_kind=terminal (uma por terminal);
+    # face_runner gira a fachada para quem chega (marco do destino).
     var terminal_glb := _optional_glb("scene/terminal.glb")
     if terminal_glb != null:
         terminal_glb.position = pos
+        if face_runner:
+            terminal_glb.rotation.y = PI
+        terminal_glb.set_meta("decor_kind", "terminal")
         decor_root.add_child(terminal_glb)
         _tint_glb(terminal_glb, {"TintWall": _scenario_color("building", Color("#344b70")), "TintTrim": _scenario_color("accent", CYAN), "TintSign": _scenario_color("accent", CYAN).lightened(0.18)})
         return
-    _box(decor_root, Vector3(3.2, 3.2, 2.8), pos + Vector3(0.0, 1.6, 0.0), _material(_scenario_color("building", Color("#344b70")), 0.0, 0.68, "metal"), "TerminalFacade")
-    _box(decor_root, Vector3(2.9, 0.95, 0.05), pos + Vector3(0.0, 1.35, -1.46), _material(Color("#7ed3d0"), 0.0, 0.25, "glass"), "TerminalGlass")
-    _box(decor_root, Vector3(3.5, 0.12, 0.72), pos + Vector3(0.0, 3.25, 0.0), _material(_scenario_color("accent", CYAN), 0.0, 0.42, "metal"), "TerminalRoof")
+    var terminal := Node3D.new()
+    terminal.name = "Terminal"
+    terminal.position = pos
+    if face_runner:
+        terminal.rotation.y = PI
+    terminal.set_meta("decor_kind", "terminal")
+    decor_root.add_child(terminal)
+    _box(terminal, Vector3(3.2, 3.2, 2.8), Vector3(0.0, 1.6, 0.0), _material(_scenario_color("building", Color("#344b70")), 0.0, 0.68, "metal"), "TerminalFacade")
+    _box(terminal, Vector3(2.9, 0.95, 0.05), Vector3(0.0, 1.35, -1.46), _material(Color("#7ed3d0"), 0.0, 0.25, "glass"), "TerminalGlass")
+    _box(terminal, Vector3(3.5, 0.12, 0.72), Vector3(0.0, 3.25, 0.0), _material(_scenario_color("accent", CYAN), 0.0, 0.42, "metal"), "TerminalRoof")
 
 func _build_market_stall(pos: Vector3, _index: int) -> void:
     # ETAPA 12 — marca decor_kind=barraca (uma por barraca) para o QA
@@ -2849,6 +2911,9 @@ func _create_bus_stop(total: float) -> void:
     elif _marco_nivel == "guarita":
         # ETAPA 13 — a guarita marca o ponto na orla (fase 35).
         _build_guard_post(Vector3(-6.0, 0.0, -total - 14.0), phase_index)
+    elif _marco_nivel == "terminal":
+        # ETAPA 16 — o terminal recebe no ponto (fases 46-50).
+        _build_terminal_facade(Vector3(-6.0, 0.0, -total - 14.0), phase_index, true)
 
 func _build_bus_mesh(parent: Node3D) -> void:
     var bus_glb := _optional_model("onibus.glb")

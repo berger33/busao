@@ -367,6 +367,27 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
   seco no centro com rodízio intacto), reuso sem estreia e
   determinismo. Regressões 1–14 verdes (QA1 H e QA5 X2 migrados para
   o índice 45, primeira fase ainda procedural).
+- ETAPA 16 (21/09): lote 10 das 50 fases (caminho do terminal final,
+  reuso) — fecha as 50. Fases 46–50 autorais em `LevelData`
+  (bairro_46–50) com números do PLANO_50_FASES (532/8,5/72;
+  560/8,6/74; 588/8,7/76; 588/8,8/74; 616/9,0/75), só com famílias já
+  apresentadas (três pedestres, carrinhos, dois ônibus, revisão de
+  doze famílias, exame final em três atos com três respiros). Placas
+  para o terminal dos dois lados a cada 56 m pulando travessias
+  (18/20/20/20/22), multidão de fundo (14 figuras), lojas com
+  prédios médios (2–4 pisos), tempo seco fixo; o terminal recebe no
+  ponto nas cinco fases (marco recorrente, de frente para quem
+  chega); fase 48 fixa a paleta "dia" (o rodízio global daria noite
+  ao grande evento). Fase 50 com três bilhetes dourados em C.
+- QA etapa 16 (6/6): dados do plano + gates intactos + cenário do
+  terminal, validador nas 50 fases, montagem exata, comportamentos
+  (pedestres SOFT em D/E/C, carrinhos FULL + barreira de deslize,
+  ônibus com nariz em C + duas zonas, revisão de 12 famílias, atos
+  com respiros + dourados + terminal no ponto, placas alinhadas e
+  determinísticas, multidão anda/repete, seco ×5, sol de dia na 48),
+  reuso sem estreia e determinismo. Regressões 1–15 verdes (QA1 H e
+  QA5 X2 redefinidos: prazo autoral nas 50 + margens íntegras +
+  clamp documentado; índice 50 fixa na final com deck em E/C/D).
 
 ## Regras de engenharia desta execução
 
