@@ -18,6 +18,7 @@ const WORLD_CHARACTER_SCRIPT = preload("res://scripts/world_character.gd")
 const RUN_DIRECTOR = preload("res://scripts/run_director.gd")
 const WORLD_ANIMAL_SCRIPT = preload("res://scripts/world_animal.gd")
 const PHYSICS_HANDLER = preload("res://scripts/physics_handler.gd")
+const OBSTACLE_RULES = preload("res://scripts/obstacle_rules.gd")
 const LIGHTING_HANDLER = preload("res://scripts/lighting_handler.gd")
 const TEXTURE_ASPHALT = preload("res://assets/textures/asfalto_brasil.svg")
 const TEXTURE_ASPHALT_REAL = preload("res://assets/textures/asfalto_realista.png")
@@ -82,6 +83,10 @@ const DEADLINE_MARGINS: Array = [
 ]
 # Um impacto válido retira um ponto e acrescenta 2 s ao tempo consumido.
 const IMPACT_TIME_PENALTY := 2.0
+# ETAPA 2 — buffer de entrada: ação pedida até 0,12 s (de simulação)
+# antes de ficar disponível (aterrissagem, fim do deslize) ainda é
+# executada. Medido em tempo de jogo: independe do fps e morre na pausa.
+const INPUT_BUFFER_S := 0.12
 const ROAD_LANE := 0
 const SIDEWALK_CENTER := 1
 const SIDEWALK_RIGHT := 2
@@ -186,6 +191,9 @@ var rain_guard_timer := 0.0
 # ETAPA 1 — RunDirector: máquina de estados, relógio e regra do prazo.
 var run_director: RunDirector = RUN_DIRECTOR.new()
 var boarding_left := 0.0
+# ETAPA 2 — segundos de buffer restantes do último pedido de pulo/deslize.
+var buffered_jump_left := 0.0
+var buffered_slide_left := 0.0
 var wall_run_count := 0
 var dog_chase_timer := 0.0
 # --- Lote 11/12: Ads/Billing estado ----------------------------------------
@@ -588,6 +596,8 @@ func _start_run(index: int) -> void:
     magnet_timer = 0.0
     rain_guard_timer = 0.0
     boarding_left = 0.0
+    buffered_jump_left = 0.0
+    buffered_slide_left = 0.0
     wall_run_count = 0
     dog_chase_timer = 0.0
     tutorial_stage = -1
@@ -947,6 +957,9 @@ func _update_tutorial_hint() -> void:
 
 func _update_run(dt: float) -> void:
     if run_mode == "paused":
+        # ETAPA 2 — o buffer morre com a pausa: nenhuma ação no retorno.
+        buffered_jump_left = 0.0
+        buffered_slide_left = 0.0
         return
     if run_mode == "countdown":
         # Contagem regressiva: mundo parado; o relógio do prazo vive no RunDirector.
@@ -962,9 +975,25 @@ func _update_run(dt: float) -> void:
         return
     elapsed += dt
     run_phase += dt * (8.0 + player_speed)
+    buffered_jump_left = maxf(0.0, buffered_jump_left - dt)
+    buffered_slide_left = maxf(0.0, buffered_slide_left - dt)
+    var _prev_jump: float = jump_timer
+    var _prev_slide: float = slide_timer
     jump_timer = maxf(0.0, jump_timer - dt)
     slide_timer = maxf(0.0, slide_timer - dt)
     dash_timer = maxf(0.0, dash_timer - dt)
+    # ETAPA 2 — fim de ação: consome entradas em buffer (~0,12 s de jogo).
+    if _prev_jump > 0.0 and jump_timer <= 0.0:
+        if buffered_slide_left > 0.0:
+            buffered_slide_left = 0.0
+            _slide()
+        elif buffered_jump_left > 0.0:
+            buffered_jump_left = 0.0
+            _jump()
+    if _prev_slide > 0.0 and slide_timer <= 0.0:
+        if buffered_jump_left > 0.0:
+            buffered_jump_left = 0.0
+            _jump()
     dash_cooldown = maxf(0.0, dash_cooldown - dt)
     combo_timer = maxf(0.0, combo_timer - dt)
     speed_boost_timer = maxf(0.0, speed_boost_timer - dt)
@@ -1095,23 +1124,31 @@ func _resolve_entity(entity: Dictionary) -> void:
         if lane == player_lane or magnet_timer > 0.0:
             _collect(kind, pos)
         return
-    if lane != player_lane:
+    # ETAPA 2 — colisão pela posição real (inclusive durante a troca de
+    # corredor), não apenas pelo índice do corredor de destino.
+    if absf(player_x - LANE_X[lane]) > OBSTACLE_RULES.hit_width(kind):
         return
-    # Lote23 — detecção por shape quando física ativa (hearts só perde se shape intersecta fora de invencível)
-    var use_physics: bool = physics_realista_enabled and _player_physics_body != null
-    var obstacle_body: Node = null
-    if use_physics:
-        var ent_node: Node3D = entity["node"] as Node3D
-        obstacle_body = ent_node.get_node_or_null("PhysicsBody")
-        # pothole Area3D fricção 0.15 e impulso -Y 3 já está no handler; aqui só checa shape
-        if PHYSICS_HANDLER.should_lose_heart(_player_physics_body, obstacle_body, dash_timer, false) == false and not (jump_timer > 0.0 or dash_timer > 0.0 or slide_timer > 0.0):
-            # shape não intersectaria, mas mantém fallback lane para não quebrar arcade
-            pass
+    var classe: int = OBSTACLE_RULES.classe_for(kind)
     var safe := false
-    if kind in ["car", "bus_traffic", "motorcycle", "truck", "pothole"]:
-        safe = jump_timer > 0.0 or dash_timer > 0.0
-    elif kind in ["old_lady", "hydrant", "payphone", "dog", "bicycle", "cone", "vendor", "bench"]:
-        safe = jump_timer > 0.0 or slide_timer > 0.0 or dash_timer > 0.0
+    if jump_timer > 0.0:
+        safe = OBSTACLE_RULES.jump_clears(classe)
+    elif slide_timer > 0.0:
+        safe = OBSTACLE_RULES.slide_clears(classe)
+    if safe:
+        _show_feedback("DESVIO LIMPO", _reaction_for(kind), GOLD, "reward")
+        _spawn_3d_burst(pos + Vector3(0, 1.0, -0.6), GOLD, 10)
+    elif OBSTACLE_RULES.is_soft(classe):
+        _stumble(kind, entity)
+    else:
+        _hit_player(kind)
+
+func _stumble(kind: String, entity: Dictionary) -> void:
+    # ETAPA 2 — pessoas e animais: esbarrão/tropeço com lentidão, sem dano.
+    if invulnerability > 0.0:
+        return
+    invulnerability = 0.8
+    slow_motion_timer = maxf(slow_motion_timer, 0.8)
+    camera_shake = 0.22
     if kind == "dog":
         dog_chase_timer = 10.0
         var dog_entity_node: Node3D = entity["node"]
@@ -1119,11 +1156,8 @@ func _resolve_entity(entity: Dictionary) -> void:
         if dog_node and dog_node.has_method("set_running"):
             dog_node.call("set_running", true)
         _show_feedback("CARAMELO!", "10 segundos na sua cola", RED, "bark")
-    if safe:
-        _show_feedback("DESVIO LIMPO", _reaction_for(kind), GOLD, "reward")
-        _spawn_3d_burst(pos + Vector3(0, 1.0, -0.6), GOLD, 10)
     else:
-        _hit_player(kind)
+        _show_feedback("ESBARRÃO!", "com licença...", YELLOW, "shout")
 
 func _collect(kind: String, pos: Vector3) -> void:
     var value := 1
@@ -1166,7 +1200,9 @@ func _collect(kind: String, pos: Vector3) -> void:
     _spawn_3d_burst(pos + Vector3(0, 1.0, 0), GOLD, 8)
 
 func _hit_player(kind: String) -> void:
-    if dash_timer > 0.0 or invulnerability > 0.0:
+    # ETAPA 2 — dash não concede imunidade (blueprint §4): só a
+    # invulnerabilidade pós-impacto bloqueia dano.
+    if invulnerability > 0.0:
         return
     GameSave.record_event("hit_" + kind)
     if has_node("/root/AnalyticsManager"):
@@ -1211,7 +1247,12 @@ func _change_lane(direction: int) -> void:
         _show_feedback("FAIXA %s" % ["RUA", "CALÇADA", "CALÇADA"][player_lane], "Leitura perfeita", BLUE, "whoosh")
 
 func _jump() -> void:
-    if screen != 2 or run_mode != "playing" or jump_timer > 0.0 or slide_timer > 0.0:
+    if screen != 2 or run_mode != "playing":
+        return
+    if jump_timer > 0.0 or slide_timer > 0.0:
+        # ETAPA 2 — buffer de entrada (~0,12 s): pulo pedido no ar ou no
+        # deslize é executado assim que ficar disponível.
+        buffered_jump_left = INPUT_BUFFER_S
         return
     # Lote23 — head clearance raycast quando física realista (snap 0.4)
     if physics_realista_enabled and _player_physics_body != null and not _is_on_floor_physics:
@@ -1231,7 +1272,12 @@ func _jump() -> void:
     _spawn_3d_burst(player_root.position + Vector3(0, 0.1, 0), CYAN, 7)
 
 func _slide() -> void:
-    if screen != 2 or run_mode != "playing" or jump_timer > 0.0:
+    if screen != 2 or run_mode != "playing":
+        return
+    if jump_timer > 0.0:
+        # ETAPA 2 — buffer de entrada (~0,12 s): deslize pedido no ar é
+        # executado na aterrissagem.
+        buffered_slide_left = INPUT_BUFFER_S
         return
     # Lote23 — slide = crouch com head clearance raycast 0.4 quando física
     if physics_realista_enabled and _player_physics_body != null:
@@ -1255,11 +1301,11 @@ func _dash() -> void:
     dash_cooldown = 1.9 if dash_recharge_fast else 3.2
     # Lote23 — dash = impulse 900 N·s, cooldown 3.2 (physics)
     if physics_realista_enabled and _player_physics_body != null:
-        # impulso lateral já via lane_change_velocity; dash mantém invencível 0.42
+        # ETAPA 2 — dash é só explosão de velocidade (sem imunidade)
         _player_velocity_y = maxf(_player_velocity_y, 0.0)
     GameSave.record_event("dash")
     camera_shake = 0.18
-    _show_feedback("DASH!", "Invencível por um instante", YELLOW, "whoosh")
+    _show_feedback("ARRANCADA!", "Explosão curta de velocidade", YELLOW, "whoosh")
     _spawn_3d_burst(player_root.position + Vector3(0, 1.0, 0), YELLOW, 18)
 
 func _finish_run(success: bool, game_over := false) -> void:
