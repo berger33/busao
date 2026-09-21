@@ -313,7 +313,8 @@ func _draw_results() -> void:
         var fail_reason: String = str(result_data.get("fail_reason", "folego"))
         var fail_line: String = "Use rua e calçada como rotas diferentes."
         if fail_reason == "atraso":
-            fail_line = "Faltavam %d m para o ponto quando o ônibus partiu." % int(result_data.get("shortfall_m", 0))
+            fail_line = "Faltavam %d m (%d s) para o ponto quando o ônibus partiu." % [
+                    int(result_data.get("shortfall_m", 0)), int(result_data.get("shortfall_s", 0))]
         elif fail_reason == "folego":
             fail_line = "O fôlego acabou antes do ponto."
         _text_center(Vector2(360, 180), "O BUSÃO FOI EMBORA", 34, RED)

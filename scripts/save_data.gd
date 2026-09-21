@@ -8,7 +8,7 @@ const SHOP_DATA = preload("res://scripts/shop_data.gd")
 const SAVE_PATH := "user://corre_pro_ponto.json"
 const BACKUP_PATH := "user://corre_pro_ponto.bak.json"
 const TEMP_PATH := "user://corre_pro_ponto.tmp.json"
-const SAVE_SCHEMA_VERSION := 3
+const SAVE_SCHEMA_VERSION := 4
 const CLOUD_SNAPSHOT_KEYS: Array = ["schema_version","coins","hard_currency","remove_ads","phase_stars","best_times","achievements","inventory","owned_items","pet_skins","equipped_character","xp","daily_streak","max_streak","metrics","endless_best","endless_unlocked"]
 
 var data: Dictionary = {}
@@ -39,6 +39,7 @@ func _set_defaults() -> void:
         "schema_version": SAVE_SCHEMA_VERSION,
         "coins": BALANCE.starting_coins,
         "phase_stars": [],
+        "phase_goals": [],
         "best_times": {},
         "daily_streak": 0,
         "max_streak": 0,
@@ -98,6 +99,7 @@ func _set_defaults() -> void:
     }
     for i in int(BALANCE.phase_count):
         data["phase_stars"].append(0)
+        data["phase_goals"].append({"prazo": false, "sem_dano": false, "moedas": false})
 
 func _load_data() -> void:
     var primary_exists := FileAccess.file_exists(SAVE_PATH)
@@ -145,6 +147,16 @@ func _migrate_data(source_version: int) -> void:
         data["metrics"]["coins_spent"] = 0
         data["reduced_motion"] = bool(data.get("reduced_motion", false))
         data["high_contrast"] = bool(data.get("high_contrast", false))
+    if source_version < 4:
+        # ETAPA 6 — estrelas por objetivo (blueprint S9): cada objetivo guarda
+        # a melhor realizacao em qualquer tentativa. Saves antigos nao tem
+        # objetivos separados: so o "prazo" e derivado das estrelas antigas.
+        var goals_antigos: Array = []
+        var estrelas_antigas: Array = data.get("phase_stars", [])
+        for i in int(BALANCE.phase_count):
+            var antiga: int = int(estrelas_antigas[i]) if i < estrelas_antigas.size() else 0
+            goals_antigos.append({"prazo": antiga >= 1, "sem_dano": false, "moedas": false})
+        data["phase_goals"] = goals_antigos
     data["schema_version"] = SAVE_SCHEMA_VERSION
 
 func _read_dictionary(path: String) -> Dictionary:
@@ -220,6 +232,18 @@ func _sanitize_data() -> void:
     if normalized_stars.size() > int(BALANCE.phase_count):
         normalized_stars.resize(int(BALANCE.phase_count))
     data["phase_stars"] = normalized_stars
+    var normalized_goals: Array = []
+    var raw_goals = data.get("phase_goals", [])
+    for i in int(BALANCE.phase_count):
+        var goal: Dictionary = {"prazo": false, "sem_dano": false, "moedas": false}
+        if raw_goals is Array and i < raw_goals.size() and raw_goals[i] is Dictionary:
+            goal["prazo"] = bool(raw_goals[i].get("prazo", false))
+            goal["sem_dano"] = bool(raw_goals[i].get("sem_dano", false))
+            goal["moedas"] = bool(raw_goals[i].get("moedas", false))
+        elif int(normalized_stars[i]) >= 1:
+            goal["prazo"] = true
+        normalized_goals.append(goal)
+    data["phase_goals"] = normalized_goals
     for key in ["badges", "inventory", "owned_items", "pet_skins", "achievements", "daily_completed"]:
         if not (data.get(key, []) is Array):
             data[key] = []
@@ -398,9 +422,19 @@ func is_phase_unlocked(index: int) -> bool:
         return total_stars() >= BALANCE.unlock_endless_stars and phase_stars(BALANCE.endless_unlock_phase - 1) >= 1
     return phase_stars(index - 1) >= 1
 
-func record_phase(index: int, stars: int, time_seconds: float) -> Dictionary:
+func record_phase(index: int, stars: int, time_seconds: float, goals: Dictionary = {}) -> Dictionary:
     if index < 0 or index >= int(BALANCE.phase_count):
         return {"first_clear": false, "new_stars": 0, "new_record": false}
+    # ETAPA 6 — objetivos por tentativa (blueprint S9): estrelas 2 e 3 podem
+    # ser conquistadas em tentativas diferentes; guarda-se a melhor
+    # realizacao de cada objetivo e deriva-se as estrelas da uniao.
+    if not goals.is_empty():
+        var goal: Dictionary = data["phase_goals"][index]
+        goal["prazo"] = bool(goal.get("prazo", false)) or bool(goals.get("prazo", false))
+        goal["sem_dano"] = bool(goal.get("sem_dano", false)) or bool(goals.get("sem_dano", false))
+        goal["moedas"] = bool(goal.get("moedas", false)) or bool(goals.get("moedas", false))
+        stars = (1 if bool(goal["prazo"]) else 0) + (1 if bool(goal["sem_dano"]) else 0) \
+                + (1 if bool(goal["moedas"]) else 0)
     var old_stars := phase_stars(index)
     var clamped_stars := clampi(stars, 0, 3)
     data["phase_stars"][index] = maxi(old_stars, clamped_stars)
@@ -414,7 +448,8 @@ func record_phase(index: int, stars: int, time_seconds: float) -> Dictionary:
     if first_clear:
         data["metrics"]["first_clears"] = int(data["metrics"].get("first_clears", 0)) + 1
     _request_save()
-    return {"first_clear": first_clear, "new_stars": new_stars, "new_record": new_record}
+    return {"first_clear": first_clear, "new_stars": new_stars, "new_record": new_record,
+            "stars_total": int(data["phase_stars"][index])}
 
 func best_time(index: int) -> float:
     return float(data["best_times"].get(str(index), 0.0))

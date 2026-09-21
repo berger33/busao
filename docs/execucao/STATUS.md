@@ -13,6 +13,7 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
 | 3 | Primeira família SLIDE_UNDER: barreira suspensa de obra com fase de introdução (fase 3), dando função ao deslize no percurso | concluída | `tools/qa_etapa3_barreira.gd`: 5/5 verificações verdes (K–O); fases 1-2 sem barreira, fase 3 com 2; percurso determinístico |
 | 4 | Estrutura de fase piloto (blueprint §7/§8): módulos editáveis em dados, validador de caminho com estado do jogador, fase 3 autoral "Rua do Ipê" (336 m, 12 módulos) | concluída | `tools/qa_etapa4_piloto.gd`: 10/10 verificações verdes (P–T); validador aprova o piloto na velocidade base e no impulso 1,22x e rejeita estação sem saída; fase 3 montada só com os dados do nível (`scripts/level_data.gd`), sem loop procedural |
 | 5 | Frente de conteúdo/arte do piloto: `barreira.glb` (fecha o drop-in da ETAPA 3), deck cobrindo os três corredores na fase 3, `ipe_amarelo.glb` na Rua do Ipê — tudo gerado sem bpy (`tools/glb/`) | concluída | `tools/qa_etapa5_arte.gd`: 8/8 verificações verdes (V–X); barreiras da fase 3 instanciam o GLB (0 fallbacks), deck cobre -3,25/0/+3,25 só na fase 3, 16 ipês no cenário do piloto; fases sem nível preservam o leiaute padrão |
+| 6 | Auditoria de conformidade com o blueprint antes das 50 fases: matriz completa em `docs/execucao/AUDITORIA_BLUEPRINT.md` + fechamento dos gaps verificáveis (segundos faltando no atraso, estrelas por objetivo em tentativas diferentes, collider visível em modo de teste) | concluída | `tools/qa_etapa6_auditoria.gd`: 6/6 verificações verdes (A–F, idempotente); save schema v3→v4 com migração; regressões 1–5 verdes |
 
 ## Diário
 
@@ -140,6 +141,24 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
   check_gdscript.py (marca uso como UNDECLARED) — reproduzido em teste
   isolado; falsos positivos de classe interna em game_3d já registrados
   na ETAPA 4. Nenhuma questão real nova.
+- ETAPA 6 (21/09): auditoria completa do blueprint antes do passo das 50
+  fases (`docs/execucao/AUDITORIA_BLUEPRINT.md`). Decisão do usuário: a
+  câmera permanece como está. Gaps fechados em código: (1) derrota por
+  atraso informa segundos faltando, além dos metros (`shortfall_s` no
+  RunDirector, HUD e feedback — blueprint §5); (2) estrelas por objetivo
+  com melhor realização por tentativa (blueprint §9): `phase_goals` no
+  save, schema v4 com migração que deriva "prazo" das estrelas antigas,
+  `_finish_run` grava prazo/sem_dano/moedas e as estrelas vêm da união;
+  (3) `debug_hitboxes` visualiza o colisor dos obstáculos em modo de
+  teste (blueprint §4).
+- QA etapa 6 (6/6, idempotente entre execuções): atraso em m+s, união de
+  estrelas em tentativas distintas, migração v3→v4, caminho real do piloto,
+  hitboxes só com o flag, piloto intacto. Regressões 1–5 todas verdes.
+- Registro para o passo das 50 fases: famílias novas (lixeira, pedestre em
+  travessia, carrinho, poça, ciclista...) entram pelo mecanismo gated na
+  fase de introdução marcada no §6; velocidades autorais por nível seguem a
+  tabela do PLANO_50_FASES (5,5–9 m/s), não os 18 m/s antigos; economia de
+  teste (100k) tem ponto de reversão marcado para a publicação.
 
 ## Regras de engenharia desta execução
 

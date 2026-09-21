@@ -27,6 +27,7 @@ var finished := false
 var success := false
 var fail_reason := ""               # "atraso" | "folego"
 var shortfall_m := 0.0              # metros que faltavam quando o ônibus partiu
+var shortfall_s := 0.0              # segundos que faltavam (blueprint S5: informar os dois)
 var _near_announced := false
 
 
@@ -42,6 +43,7 @@ func setup(p_run_total: float, p_base_speed: float, p_deadline: float, p_bonus: 
     success = false
     fail_reason = ""
     shortfall_m = 0.0
+    shortfall_s = 0.0
     _near_announced = false
 
 
@@ -85,6 +87,8 @@ func update(dt: float, distance: float) -> Array:
                 success = false
                 fail_reason = "atraso"
                 shortfall_m = remaining
+                # Segundos estimados na velocidade base do percurso.
+                shortfall_s = remaining / maxf(base_speed, 0.01)
                 events.append("deadline")
     return events
 
@@ -100,6 +104,7 @@ func crossed_boarding() -> bool:
     if not success:
         fail_reason = "atraso"
         shortfall_m = 0.0
+        shortfall_s = 0.0
     return success
 
 

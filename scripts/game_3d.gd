@@ -163,6 +163,8 @@ var run_mode := "playing" # playing, paused, countdown, boarding, results
 var distance := 0.0
 var elapsed := 0.0
 var run_total := 400.0
+# ETAPA 6 — blueprint S4: visualizacao de colisor em modo de teste.
+var debug_hitboxes := false
 var player_lane := SIDEWALK_CENTER
 var player_x := 0.0
 # Lote 23 — Física Mundo Real (toggle; false mantém arcade lerp, true usa CharacterBody3D)
@@ -840,6 +842,19 @@ func _spawn_entity(kind: String, lane: int, entity_distance: float, collectible:
     node.name = "%s_%03d" % [kind, entities.size()]
     node.position = Vector3(LANE_X[clampi(lane, 0, 2)], 0.0, -entity_distance)
     entity_root.add_child(node)
+    # ETAPA 6 — blueprint S4: colisor visivel em modo de teste.
+    if debug_hitboxes and not collectible:
+        var hitbox := MeshInstance3D.new()
+        hitbox.name = "DebugHitbox"
+        var hit_mesh := BoxMesh.new()
+        hit_mesh.size = Vector3(OBSTACLE_RULES.hit_width(kind) * 2.0, 1.6, 0.3)
+        hitbox.mesh = hit_mesh
+        hitbox.position = Vector3(0.0, 0.8, 0.0)
+        var hit_mat := StandardMaterial3D.new()
+        hit_mat.albedo_color = Color(1.0, 0.2, 0.2, 0.35)
+        hit_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+        hitbox.material_override = hit_mat
+        node.add_child(hitbox)
     if collectible:
         _build_collectible(node, kind)
     elif lane == ROAD_LANE:
@@ -1096,7 +1111,8 @@ func _update_run(dt: float) -> void:
             _show_feedback("QUASE LÁ", "Segura firme até a porta", YELLOW, "horn")
         if "deadline" in ev_run:
             # O ônibus partiu: a tentativa termina aqui, causa na tela de resultado.
-            _show_feedback("O ÔNIBUS PARTIU", "Faltavam %d m para o ponto" % int(run_director.shortfall_m), RED, "impact_heavy")
+            _show_feedback("O ÔNIBUS PARTIU", "Faltavam %d m (%d s) para o ponto" % [
+                    int(run_director.shortfall_m), int(ceilf(run_director.shortfall_s))], RED, "impact_heavy")
             _finish_run(false, true)
             return
     step_timer -= dt
@@ -1431,10 +1447,18 @@ func _finish_run(success: bool, game_over := false) -> void:
             stars += 1
         if collected_coins >= int(phase["coin_target"]):
             stars += 1
+        # ETAPA 6 — objetivos por tentativa (blueprint S9): estrelas 2 e 3
+        # podem vir de tentativas diferentes; o save guarda a melhor de cada.
+        var run_goals: Dictionary = {
+            "prazo": true,
+            "sem_dano": no_damage,
+            "moedas": collected_coins >= int(phase["coin_target"]),
+        }
         var previous_stars := GameSave.phase_stars(phase_index)
         var previous_time: float = GameSave.best_time(phase_index)
         var record: bool = previous_time <= 0.0 or elapsed < previous_time
-        var record_info: Dictionary = GameSave.record_phase(phase_index, stars, elapsed)
+        var record_info: Dictionary = GameSave.record_phase(phase_index, stars, elapsed, run_goals)
+        stars = int(record_info.get("stars_total", stars))
         var first_clear: bool = bool(record_info.get("first_clear", false))
         var new_stars: int = int(record_info.get("new_stars", 0))
         var base_reward: int = BALANCE.first_clear_reward if first_clear else BALANCE.replay_reward
@@ -1499,10 +1523,12 @@ func _finish_run(success: bool, game_over := false) -> void:
             "record": false,
             "xp": 0,
             "fail_reason": run_director.fail_reason,
-            "shortfall_m": int(run_director.shortfall_m)
+            "shortfall_m": int(run_director.shortfall_m),
+            "shortfall_s": int(ceilf(run_director.shortfall_s)),
         }
         if run_director.fail_reason == "atraso":
-            _show_feedback("O BUSÃO FOI EMBORA", "Faltavam %d m para o ponto" % int(run_director.shortfall_m), RED, "impact_heavy")
+            _show_feedback("O BUSÃO FOI EMBORA", "Faltavam %d m (%d s) para o ponto" % [
+                    int(run_director.shortfall_m), int(ceilf(run_director.shortfall_s))], RED, "impact_heavy")
         else:
             _show_feedback("O BUSÃO FOI EMBORA", "O fôlego acabou antes do ponto", RED, "impact_heavy")
     GameSave.flush()
