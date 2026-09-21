@@ -753,6 +753,13 @@ def build_one(is_male, out_path):
     return out_path
 
 if __name__ == "__main__":
-    for is_male, nome in [(True, "Humano_M.glb"), (False, "Humano_F.glb")]:
-        build_one(is_male, os.path.join(OUT_HUMANOS, nome))
+    for is_male, nome in [
+        (True, "Humano_M.glb"),
+        (False, "Humano_F.glb"),
+        # Primeiro asset dedicado do pipeline hero: a Julia deixa de depender
+        # da mesma malha nomeada usada pelo elenco quando o build é executado.
+        (False, "../personagens/hero_julia.glb"),
+    ]:
+        output_dir = OUT_HUMANOS if not nome.startswith("../") else os.path.join(REPO, "assets", "characters", "personagens")
+        build_one(is_male, os.path.join(output_dir, nome.replace("../personagens/", "")))
     print("HUMANOS OK")
