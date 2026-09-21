@@ -141,8 +141,13 @@ func is_owned(product_id: String) -> bool:
 func _ledger() -> Dictionary:
     if GameSave == null:
         return {}
-    if not (GameSave.data.get("billing_ledger", {}) is Dictionary):
-        GameSave.data["billing_ledger"] = {}
+    # Default null (nao {}): chave ausente retorna null, que nao e Dictionary
+    # e cai na criacao. Com default {} o `is` sempre passava e o return abaixo
+    # lia chave inexistente (crash no primeiro run — 2026-09-21).
+    var existing = GameSave.data.get("billing_ledger", null)
+    if existing is Dictionary:
+        return existing
+    GameSave.data["billing_ledger"] = {}
     return GameSave.data["billing_ledger"]
 
 func _ledger_save() -> void:

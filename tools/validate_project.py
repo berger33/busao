@@ -384,6 +384,20 @@ def check_balance_and_persistence() -> None:
             fail(f"3D progression missing token: {token}")
 
 
+def check_billing_ledger() -> None:
+    # Regressao 2026-09-21: `.get("billing_ledger", {})` + `is Dictionary`
+    # nunca detectava chave ausente (o default {} E Dictionary) e o `_ledger()`
+    # crashava no primeiro run. Padrao exigido: default null + chave nos
+    # defaults do save (senao o _load_data descarta o ledger e o reconcile
+    # pos-restart nao encontra nada).
+    billing = (ROOT / "scripts/billing_manager.gd").read_text(encoding="utf-8")
+    save = (ROOT / "scripts/save_data.gd").read_text(encoding="utf-8")
+    if '.get("billing_ledger", null)' not in billing:
+        fail("billing ledger sem leitura null-default (risco de crash na chave ausente)")
+    if '"billing_ledger": {}' not in save:
+        fail("save defaults sem billing_ledger (ledger nao persistiria entre sessoes)")
+
+
 def check_assets() -> None:
     for svg in [ROOT / "assets/art/icon.svg", *sorted((ROOT / "assets/textures").glob("*.svg"))]:
         try:
@@ -447,6 +461,7 @@ def main() -> int:
     check_catalog()
     check_balance_and_persistence()
     check_3d_entrypoint()
+    check_billing_ledger()
     check_character_assets()
     check_assets()
     if ERRORS:

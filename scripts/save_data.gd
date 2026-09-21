@@ -76,6 +76,7 @@ func _set_defaults() -> void:
         "high_contrast": false,
         "hard_currency": 0,
         "remove_ads": false,
+        "billing_ledger": {},
         "ads_consent_granted": false,
         "analytics_enabled": true,
         "locale": "pt_BR",
@@ -276,6 +277,9 @@ func _sanitize_data() -> void:
     data["ad_counters"] = {"interstitial_run": maxi(0,int(ad_c.get("interstitial_run",0))), "rewarded_run": maxi(0,int(ad_c.get("rewarded_run",0)))}
     if not (data.get("retention_flags", {}) is Dictionary):
         data["retention_flags"] = {"d1": false, "d7": false, "d30": false}
+    if not (data.get("billing_ledger", {}) is Dictionary):
+        # Chave garantida pelos defaults; aqui so repara save corrompido.
+        data["billing_ledger"] = {}
     data["play_signed_in"] = bool(data.get("play_signed_in", false))
     data["last_review_ts"] = maxi(0, int(data.get("last_review_ts", 0)))
     data["review_requests"] = maxi(0, int(data.get("review_requests", 0)))

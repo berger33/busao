@@ -423,6 +423,22 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
   novos vs base (diff em worktree limpa); QA headless + 1º AAB + Test Lab
   pendentes (scripts prontos, exigem engine/aparelho).
 
+### 2026-09-21 (hotfix billing_ledger + warnings)
+
+- Crash `Invalid access ... 'billing_ledger'` no boot (engine real):
+  `_ledger()` usava `.get(chave, {})` + `is Dictionary` — o default {}
+  sempre passava no `is`, a criacao era pulada e o `return` lia chave
+  inexistente. Fix: default null + early return; trava de regressao em
+  `check_billing_ledger()`.
+- Bug adjacente: ledger fora dos defaults era descartado pelo `_load_data`,
+  quebrando o reconcile pos-restart. Fix: `"billing_ledger": {}` nos
+  defaults + coercao no `_sanitize_data`.
+- Warnings do engine (pre-existentes): `var i` morta em `_spawn_outdoors`
+  removida; `rng` local em `_rebuild_multidao` renomeado p/ `multidao_rng`.
+- Sandbox sem binario Godot (rede bloqueia download): validado por
+  inspeção + portoes (PRE-FLIGHT, qa_full, gdscan); runtime a confirmar
+  na maquina do usuario.
+
 ## Regras de engenharia desta execução
 
 - Uma etapa por vez; cada etapa fecha com demonstração reproduzível

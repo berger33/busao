@@ -900,7 +900,6 @@ func _spawn_outdoors(level: Dictionary, total: float) -> void:
         if p.has("cross_mps"):
             cruzamentos.append(float(p.get("at_m", 0.0)))
     var z := desloc
-    var i := 0
     while z < total - 10.0:
         var livre := true
         for at in cruzamentos:
@@ -911,7 +910,6 @@ func _spawn_outdoors(level: Dictionary, total: float) -> void:
                 _build_billboard(Vector3(lado * x_lado, 0.0, -z),
                         _scenario_color("accent", CYAN))
         z += passo
-        i += 1
 
 
 ## ETAPA 16 — placa de sinalização para o terminal (só procedural):
@@ -2266,8 +2264,8 @@ func _rebuild_multidao() -> void:
     var cfg: Dictionary = level.get("scenery", {}).get("multidao", {})
     if cfg.is_empty():
         return
-    var rng := RandomNumberGenerator.new()
-    rng.seed = 9000 + phase_index
+    var multidao_rng := RandomNumberGenerator.new()
+    multidao_rng.seed = 9000 + phase_index
     var quantidade := int(cfg.get("quantidade", 12))
     var x_min := float(cfg.get("x_min_m", 6.5))
     var x_max := float(cfg.get("x_max_m", 7.4))
@@ -2278,19 +2276,19 @@ func _rebuild_multidao() -> void:
         var figura := Node3D.new()
         figura.name = "Figura"
         figura.set_meta("decor_kind", "figura")
-        var x := lado * rng.randf_range(x_min, x_max)
-        figura.position = Vector3(x, 0.0, rng.randf_range(-26.0, 24.0))
+        var x := lado * multidao_rng.randf_range(x_min, x_max)
+        figura.position = Vector3(x, 0.0, multidao_rng.randf_range(-26.0, 24.0))
         crowd_root.add_child(figura)
-        var roupa := _material(tons[rng.randi_range(0, tons.size() - 1)], 0.0, 0.8, "fabric")
+        var roupa := _material(tons[multidao_rng.randi_range(0, tons.size() - 1)], 0.0, 0.8, "fabric")
         _capsule(figura, 0.22, 1.1, Vector3(0.0, 0.95, 0.0), roupa, "Corpo")
         _sphere(figura, 0.16, Vector3(0.0, 1.68, 0.0),
                 _material(Color("#c9a06a"), 0.0, 0.7, "skin"), "Cabeca")
         crowd_nodes.append({
             "node": figura,
             "base_x": x,
-            "speed": (0.8 + rng.randf() * 0.8) * (1.0 if rng.randf() < 0.5 else -1.0),
-            "phase": rng.randf_range(0.0, TAU),
-            "bob": rng.randf_range(2.2, 3.4),
+            "speed": (0.8 + multidao_rng.randf() * 0.8) * (1.0 if multidao_rng.randf() < 0.5 else -1.0),
+            "phase": multidao_rng.randf_range(0.0, TAU),
+            "bob": multidao_rng.randf_range(2.2, 3.4),
         })
 
 
