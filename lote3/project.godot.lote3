@@ -1,0 +1,15 @@
+; Lote 3 — nao ha nada obrigatorio aqui.
+;
+; O Lote 3 so precisa dos arquivos:
+;   scripts/building_kit.gd
+;   resources/world_spec.json
+;
+; Este fragmento existe apenas para lembrar que o controlador de qualidade do
+; Lote 2 precisa estar registrado como autoload. Se voce ja aplicou o Lote 2,
+; NAO precisa mexer no project.godot agora.
+;
+; Confira se a secao abaixo existe no seu project.godot (se nao existir, adicione):
+
+[autoload]
+
+RenderQuality="*res://scripts/render_quality.gd"

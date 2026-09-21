@@ -1,0 +1,40 @@
+; ---------------------------------------------------------------------------
+; LOTE 2 - ajustes do project.godot
+;
+; Nao substitua o arquivo inteiro: abra project.godot no Bloco de Notas (ou no
+; editor do Godot) e faca estas tres coisas:
+;   1. acrescente a secao [autoload] (se ja existir uma, so cole a linha de
+;      dentro dela);
+;   2. dentro de [rendering], ajuste/cole as chaves abaixo;
+;   3. salve e abra o projeto no Godot (Projeto > Configuracoes do Projeto).
+;
+; O Godot reescreve o arquivo na primeira vez que abre o projeto, por isso os
+; nomes aqui seguem o formato de nome-interno -> secao/chave.
+; ---------------------------------------------------------------------------
+
+[autoload]
+
+RenderQuality="*res://scripts/render_quality.gd"
+
+[rendering]
+
+; Renderizador principal: Mobile (Vulkan). No Honor X8b (Adreno 610) e o
+; caminho recomendado: mantem MSAA, escala 3D/FSR2 e DOF.
+renderer/rendering_method="mobile"
+
+; Plano B automatico: se o aparelho nao conseguir criar o Vulkan, o Godot cai
+; sozinho para OpenGL (Compatibility) e o render_quality.gd ajusta o resto.
+renderer/rendering_method.mobile="gl_compatibility"
+
+; Anti-aliasing de partida (o controlador troca em tempo de execucao).
+; msaa_3d: 0 = desligado, 1 = 2x, 2 = 4x, 3 = 8x.
+anti_aliasing/quality/msaa_3d=1
+anti_aliasing/quality/use_debanding=true
+anti_aliasing/quality/screen_space_aa=0
+
+; Sombra direcional do sol: 2048 e o melhor custo/beneficio no Mobile
+; (o valor redondo em potencia de 2 evita o aviso do editor).
+lights_and_shadows/directional_shadow/size=2048
+
+; Cor de fundo padrao (usada só se por algum motivo o ceu nao existir).
+environment/defaults/default_clear_color=Color(0.72, 0.78, 0.85, 1)
