@@ -54,6 +54,11 @@ func _unlock_up_to_phase_3() -> void:
     _save.call("record_phase", 1, 3, 10.0)
 
 
+func _unlock_phase_6() -> void:
+    for i in range(2, 5):
+        _save.call("record_phase", i, 3, 10.0)
+
+
 func _start_phase(index: int) -> void:
     _game._start_run(index)
     _game.run_director.countdown_left = 0.0
@@ -128,15 +133,17 @@ func _scenario_d() -> void:
 
 
 # E. Modo de teste: colliders visíveis só quando o flag está ligado.
+# ETAPA 7 — usa fase procedural (índice 5): as fases 1-5 são níveis autorais.
 func _scenario_e() -> void:
+    _unlock_phase_6()
     _game.debug_hitboxes = true
-    _start_phase(0)
+    _start_phase(5)
     var com_debug := 0
     for e in _game.entities:
         if e["node"].find_children("DebugHitbox", "MeshInstance3D", true, false).size() > 0:
             com_debug += 1
     _game.debug_hitboxes = false
-    _start_phase(0)
+    _start_phase(5)
     var sem_debug := 0
     for e in _game.entities:
         if e["node"].find_children("DebugHitbox", "MeshInstance3D", true, false).size() > 0:

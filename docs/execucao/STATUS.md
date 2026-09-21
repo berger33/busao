@@ -14,6 +14,7 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
 | 4 | Estrutura de fase piloto (blueprint §7/§8): módulos editáveis em dados, validador de caminho com estado do jogador, fase 3 autoral "Rua do Ipê" (336 m, 12 módulos) | concluída | `tools/qa_etapa4_piloto.gd`: 10/10 verificações verdes (P–T); validador aprova o piloto na velocidade base e no impulso 1,22x e rejeita estação sem saída; fase 3 montada só com os dados do nível (`scripts/level_data.gd`), sem loop procedural |
 | 5 | Frente de conteúdo/arte do piloto: `barreira.glb` (fecha o drop-in da ETAPA 3), deck cobrindo os três corredores na fase 3, `ipe_amarelo.glb` na Rua do Ipê — tudo gerado sem bpy (`tools/glb/`) | concluída | `tools/qa_etapa5_arte.gd`: 8/8 verificações verdes (V–X); barreiras da fase 3 instanciam o GLB (0 fallbacks), deck cobre -3,25/0/+3,25 só na fase 3, 16 ipês no cenário do piloto; fases sem nível preservam o leiaute padrão |
 | 6 | Auditoria de conformidade com o blueprint antes das 50 fases: matriz completa em `docs/execucao/AUDITORIA_BLUEPRINT.md` + fechamento dos gaps verificáveis (segundos faltando no atraso, estrelas por objetivo em tentativas diferentes, collider visível em modo de teste) | concluída | `tools/qa_etapa6_auditoria.gd`: 6/6 verificações verdes (A–F, idempotente); save schema v3→v4 com migração; regressões 1–5 verdes |
+| 7 | 50 fases, lote 1: fases 1, 2, 4 e 5 autorais ("Saiu atrasada", "A praça do bairro", "Remendo na calçada", "Primeiro compromisso") conforme PLANO_50_FASES; visual de calçada nos três corredores; buraco como obstáculo de calçada | concluída | `tools/qa_etapa7_lote1.gd`: 6/6 verificações verdes (G–L); validador aprova as 5 fases do bairro (base e impulso); ordem de aprendizagem preservada; regressões 1–6 verdes |
 
 ## Diário
 
@@ -159,6 +160,27 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
   fase de introdução marcada no §6; velocidades autorais por nível seguem a
   tabela do PLANO_50_FASES (5,5–9 m/s), não os 18 m/s antigos; economia de
   teste (100k) tem ponto de reversão marcado para a publicação.
+- ETAPA 7 (21/09): lote 1 das 50 fases — as fases 1, 2, 4 e 5 viraram níveis
+  autorais em `LevelData` (bairro_01/02/04/05), com distâncias, velocidades,
+  prazos e roteiros do PLANO_50_FASES (224 m/5,5/55 s; 280/5,8/61; 336/6,0/68;
+  364/6,2/69). Ordem de aprendizagem do blueprint §6 preservada: fase 1 só
+  cones; fase 2 cone+banco; fase 4 introduz o buraco (pulo) com barreira e
+  cone já conhecidos; fase 5 revisa as quatro famílias sem novidade. Clímax
+  da fase 4 = buraco seguido de banco com aterrissagem garantida; clímax da
+  fase 5 = baixo → alto → desvio com recuperação.
+- Cenário compartilhado `CENARIO_TRES_CALCADAS` (deck cobrindo os três
+  corredores) aplicado às quatro fases; a fase 3 mantém o ipê por conta.
+- Mudanças de suporte: fases autorais usam visual de calçada nos três
+  corredores (o índice 0 deixava o mobiliário com cara de rua) via flag
+  `sidewalk_style` no `_spawn_entity`; buraco ganhou branch de calçada com o
+  mesmo visual da rua (`_build_pothole_visual` compartilhado).
+- QA etapa 7 (6/6): dados da tabela do plano, validador nas 5 fases (base e
+  impulso), montagem exata sem procedural, ordem de aprendizagem, visuais
+  corretos nos corredores e determinismo. Regressões 1–6 verdes (QA1 H agora
+  verifica a fórmula do catálogo numa fase procedural; QA5 X2 e QA6 E usam
+  fase sem nível).
+- Decisão de design: "floreira" segue a regra do banco (família
+  "Banco/floreira" do §6); variação visual fica para passe de arte.
 
 ## Regras de engenharia desta execução
 

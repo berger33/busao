@@ -794,10 +794,10 @@ func _audit_world_geometry() -> void:
 func _build_course_from_level(level: Dictionary, total: float) -> void:
     var level_patterns: Array = level.get("patterns", [])
     for p in level_patterns:
-        _spawn_entity(str(p.get("kind", "")), int(p.get("lane", 1)), float(p.get("at_m", 0.0)), false)
+        _spawn_entity(str(p.get("kind", "")), int(p.get("lane", 1)), float(p.get("at_m", 0.0)), false, true)
     var level_coins: Array = level.get("coins", [])
     for c in level_coins:
-        _spawn_entity(str(c.get("kind", "coin")), int(c.get("lane", 1)), float(c.get("at_m", 0.0)), true)
+        _spawn_entity(str(c.get("kind", "coin")), int(c.get("lane", 1)), float(c.get("at_m", 0.0)), true, true)
     _create_bus_stop(total)
     call_deferred("_audit_world_geometry")
 
@@ -837,7 +837,7 @@ func _spawn_forced_gags(total: float) -> void:
 func _bonus_kind_for_phase() -> String:
     return WorldSpawner.bonus_kind_for_phase(phase_index, distance)
 
-func _spawn_entity(kind: String, lane: int, entity_distance: float, collectible: bool) -> void:
+func _spawn_entity(kind: String, lane: int, entity_distance: float, collectible: bool, sidewalk_style: bool = false) -> void:
     var node := Node3D.new()
     node.name = "%s_%03d" % [kind, entities.size()]
     node.position = Vector3(LANE_X[clampi(lane, 0, 2)], 0.0, -entity_distance)
@@ -857,9 +857,12 @@ func _spawn_entity(kind: String, lane: int, entity_distance: float, collectible:
         node.add_child(hitbox)
     if collectible:
         _build_collectible(node, kind)
-    elif lane == ROAD_LANE:
+    elif lane == ROAD_LANE and not sidewalk_style:
         _build_road_obstacle(node, kind)
     else:
+        # ETAPA 7 — fases autorais: os tres corredores sao calcada, entao o
+        # mobiliario usa o visual de calcada ate no indice 0 (o deck da
+        # ETAPA 5 cobre os tres corredores).
         _build_sidewalk_obstacle(node, kind)
     # Lote 23 — Física: RigidBody/Static/Area por kind (freeze, massa, fricção)
     if PHYSICS_HANDLER != null and not collectible:
@@ -2838,6 +2841,21 @@ func _pick_vehicle_variant(kind: String) -> String:
     var idx: int = abs((str(kind) + str(entities.size()) + str(phase_index)).hash()) % existentes.size()
     return existentes[idx]
 
+## ETAPA 7 — visual do buraco compartilhado entre rua e calcada (as fases
+## autorais usam o buraco nos tres corredores; a leitura e a mesma).
+func _build_pothole_visual(parent: Node3D) -> void:
+    var pothole_glb := _optional_glb("scene/pothole.glb")
+    if pothole_glb != null:
+        pothole_glb.position = Vector3(0, 0.02, 0)
+        parent.add_child(pothole_glb)
+        return
+    _cylinder(parent, 0.84, 0.84, 0.035, Vector3(0.0, 0.04, 0.0), _material(Color("#101723"), 0.0, 1.0, "asphalt"), "Pothole")
+    _cylinder(parent, 0.58, 0.58, 0.045, Vector3(0.0, 0.068, 0.0), _material(Color("#283243"), 0.0, 1.0, "dirt"), "PotholeInner")
+    for i in 7:
+        var angle: float = float(i) * TAU / 7.0
+        _box(parent, Vector3(0.20, 0.035, 0.07), Vector3(cos(angle) * 0.82, 0.075, sin(angle) * 0.82), _material(Color("#59616a"), 0.0, 0.95, "asphalt"), "BrokenAsphalt")
+
+
 func _build_road_obstacle(parent: Node3D, kind: String) -> void:
     if GLB_FIT.has(kind):
         var variant := _pick_vehicle_variant(kind)
@@ -2898,16 +2916,7 @@ func _build_road_obstacle(parent: Node3D, kind: String) -> void:
             _box(parent, Vector3(2.22, 0.07, 0.05), Vector3(0.0, 1.60, 1.76), _material(Color("#f4c94e"), 0.0, 0.55, "paint"), "TruckReflectiveStrip")
             _wheels(parent, dark, 1.08, 1.15)
         "pothole":
-            var pothole_glb := _optional_glb("scene/pothole.glb")
-            if pothole_glb != null:
-                pothole_glb.position = Vector3(0, 0.02, 0)
-                parent.add_child(pothole_glb)
-                return
-            _cylinder(parent, 0.84, 0.84, 0.035, Vector3(0.0, 0.04, 0.0), _material(Color("#101723"), 0.0, 1.0, "asphalt"), "Pothole")
-            _cylinder(parent, 0.58, 0.58, 0.045, Vector3(0.0, 0.068, 0.0), _material(Color("#283243"), 0.0, 1.0, "dirt"), "PotholeInner")
-            for i in 7:
-                var angle: float = float(i) * TAU / 7.0
-                _box(parent, Vector3(0.20, 0.035, 0.07), Vector3(cos(angle) * 0.82, 0.075, sin(angle) * 0.82), _material(Color("#59616a"), 0.0, 0.95, "asphalt"), "BrokenAsphalt")
+            _build_pothole_visual(parent)
         _:
             _box(parent, Vector3(2.0, 0.8, 2.0), Vector3(0.0, 0.5, 0.0), body, "RoadHazard")
 
@@ -3132,6 +3141,9 @@ func _build_sidewalk_obstacle(parent: Node3D, kind: String) -> void:
             for side in [-0.56, 0.56]:
                 _box(parent, Vector3(0.10, 0.75, 0.12), Vector3(side, 0.37, 0.0), bench_metal, "BenchLeg")
                 _box(parent, Vector3(0.18, 0.34, 0.10), Vector3(side, 0.86, 0.04), bench_metal, "BenchArm")
+        "pothole":
+            # ETAPA 7 — buraco tambem e obstaculo de calcada nas fases autorais.
+            _build_pothole_visual(parent)
         "barrier":
             # ETAPA 3 — barreira suspensa de obra: dois postes seguram a barra
             # listrada com vão inferior livre; deslizar passa, pular não.

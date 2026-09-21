@@ -231,8 +231,8 @@ dash/pagos/personagem específico.
 
 ## Recomendação de sequência (do PLANO_50_FASES §"Sequência de entrega")
 
-1. Derivar as fases 1, 2, 4 e 5 com os módulos aprovados do piloto
-   (mecanismo pronto: dados + validador por fase).
+1. ✅ Derivar as fases 1, 2, 4 e 5 com os módulos aprovados do piloto —
+   **feito na ETAPA 7** (`bairro_01/02/04/05` em `LevelData`, QA 6/6).
 2. Produzir 6–10 introduzindo lixeira, pedestre em travessia e carrinho
    pelo mecanismo gated.
 3. Lotes seguintes conforme o plano, cada um fechando com QA reproduzível.
