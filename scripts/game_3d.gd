@@ -4555,8 +4555,19 @@ func _update_clima(_delta: float) -> void:
 
 
 func _trocar_clima_do_capitulo(indice: int) -> void:
-    if _clima != null:
-        _clima.set_chapter(indice)
+    if _clima == null:
+        return
+    # ETAPA 14 — o nível pode fixar o clima do capítulo (lote 36-40:
+    # chuva leve com poças, sol de volta na 40); sem ele, vale o
+    # rodízio global por índice de fase.
+    if not endless_mode:
+        var _nivel_clima: Dictionary = LevelData.for_phase(indice)
+        if not _nivel_clima.is_empty():
+            var _clima_nivel := str(_nivel_clima.get("scenery", {}).get("clima", ""))
+            if _clima_nivel != "":
+                _clima.set_state(_clima_nivel)
+                return
+    _clima.set_chapter(indice)
 
 
 # --- Lote 6: efeitos de poeira, respingo molhado e captura ------------------

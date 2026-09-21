@@ -323,6 +323,31 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
   aplicada com rodízio global intacto, 16 palmeiras), reuso sem
   estreia e determinismo. Regressões 1–12 verdes (QA1 H e QA5 X2
   migrados para o índice 35, primeira fase ainda procedural).
+- ETAPA 14 (21/09): lote 8 das 50 fases (Depois da chuva, reuso).
+  Fases 36–40 autorais em `LevelData` (bairro_36–40) com números do
+  PLANO_50_FASES (476/7,8/74; 504/8,0/74; 532/8,1/76; 532/8,2/74;
+  560/8,3/76), só com famílias já apresentadas (poça, cone, banco,
+  carrinho, pedestre, buraco, barreira, ciclista). Primeiro capítulo
+  de clima fixo: `scenery.clima` (lido em
+  `_trocar_clima_do_capitulo`) prende garoa leve nas fases 36–39
+  (700 gotas, sem relâmpago, molhado e poças do ambiente) e sol na
+  40; paleta "dia" nas fases 36 e 40 (o rodízio global daria noite
+  urbana), 37–39 no rodízio (manhã, tarde, nublado sobre a chuva).
+  Rota seca garantida em todas as poças (pulo ou corredor livre);
+  F39 com poças fora das aterrissagens; F37 com moedas sobre a poça.
+- Descobertas do lote: o `_ready` só monta o clima depois de awaits
+  longos — o QA chama `_setup_clima()` quando `_clima` é nulo;
+  `_alvo_molhado` interpola por frames (não observável sem frames),
+  então o QA afirma estado + chuva emitindo (síncronos). Nunca
+  mandar duas edições ao mesmo arquivo no mesmo bloco (condição de
+  corrida: a segunda escrita engole a primeira).
+- QA etapa 14 (6/6): dados do plano + gates intactos + cenário de
+  chuva, validador nas 40 fases, montagem exata, comportamentos
+  (poça SOFT com lentidão, recompensa sobre a poça, obra molhada,
+  entrega debaixo d'água, garoa 700 nas 36–39, sol na 40, rodízio
+  intacto, árvore comum), reuso sem estreia e determinismo.
+  Regressões 1–13 verdes (QA1 H e QA5 X2 migrados para o índice 40,
+  primeira fase ainda procedural).
 
 ## Regras de engenharia desta execução
 

@@ -196,6 +196,74 @@ const CENARIO_ORLA: Dictionary = {
     "marco": "guarita",
 }
 
+## ETAPA 14 — rua molhada do lote 36-40: mesmo deck dos três corredores,
+## árvore comum, bancos e lixeiras na rotina, casas e lojas no fundo; o
+## clima fixo do nível ("chuva": garoa de 700 partículas, sem relâmpago;
+## poças do ambiente aparecem com o molhado) carrega o capítulo — sem
+## quiosques, barracas ou marco. O rodízio global daria noite urbana às
+## fases 36 e 40 (índices 35 e 39); a paleta "dia" as mantém legíveis
+## (36: garoa de dia; 40: sol de volta), e o motor clareia aos poucos
+## (transição de estado + secagem). 37–39 usam o rodízio (manhã, tarde
+## dourada e nublado sobre a chuva).
+const CENARIO_CHUVA: Dictionary = {
+    "faixas": {"piso_central_m": 9.9, "piso_borda_esq_m": 4.95},
+    "props": {
+        "arvore": {"glb": "arvore", "espacamento_m": 12.0},
+        "banco": {"espacamento_m": 14.0},
+        "lixeira": {"espacamento_m": 18.0},
+    },
+    "predios": {"tipo_pesos": {"tijolo": 3, "reboco": 4, "loja": 2, "obra": 1}},
+    "clima": "chuva",
+    "paleta": {
+        "nome": "chuva_dia",
+        "sol": [1.0, 0.93, 0.80],
+        "nevoa": [0.84, 0.79, 0.70],
+        "sombra": [0.33, 0.39, 0.48],
+        "ceu_alto": [0.32, 0.48, 0.72],
+        "ceu_horizonte": [0.82, 0.80, 0.76],
+        "sol_rotacao": [-9.0, 170.0, 0.0],
+        "sol_energia": 1.1,
+        "energia_ambiente": 0.62,
+        "nevoa_densidade": 0.5,
+        "exposicao": 0.51,
+        "nuvens": 0.3,
+    },
+}
+const CENARIO_CHUVA_CICLO: Dictionary = {
+    "faixas": {"piso_central_m": 9.9, "piso_borda_esq_m": 4.95},
+    "props": {
+        "arvore": {"glb": "arvore", "espacamento_m": 12.0},
+        "banco": {"espacamento_m": 14.0},
+        "lixeira": {"espacamento_m": 18.0},
+    },
+    "predios": {"tipo_pesos": {"tijolo": 3, "reboco": 4, "loja": 2, "obra": 1}},
+    "clima": "chuva",
+}
+const CENARIO_SOL: Dictionary = {
+    "faixas": {"piso_central_m": 9.9, "piso_borda_esq_m": 4.95},
+    "props": {
+        "arvore": {"glb": "arvore", "espacamento_m": 12.0},
+        "banco": {"espacamento_m": 14.0},
+        "lixeira": {"espacamento_m": 18.0},
+    },
+    "predios": {"tipo_pesos": {"tijolo": 3, "reboco": 4, "loja": 2, "obra": 1}},
+    "clima": "limpo",
+    "paleta": {
+        "nome": "sol",
+        "sol": [1.0, 0.93, 0.80],
+        "nevoa": [0.84, 0.79, 0.70],
+        "sombra": [0.33, 0.39, 0.48],
+        "ceu_alto": [0.32, 0.48, 0.72],
+        "ceu_horizonte": [0.82, 0.80, 0.76],
+        "sol_rotacao": [-9.0, 170.0, 0.0],
+        "sol_energia": 1.1,
+        "energia_ambiente": 0.62,
+        "nevoa_densidade": 0.5,
+        "exposicao": 0.51,
+        "nuvens": 0.3,
+    },
+}
+
 ## Fase 1 — "Saiu atrasada" (PLANO_50_FASES): aprender troca de corredor e
 ## pulo; cones baixos isolados; moedas guiam uma rota ampla. Clímax: dois
 ## cones em estações separadas, sempre com desvio disponível.
@@ -1595,7 +1663,221 @@ const FASE_35: Dictionary = {
     ],
 }
 
-const LEVELS: Array = [FASE_1, FASE_2, PILOT, FASE_4, FASE_5, FASE_6, FASE_7, FASE_8, FASE_9, FASE_10, FASE_11, FASE_12, FASE_13, FASE_14, FASE_15, FASE_16, FASE_17, FASE_18, FASE_19, FASE_20, FASE_21, FASE_22, FASE_23, FASE_24, FASE_25, FASE_26, FASE_27, FASE_28, FASE_29, FASE_30, FASE_31, FASE_32, FASE_33, FASE_34, FASE_35]
+## Fase 36 — "Chuva passageira" (PLANO_50_FASES): clima novo com desafios
+## fáceis; poças e cones, reaprender a leitura sem elevar a velocidade.
+## Clímax: poça em C com cone em D, E livre e seco.
+const FASE_36: Dictionary = {
+    "id": "bairro_36",
+    "version": 1,
+    "name": "Chuva passageira",
+    "phase_index": 35,
+    "distance_m": 476.0,
+    "chunk_length_m": 28.0,
+    "chunks": 17,
+    "base_speed_mps": 7.8,
+    "deadline_seconds": 74.0,
+    "layout_seed": 136,
+    "scenery": CENARIO_CHUVA,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "puddle", "lane": 0, "at_m": 72.0},
+        {"kind": "cone", "lane": 2, "at_m": 100.0},
+        {"kind": "puddle", "lane": 2, "at_m": 128.0},
+        {"kind": "cone", "lane": 0, "at_m": 156.0},
+        {"kind": "puddle", "lane": 1, "at_m": 184.0},
+        {"kind": "cone", "lane": 1, "at_m": 212.0},
+        {"kind": "puddle", "lane": 0, "at_m": 240.0},
+        {"kind": "cone", "lane": 2, "at_m": 268.0},
+        {"kind": "cone", "lane": 0, "at_m": 296.0},
+        {"kind": "puddle", "lane": 2, "at_m": 324.0},
+        {"kind": "cone", "lane": 1, "at_m": 352.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 428.0},
+        {"kind": "coin", "lane": 1, "at_m": 436.0},
+        {"kind": "coin", "lane": 1, "at_m": 444.0},
+    ],
+}
+
+## Fase 37 — "Procurando piso seco" (PLANO_50_FASES): a poça em C cobra o
+## pulo na rota de recompensa (moedas sobre ela); E e D seguem secos.
+## Clímax: rota de recompensa (pulo com moedas) versus rota de conclusão.
+const FASE_37: Dictionary = {
+    "id": "bairro_37",
+    "version": 1,
+    "name": "Procurando piso seco",
+    "phase_index": 36,
+    "distance_m": 504.0,
+    "chunk_length_m": 28.0,
+    "chunks": 18,
+    "base_speed_mps": 8.0,
+    "deadline_seconds": 74.0,
+    "layout_seed": 137,
+    "scenery": CENARIO_CHUVA_CICLO,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "puddle", "lane": 2, "at_m": 72.0},
+        {"kind": "bench", "lane": 0, "at_m": 100.0},
+        {"kind": "puddle", "lane": 1, "at_m": 128.0},
+        {"kind": "cone", "lane": 0, "at_m": 156.0},
+        {"kind": "puddle", "lane": 0, "at_m": 184.0},
+        {"kind": "bench", "lane": 2, "at_m": 212.0},
+        {"kind": "puddle", "lane": 1, "at_m": 240.0},
+        {"kind": "cone", "lane": 2, "at_m": 268.0},
+        {"kind": "puddle", "lane": 2, "at_m": 296.0},
+        {"kind": "cone", "lane": 0, "at_m": 324.0},
+        {"kind": "bench", "lane": 1, "at_m": 352.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 120.0},
+        {"kind": "coin", "lane": 1, "at_m": 128.0},
+        {"kind": "coin", "lane": 1, "at_m": 136.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 456.0},
+        {"kind": "coin", "lane": 1, "at_m": 464.0},
+        {"kind": "coin", "lane": 1, "at_m": 472.0},
+    ],
+}
+
+## Fase 38 — "Entrega debaixo d'água" (PLANO_50_FASES): carrinhos e pedestres
+## com aviso reforçado; cada evento dinâmico seguido de solo seguro.
+## Clímax: pedestre em C com cone em E, D livre.
+const FASE_38: Dictionary = {
+    "id": "bairro_38",
+    "version": 1,
+    "name": "Entrega debaixo d'água",
+    "phase_index": 37,
+    "distance_m": 532.0,
+    "chunk_length_m": 28.0,
+    "chunks": 19,
+    "base_speed_mps": 8.1,
+    "deadline_seconds": 76.0,
+    "layout_seed": 138,
+    "scenery": CENARIO_CHUVA_CICLO,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "puddle", "lane": 0, "at_m": 72.0},
+        {"kind": "cart", "lane": 2, "at_m": 100.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.0, "lead_m": 66.0},
+        {"kind": "cone", "lane": 2, "at_m": 128.0},
+        {"kind": "crosser", "lane": 0, "at_m": 156.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.3, "lead_m": 50.8},
+        {"kind": "puddle", "lane": 1, "at_m": 184.0},
+        {"kind": "cart", "lane": 0, "at_m": 212.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.0, "lead_m": 66.0},
+        {"kind": "bench", "lane": 2, "at_m": 240.0},
+        {"kind": "crosser", "lane": 1, "at_m": 268.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.3, "lead_m": 30.5},
+        {"kind": "cone", "lane": 0, "at_m": 296.0},
+        {"kind": "puddle", "lane": 2, "at_m": 324.0},
+        {"kind": "bench", "lane": 1, "at_m": 352.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 484.0},
+        {"kind": "coin", "lane": 1, "at_m": 492.0},
+        {"kind": "coin", "lane": 1, "at_m": 500.0},
+    ],
+}
+
+## Fase 39 — "Obra molhada" (PLANO_50_FASES): buraco, barra e poças longe das
+## aterrissagens obrigatórias (poça nunca a <28 m do buraco no corredor).
+## Clímax: barreira em D fechando a obra, C e E livres.
+const FASE_39: Dictionary = {
+    "id": "bairro_39",
+    "version": 1,
+    "name": "Obra molhada",
+    "phase_index": 38,
+    "distance_m": 532.0,
+    "chunk_length_m": 28.0,
+    "chunks": 19,
+    "base_speed_mps": 8.2,
+    "deadline_seconds": 74.0,
+    "layout_seed": 139,
+    "scenery": CENARIO_CHUVA_CICLO,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "pothole", "lane": 0, "at_m": 72.0},
+        {"kind": "barrier", "lane": 2, "at_m": 100.0},
+        {"kind": "puddle", "lane": 2, "at_m": 128.0},
+        {"kind": "pothole", "lane": 1, "at_m": 156.0},
+        {"kind": "barrier", "lane": 0, "at_m": 184.0},
+        {"kind": "puddle", "lane": 1, "at_m": 212.0},
+        {"kind": "pothole", "lane": 2, "at_m": 240.0},
+        {"kind": "barrier", "lane": 1, "at_m": 268.0},
+        {"kind": "puddle", "lane": 0, "at_m": 296.0},
+        {"kind": "cone", "lane": 0, "at_m": 324.0},
+        {"kind": "barrier", "lane": 2, "at_m": 352.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 484.0},
+        {"kind": "coin", "lane": 1, "at_m": 492.0},
+        {"kind": "coin", "lane": 1, "at_m": 500.0},
+    ],
+}
+
+## Fase 40 — "O sol voltou" (PLANO_50_FASES): revisão com o clima clareando;
+## último trecho firme com sequência conhecida e ônibus ao sol.
+## Clímax: barreira em C com cone em D, E livre, ônibus à vista.
+const FASE_40: Dictionary = {
+    "id": "bairro_40",
+    "version": 1,
+    "name": "O sol voltou",
+    "phase_index": 39,
+    "distance_m": 560.0,
+    "chunk_length_m": 28.0,
+    "chunks": 20,
+    "base_speed_mps": 8.3,
+    "deadline_seconds": 76.0,
+    "layout_seed": 140,
+    "scenery": CENARIO_SOL,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "puddle", "lane": 0, "at_m": 72.0},
+        {"kind": "crosser", "lane": 2, "at_m": 100.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.3, "lead_m": 52.0},
+        {"kind": "bench", "lane": 1, "at_m": 128.0},
+        {"kind": "pothole", "lane": 2, "at_m": 156.0},
+        {"kind": "barrier", "lane": 0, "at_m": 184.0},
+        {"kind": "cyclist", "lane": 0, "at_m": 212.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 3.0, "lead_m": 22.5},
+        {"kind": "puddle", "lane": 1, "at_m": 240.0},
+        {"kind": "cone", "lane": 2, "at_m": 268.0},
+        {"kind": "crosser", "lane": 0, "at_m": 296.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.3, "lead_m": 52.0},
+        {"kind": "bench", "lane": 2, "at_m": 324.0},
+        {"kind": "barrier", "lane": 1, "at_m": 352.0},
+        {"kind": "cone", "lane": 0, "at_m": 380.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 512.0},
+        {"kind": "coin", "lane": 1, "at_m": 520.0},
+        {"kind": "coin", "lane": 1, "at_m": 528.0},
+    ],
+}
+
+const LEVELS: Array = [FASE_1, FASE_2, PILOT, FASE_4, FASE_5, FASE_6, FASE_7, FASE_8, FASE_9, FASE_10, FASE_11, FASE_12, FASE_13, FASE_14, FASE_15, FASE_16, FASE_17, FASE_18, FASE_19, FASE_20, FASE_21, FASE_22, FASE_23, FASE_24, FASE_25, FASE_26, FASE_27, FASE_28, FASE_29, FASE_30, FASE_31, FASE_32, FASE_33, FASE_34, FASE_35, FASE_36, FASE_37, FASE_38, FASE_39, FASE_40]
 
 
 static func for_phase(index: int) -> Dictionary:
