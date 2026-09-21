@@ -9,6 +9,10 @@ Regras:
 - importer="texture" com compress/mode=0 (lossless, PNG cru na VRAM) -> =2
   (VRAM Compressed / S3TC-ETC2-ASTC conforme plataforma — Godot escolhe).
 - *normal*.png -> compress/normal_map=1 (codificacao correta de normal map).
+- Remove o bloco metadata bogus {"vram_texture": ...} (2026-09-21, engine
+  real): chave desconhecida faz o importador recusar a textura inteira
+  ("Unexpected identifier 'vram_texture'"). Blocos com outras chaves sao
+  preservados.
 - Audio (.wav), cenas e outros importers: intocados.
 - Idempotente: segunda passada nao altera nada.
 """
@@ -22,6 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 MODE = re.compile(r"^compress/mode=(\d+)\s*$", re.MULTILINE)
 NORMAL = re.compile(r"^compress/normal_map=(\d+)\s*$", re.MULTILINE)
+BOGUS_META = re.compile(r'\nmetadata=\{\n"vram_texture": (?:true|false)\n\}\n')
 
 
 def process(path: Path, check: bool) -> str:
@@ -29,6 +34,14 @@ def process(path: Path, check: bool) -> str:
     text = path.read_text(encoding="utf-8")
     if 'importer="texture"' not in text:
         return "ok"
+    if BOGUS_META.search(text):
+        if check:
+            return "pending"
+        path.write_text(BOGUS_META.sub("\n", text), encoding="utf-8")
+        text = path.read_text(encoding="utf-8")
+        fixed_meta = True
+    else:
+        fixed_meta = False
     mode = MODE.search(text)
     if mode is None or mode.group(1) != "0":
         fixed_normal = False
@@ -38,7 +51,9 @@ def process(path: Path, check: bool) -> str:
                 if not check:
                     path.write_text(NORMAL.sub("compress/normal_map=1", text), encoding="utf-8")
                 fixed_normal = True
-        return "pending" if (check and fixed_normal) else ("fixed" if fixed_normal else "ok")
+        if check and (fixed_normal or fixed_meta):
+            return "pending"
+        return "fixed" if (fixed_normal or fixed_meta) else "ok"
     if check:
         return "pending"
     text = MODE.sub("compress/mode=2", text)

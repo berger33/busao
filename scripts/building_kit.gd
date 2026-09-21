@@ -217,6 +217,10 @@ static func _tem_textura(nome: String) -> bool:
 
 static func _textura(arquivo: String) -> Texture2D:
     var caminho := PBR_DIR + arquivo
+    # exists() antes do load: arquivo ausente vira cor plana silenciosa em
+    # vez de triplicar erro no log (o material() ja trata null).
+    if not ResourceLoader.exists(caminho):
+        return null
     var recurso := ResourceLoader.load(caminho)
     if recurso is Texture2D:
         return recurso

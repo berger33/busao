@@ -384,6 +384,31 @@ def check_balance_and_persistence() -> None:
             fail(f"3D progression missing token: {token}")
 
 
+def check_imports() -> None:
+    # Regressao 2026-09-21 (engine real): 157 .import de textura tinham
+    # metadata com a chave bogus "vram_texture" e o importador recusava TODAS
+    # as texturas ("Unexpected identifier"). Aqui: sem chave bogus, uids
+    # unicos, source_file existente e textura sempre com compressao VRAM.
+    uids: dict[str, str] = {}
+    for imp in sorted(ROOT.rglob("*.import")):
+        if ".godot" in imp.parts:
+            continue
+        rel = imp.relative_to(ROOT).as_posix()
+        text = imp.read_text(encoding="utf-8")
+        if '"vram_texture"' in text:
+            fail(f"{rel}: chave 'vram_texture' invalida no metadata (rode fix_texture_imports.py)")
+        match = re.search(r'^uid="(uid://[^"]+)"', text, re.MULTILINE)
+        if match:
+            if match.group(1) in uids:
+                fail(f"uid duplicado {match.group(1)}: {uids[match.group(1)]} + {rel}")
+            uids[match.group(1)] = rel
+        src = re.search(r'^source_file="(res://[^"]+)"', text, re.MULTILINE)
+        if src and not (ROOT / src.group(1).removeprefix("res://")).exists():
+            fail(f"{rel}: source_file inexistente {src.group(1)}")
+        if 'importer="texture"' in text and "compress/mode=0" in text:
+            fail(f"{rel}: textura sem compressao VRAM (rode fix_texture_imports.py)")
+
+
 def check_billing_ledger() -> None:
     # Regressao 2026-09-21: `.get("billing_ledger", {})` + `is Dictionary`
     # nunca detectava chave ausente (o default {} E Dictionary) e o `_ledger()`
@@ -461,6 +486,7 @@ def main() -> int:
     check_catalog()
     check_balance_and_persistence()
     check_3d_entrypoint()
+    check_imports()
     check_billing_ledger()
     check_character_assets()
     check_assets()

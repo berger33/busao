@@ -207,3 +207,27 @@ python3 tools/qa_full.py                   # OK 133 | WARN 0 | FAIL 0
 ./tools/build_trailer.sh                   # gera build/trailer_30s.mp4
 godot --headless --path . --quit-after 1   # smoke (binário real)
 ```
+
+---
+
+## Adendo 2026-09-21 (round 2 — engine real)
+
+Primeira execução com binário Godot (máquina do usuário, 173 erros). Todos
+investigados; causas e fixes abaixo (commit hotfix round 2 nesta branch).
+
+| Erro do engine | Causa raiz | Fix |
+|---|---|---|
+| `vram_texture: Unexpected identifier` (flood, 157 texturas) | `.import` com bloco `metadata` bogus (pré-existente) | `fix_texture_imports.py` stripa o bloco; `check_imports()` trava regressão (chave bogus, uid dup, source ausente, mode=0) |
+| `Failed loading .../julia.glb` | ambiental: bytes do GLB 100% válidos (contêiner + accessors + skin + 6 anims verificados) + `.import` correto → cache/uid obsoleto no `.godot/` do usuário | `docs/REIMPORT.md` (apagar `.godot/` + reimportar); fallback p/ `Humano_F` já existia no código |
+| `game_3d: _update_run: previously freed instance` (trava a run) | despawn do tráfego libera o nó mas mantém o dict; próximo frame faz atribuição tipada do nó morto | leitura sem tipo + `is_instance_valid` no loop de entities (varredura completa: demais loops — traffic/harmonize, fx, sky, ambient, multidão, fauna — verificados seguros) |
+| `weather: Amount of particles cannot be smaller than 1` (2 pontos) | `amount = 0` em `_montar_chuva`/`_atualizar_chuva` | clamp para mínimo 1 (`emitting=false` já esconde) |
+| `FSR1/FSR2 scaling only available on Forward+` | `_method` cacheado no `_ready` podia divergir do renderer efetivo | reconsulta ao vivo em `_configure_viewport` + Bilinear fora de Forward+/Mobile |
+| `cachorro sem Animal3D_caramelo` | `caramelo.glb` existe → caminho GLB nunca nomeava o nó com o contrato (só o fallback procedural nomeava) | nomeia a instância GLB `Animal3D_<species>` (também religa `set_running`/latido) |
+| moeda coletada continua visível | `_collect` nunca escondia o nó | `visible=false` no collect |
+| triplo log por textura ausente | `load()` direto loga 3 erros | `exists()` antes (cor plana silenciosa) |
+
+Nota de diagnóstico: os números de linha do usuário não batem com nenhum
+commit/branch deste repo (comparado `main`, base, esta branch e outras 12
+branches `arena/*`) — a árvore dele tem modificações locais. Para receber
+estes fixes e gerar erros mapeáveis: commitar/stash local, checkout desta
+branch, apagar `.godot/` e reimportar (ver `docs/REIMPORT.md`).

@@ -244,7 +244,12 @@ func _configure_viewport() -> void:
     var cfg := _tier()
     _scale = float(cfg.get("scale", 1.0))
     vp.use_debanding = bool(_profile.get("deband", true))
-    if _method != "gl_compatibility":
+    # Reconsulta o renderer AO VIVO: o _method do _ready pode estar obsoleto
+    # (override de driver/linha de comando); FSR fora do renderer certo gera
+    # warning do engine a cada apply. FSR2 exige Forward+; FSR1 exige
+    # Forward+/Mobile; fora disso, Bilinear (2026-09-21, engine real).
+    var live_method := String(RenderingServer.get_current_rendering_method())
+    if live_method != "gl_compatibility":
         # MSAA 3D e escala 3D existem em Forward+ e Mobile; no caminho de
         # Compatibilidade o jogo segue na resolucao cheia.
         var msaa_nivel: int = int(cfg.get("msaa", 0))
@@ -254,10 +259,12 @@ func _configure_viewport() -> void:
             vp.msaa_3d = Viewport.MSAA_2X
         else:
             vp.msaa_3d = Viewport.MSAA_4X
-        if _tier_index <= 1:
+        if _tier_index <= 1 and live_method == "forward_plus":
             vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR2
-        else:
+        elif live_method in ["forward_plus", "mobile"]:
             vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR
+        else:
+            vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
         vp.scaling_3d_scale = clampf(_scale, 0.5, 1.0)
 
 

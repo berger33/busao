@@ -162,7 +162,7 @@ func _montar_chuva() -> void:
     chuva.interpolate = true
     chuva.local_coords = true
     chuva.emitting = false
-    chuva.amount = 0
+    chuva.amount = 1  # amount 0 e invalido no Godot (minimo 1; emitting=false ja esconde)
     chuva.visibility_aabb = AABB(
         Vector3(-float(area[0]) * 0.5, -float(area[1]) * 0.5 - float(cfg.get("altura_m", 18.0)) * 0.5, -float(area[2]) * 0.5),
         Vector3(float(area[0]), float(area[1]) + float(cfg.get("altura_m", 18.0)), float(area[2])))
@@ -185,7 +185,7 @@ func _atualizar_chuva(estado_nome: String, suave: Dictionary) -> void:
         quantidade = teto
     if quantidade <= 0:
         _chuva.emitting = false
-        _chuva.amount = 0
+        _chuva.amount = 1
         return
     _chuva.amount = quantidade
     _chuva.emitting = true

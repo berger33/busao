@@ -439,6 +439,24 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
   inspeção + portoes (PRE-FLIGHT, qa_full, gdscan); runtime a confirmar
   na maquina do usuario.
 
+### 2026-09-21 (round 2 — erros do engine real)
+
+- 173 erros da primeira execução com Godot: flood `vram_texture` (157
+  `.import` com metadata bogus — strip + `check_imports()`), crash
+  `previously freed instance` no loop de entities (guard
+  `is_instance_valid`; varredura prova demais loops seguros), `amount=0`
+  no clima (clamp 1), FSR fora do Forward+ (reconsulta ao vivo +
+  Bilinear), contrato do caramelo (nome na instância GLB), moeda sem
+  sumir (hide no collect), `_textura` com `exists()` silencioso.
+- `julia.glb` validado byte a byte (OK) — falha do usuário é cache
+  `.godot/` obsoleto: `docs/REIMPORT.md` com o procedimento.
+- Achado de processo: linhas do usuário não batem com nenhum ref
+  (12 branches `arena/*` comparadas) — árvore local dele divergiu;
+  orientado a rodar nesta branch + reimport limpo.
+- Incidente de sandbox: restore apagou os commits locais (HEAD voltou à
+  base); recuperado via `fetch origin` + `reset` — diff confirmou zero
+  perda (worktree = d1b604b + round 2 exato).
+
 ## Regras de engenharia desta execução
 
 - Uma etapa por vez; cada etapa fecha com demonstração reproduzível

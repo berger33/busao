@@ -1360,7 +1360,13 @@ func _update_run(dt: float) -> void:
         player_visual.visible = true
     _harmonize_traffic(dt)
     for entity in entities:
-        var node: Node3D = entity["node"]
+        # Despawn (trafego) libera o no mas mantem o dict: leitura sem tipo +
+        # is_instance_valid, senao a atribuicao tipada crasha ("previously
+        # freed instance") no frame seguinte — 2026-09-21, engine real.
+        var raw_node: Variant = entity.get("node")
+        if not is_instance_valid(raw_node) or not (raw_node is Node3D):
+            continue
+        var node: Node3D = raw_node
         var traffic_speed: float = float(entity.get("traffic_speed", 0.0))
         if traffic_speed > 0.0 and is_instance_valid(node):
             # Tráfego avança no sentido da avenida (-Z), mais rápido que o
@@ -1457,6 +1463,8 @@ func _resolve_entity(entity: Dictionary) -> void:
         pos.x = entity_x
     if bool(entity["collectible"]):
         if lane == player_lane or magnet_timer > 0.0:
+            if is_instance_valid(entity_node):
+                entity_node.visible = false
             _collect(kind, pos)
         return
     # ETAPA 2 — colisão pela posição real (inclusive durante a troca de
@@ -3413,6 +3421,7 @@ func _build_animal_obstacle(parent: Node3D, species: String) -> Node3D:
     # primeira animacao de caminhada encontrada, em loop.
     var modelo := _modelo_animal_opcional(species)
     if modelo != null:
+        modelo.name = "Animal3D_%s" % species  # contrato do audit/gameplay (cachorro late/corre)
         modelo.rotation.y = PI / 2.0   # GLBs chegam olhando +Z; a convensao da entidade e +X
         parent.add_child(modelo)
         _fit_model(modelo, 0.95, 0.72)
