@@ -5,16 +5,18 @@ extends RefCounted
 ## cada família tem classe de altura/volume e ações válidas próprias.
 ##
 ## Classes:
-##   LOW         silhueta baixa (cone): pulo resolve; deslize não.
+##   LOW         silhueta baixa (cone, caixa baixa): pulo resolve;
+##               deslize não.
 ##   GROUND      buraco/vala curta: pulo resolve.
 ##   FULL        volume sólido (banco, hidrante, orelhão, bicicleta,
 ##               lixeira, carrinho de entrega, floreira, ciclista): só
 ##               trocar de corredor resolve; deslize não resolve.
 ##   VEHICLE     carro/caminhão/ônibus/moto/van parada/moto em
-##               cruzamento: só trocar de corredor; pulo não atravessa
-##               ônibus ou caminhão.
+##               cruzamento/caminhão e ônibus em cruzamento: só trocar
+##               de corredor; pulo não atravessa ônibus ou caminhão.
 ##   SOFT        pessoas, animais e poças (inclui pedestre em
-##               travessia): sem dano; esbarrão/tropeço com lentidão.
+##               travessia e cachorro cruzando): sem dano;
+##               esbarrão/tropeço com lentidão.
 ##   SLIDE_UNDER barra suspensa com vão inferior (barreira de obra,
 ##               andaime/toldo): só deslize resolve.
 
@@ -48,6 +50,13 @@ const CLASSES: Dictionary = {
     "planter": Classe.FULL,
     "cyclist": Classe.FULL,
     "moto_cross": Classe.VEHICLE,
+    # ETAPA 10 — lote 16-20 (blueprint S6): cachorro cruzando (SOFT, sem
+    # perseguicao), caixa baixa (LOW), caminhao e onibus em cruzamento
+    # (VEHICLE, colisao no nariz).
+    "dog_cross": Classe.SOFT,
+    "crate": Classe.LOW,
+    "truck_cross": Classe.VEHICLE,
+    "bus_cross": Classe.VEHICLE,
 }
 
 ## Limite lateral de colisão (m): meia largura da personagem + meia do
@@ -77,6 +86,10 @@ const HIT_WIDTHS: Dictionary = {
     "planter": 1.3,
     "cyclist": 1.1,
     "moto_cross": 1.0,
+    "dog_cross": 0.9,
+    "crate": 1.0,
+    "truck_cross": 1.4,
+    "bus_cross": 1.4,
 }
 
 const DEFAULT_WIDTH := 1.2

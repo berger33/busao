@@ -17,6 +17,7 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
 | 7 | 50 fases, lote 1: fases 1, 2, 4 e 5 autorais ("Saiu atrasada", "A praça do bairro", "Remendo na calçada", "Primeiro compromisso") conforme PLANO_50_FASES; visual de calçada nos três corredores; buraco como obstáculo de calçada | concluída | `tools/qa_etapa7_lote1.gd`: 6/6 verificações verdes (G–L); validador aprova as 5 fases do bairro (base e impulso); ordem de aprendizagem preservada; regressões 1–6 verdes |
 | 8 | 50 fases, lote 2 (comércio e praça): fases 6–10 autorais ("Na porta da padaria", "Passagem de pedestres", "Hora da entrega", "A van da esquina", "Feira de sábado") + 4 famílias (lixeira, pedestre em travessia, carrinho de entrega, van parada); travessias laterais com aviso; validador com posições temporais | concluída | `tools/qa_etapa8_lote2.gd`: 6/6 verificações verdes (M–R); validador aprova as 10 fases (base e impulso); colisão de travessia pela posição real; regressões 1–7 verdes |
 | 9 | 50 fases, lote 3: fases 11–15 autorais ("Sob o andaime", "Poças da manhã", "Ciclovia na praça", "Olha a moto", "Desvio de obra") + 5 famílias (andaime, poça, floreira, ciclista, moto em cruzamento); travessias rápidas, rumo do modelo e som de aviso da moto | concluída | `tools/qa_etapa9_lote3.gd`: 6/6 verificações verdes (S–X); validador aprova as 15 fases (base e impulso); regressões 1–8 verdes |
+| 10 | 50 fases, lote 4 (avenida, fecha a campanha inicial): fases 16–20 autorais ("O caramelo da praça", "Entregas da avenida", "Travessia do caminhão", "Últimas quadras", "Peguei o ônibus!") + 4 famílias (cachorro cruzando, caixa baixa, caminhão e ônibus em cruzamento); pesados com colisão no nariz, área sinalizada e buzina; fase 20 com respiros e bilhetes dourados | concluída | `tools/qa_etapa10_lote4.gd`: 6/6 verificações verdes (L4-A–L4-F); validador aprova as 20 fases (base e impulso); regressões 1–9 verdes |
 
 ## Diário
 
@@ -232,6 +233,33 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
   ordem de aprendizagem + novas famílias seguras paradas (pool
   procedural) e determinismo. Regressões 1–8 verdes (QA1 H e QA5 X2 agora
   usam fases ainda procedurais, índice 15).
+- ETAPA 10 (21/09): lote 4 das 50 fases, fecha a campanha inicial.
+  Fases 16–20 autorais em `LevelData` (bairro_16–20) com números do
+  PLANO_50_FASES (420/7,0/71; 448/7,2/73; 448/7,2/73; 476/7,4/74;
+  504/7,5/76) e cenário de avenida (deck + `palmeira.glb`).
+  Quatro famílias pelo mecanismo gated: cachorro cruzando/SOFT (16, sem
+  perseguição: kind distinto do "dog", sem `dog_chase_timer` nem
+  mobilidade), caixa baixa de entrega/LOW (17, pular resolve), caminhão e
+  ônibus em cruzamento/VEHICLE (18, sempre da esquerda para a direita).
+  Pesados com origem de colisão no nariz (ponta exatamente na origem,
+  carroceria a reboque), área sinalizada zebrada no chão sob cada
+  cruzamento e buzina grave/aguda ao arrancar (nunca o único aviso:
+  veículo espera visível + faixa no chão). Parados no pool procedural,
+  encaram quem chega (180°). Fase 20 em três blocos com respiros e três
+  bilhetes dourados no embarque final.
+- QA etapa 10 (6/6): dados do plano + matriz + gates + palmeiras,
+  validador nas 20 fases, montagem exata, comportamentos (cachorro sem
+  perseguição, caixa LOW, pesados VEHICLE nem com pulo, rumos, 5 zonas
+  na fase 18, nariz na origem, palmeiras só no lote 4), ordem de
+  aprendizagem + novas famílias seguras paradas e determinismo.
+  Regressões 1–9 verdes (QA1 H e QA5 X2 migrados para o índice 20,
+  primeira fase ainda procedural).
+- Lições do lote registradas nos testes: `find_child`/`find_children`
+  com `owned=true` (padrão) ignora nós criados em runtime; sem frames
+  entre `_start_run` os irmãos liberados seguem na árvore e o Godot
+  renomeia os novos para `@Node3D@N` — consultas por nome entre
+  montagens precisam de identidade estrutural/posição (zonas achadas
+  pela `CrossZoneBase`).
 
 ## Regras de engenharia desta execução
 

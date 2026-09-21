@@ -28,6 +28,10 @@ const CATALOG: Array[Dictionary] = [
     {"id": "planter", "space": "sidewalk", "kind": "street_prop", "builder": "_build_sidewalk_obstacle", "asset": "planter_assembly"},
     {"id": "cyclist", "space": "sidewalk", "kind": "vehicle_prop", "builder": "_build_sidewalk_obstacle", "asset": "cyclist_assembly"},
     {"id": "moto_cross", "space": "sidewalk", "kind": "vehicle_prop", "builder": "_build_sidewalk_obstacle", "asset": "moto_cross_assembly"},
+    {"id": "dog_cross", "space": "sidewalk", "kind": "animal", "builder": "_build_sidewalk_obstacle", "asset": "caramelo_crossing"},
+    {"id": "crate", "space": "sidewalk", "kind": "construction_prop", "builder": "_build_sidewalk_obstacle", "asset": "crate_assembly"},
+    {"id": "truck_cross", "space": "sidewalk", "kind": "vehicle_prop", "builder": "_build_sidewalk_obstacle", "asset": "truck_cross_assembly"},
+    {"id": "bus_cross", "space": "sidewalk", "kind": "vehicle_prop", "builder": "_build_sidewalk_obstacle", "asset": "bus_cross_assembly"},
 ]
 
 const COLLECTIBLE_IDS: Array[String] = [
