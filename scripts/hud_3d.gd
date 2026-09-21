@@ -223,7 +223,7 @@ func _draw_run() -> void:
     var hearts: int = int(state.get("hearts", 3))
     var max_hearts: int = int(state.get("max_hearts", 3))
     _text(Vector2(446, 46), "♥".repeat(hearts) + "♡".repeat(maxi(0, max_hearts - hearts)), 22, RED)
-    _text(Vector2(446, 68), "FAIXA RUA/CALÇADA", 10, Color("#d9e3f0"))
+    _text(Vector2(446, 68), "VIDA • ROTA SEGURA", 10, Color("#d9e3f0"))
     # ETAPA 1 — prazo de partida do ônibus (o relógio que era a "espera no ponto").
     if not bool(state.get("endless", false)):
         var time_left: float = float(state.get("time_left", 0.0))
@@ -235,8 +235,13 @@ func _draw_run() -> void:
     _text_center(Vector2(656, 56), "Ⅱ" if str(state.get("run_mode", "playing")) == "paused" else "▮▮", 20, WHITE)
     var total: float = maxf(1.0, float(state.get("run_total", 400.0)))
     var progress: float = clampf(float(state.get("distance", 0.0)) / total, 0.0, 1.0)
-    draw_rect(Rect2(18, 94, 678, 4), Color(0.05, 0.10, 0.18, 0.50))
-    draw_rect(Rect2(18, 94, 678 * progress, 4), state.get("phase_accent", YELLOW))
+    # Rota do ônibus: trilho discreto + marcador móvel, mais legível que
+    # apenas uma linha de progresso solta.
+    draw_line(Vector2(28, 96), Vector2(688, 96), Color(0.75, 0.86, 0.92, 0.20), 3.0)
+    draw_line(Vector2(28, 96), Vector2(28 + 660 * progress, 96), state.get("phase_accent", YELLOW), 4.0)
+    draw_circle(Vector2(28 + 660 * progress, 96), 5.0, Color("#fff8e7"))
+    draw_circle(Vector2(688, 96), 7.0, Color("#ffd34e"))
+    _text_center(Vector2(688, 101), "●", 9, INK)
     if float(state.get("dash_cooldown", 0.0)) <= 0.0:
         _panel(Rect2(518, 118, 178, 30), Color(1, 0.72, 0.24, 0.15), 10)
         _text_center(Vector2(607, 138), "DASH PRONTO", 12, YELLOW)
@@ -637,15 +642,22 @@ func _header(title: String, right: String) -> void:
     _text_center(Vector2(594, 62), right, 17, YELLOW)
 
 func _panel(rect: Rect2, color: Color, radius: float = 12.0) -> void:
-    draw_style_box(_make_box(Color(0.01, 0.025, 0.07, 0.48), radius), Rect2(rect.position + Vector2(0, 6), rect.size))
+    # Painel de vidro fumê: sombra curta, borda fina e reflexo superior dão
+    # profundidade sem competir com o cenário 3D.
+    var shadow := _make_box(Color(0.005, 0.012, 0.035, 0.58), radius + 1.0)
+    shadow.shadow_color = Color(0.0, 0.0, 0.0, 0.30)
+    shadow.shadow_size = 5
+    shadow.shadow_offset = Vector2(0, 4)
+    draw_style_box(shadow, rect)
     draw_style_box(_make_box(color, radius), rect)
     if rect.size.x > radius * 2.0:
-        draw_line(rect.position + Vector2(radius, 1), Vector2(rect.end.x - radius, rect.position.y + 1), Color(1, 1, 1, 0.12), 1.0)
+        draw_line(rect.position + Vector2(radius, 1), Vector2(rect.end.x - radius, rect.position.y + 1), Color(1, 1, 1, 0.22), 1.0)
+        draw_line(rect.position + Vector2(radius + 8, rect.size.y - 2), Vector2(rect.end.x - radius - 8, rect.size.y - 2), Color(0.25, 0.78, 0.86, 0.14), 1.0)
 
 func _button(rect: Rect2, label: String, color: Color, font_size: int = 20) -> void:
     _panel(rect, color, 15)
-    draw_rect(Rect2(rect.position + Vector2(3, 3), Vector2(rect.size.x - 6, 4)), Color(1, 1, 1, 0.12))
-    draw_line(rect.position + Vector2(14, rect.size.y - 6), rect.end - Vector2(14, 6), Color(0.02, 0.05, 0.1, 0.22), 2)
+    draw_rect(Rect2(rect.position + Vector2(4, 4), Vector2(rect.size.x - 8, 3)), Color(1, 1, 1, 0.18))
+    draw_line(rect.position + Vector2(14, rect.size.y - 6), rect.end - Vector2(14, 6), Color(0.02, 0.05, 0.1, 0.28), 2)
     _text_center(rect.position + rect.size / 2.0 + Vector2(0, 3), label, font_size, INK if color != Color("#293955") and color != Color("#263958") else WHITE)
 
 func _make_box(color: Color, radius: float) -> StyleBoxFlat:
