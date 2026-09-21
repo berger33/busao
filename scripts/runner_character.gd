@@ -201,7 +201,11 @@ func set_character(next_id: String) -> void:
     model_pivot.add_child(model_root)
     skeleton = _find_skeleton(model_root)
     if skeleton == null:
-        _build_fallback("esqueleto humano não encontrado")
+        # Hero procedural mesh-only: mantém a malha detalhada mesmo sem rig
+        # Blender, enquanto o pipeline de animação avançada é preparado.
+        # O root do jogo ainda fornece corrida, inclinação, salto e bob.
+        _configure_mesh_shadows(model_root)
+        primary_asset_loaded = true
         return
     _cache_skeleton()
     if is_original:
