@@ -476,7 +476,17 @@ func _apply_skin_tint(skin_color: Color) -> void:
                 material.roughness = 1.0
                 material.roughness_texture = TEXTURE_SKIN_R
                 material.uv1_scale = Vector3(2.2, 2.2, 2.2)
-                # mantém translucidez sutil da pele (Godot 4 subsurf not needed; roughness já resolve)
+                # Pele humana precisa responder à luz de forma macia: SSS
+                # sutil, especular baixo e rim discreto removem o aspecto de
+                # plástico sem deixar o rosto brilhando como porcelana.
+                material.subsurf_scatter_enabled = true
+                material.subsurf_scatter_skin_mode = true
+                material.subsurf_scatter_strength = 0.18
+                material.metallic = 0.0
+                material.metallic_specular = 0.28
+                material.rim_enabled = true
+                material.rim = 0.06
+                material.rim_tint = 0.72
                 mesh.set_surface_override_material(surface_index, material)
 
 func _apply_profile_palette(profile: Dictionary) -> void:
@@ -559,6 +569,21 @@ func _apply_profile_palette(profile: Dictionary) -> void:
                     material.albedo_texture = TEXTURE_HAIR
                     material.roughness = 0.82
                     material.uv1_scale = Vector3(1.8, 1.8, 1.8)
+                    material.anisotropy_enabled = true
+                    material.anisotropy = 0.34
+                    material.rim_enabled = true
+                    material.rim = 0.12
+                    material.rim_tint = 0.68
+            # tecidos e jeans ganham uma reflexão larga e fraca, como fibras
+            # reais, em vez do brilho plástico dos materiais uniformes.
+            if pbr_kind in ["tecido", "jeans"]:
+                material.clearcoat_enabled = true
+                material.clearcoat = 0.10
+                material.clearcoat_roughness = 0.42
+            elif pbr_kind == "borracha":
+                material.clearcoat_enabled = true
+                material.clearcoat = 0.16
+                material.clearcoat_roughness = 0.30
             mesh.set_surface_override_material(surface_index, material)
 
 func _attach_creator_details(profile: Dictionary) -> void:
