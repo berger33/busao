@@ -299,6 +299,30 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
   galpões no fundo, só árvore comum), reuso sem estreia e
   determinismo. Regressões 1–11 verdes (QA1 H e QA5 X2 migrados para
   o índice 30, primeira fase ainda procedural).
+- ETAPA 13 (21/09): lote 7 das 50 fases (Parque e orla, reuso).
+  Fases 31–35 autorais em `LevelData` (bairro_31–35) com números do
+  PLANO_50_FASES (476/7,8/73; 504/8,0/73; 504/8,0/73; 532/8,1/75;
+  560/8,2/77), só com famílias já apresentadas (banco, floreira,
+  cone, cachorro, pedestre, ciclista, vala, barreira). Cenário pelo
+  building_kit (camada viva): palmeiras em alameda (cada uma com
+  canteiro), bancos de praça, casas baixas de 1–2 pisos (horizonte
+  aberto); `_spawn_quiosques` planta quiosques (`quiosque.glb` +
+  reserva, x=±6,4 m a cada 112 m dos dois lados, pulando
+  travessias) — visual puro; fase 35 com `marco: guarita` ao lado
+  do ponto. Luz aberta por paleta do nível (`scenery.paleta`,
+  aplicada em `_render_profile_world`; sem ela vale o rodízio
+  global do world_spec).
+- Descoberta do lote: `_scene_glb` é determinístico — as "árvores
+  sem nome" eram palmeiras reais renomeadas para `@Node3D@N`, e o
+  `find` case-sensitive não casava `Palmeira`; a contagem do QA13
+  compara sem maiúsculas (16/16 na fase 31).
+- QA etapa 13 (6/6): dados do plano + gates intactos + cenário do
+  parque, validador nas 35 fases, montagem exata, comportamentos
+  (passeio SOFT em E/D, ciclistas FULL, vala/barra, 8/8/8/10/10
+  quiosques fora das travessias, guarita no ponto, paleta orla
+  aplicada com rodízio global intacto, 16 palmeiras), reuso sem
+  estreia e determinismo. Regressões 1–12 verdes (QA1 H e QA5 X2
+  migrados para o índice 35, primeira fase ainda procedural).
 
 ## Regras de engenharia desta execução
 

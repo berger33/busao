@@ -841,6 +841,35 @@ func _spawn_feira(level: Dictionary, total: float) -> void:
         i += 1
 
 
+## ETAPA 13 — quiosques do calçadão (fases 31-35): dos dois lados a
+## cada passo, pulando os que caem sobre travessias; visual puro,
+## sem colisão nem entrada em entities.
+func _spawn_quiosques(level: Dictionary, total: float) -> void:
+    var quiosques: Dictionary = level.get("scenery", {}).get("quiosques", {})
+    if quiosques.is_empty():
+        return
+    var passo: float = float(quiosques.get("passo_m", 112.0))
+    var desloc: float = float(quiosques.get("desloc_m", passo * 0.5))
+    var x_lado: float = float(quiosques.get("x_m", 6.4))
+    var margem: float = float(quiosques.get("margem_cruzamento_m", 6.0))
+    var cruzamentos: Array = []
+    for p in level.get("patterns", []):
+        if p.has("cross_mps"):
+            cruzamentos.append(float(p.get("at_m", 0.0)))
+    var z := desloc
+    var i := 0
+    while z < total - 10.0:
+        var livre := true
+        for at in cruzamentos:
+            if absf(z - at) < margem:
+                livre = false
+        if livre:
+            for lado in [-1.0, 1.0]:
+                _build_tourist_kiosk(Vector3(lado * x_lado, 0.0, -z), i)
+        z += passo
+        i += 1
+
+
 func _build_course_from_level(level: Dictionary, total: float) -> void:
     var level_patterns: Array = level.get("patterns", [])
     for p in level_patterns:
@@ -865,6 +894,7 @@ func _build_course_from_level(level: Dictionary, total: float) -> void:
     for c in level_coins:
         _spawn_entity(str(c.get("kind", "coin")), int(c.get("lane", 1)), float(c.get("at_m", 0.0)), true, true)
     _spawn_feira(level, total)
+    _spawn_quiosques(level, total)
     _create_bus_stop(total)
     call_deferred("_audit_world_geometry")
 
@@ -2405,15 +2435,22 @@ func _build_construction(pos: Vector3, index: int) -> void:
         _cone(decor_root, 0.28, 0.65, pos + Vector3(1.6, 0.34, -1.0), orange, "ConstructionCone")
 
 func _build_guard_post(pos: Vector3, _index: int) -> void:
+    # ETAPA 13 — marca decor_kind=guarita (uma por guarita).
     var guarita_glb := _optional_glb("scene/guarita.glb")
     if guarita_glb != null:
         guarita_glb.position = pos
+        guarita_glb.set_meta("decor_kind", "guarita")
         decor_root.add_child(guarita_glb)
         _tint_glb(guarita_glb, {"TintWall": _scenario_color("building_alt", Color("#b9a770")), "TintTrim": _scenario_color("accent", YELLOW), "TintFabric": _scenario_color("accent", YELLOW)})
         return
-    _box(decor_root, Vector3(1.9, 1.9, 1.8), pos + Vector3(0.0, 0.95, 0.0), _material(_scenario_color("building_alt", Color("#b9a770")), 0.0, 0.74, "stucco"), "GuardPost")
-    _box(decor_root, Vector3(1.3, 0.46, 0.05), pos + Vector3(0.0, 1.3, -0.94), _material(Color("#263d4b"), 0.0, 0.34, "glass"), "GuardWindow")
-    _box(decor_root, Vector3(2.1, 0.10, 2.0), pos + Vector3(0.0, 2.0, 0.0), _material(_scenario_color("accent", YELLOW), 0.0, 0.72, "metal"), "GuardRoof")
+    var guarita := Node3D.new()
+    guarita.name = "Guarita"
+    guarita.position = pos
+    guarita.set_meta("decor_kind", "guarita")
+    decor_root.add_child(guarita)
+    _box(guarita, Vector3(1.9, 1.9, 1.8), Vector3(0.0, 0.95, 0.0), _material(_scenario_color("building_alt", Color("#b9a770")), 0.0, 0.74, "stucco"), "GuardPost")
+    _box(guarita, Vector3(1.3, 0.46, 0.05), Vector3(0.0, 1.3, -0.94), _material(Color("#263d4b"), 0.0, 0.34, "glass"), "GuardWindow")
+    _box(guarita, Vector3(2.1, 0.10, 2.0), Vector3(0.0, 2.0, 0.0), _material(_scenario_color("accent", YELLOW), 0.0, 0.72, "metal"), "GuardRoof")
     _build_flag(pos + Vector3(0.75, 0.0, 0.0), _scenario_color("accent", YELLOW))
 
 func _build_church(pos: Vector3, _index: int) -> void:
@@ -2431,15 +2468,22 @@ func _build_church(pos: Vector3, _index: int) -> void:
     _box(decor_root, Vector3(0.25, 0.92, 0.05), pos + Vector3(-1.0, 6.9, -0.05), _material(_scenario_color("accent", VIOLET), 0.0, 0.42), "ChurchCross")
 
 func _build_tourist_kiosk(pos: Vector3, _index: int) -> void:
+    # ETAPA 13 — marca decor_kind=quiosque (uma por quiosque).
     var quiosque_glb := _optional_glb("scene/quiosque.glb")
     if quiosque_glb != null:
         quiosque_glb.position = pos
+        quiosque_glb.set_meta("decor_kind", "quiosque")
         decor_root.add_child(quiosque_glb)
         _tint_glb(quiosque_glb, {"TintWall": _scenario_color("building_alt", Color("#72b1ad")), "TintTrim": _scenario_color("accent", CYAN)})
         return
-    _cylinder(decor_root, 0.72, 0.82, 1.55, pos + Vector3(0.0, 0.78, 0.0), _material(_scenario_color("building_alt", Color("#72b1ad")), 0.0, 0.74, "stucco"), "Kiosk")
-    _cone(decor_root, 1.05, 0.52, pos + Vector3(0.0, 1.82, 0.0), _material(_scenario_color("accent", CYAN), 0.0, 0.62, "fabric"), "KioskRoof")
-    _box(decor_root, Vector3(0.72, 0.22, 0.05), pos + Vector3(0.0, 0.98, -0.8), _material(Color("#f5e6bc"), 0.0, 0.45, "wood"), "KioskCounter")
+    var quiosque := Node3D.new()
+    quiosque.name = "Quiosque"
+    quiosque.position = pos
+    quiosque.set_meta("decor_kind", "quiosque")
+    decor_root.add_child(quiosque)
+    _cylinder(quiosque, 0.72, 0.82, 1.55, Vector3(0.0, 0.78, 0.0), _material(_scenario_color("building_alt", Color("#72b1ad")), 0.0, 0.74, "stucco"), "Kiosk")
+    _cone(quiosque, 1.05, 0.52, Vector3(0.0, 1.82, 0.0), _material(_scenario_color("accent", CYAN), 0.0, 0.62, "fabric"), "KioskRoof")
+    _box(quiosque, Vector3(0.72, 0.22, 0.05), Vector3(0.0, 0.98, -0.8), _material(Color("#f5e6bc"), 0.0, 0.45, "wood"), "KioskCounter")
 
 func _build_terminal_facade(pos: Vector3, _index: int) -> void:
     var terminal_glb := _optional_glb("scene/terminal.glb")
@@ -2682,9 +2726,14 @@ func _create_bus_stop(total: float) -> void:
     # ETAPA 11 — marco arquitetônico do nível (fase 25: a igreja ao
     # lado do ponto); só em fase autoral, fora dos corredores.
     var _level_marcado: Dictionary = LevelData.for_phase(phase_index)
-    if not endless_mode and not _level_marcado.is_empty() \
-            and str(_level_marcado.get("scenery", {}).get("marco", "")) == "igreja":
+    var _marco_nivel := ""
+    if not endless_mode and not _level_marcado.is_empty():
+        _marco_nivel = str(_level_marcado.get("scenery", {}).get("marco", ""))
+    if _marco_nivel == "igreja":
         _build_church(Vector3(-6.0, 0.0, -total - 14.0), phase_index)
+    elif _marco_nivel == "guarita":
+        # ETAPA 13 — a guarita marca o ponto na orla (fase 35).
+        _build_guard_post(Vector3(-6.0, 0.0, -total - 14.0), phase_index)
 
 func _build_bus_mesh(parent: Node3D) -> void:
     var bus_glb := _optional_model("onibus.glb")
@@ -4468,6 +4517,15 @@ func _render_profile_world() -> Dictionary:
     # Paleta do capítulo vinda do world_spec.json (a mesma que o kit usa).
     # `phase_index` é a variável de capítulo deste jogo (roteiro: run_level).
     var spec := BuildingKit.load_spec()
+    # ETAPA 13 — o nível pode fixar a paleta do capítulo (orla: luz
+    # aberta); sem ela, vale o rodízio global por índice de fase.
+    if not endless_mode:
+        var _nivel_paleta: Dictionary = LevelData.for_phase(phase_index)
+        if not _nivel_paleta.is_empty():
+            var _cen_paleta: Dictionary = _nivel_paleta.get("scenery", {})
+            var _paleta_nivel: Dictionary = _cen_paleta.get("paleta", {})
+            if not _paleta_nivel.is_empty():
+                return BuildingKit.chapter_profile({"paletas": [_paleta_nivel]}, 0)
     return BuildingKit.chapter_profile(spec, phase_index)
 
 

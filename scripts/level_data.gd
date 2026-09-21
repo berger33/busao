@@ -131,6 +131,71 @@ const CENARIO_FEIRA: Dictionary = {
     "feira": {"passo_m": 56.0, "x_m": 6.4, "margem_cruzamento_m": 6.0},
 }
 
+## ETAPA 13 — parque e orla do lote 31-35: mesmo deck dos três corredores,
+## palmeiras em alameda (8 m, cada uma com o canteiro do kit), bancos de
+## praça, lixeira esparsa, casas baixas no fundo (1-2 pisos: horizonte
+## aberto); quiosques dos dois lados a cada 112 m, pulando as que caem
+## sobre travessias (bloco "quiosques", lido por _spawn_quiosques); a
+## paleta "orla" fixa a luz aberta do capítulo (lida por
+## _render_profile_world; sombras de contato preservadas).
+const CENARIO_PARQUE: Dictionary = {
+    "faixas": {"piso_central_m": 9.9, "piso_borda_esq_m": 4.95},
+    "props": {
+        "arvore": {"glb": "palmeira", "espacamento_m": 8.0},
+        "banco": {"espacamento_m": 12.0},
+        "lixeira": {"espacamento_m": 18.0},
+    },
+    "predios": {
+        "tipo_pesos": {"tijolo": 2, "reboco": 4, "loja": 2, "obra": 0},
+        "pisos": [1, 2],
+    },
+    "quiosques": {"passo_m": 112.0, "x_m": 6.4, "margem_cruzamento_m": 6.0},
+    "paleta": {
+        "nome": "orla",
+        "sol": [1.0, 0.95, 0.85],
+        "nevoa": [0.86, 0.83, 0.76],
+        "sombra": [0.33, 0.39, 0.48],
+        "ceu_alto": [0.30, 0.50, 0.76],
+        "ceu_horizonte": [0.85, 0.84, 0.80],
+        "sol_rotacao": [-9.0, 170.0, 0.0],
+        "sol_energia": 1.15,
+        "energia_ambiente": 0.66,
+        "nevoa_densidade": 0.35,
+        "exposicao": 0.55,
+        "nuvens": 0.25,
+    },
+}
+
+## ETAPA 13 — orla da fase 35: o parque + a guarita ao lado do ponto.
+const CENARIO_ORLA: Dictionary = {
+    "faixas": {"piso_central_m": 9.9, "piso_borda_esq_m": 4.95},
+    "props": {
+        "arvore": {"glb": "palmeira", "espacamento_m": 8.0},
+        "banco": {"espacamento_m": 12.0},
+        "lixeira": {"espacamento_m": 18.0},
+    },
+    "predios": {
+        "tipo_pesos": {"tijolo": 2, "reboco": 4, "loja": 2, "obra": 0},
+        "pisos": [1, 2],
+    },
+    "quiosques": {"passo_m": 112.0, "x_m": 6.4, "margem_cruzamento_m": 6.0},
+    "paleta": {
+        "nome": "orla",
+        "sol": [1.0, 0.95, 0.85],
+        "nevoa": [0.86, 0.83, 0.76],
+        "sombra": [0.33, 0.39, 0.48],
+        "ceu_alto": [0.30, 0.50, 0.76],
+        "ceu_horizonte": [0.85, 0.84, 0.80],
+        "sol_rotacao": [-9.0, 170.0, 0.0],
+        "sol_energia": 1.15,
+        "energia_ambiente": 0.66,
+        "nevoa_densidade": 0.35,
+        "exposicao": 0.55,
+        "nuvens": 0.25,
+    },
+    "marco": "guarita",
+}
+
 ## Fase 1 — "Saiu atrasada" (PLANO_50_FASES): aprender troca de corredor e
 ## pulo; cones baixos isolados; moedas guiam uma rota ampla. Clímax: dois
 ## cones em estações separadas, sempre com desvio disponível.
@@ -1316,7 +1381,221 @@ const FASE_30: Dictionary = {
     ],
 }
 
-const LEVELS: Array = [FASE_1, FASE_2, PILOT, FASE_4, FASE_5, FASE_6, FASE_7, FASE_8, FASE_9, FASE_10, FASE_11, FASE_12, FASE_13, FASE_14, FASE_15, FASE_16, FASE_17, FASE_18, FASE_19, FASE_20, FASE_21, FASE_22, FASE_23, FASE_24, FASE_25, FASE_26, FASE_27, FASE_28, FASE_29, FASE_30]
+## Fase 31 — "Alamedas do parque" (PLANO_50_FASES): início de capítulo
+## com menor pressão; bancos, floreiras e cones entre palmeiras.
+## Clímax: floreira em C com banco em D, E livre.
+const FASE_31: Dictionary = {
+    "id": "bairro_31",
+    "version": 1,
+    "name": "Alamedas do parque",
+    "phase_index": 30,
+    "distance_m": 476.0,
+    "chunk_length_m": 28.0,
+    "chunks": 17,
+    "base_speed_mps": 7.8,
+    "deadline_seconds": 73.0,
+    "layout_seed": 131,
+    "scenery": CENARIO_PARQUE,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "bench", "lane": 0, "at_m": 72.0},
+        {"kind": "planter", "lane": 2, "at_m": 100.0},
+        {"kind": "cone", "lane": 2, "at_m": 128.0},
+        {"kind": "bench", "lane": 1, "at_m": 156.0},
+        {"kind": "planter", "lane": 0, "at_m": 184.0},
+        {"kind": "cone", "lane": 0, "at_m": 212.0},
+        {"kind": "bench", "lane": 2, "at_m": 240.0},
+        {"kind": "planter", "lane": 1, "at_m": 268.0},
+        {"kind": "cone", "lane": 2, "at_m": 296.0},
+        {"kind": "bench", "lane": 0, "at_m": 324.0},
+        {"kind": "planter", "lane": 2, "at_m": 352.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 428.0},
+        {"kind": "coin", "lane": 1, "at_m": 436.0},
+        {"kind": "coin", "lane": 1, "at_m": 444.0},
+    ],
+}
+
+## Fase 32 — "Passeio com o caramelo" (PLANO_50_FASES): cachorro e pedestres
+## cruzam em eventos separados (56 m entre eles), com estáticos conhecidos.
+## Clímax: pedestre em C com floreira em D, E livre.
+const FASE_32: Dictionary = {
+    "id": "bairro_32",
+    "version": 1,
+    "name": "Passeio com o caramelo",
+    "phase_index": 31,
+    "distance_m": 504.0,
+    "chunk_length_m": 28.0,
+    "chunks": 18,
+    "base_speed_mps": 8.0,
+    "deadline_seconds": 73.0,
+    "layout_seed": 132,
+    "scenery": CENARIO_PARQUE,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "bench", "lane": 0, "at_m": 72.0},
+        {"kind": "dog_cross", "lane": 2, "at_m": 100.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 2.5, "lead_m": 26.1},
+        {"kind": "planter", "lane": 1, "at_m": 128.0},
+        {"kind": "crosser", "lane": 0, "at_m": 156.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.3, "lead_m": 50.2},
+        {"kind": "cone", "lane": 2, "at_m": 184.0},
+        {"kind": "dog_cross", "lane": 0, "at_m": 212.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 2.5, "lead_m": 26.1},
+        {"kind": "bench", "lane": 1, "at_m": 240.0},
+        {"kind": "crosser", "lane": 1, "at_m": 268.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.3, "lead_m": 30.8},
+        {"kind": "planter", "lane": 2, "at_m": 296.0},
+        {"kind": "cone", "lane": 0, "at_m": 324.0},
+        {"kind": "bench", "lane": 2, "at_m": 352.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 456.0},
+        {"kind": "coin", "lane": 1, "at_m": 464.0},
+        {"kind": "coin", "lane": 1, "at_m": 472.0},
+    ],
+}
+
+## Fase 33 — "Ciclistas da orla" (PLANO_50_FASES): dois ciclistas em momentos
+## diferentes (112 m entre eles), janelas previsíveis, escape lateral livre.
+## Clímax: ciclista em E com cone em D, C livre.
+const FASE_33: Dictionary = {
+    "id": "bairro_33",
+    "version": 1,
+    "name": "Ciclistas da orla",
+    "phase_index": 32,
+    "distance_m": 504.0,
+    "chunk_length_m": 28.0,
+    "chunks": 18,
+    "base_speed_mps": 8.0,
+    "deadline_seconds": 73.0,
+    "layout_seed": 133,
+    "scenery": CENARIO_PARQUE,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "planter", "lane": 0, "at_m": 72.0},
+        {"kind": "bench", "lane": 2, "at_m": 100.0},
+        {"kind": "cyclist", "lane": 2, "at_m": 128.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 3.0, "lead_m": 21.7},
+        {"kind": "cone", "lane": 0, "at_m": 156.0},
+        {"kind": "planter", "lane": 1, "at_m": 184.0},
+        {"kind": "bench", "lane": 0, "at_m": 212.0},
+        {"kind": "cyclist", "lane": 0, "at_m": 240.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 3.0, "lead_m": 21.7},
+        {"kind": "cone", "lane": 2, "at_m": 268.0},
+        {"kind": "planter", "lane": 2, "at_m": 296.0},
+        {"kind": "bench", "lane": 1, "at_m": 324.0},
+        {"kind": "cone", "lane": 0, "at_m": 352.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 456.0},
+        {"kind": "coin", "lane": 1, "at_m": 464.0},
+        {"kind": "coin", "lane": 1, "at_m": 472.0},
+    ],
+}
+
+## Fase 34 — "Manutenção do calçadão" (PLANO_50_FASES): vala, barra e cone;
+## pulo e deslize combinados, com rota alternativa de moedas em D.
+## Clímax: barreira em C com a rota D livre e premiada.
+const FASE_34: Dictionary = {
+    "id": "bairro_34",
+    "version": 1,
+    "name": "Manutenção do calçadão",
+    "phase_index": 33,
+    "distance_m": 532.0,
+    "chunk_length_m": 28.0,
+    "chunks": 19,
+    "base_speed_mps": 8.1,
+    "deadline_seconds": 75.0,
+    "layout_seed": 134,
+    "scenery": CENARIO_PARQUE,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "pothole", "lane": 0, "at_m": 72.0},
+        {"kind": "barrier", "lane": 2, "at_m": 100.0},
+        {"kind": "cone", "lane": 2, "at_m": 128.0},
+        {"kind": "pothole", "lane": 1, "at_m": 156.0},
+        {"kind": "barrier", "lane": 0, "at_m": 184.0},
+        {"kind": "cone", "lane": 0, "at_m": 212.0},
+        {"kind": "barrier", "lane": 1, "at_m": 240.0},
+        {"kind": "pothole", "lane": 2, "at_m": 268.0},
+        {"kind": "cone", "lane": 1, "at_m": 296.0},
+        {"kind": "barrier", "lane": 2, "at_m": 324.0},
+        {"kind": "pothole", "lane": 0, "at_m": 352.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 2, "at_m": 232.0},
+        {"kind": "coin", "lane": 2, "at_m": 240.0},
+        {"kind": "coin", "lane": 2, "at_m": 248.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 484.0},
+        {"kind": "coin", "lane": 1, "at_m": 492.0},
+        {"kind": "coin", "lane": 1, "at_m": 500.0},
+    ],
+}
+
+## Fase 35 — "O ônibus da orla" (PLANO_50_FASES): revisão de parque, ciclovia
+## e manutenção em três blocos; aproximação limpa com a guarita no ponto.
+## Clímax: barreira em C com cone em D, E livre, ônibus à vista.
+const FASE_35: Dictionary = {
+    "id": "bairro_35",
+    "version": 1,
+    "name": "O ônibus da orla",
+    "phase_index": 34,
+    "distance_m": 560.0,
+    "chunk_length_m": 28.0,
+    "chunks": 20,
+    "base_speed_mps": 8.2,
+    "deadline_seconds": 77.0,
+    "layout_seed": 135,
+    "scenery": CENARIO_ORLA,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "bench", "lane": 0, "at_m": 72.0},
+        {"kind": "planter", "lane": 2, "at_m": 100.0},
+        {"kind": "cyclist", "lane": 2, "at_m": 128.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 3.0, "lead_m": 22.3},
+        {"kind": "cone", "lane": 0, "at_m": 156.0},
+        {"kind": "pothole", "lane": 1, "at_m": 184.0},
+        {"kind": "barrier", "lane": 2, "at_m": 212.0},
+        {"kind": "crosser", "lane": 0, "at_m": 240.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.3, "lead_m": 51.4},
+        {"kind": "bench", "lane": 1, "at_m": 268.0},
+        {"kind": "dog_cross", "lane": 2, "at_m": 296.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 2.5, "lead_m": 26.7},
+        {"kind": "planter", "lane": 0, "at_m": 324.0},
+        {"kind": "barrier", "lane": 1, "at_m": 352.0},
+        {"kind": "cone", "lane": 2, "at_m": 380.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 512.0},
+        {"kind": "coin", "lane": 1, "at_m": 520.0},
+        {"kind": "coin", "lane": 1, "at_m": 528.0},
+    ],
+}
+
+const LEVELS: Array = [FASE_1, FASE_2, PILOT, FASE_4, FASE_5, FASE_6, FASE_7, FASE_8, FASE_9, FASE_10, FASE_11, FASE_12, FASE_13, FASE_14, FASE_15, FASE_16, FASE_17, FASE_18, FASE_19, FASE_20, FASE_21, FASE_22, FASE_23, FASE_24, FASE_25, FASE_26, FASE_27, FASE_28, FASE_29, FASE_30, FASE_31, FASE_32, FASE_33, FASE_34, FASE_35]
 
 
 static func for_phase(index: int) -> Dictionary:
