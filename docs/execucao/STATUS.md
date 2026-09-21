@@ -18,6 +18,7 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
 | 8 | 50 fases, lote 2 (comércio e praça): fases 6–10 autorais ("Na porta da padaria", "Passagem de pedestres", "Hora da entrega", "A van da esquina", "Feira de sábado") + 4 famílias (lixeira, pedestre em travessia, carrinho de entrega, van parada); travessias laterais com aviso; validador com posições temporais | concluída | `tools/qa_etapa8_lote2.gd`: 6/6 verificações verdes (M–R); validador aprova as 10 fases (base e impulso); colisão de travessia pela posição real; regressões 1–7 verdes |
 | 9 | 50 fases, lote 3: fases 11–15 autorais ("Sob o andaime", "Poças da manhã", "Ciclovia na praça", "Olha a moto", "Desvio de obra") + 5 famílias (andaime, poça, floreira, ciclista, moto em cruzamento); travessias rápidas, rumo do modelo e som de aviso da moto | concluída | `tools/qa_etapa9_lote3.gd`: 6/6 verificações verdes (S–X); validador aprova as 15 fases (base e impulso); regressões 1–8 verdes |
 | 10 | 50 fases, lote 4 (avenida, fecha a campanha inicial): fases 16–20 autorais ("O caramelo da praça", "Entregas da avenida", "Travessia do caminhão", "Últimas quadras", "Peguei o ônibus!") + 4 famílias (cachorro cruzando, caixa baixa, caminhão e ônibus em cruzamento); pesados com colisão no nariz, área sinalizada e buzina; fase 20 com respiros e bilhetes dourados | concluída | `tools/qa_etapa10_lote4.gd`: 6/6 verificações verdes (L4-A–L4-F); validador aprova as 20 fases (base e impulso); regressões 1–9 verdes |
+| 11 | 50 fases, lote 5 (centro histórico, reuso): fases 21–25 autorais ("Rua das fachadas", "Entrega na livraria", "Foto na praça", "Restauração da fachada", "O ponto da igreja"), sem família nova; rua de comércio antigo (vitrines/toldos), praça com ipês e igreja ao lado do ponto na fase 25 | concluída | `tools/qa_etapa11_lote5.gd`: 6/6 verificações verdes (L5-A–L5-F); validador aprova as 25 fases (base e impulso); regressões 1–10 verdes |
 
 ## Diário
 
@@ -260,6 +261,26 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
   renomeia os novos para `@Node3D@N` — consultas por nome entre
   montagens precisam de identidade estrutural/posição (zonas achadas
   pela `CrossZoneBase`).
+- ETAPA 11 (21/09): lote 5 das 50 fases (centro histórico, reuso).
+  Fases 21–25 autorais em `LevelData` (bairro_21–25) com números do
+  PLANO_50_FASES (448/7,4/72; 476/7,5/74; 476/7,6/73; 504/7,6/76;
+  504/7,7/74), só com famílias já apresentadas (banco, floreira,
+  pedestre, caixa, carrinho, andaime, vala, cone). Cenário pelo
+  building_kit (camada viva): pesos de loja/reboco dominando a rua,
+  ipês na praça, bancos e postes adensados; fase 25 com `marco:
+  igreja` ao lado do ponto (fora dos corredores, sem colisão).
+- Descoberta do lote: `_build_track` só retorna — as fatias
+  (`_build_track_antigo`, `building_style`, vitrines/casas/igreja por
+  fatia) são código morto desde o Lote 3; a primeira versão da etapa
+  ligou um override de fatias sem leitor e foi revertida para o kit.
+  Teste novo: `queue_free` marca só o nó direto — peças-filhas de
+  marco exigem checar `is_queued_for_deletion` até a raiz.
+- QA etapa 11 (6/6): dados do plano + gates intactos + cenários,
+  validador nas 25 fases, montagem exata, comportamentos (dois
+  pedestres alternados, andaime/vala, cruzamentos pelo centro, igreja
+  no ponto, 12 toldos na rua, 15 ipês), reuso sem estreia e
+  determinismo. Regressões 1–10 verdes (QA1 H e QA5 X2 migrados para
+  o índice 25, primeira fase ainda procedural).
 
 ## Regras de engenharia desta execução
 

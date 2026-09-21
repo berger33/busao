@@ -2641,6 +2641,12 @@ func _create_bus_stop(total: float) -> void:
     _build_bus_mesh(bus_node)
     bus_node.visible = false
     bus_stop_node.visible = false
+    # ETAPA 11 — marco arquitetônico do nível (fase 25: a igreja ao
+    # lado do ponto); só em fase autoral, fora dos corredores.
+    var _level_marcado: Dictionary = LevelData.for_phase(phase_index)
+    if not endless_mode and not _level_marcado.is_empty() \
+            and str(_level_marcado.get("scenery", {}).get("marco", "")) == "igreja":
+        _build_church(Vector3(-6.0, 0.0, -total - 14.0), phase_index)
 
 func _build_bus_mesh(parent: Node3D) -> void:
     var bus_glb := _optional_model("onibus.glb")

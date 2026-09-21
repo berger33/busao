@@ -89,6 +89,32 @@ const CENARIO_AVENIDA: Dictionary = {
     "props": {"arvore": {"glb": "palmeira"}},
 }
 
+## ETAPA 11 — centro histórico do lote 21-25: mesmo deck dos três
+## corredores, com ipês na praça, bancos e postes de ferro mais densos e
+## rua de comércio antigo (pesos do kit: loja e reboco dominam; vitrines
+## com toldo e molduras vêm do building_kit, camada viva do cenário).
+const CENARIO_CENTRO: Dictionary = {
+    "faixas": {"piso_central_m": 9.9, "piso_borda_esq_m": 4.95},
+    "props": {
+        "arvore": {"glb": "ipe_amarelo"},
+        "banco": {"espacamento_m": 10.0},
+        "poste": {"espacamento_m": 10.0},
+    },
+    "predios": {"tipo_pesos": {"tijolo": 1, "reboco": 4, "loja": 5, "obra": 0}},
+}
+
+## ETAPA 11 — largo da fase 25: o centro + a igreja ao lado do ponto.
+const CENARIO_LARGO: Dictionary = {
+    "faixas": {"piso_central_m": 9.9, "piso_borda_esq_m": 4.95},
+    "props": {
+        "arvore": {"glb": "ipe_amarelo"},
+        "banco": {"espacamento_m": 10.0},
+        "poste": {"espacamento_m": 10.0},
+    },
+    "predios": {"tipo_pesos": {"tijolo": 1, "reboco": 4, "loja": 5, "obra": 0}},
+    "marco": "igreja",
+}
+
 ## Fase 1 — "Saiu atrasada" (PLANO_50_FASES): aprender troca de corredor e
 ## pulo; cones baixos isolados; moedas guiam uma rota ampla. Clímax: dois
 ## cones em estações separadas, sempre com desvio disponível.
@@ -863,7 +889,213 @@ const FASE_20: Dictionary = {
     ],
 }
 
-const LEVELS: Array = [FASE_1, FASE_2, PILOT, FASE_4, FASE_5, FASE_6, FASE_7, FASE_8, FASE_9, FASE_10, FASE_11, FASE_12, FASE_13, FASE_14, FASE_15, FASE_16, FASE_17, FASE_18, FASE_19, FASE_20]
+## Fase 21 — "Rua das fachadas" (PLANO_50_FASES): reentrada tranquila no
+## centro; bancos, floreiras e um pedestre por vez. Clímax: pedestre em E
+## com banco em C, D livre.
+const FASE_21: Dictionary = {
+    "id": "bairro_21",
+    "version": 1,
+    "name": "Rua das fachadas",
+    "phase_index": 20,
+    "distance_m": 448.0,
+    "chunk_length_m": 28.0,
+    "chunks": 16,
+    "base_speed_mps": 7.4,
+    "deadline_seconds": 72.0,
+    "layout_seed": 121,
+    "scenery": CENARIO_CENTRO,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "bench", "lane": 0, "at_m": 72.0},
+        {"kind": "planter", "lane": 2, "at_m": 100.0},
+        {"kind": "crosser", "lane": 0, "at_m": 128.0, "from_x": -4.9, "to_x": 3.25, "cross_mps": 1.3, "lead_m": 46.4},
+        {"kind": "bench", "lane": 1, "at_m": 156.0},
+        {"kind": "planter", "lane": 0, "at_m": 184.0},
+        {"kind": "cone", "lane": 2, "at_m": 212.0},
+        {"kind": "crosser", "lane": 2, "at_m": 240.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.3, "lead_m": 46.4},
+        {"kind": "bench", "lane": 1, "at_m": 240.0},
+        {"kind": "planter", "lane": 2, "at_m": 296.0},
+        {"kind": "cone", "lane": 0, "at_m": 324.0},
+        {"kind": "bench", "lane": 1, "at_m": 352.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 400.0},
+        {"kind": "coin", "lane": 1, "at_m": 408.0},
+        {"kind": "coin", "lane": 1, "at_m": 416.0},
+    ],
+}
+
+## Fase 22 — "Entrega na livraria" (PLANO_50_FASES): caixas baixas e o
+## carrinho entre vitrines; volumes baixos e altos em rota simples.
+## Clímax: carrinho em D com caixa pulável em C, E livre.
+const FASE_22: Dictionary = {
+    "id": "bairro_22",
+    "version": 1,
+    "name": "Entrega na livraria",
+    "phase_index": 21,
+    "distance_m": 476.0,
+    "chunk_length_m": 28.0,
+    "chunks": 17,
+    "base_speed_mps": 7.5,
+    "deadline_seconds": 74.0,
+    "layout_seed": 122,
+    "scenery": CENARIO_CENTRO,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "crate", "lane": 1, "at_m": 72.0},
+        {"kind": "cart", "lane": 2, "at_m": 100.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.0, "lead_m": 61.1},
+        {"kind": "crate", "lane": 2, "at_m": 128.0},
+        {"kind": "bench", "lane": 0, "at_m": 156.0},
+        {"kind": "crate", "lane": 1, "at_m": 184.0},
+        {"kind": "cone", "lane": 2, "at_m": 212.0},
+        {"kind": "cart", "lane": 0, "at_m": 240.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.0, "lead_m": 61.1},
+        {"kind": "crate", "lane": 1, "at_m": 240.0},
+        {"kind": "crate", "lane": 0, "at_m": 296.0},
+        {"kind": "bench", "lane": 2, "at_m": 324.0},
+        {"kind": "cone", "lane": 1, "at_m": 352.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 428.0},
+        {"kind": "coin", "lane": 1, "at_m": 436.0},
+        {"kind": "coin", "lane": 1, "at_m": 444.0},
+    ],
+}
+
+## Fase 23 — "Foto na praça" (PLANO_50_FASES): dois pedestres em trajetórias
+## separadas com espera visível; cruzamentos alternados, nunca simultâneos.
+const FASE_23: Dictionary = {
+    "id": "bairro_23",
+    "version": 1,
+    "name": "Foto na praça",
+    "phase_index": 22,
+    "distance_m": 476.0,
+    "chunk_length_m": 28.0,
+    "chunks": 17,
+    "base_speed_mps": 7.6,
+    "deadline_seconds": 73.0,
+    "layout_seed": 123,
+    "scenery": CENARIO_CENTRO,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "bench", "lane": 0, "at_m": 72.0},
+        {"kind": "planter", "lane": 1, "at_m": 100.0},
+        {"kind": "crosser", "lane": 0, "at_m": 128.0, "from_x": -4.9, "to_x": 3.25, "cross_mps": 1.3, "lead_m": 47.6},
+        {"kind": "cone", "lane": 0, "at_m": 156.0},
+        {"kind": "bench", "lane": 2, "at_m": 184.0},
+        {"kind": "cone", "lane": 1, "at_m": 212.0},
+        {"kind": "crosser", "lane": 2, "at_m": 240.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.3, "lead_m": 47.6},
+        {"kind": "planter", "lane": 1, "at_m": 268.0},
+        {"kind": "bench", "lane": 2, "at_m": 296.0},
+        {"kind": "cone", "lane": 0, "at_m": 324.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 428.0},
+        {"kind": "coin", "lane": 1, "at_m": 436.0},
+        {"kind": "coin", "lane": 1, "at_m": 444.0},
+    ],
+}
+
+## Fase 24 — "Restauração da fachada" (PLANO_50_FASES): andaimes, vala curta
+## e cone; deslize, respiro, salto e troca lateral, nessa ordem.
+const FASE_24: Dictionary = {
+    "id": "bairro_24",
+    "version": 1,
+    "name": "Restauração da fachada",
+    "phase_index": 23,
+    "distance_m": 504.0,
+    "chunk_length_m": 28.0,
+    "chunks": 18,
+    "base_speed_mps": 7.6,
+    "deadline_seconds": 76.0,
+    "layout_seed": 124,
+    "scenery": CENARIO_CENTRO,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "scaffold", "lane": 1, "at_m": 72.0},
+        {"kind": "pothole", "lane": 2, "at_m": 128.0},
+        {"kind": "cone", "lane": 1, "at_m": 156.0},
+        {"kind": "bench", "lane": 0, "at_m": 184.0},
+        {"kind": "scaffold", "lane": 0, "at_m": 212.0},
+        {"kind": "cone", "lane": 2, "at_m": 212.0},
+        {"kind": "pothole", "lane": 1, "at_m": 240.0},
+        {"kind": "scaffold", "lane": 2, "at_m": 296.0},
+        {"kind": "cone", "lane": 0, "at_m": 296.0},
+        {"kind": "cone", "lane": 1, "at_m": 324.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 456.0},
+        {"kind": "coin", "lane": 1, "at_m": 464.0},
+        {"kind": "coin", "lane": 1, "at_m": 472.0},
+    ],
+}
+
+## Fase 25 — "O ponto da igreja" (PLANO_50_FASES): revisão do centro com
+## três padrões aprovados (P03/P05/P07/P08/P12); a igreja marca o ponto.
+const FASE_25: Dictionary = {
+    "id": "bairro_25",
+    "version": 1,
+    "name": "O ponto da igreja",
+    "phase_index": 24,
+    "distance_m": 504.0,
+    "chunk_length_m": 28.0,
+    "chunks": 18,
+    "base_speed_mps": 7.7,
+    "deadline_seconds": 74.0,
+    "layout_seed": 125,
+    "scenery": CENARIO_LARGO,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "bench", "lane": 2, "at_m": 44.0},
+        {"kind": "crosser", "lane": 2, "at_m": 100.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.3, "lead_m": 29.0},
+        {"kind": "planter", "lane": 0, "at_m": 128.0},
+        {"kind": "scaffold", "lane": 1, "at_m": 156.0},
+        {"kind": "bench", "lane": 2, "at_m": 184.0},
+        {"kind": "cart", "lane": 0, "at_m": 212.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.0, "lead_m": 37.7},
+        {"kind": "cone", "lane": 1, "at_m": 240.0},
+        {"kind": "crate", "lane": 0, "at_m": 268.0},
+        {"kind": "cone", "lane": 1, "at_m": 296.0},
+        {"kind": "planter", "lane": 2, "at_m": 324.0},
+        {"kind": "crosser", "lane": 2, "at_m": 352.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.3, "lead_m": 48.3},
+        {"kind": "bench", "lane": 1, "at_m": 352.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 456.0},
+        {"kind": "coin", "lane": 1, "at_m": 464.0},
+        {"kind": "coin", "lane": 1, "at_m": 472.0},
+    ],
+}
+
+const LEVELS: Array = [FASE_1, FASE_2, PILOT, FASE_4, FASE_5, FASE_6, FASE_7, FASE_8, FASE_9, FASE_10, FASE_11, FASE_12, FASE_13, FASE_14, FASE_15, FASE_16, FASE_17, FASE_18, FASE_19, FASE_20, FASE_21, FASE_22, FASE_23, FASE_24, FASE_25]
 
 
 static func for_phase(index: int) -> Dictionary:

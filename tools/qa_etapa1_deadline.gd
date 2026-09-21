@@ -158,14 +158,14 @@ func _scenario_g() -> void:
             "G. impacto acrescenta +2 s ao tempo consumido")
 
 
-# H. Conta do prazo bate com o catálogo (fase 21: primeira procedural).
+# H. Conta do prazo bate com o catálogo (fase 26: primeira procedural).
 func _scenario_h() -> void:
-    # ETAPA 10 — fases autorais (0–19) trazem o próprio prazo nos dados do
+    # ETAPA 11 — fases autorais (0–24) trazem o próprio prazo nos dados do
     # nível (blueprint §8); a fórmula do catálogo vale para as procedurais.
-    var p: Dictionary = PhaseData.get_phase(20)
-    var esperado: float = float(p.get("distance", 0.0)) / _game._phase_speed_for(20) \
-            + _game._deadline_margin_for(20)
-    var prazo: float = _game._phase_deadline_for(20)
-    print("prazo fase 21 = ", prazo, " s (esperado ", esperado, ")")
+    var p: Dictionary = PhaseData.get_phase(25)
+    var esperado: float = float(p.get("distance", 0.0)) / _game._phase_speed_for(25) \
+            + _game._deadline_margin_for(25)
+    var prazo: float = _game._phase_deadline_for(25)
+    print("prazo fase 26 = ", prazo, " s (esperado ", esperado, ")")
     _check(absf(prazo - esperado) < 0.001,
             "H. prazo = distância/velocidade + margem do catálogo")
