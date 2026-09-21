@@ -15,6 +15,7 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
 | 5 | Frente de conteúdo/arte do piloto: `barreira.glb` (fecha o drop-in da ETAPA 3), deck cobrindo os três corredores na fase 3, `ipe_amarelo.glb` na Rua do Ipê — tudo gerado sem bpy (`tools/glb/`) | concluída | `tools/qa_etapa5_arte.gd`: 8/8 verificações verdes (V–X); barreiras da fase 3 instanciam o GLB (0 fallbacks), deck cobre -3,25/0/+3,25 só na fase 3, 16 ipês no cenário do piloto; fases sem nível preservam o leiaute padrão |
 | 6 | Auditoria de conformidade com o blueprint antes das 50 fases: matriz completa em `docs/execucao/AUDITORIA_BLUEPRINT.md` + fechamento dos gaps verificáveis (segundos faltando no atraso, estrelas por objetivo em tentativas diferentes, collider visível em modo de teste) | concluída | `tools/qa_etapa6_auditoria.gd`: 6/6 verificações verdes (A–F, idempotente); save schema v3→v4 com migração; regressões 1–5 verdes |
 | 7 | 50 fases, lote 1: fases 1, 2, 4 e 5 autorais ("Saiu atrasada", "A praça do bairro", "Remendo na calçada", "Primeiro compromisso") conforme PLANO_50_FASES; visual de calçada nos três corredores; buraco como obstáculo de calçada | concluída | `tools/qa_etapa7_lote1.gd`: 6/6 verificações verdes (G–L); validador aprova as 5 fases do bairro (base e impulso); ordem de aprendizagem preservada; regressões 1–6 verdes |
+| 8 | 50 fases, lote 2 (comércio e praça): fases 6–10 autorais ("Na porta da padaria", "Passagem de pedestres", "Hora da entrega", "A van da esquina", "Feira de sábado") + 4 famílias (lixeira, pedestre em travessia, carrinho de entrega, van parada); travessias laterais com aviso; validador com posições temporais | concluída | `tools/qa_etapa8_lote2.gd`: 6/6 verificações verdes (M–R); validador aprova as 10 fases (base e impulso); colisão de travessia pela posição real; regressões 1–7 verdes |
 
 ## Diário
 
@@ -181,6 +182,34 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
   fase sem nível).
 - Decisão de design: "floreira" segue a regra do banco (família
   "Banco/floreira" do §6); variação visual fica para passe de arte.
+- ETAPA 8 (21/09): lote 2 das 50 fases — comércio e praça. Fases 6–10
+  autorais em `LevelData` (bairro_06–10) com distâncias, velocidades,
+  prazos e roteiros do PLANO_50_FASES (364/6,2/71; 364/6,3/70; 392/6,4/73;
+  392/6,5/72; 420/6,5/75). Quatro famílias novas pelo mecanismo gated, cada
+  uma na sua fase de introdução do §6: lixeira/FULL (6), pedestre em
+  travessia/SOFT (7), carrinho de entrega/FULL (8), van parada/VEHICLE (9);
+  fase 10 é revisão sem novidade.
+- Travessia lateral com aviso (primeiras famílias dinâmicas): padrões com
+  `cross_mps/from_x/to_x/lead_m` esperam no ponto de partida e cruzam
+  quando o corredor alcança `start_d = at_m − lead_m`, no relógio da
+  simulação (pausa congela; independe de fps). `_resolve_entity` usa a
+  posição real do nó para entidades em travessia (antes usava o corredor
+  de spawn). Visuais: `lixeira.glb` e `carrinho.glb` como drop-in,
+  pedestre estilizado e van procedurais.
+- Validador com posições temporais (§7): bloqueio por corredor avaliado na
+  posição do obstáculo no instante da passagem (±0,6 m em Z), na base e no
+  impulso 1,22x — pedestres param no corredor-alvo e carrinhos atravessam
+  e saem do tabuleiro, sempre com rota livre declarada.
+- QA etapa 8 (6/6): dados do plano + matriz das famílias + gates,
+  validador nas 10 fases, montagem exata, dinâmica das travessias
+  (espera, cruzamento no relógio, esbarrão SOFT vs dano FULL pela posição
+  real), ordem de aprendizagem e determinismo. Regressões 1–7 verdes
+  (QA5 X2 agora usa a fase 11, ainda procedural). Analisador: só falsos
+  positivos ambientais (sem doc de API do engine); fixture intencional
+  `erro_sintaxe.gd` quebra o parse do projeto — excluída da varredura.
+- Ambiente reconstruído após reprovisionamento do sandbox: swap de 8G,
+  venv de ferramentas (scons/gdtoolkit/pkgconf), Godot 4.7-stable
+  (5b4e0cb) recompilado headless (`x11=no wayland=no`), `--import` limpo.
 
 ## Regras de engenharia desta execução
 

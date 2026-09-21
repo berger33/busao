@@ -104,13 +104,16 @@ cachorro/SOFT, barreira/SLIDE_UNDER (QA etapas 2-3). Cada uma com ID
 estável, visual (GLB com fallback procedural), largura de colisão, ações
 válidas e teste de passagem.
 
-⏭️ Famílias cuja **introdução pertence ao passo das 50 fases** (o blueprint
-marca a fase de introdução de cada uma): lixeira (fase 6), pedestre em
-travessia (7), carrinho de entrega (8), van/carro parado como bloqueio (9),
-andaime/toldo (11), poça (12), ciclista (13), moto em cruzamento (14),
-cachorro cruzando (16), caminhão/ônibus em janela (18). O mecanismo de
-famílias gated (`SIDEWALK_OBSTACLES_GATED` + `GATED_INTRO_PHASE`, ETAPA 3)
-é o caminho aprovado para cada uma entrar na sua fase de introdução.
+✅ Famílias introduzidas na ETAPA 8 pelo mecanismo gated: lixeira/FULL
+(fase 6), pedestre em travessia/SOFT com trajetória anunciada (7), carrinho
+de entrega/FULL com travessia lenta (8), van parada/VEHICLE (9).
+
+⏭️ Famílias cuja **introdução pertence aos próximos lotes** (o blueprint
+marca a fase de introdução de cada uma): andaime/toldo (11), poça (12),
+ciclista (13), moto em cruzamento (14), cachorro cruzando (16),
+caminhão/ônibus em janela (18). O mecanismo de famílias gated
+(`SIDEWALK_OBSTACLES_GATED` + `GATED_INTRO_PHASE`, ETAPA 3) é o caminho
+aprovado para cada uma entrar na sua fase de introdução.
 
 Regras transversais do §6 atendidas: veículos decorativos não colidem;
 props fora da rota não têm collider de gameplay; espaçamento procedural em
@@ -127,7 +130,7 @@ intervalos de distância (legibilidade final medida por módulo no passo das
 | Validador considera estado do jogador (corredor, transição, ação, recuperação) | ✅ | `PatternValidator` (QA Q/R2) |
 | Revalidação na velocidade máxima | ✅ | fator 1,22x (QA Q) |
 | Boost nunca torna a única saída impossível | ✅ | mesma validação nos dois fatores |
-| Posições temporais de pedestres/veículos no validador | ⏭️ | necessário quando as travessias dinâmicas entrarem (fases 7+) |
+| Posições temporais de pedestres/veículos no validador | ✅ | ETAPA 8: bloqueio por corredor avaliado na posição temporal (±janela Z), base e impulso (QA M/N/P) |
 | Encaixe de chunks (comprimento variável ±1 m) | 🟡 | sobreposição cosmética ≤ 1 m possível; blueprint pede confirmação visual antes de classificar defeito (📱) |
 | Estrutura de cena `Trecho28m`/.tscn por módulo | 🟡 | substituída por dados declarativos (padrões em dicionário) — mesmo contrato, mais leve; cenas por módulo podem voltar se a edição visual exigir |
 
@@ -233,6 +236,7 @@ dash/pagos/personagem específico.
 
 1. ✅ Derivar as fases 1, 2, 4 e 5 com os módulos aprovados do piloto —
    **feito na ETAPA 7** (`bairro_01/02/04/05` em `LevelData`, QA 6/6).
-2. Produzir 6–10 introduzindo lixeira, pedestre em travessia e carrinho
-   pelo mecanismo gated.
+2. ✅ Produzir 6–10 introduzindo lixeira, pedestre em travessia, carrinho
+   e van parada — **feito na ETAPA 8** (`bairro_06`–`bairro_10` em
+   `LevelData`, travessias laterais com aviso, QA 6/6).
 3. Lotes seguintes conforme o plano, cada um fechando com QA reproduzível.

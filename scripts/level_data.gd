@@ -236,7 +236,212 @@ const FASE_5: Dictionary = {
     ],
 }
 
-const LEVELS: Array = [FASE_1, FASE_2, PILOT, FASE_4, FASE_5]
+## Fase 6 — "Na porta da padaria" (PLANO_50_FASES): hidrante, lixeira e
+## orelhão como bloqueios altos; cones como revisão. Clímax: alternância de
+## bloqueio alto em E e D, com a rota C sempre legível.
+const FASE_6: Dictionary = {
+    "id": "bairro_06",
+    "version": 1,
+    "name": "Na porta da padaria",
+    "phase_index": 5,
+    "distance_m": 364.0,
+    "chunk_length_m": 28.0,
+    "chunks": 13,
+    "base_speed_mps": 6.2,
+    "deadline_seconds": 71.0,
+    "layout_seed": 106,
+    "scenery": CENARIO_TRES_CALCADAS,
+    "patterns": [
+        {"kind": "trash", "lane": 0, "at_m": 44.0},
+        {"kind": "hydrant", "lane": 2, "at_m": 72.0},
+        {"kind": "cone", "lane": 1, "at_m": 100.0},
+        {"kind": "payphone", "lane": 0, "at_m": 128.0},
+        {"kind": "hydrant", "lane": 0, "at_m": 156.0},
+        {"kind": "cone", "lane": 2, "at_m": 156.0},
+        {"kind": "trash", "lane": 2, "at_m": 184.0},
+        {"kind": "cone", "lane": 0, "at_m": 184.0},
+        {"kind": "hydrant", "lane": 0, "at_m": 260.0},
+        {"kind": "trash", "lane": 2, "at_m": 274.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 232.0},
+        {"kind": "coin", "lane": 1, "at_m": 238.0},
+        {"kind": "coin", "lane": 1, "at_m": 244.0},
+        {"kind": "coin", "lane": 1, "at_m": 316.0},
+        {"kind": "coin", "lane": 1, "at_m": 324.0},
+        {"kind": "coin", "lane": 1, "at_m": 332.0},
+    ],
+}
+
+## Fase 7 — "Passagem de pedestres": primeiro pedestre atravessa após
+## preparar o movimento (espera visível + travessia em tempo fixo); bancos
+## fixos. Clímax: pedestre cruza um corredor, rota lateral livre.
+## Travessia: from_x -> to_x a cross_mps, com lead_m de aviso.
+const FASE_7: Dictionary = {
+    "id": "bairro_07",
+    "version": 1,
+    "name": "Passagem de pedestres",
+    "phase_index": 6,
+    "distance_m": 364.0,
+    "chunk_length_m": 28.0,
+    "chunks": 13,
+    "base_speed_mps": 6.3,
+    "deadline_seconds": 70.0,
+    "layout_seed": 107,
+    "scenery": CENARIO_TRES_CALCADAS,
+    "patterns": [
+        {"kind": "bench", "lane": 0, "at_m": 44.0},
+        {"kind": "crosser", "lane": 2, "at_m": 72.0, "from_x": 4.9, "to_x": -3.25, "cross_mps": 1.3, "lead_m": 40.0},
+        {"kind": "cone", "lane": 1, "at_m": 100.0},
+        {"kind": "crosser", "lane": 0, "at_m": 128.0, "from_x": -4.9, "to_x": 3.25, "cross_mps": 1.3, "lead_m": 40.0},
+        {"kind": "bench", "lane": 1, "at_m": 156.0},
+        {"kind": "crosser", "lane": 2, "at_m": 158.0, "from_x": 4.9, "to_x": -3.25, "cross_mps": 1.3, "lead_m": 40.0},
+        {"kind": "crosser", "lane": 0, "at_m": 234.0, "from_x": -4.9, "to_x": 3.25, "cross_mps": 1.3, "lead_m": 40.0},
+        {"kind": "cone", "lane": 1, "at_m": 234.0},
+        {"kind": "crosser", "lane": 2, "at_m": 250.0, "from_x": 4.9, "to_x": -3.25, "cross_mps": 1.3, "lead_m": 40.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 198.0},
+        {"kind": "coin", "lane": 1, "at_m": 204.0},
+        {"kind": "coin", "lane": 1, "at_m": 210.0},
+        {"kind": "coin", "lane": 1, "at_m": 316.0},
+        {"kind": "coin", "lane": 1, "at_m": 324.0},
+        {"kind": "coin", "lane": 1, "at_m": 332.0},
+    ],
+}
+
+## Fase 8 — "Hora da entrega": carrinho de entrega com travessia lateral e
+## aviso; lixeiras e pedestres como revisão. Clímax: carrinho + banco criam
+## escolha anunciada entre dois caminhos (corredor livre declarado).
+const FASE_8: Dictionary = {
+    "id": "bairro_08",
+    "version": 1,
+    "name": "Hora da entrega",
+    "phase_index": 7,
+    "distance_m": 392.0,
+    "chunk_length_m": 28.0,
+    "chunks": 14,
+    "base_speed_mps": 6.4,
+    "deadline_seconds": 73.0,
+    "layout_seed": 108,
+    "scenery": CENARIO_TRES_CALCADAS,
+    "patterns": [
+        {"kind": "trash", "lane": 2, "at_m": 44.0},
+        {"kind": "crosser", "lane": 2, "at_m": 72.0, "from_x": 4.9, "to_x": -3.25, "cross_mps": 1.3, "lead_m": 40.0},
+        {"kind": "cart", "lane": 2, "at_m": 100.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.0, "lead_m": 52.0},
+        {"kind": "cone", "lane": 1, "at_m": 128.0},
+        {"kind": "cart", "lane": 0, "at_m": 156.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.0, "lead_m": 52.0},
+        {"kind": "bench", "lane": 1, "at_m": 184.0},
+        {"kind": "cart", "lane": 2, "at_m": 186.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.0, "lead_m": 52.0},
+        {"kind": "trash", "lane": 0, "at_m": 212.0},
+        {"kind": "crosser", "lane": 0, "at_m": 212.0, "from_x": -4.9, "to_x": 3.25, "cross_mps": 1.3, "lead_m": 40.0},
+        {"kind": "cart", "lane": 2, "at_m": 266.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.0, "lead_m": 52.0},
+        {"kind": "cone", "lane": 2, "at_m": 266.0},
+        {"kind": "cart", "lane": 0, "at_m": 282.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.0, "lead_m": 52.0},
+        {"kind": "bench", "lane": 1, "at_m": 282.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 240.0},
+        {"kind": "coin", "lane": 1, "at_m": 246.0},
+        {"kind": "coin", "lane": 1, "at_m": 252.0},
+        {"kind": "coin", "lane": 1, "at_m": 344.0},
+        {"kind": "coin", "lane": 1, "at_m": 352.0},
+        {"kind": "coin", "lane": 1, "at_m": 360.0},
+    ],
+}
+
+## Fase 9 — "A van da esquina": veículo parado invade a borda; desvio pelo
+## corredor aberto; nunca saltar o teto (VEHICLE). Clímax: van e barreira
+## baixa (cone) em estações separadas.
+const FASE_9: Dictionary = {
+    "id": "bairro_09",
+    "version": 1,
+    "name": "A van da esquina",
+    "phase_index": 8,
+    "distance_m": 392.0,
+    "chunk_length_m": 28.0,
+    "chunks": 14,
+    "base_speed_mps": 6.5,
+    "deadline_seconds": 72.0,
+    "layout_seed": 109,
+    "scenery": CENARIO_TRES_CALCADAS,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "van", "lane": 0, "at_m": 72.0},
+        {"kind": "hydrant", "lane": 2, "at_m": 100.0},
+        {"kind": "van", "lane": 2, "at_m": 128.0},
+        {"kind": "cone", "lane": 0, "at_m": 156.0},
+        {"kind": "van", "lane": 0, "at_m": 184.0},
+        {"kind": "cone", "lane": 2, "at_m": 184.0},
+        {"kind": "barrier", "lane": 1, "at_m": 212.0},
+        {"kind": "van", "lane": 1, "at_m": 266.0},
+        {"kind": "cone", "lane": 1, "at_m": 282.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 240.0},
+        {"kind": "coin", "lane": 1, "at_m": 246.0},
+        {"kind": "coin", "lane": 1, "at_m": 252.0},
+        {"kind": "coin", "lane": 1, "at_m": 344.0},
+        {"kind": "coin", "lane": 1, "at_m": 352.0},
+        {"kind": "coin", "lane": 1, "at_m": 360.0},
+    ],
+}
+
+## Fase 10 — "Feira de sábado": revisão de movimento lateral e bloqueios;
+## faixa de corrida limpa entre barracas. Clímax: carrinho -> pedestre ->
+## desvio de banco, com intervalo de recuperação mantido.
+const FASE_10: Dictionary = {
+    "id": "bairro_10",
+    "version": 1,
+    "name": "Feira de sábado",
+    "phase_index": 9,
+    "distance_m": 420.0,
+    "chunk_length_m": 28.0,
+    "chunks": 15,
+    "base_speed_mps": 6.5,
+    "deadline_seconds": 75.0,
+    "layout_seed": 110,
+    "scenery": CENARIO_TRES_CALCADAS,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "trash", "lane": 0, "at_m": 72.0},
+        {"kind": "cart", "lane": 2, "at_m": 100.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.0, "lead_m": 53.0},
+        {"kind": "crosser", "lane": 0, "at_m": 128.0, "from_x": -4.9, "to_x": 3.25, "cross_mps": 1.3, "lead_m": 40.0},
+        {"kind": "bench", "lane": 1, "at_m": 156.0},
+        {"kind": "cart", "lane": 0, "at_m": 184.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.0, "lead_m": 53.0},
+        {"kind": "hydrant", "lane": 0, "at_m": 212.0},
+        {"kind": "crosser", "lane": 2, "at_m": 240.0, "from_x": 4.9, "to_x": -3.25, "cross_mps": 1.3, "lead_m": 40.0},
+        {"kind": "cone", "lane": 1, "at_m": 240.0},
+        {"kind": "cart", "lane": 2, "at_m": 296.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.0, "lead_m": 53.0},
+        {"kind": "crosser", "lane": 0, "at_m": 312.0, "from_x": -4.9, "to_x": 3.25, "cross_mps": 1.3, "lead_m": 40.0},
+        {"kind": "bench", "lane": 1, "at_m": 312.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 368.0},
+        {"kind": "coin", "lane": 1, "at_m": 376.0},
+        {"kind": "coin", "lane": 1, "at_m": 384.0},
+    ],
+}
+
+const LEVELS: Array = [FASE_1, FASE_2, PILOT, FASE_4, FASE_5, FASE_6, FASE_7, FASE_8, FASE_9, FASE_10]
 
 
 static func for_phase(index: int) -> Dictionary:

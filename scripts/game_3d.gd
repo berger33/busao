@@ -132,9 +132,11 @@ const SIDEWALK_OBSTACLES: Array[String] = [
 ]
 # ETAPA 3 — famílias com fase de introdução (blueprint §6): não entram no
 # ciclo base; o _build_course as acrescenta quando a fase já as apresentou.
-const SIDEWALK_OBSTACLES_GATED: Array[String] = ["barrier"]
+const SIDEWALK_OBSTACLES_GATED: Array[String] = ["barrier", "trash", "crosser", "cart", "van"]
 # Fase (índice) em que cada família gated passa a aparecer.
-const GATED_INTRO_PHASE: Dictionary = {"barrier": 2}
+# ETAPA 8 — introducao do blueprint S6: lixeira na fase 6, pedestre em
+# travessia na 7, carrinho na 8 e van parada na 9 (indices 5-8).
+const GATED_INTRO_PHASE: Dictionary = {"barrier": 2, "trash": 5, "crosser": 6, "cart": 7, "van": 8}
 const COLLECTIBLES: Dictionary = {
     "coin": "R$ 0,25",
     "coffee": "CAFÉ",
@@ -794,7 +796,19 @@ func _audit_world_geometry() -> void:
 func _build_course_from_level(level: Dictionary, total: float) -> void:
     var level_patterns: Array = level.get("patterns", [])
     for p in level_patterns:
-        _spawn_entity(str(p.get("kind", "")), int(p.get("lane", 1)), float(p.get("at_m", 0.0)), false, true)
+        # ETAPA 8 — padroes com cross_mps viram travessia lateral com aviso:
+        # a entidade espera em from_x e cruza ate to_x quando o corredor
+        # alcanca start_d = at_m - lead_m (relogio da simulacao).
+        var crossing_data: Dictionary = {}
+        if p.has("cross_mps"):
+            crossing_data = {
+                "from_x": float(p.get("from_x", LANE_X[clampi(int(p.get("lane", 1)), 0, 2)])),
+                "to_x": float(p.get("to_x", 0.0)),
+                "start_d": float(p.get("at_m", 0.0)) - float(p.get("lead_m", 20.0)),
+                "cross_mps": float(p.get("cross_mps", 1.0)),
+                "t_start": -1.0,
+            }
+        _spawn_entity(str(p.get("kind", "")), int(p.get("lane", 1)), float(p.get("at_m", 0.0)), false, true, crossing_data)
     var level_coins: Array = level.get("coins", [])
     for c in level_coins:
         _spawn_entity(str(c.get("kind", "coin")), int(c.get("lane", 1)), float(c.get("at_m", 0.0)), true, true)
@@ -837,10 +851,14 @@ func _spawn_forced_gags(total: float) -> void:
 func _bonus_kind_for_phase() -> String:
     return WorldSpawner.bonus_kind_for_phase(phase_index, distance)
 
-func _spawn_entity(kind: String, lane: int, entity_distance: float, collectible: bool, sidewalk_style: bool = false) -> void:
+func _spawn_entity(kind: String, lane: int, entity_distance: float, collectible: bool, sidewalk_style: bool = false, crossing: Dictionary = {}) -> void:
     var node := Node3D.new()
     node.name = "%s_%03d" % [kind, entities.size()]
     node.position = Vector3(LANE_X[clampi(lane, 0, 2)], 0.0, -entity_distance)
+    # ETAPA 8 — travessia lateral: nasce no ponto de espera (fora do corredor
+    # de passagem); _update_crossing mantem a posicao a cada frame.
+    if not crossing.is_empty():
+        node.position.x = float(crossing.get("from_x", node.position.x))
     entity_root.add_child(node)
     # ETAPA 6 — blueprint S4: colisor visivel em modo de teste.
     if debug_hitboxes and not collectible:
@@ -902,7 +920,8 @@ func _spawn_entity(kind: String, lane: int, entity_distance: float, collectible:
         "collectible": collectible,
         "traffic_speed": traffic_speed,
         "mobility": mobility,
-        "prev_z": node.position.z + distance
+        "prev_z": node.position.z + distance,
+        "crossing": crossing
     })
     call_deferred("_audit_3d_entity", node, kind, collectible)
 
@@ -1157,6 +1176,10 @@ func _update_run(dt: float) -> void:
             # pedestres/animais andam na direção do corredor (+Z local); a
             # colisão abaixo usa a posição real do nó, então nada mais muda.
             node.position.z += mobility * dt
+        # ETAPA 8 — travessia lateral (pedestre/carrinho): atualiza X antes
+        # da checagem de cruzamento, no mesmo relogio da simulacao.
+        if not entity.get("crossing", {}).is_empty():
+            _update_crossing(entity, node)
         var entity_z: float = node.position.z + distance
         var prev_z: float = float(entity.get("prev_z", entity_z))
         entity["prev_z"] = entity_z
@@ -1181,17 +1204,52 @@ func _update_run(dt: float) -> void:
         else:
             _finish_run(false, true)
 
+## ETAPA 8 — travessia lateral com aviso (familias dinamicas do blueprint S6:
+## pedestre em travessia e carrinho de entrega). A entidade espera no ponto
+## de partida e cruza quando o corredor alcanca a distancia de gatilho; o
+## relogio e o da simulacao (a pausa congela), entao o resultado nao depende
+## de fps. A colisao em _resolve_entity usa a posicao real do no.
+func _crossing_x(crossing: Dictionary, sim_distance: float, sim_elapsed: float) -> float:
+    var from_x: float = float(crossing.get("from_x", 0.0))
+    var to_x: float = float(crossing.get("to_x", from_x))
+    if sim_distance < float(crossing.get("start_d", 0.0)):
+        return from_x
+    var t_start: float = float(crossing.get("t_start", -1.0))
+    if t_start < 0.0:
+        return from_x
+    var walked: float = float(crossing.get("cross_mps", 1.0)) * maxf(0.0, sim_elapsed - t_start)
+    var total: float = absf(to_x - from_x)
+    return from_x + signf(to_x - from_x) * minf(walked, total)
+
+
+func _update_crossing(entity: Dictionary, node: Node3D) -> void:
+    var crossing: Dictionary = entity.get("crossing", {})
+    if crossing.is_empty():
+        return
+    if distance >= float(crossing.get("start_d", 0.0)) and float(crossing.get("t_start", -1.0)) < 0.0:
+        crossing["t_start"] = elapsed
+    node.position.x = _crossing_x(crossing, distance, elapsed)
+
+
 func _resolve_entity(entity: Dictionary) -> void:
     var kind: String = str(entity["kind"])
     var lane: int = int(entity["lane"])
     var pos: Vector3 = Vector3(LANE_X[lane], 1.0, PLAYER_Z)
+    # ETAPA 8 — travessia lateral usa a posicao real do no (pedestre e
+    # carrinho andam em X durante a aproximacao; o corredor de spawn e so
+    # o ponto de espera).
+    var entity_node: Node3D = entity.get("node") as Node3D
+    var entity_x: float = LANE_X[lane]
+    if not entity.get("crossing", {}).is_empty() and is_instance_valid(entity_node):
+        entity_x = entity_node.position.x
+        pos.x = entity_x
     if bool(entity["collectible"]):
         if lane == player_lane or magnet_timer > 0.0:
             _collect(kind, pos)
         return
     # ETAPA 2 — colisão pela posição real (inclusive durante a troca de
     # corredor), não apenas pelo índice do corredor de destino.
-    if absf(player_x - LANE_X[lane]) > OBSTACLE_RULES.hit_width(kind):
+    if absf(player_x - entity_x) > OBSTACLE_RULES.hit_width(kind):
         return
     var classe: int = OBSTACLE_RULES.classe_for(kind)
     var safe := false
@@ -3141,6 +3199,35 @@ func _build_sidewalk_obstacle(parent: Node3D, kind: String) -> void:
             for side in [-0.56, 0.56]:
                 _box(parent, Vector3(0.10, 0.75, 0.12), Vector3(side, 0.37, 0.0), bench_metal, "BenchLeg")
                 _box(parent, Vector3(0.18, 0.34, 0.10), Vector3(side, 0.86, 0.04), bench_metal, "BenchArm")
+        "trash":
+            # ETAPA 8 — lixeira de rua (fase 6): volume solido, desvio lateral.
+            var lixeira_glb := _optional_prop("lixeira.glb")
+            if lixeira_glb != null:
+                parent.add_child(lixeira_glb)
+                return
+            _cylinder(parent, 0.05, 0.05, 1.04, Vector3(0.0, 0.52, 0.0), _material(Color("#59616a"), 0.6, 0.4, "metal"), "TrashPost")
+            _cylinder(parent, 0.19, 0.19, 0.62, Vector3(0.0, 0.72, 0.0), _material(Color("#3f7d4a"), 0.2, 0.6, "metal"), "TrashDrum")
+        "crosser":
+            # ETAPA 8 — pedestre em travessia (fase 7): espera no ponto de
+            # partida e cruza com aviso; esbarra sem dano (SOFT).
+            _box(parent, Vector3(0.44, 0.58, 0.24), Vector3(0.0, 0.55, 0.0), _material(Color("#3a3f4a"), 0.0, 0.85, "fabric"), "CrosserLegs")
+            _box(parent, Vector3(0.46, 0.62, 0.26), Vector3(0.0, 1.16, 0.0), _material(Color("#4a76c8"), 0.0, 0.8, "fabric"), "CrosserTorso")
+            _sphere(parent, 0.16, Vector3(0.0, 1.62, 0.0), _material(Color("#c98d64"), 0.0, 0.7, "skin"), "CrosserHead")
+        "cart":
+            # ETAPA 8 — carrinho de entrega (fase 8): travessia lenta com
+            # aviso; volume solido (FULL). Gira 90 graus: atravessa de lado.
+            var cart_glb := _optional_prop("carrinho.glb")
+            if cart_glb != null:
+                cart_glb.rotation.y = PI / 2.0
+                parent.add_child(cart_glb)
+                return
+            _box(parent, Vector3(1.6, 0.9, 0.8), Vector3(0.0, 0.75, 0.0), _material(Color("#8a5a33"), 0.0, 0.7, "wood"), "CartBody")
+            _box(parent, Vector3(1.7, 0.08, 0.9), Vector3(0.0, 1.6, 0.0), _material(Color("#c8452e"), 0.0, 0.6, "paint"), "CartAwning")
+        "van":
+            # ETAPA 8 — van parada na borda (fase 9): VEHICLE, sem pulo por
+            # cima do teto; desvio pelo corredor livre.
+            _box(parent, Vector3(1.9, 1.9, 4.6), Vector3(0.0, 0.95, 0.0), _material(Color("#d8dde3"), 0.3, 0.35, "paint"), "VanBody")
+            _box(parent, Vector3(1.7, 0.6, 0.1), Vector3(0.0, 1.35, -2.31), _material(Color("#2a3550"), 0.0, 0.1, "glass"), "VanWindshield")
         "pothole":
             # ETAPA 7 — buraco tambem e obstaculo de calcada nas fases autorais.
             _build_pothole_visual(parent)
