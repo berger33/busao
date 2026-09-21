@@ -26,6 +26,10 @@ extends Resource
 @export var xp_replay: int = 10
 @export var xp_per_level: int = 4
 @export var xp_level_size: int = 250
+@export var xp_levelup_coins_base: int = 20
+@export var xp_levelup_coins_step: int = 5
+@export var xp_levelup_rubi_each: int = 5
+@export var xp_levelup_rubi: int = 2
 
 @export var daily_distance_target: int = 250
 @export var daily_coin_target: int = 10

@@ -297,8 +297,17 @@ func _draw_results() -> void:
             reward_note = "nova estrela"
         _text_center(Vector2(360, 612), reward_note, 14, Color("#b9d8db"))
         var progress_note := "NOVO RECORDE!" if bool(result_data.get("record", false)) else ("+%d estrela(s) nesta corrida" % int(result_data.get("new_stars", 0)))
+        var award_note := str(result_data.get("award_note", ""))
+        if award_note != "":
+            progress_note = "%s • %s" % [progress_note, award_note]
         _text_center(Vector2(360, 650), progress_note, 18, VIOLET if bool(result_data.get("record", false)) else MUTED)
-        _text_center(Vector2(360, 682), "+%d XP" % int(result_data.get("xp", 0)), 15, GREEN)
+        var xp_line := "+%d XP" % int(result_data.get("xp", 0))
+        var levelup: Dictionary = result_data.get("levelup", {})
+        if int(levelup.get("levels", 0)) > 0:
+            xp_line = "%s • NÍVEL %d! +R$ %d" % [xp_line, int(levelup.get("level", 0)), int(levelup.get("coins", 0))]
+            if int(levelup.get("rubi", 0)) > 0:
+                xp_line = "%s • +%d Rubi" % [xp_line, int(levelup.get("rubi", 0))]
+        _text_center(Vector2(360, 682), xp_line, 15, GREEN)
         var breakdown: Dictionary = result_data.get("reward_breakdown", {})
         if not breakdown.is_empty():
             _text_center(Vector2(360, 708), "base %d • fase %d • estrelas %d • perfeito %d" % [int(breakdown.get("base", 0)), int(breakdown.get("level", 0)), int(breakdown.get("stars", 0)), int(breakdown.get("perfect", 0))], 11, Color("#a9b9ca"))
@@ -311,18 +320,26 @@ func _draw_results() -> void:
             _text_center(Vector2(360, 738), star_progress, 13, CYAN)
     else:
         var fail_reason: String = str(result_data.get("fail_reason", "folego"))
-        var fail_line: String = "Use rua e calçada como rotas diferentes."
+        var fail_line: String = "Escolha sua rota cedo e desvie sem parar."
         if fail_reason == "atraso":
             fail_line = "Faltavam %d m (%d s) para o ponto quando o ônibus partiu." % [
                     int(result_data.get("shortfall_m", 0)), int(result_data.get("shortfall_s", 0))]
         elif fail_reason == "folego":
             fail_line = "O fôlego acabou antes do ponto."
+        # Retenção D0–D30: dica por causa da derrota (a anterior falava de
+        # "rua × calçadas", que não existe nas fases autorais: os 3
+        # corredores são calçada).
+        var tip_a := "Leia os 3 corredores antes de agir"
+        var tip_b := "↑ pula o buraco • ↓ passa sob a barra"
+        if fail_reason == "atraso":
+            tip_a = "DASH nas retas economiza segundos"
+            tip_b = "Cada impacto custa +2 s no relógio"
         _text_center(Vector2(360, 180), "O BUSÃO FOI EMBORA", 34, RED)
         _text_center(Vector2(360, 220), fail_line, 18, WHITE)
         _panel(Rect2(65, 330, 590, 220), Color("#2b223a"), 20)
         _text_center(Vector2(360, 390), "DICA 3D", 20, Color("#ffbf8b"))
-        _text_center(Vector2(360, 438), "Rua = mais obstáculos e mais moedas", 18, WHITE)
-        _text_center(Vector2(360, 470), "Calçadas = leitura e atalhos", 18, MUTED)
+        _text_center(Vector2(360, 438), tip_a, 18, WHITE)
+        _text_center(Vector2(360, 470), tip_b, 18, MUTED)
     # Lote 11 — ofertas rewarded (revive 1x e 2x moedas)
     var rewarded_ready: bool = bool(state.get("rewarded_ready", false))
     var revive_available: bool = bool(state.get("revive_available", false))
@@ -515,7 +532,7 @@ func _draw_achievements() -> void:
         _panel(Rect2(57, y + 17, 58, 58), accent, 16)
         _text_center(Vector2(86, y + 54), "✓" if unlocked else "?", 27, INK if unlocked else MUTED)
         _text(Vector2(140, y + 38), str(item.get("name", "Conquista")), 19, WHITE if unlocked else MUTED)
-        _text(Vector2(140, y + 68), "%s • %s" % [str(item.get("kind", "achievement")).to_upper(), str(item.get("description", ""))], 14, CYAN if unlocked else MUTED)
+        _text(Vector2(140, y + 68), "%s • %s • +R$ %d" % [str(item.get("kind", "achievement")).to_upper(), str(item.get("description", "")), int(item.get("reward", 0))], 14, CYAN if unlocked else MUTED)
         _text(Vector2(565, y + 57), "LIBERADO" if unlocked else "EM ABERTO", 11, GREEN if unlocked else Color("#8091a7"))
     _button(Rect2(45, 1110, 630, 70), "VOLTAR", Color("#293955"), 22)
 

@@ -220,6 +220,9 @@ var _rewarded_pending_placement: String = ""
 var tutorial_hint := ""
 var tutorial_stage := -1
 var result: Dictionary = {}
+# Retenção D0–D30: ids de conquistas/badges desbloqueados nesta corrida
+# (para exibir na tela de resultado sem brigar com o toast de impacto).
+var _run_awards: Array = []
 var pulse := 0.0
 var run_phase := 0.0
 var step_timer := 0.0
@@ -633,6 +636,7 @@ func _start_run(index: int) -> void:
     wall_run_count = 0
     dog_chase_timer = 0.0
     tutorial_stage = -1
+    _run_awards = []
     performance_sample_timer = 0.0
     step_timer = 0.0
     motion_speed = 0.0
@@ -1496,7 +1500,8 @@ func _collect(kind: String, pos: Vector3) -> void:
         if combo >= 5 and combo % 5 == 0:
             _show_feedback("COMBO x%02d" % combo, "A rua está pagando", CYAN, "combo")
         if combo >= 15:
-            GameSave.award_badge("combo15")
+            if GameSave.award_badge("combo15"):
+                _run_awards.append("combo15")
     else:
         _show_feedback("BÔNUS!", str(COLLECTIBLES.get(kind, kind)), GOLD, "reward")
         match kind:
@@ -1558,7 +1563,8 @@ func _hit_player(kind: String) -> void:
     if kind == "dog":
         GameSave.data["dog_hits"] = int(GameSave.data.get("dog_hits", 0)) + 1
         if int(GameSave.data["dog_hits"]) >= 10:
-            GameSave.award_achievement("dog")
+            if GameSave.award_achievement("dog"):
+                _run_awards.append("dog")
         GameSave.save()
 
 func _change_lane(direction: int) -> void:
@@ -1633,6 +1639,44 @@ func _dash() -> void:
     _show_feedback("ARRANCADA!", "Explosão curta de velocidade", YELLOW, "whoosh")
     _spawn_3d_burst(player_root.position + Vector3(0, 1.0, 0), YELLOW, 18)
 
+func _apply_levelup_rewards(level_before: int) -> Dictionary:
+    # Retenção D0–D30: subir de nível paga moedas (+ Rubi a cada N níveis).
+    # Retorna o resumo para a tela de resultado; sem toast (não briga com o
+    # feedback de conclusão — a fanfarra é só sonora).
+    var level_after: int = GameSave.xp_level()
+    var info := {"levels": 0, "coins": 0, "rubi": 0, "level": level_after}
+    if level_after <= level_before:
+        return info
+    var coins := 0
+    for level in range(level_before + 1, level_after + 1):
+        coins += BALANCE.xp_levelup_coins_base + (level - 1) * BALANCE.xp_levelup_coins_step
+    GameSave.add_coins(coins)
+    var rubi := 0
+    var each: int = maxi(1, BALANCE.xp_levelup_rubi_each)
+    for level in range(level_before + 1, level_after + 1):
+        if level % each == 0:
+            rubi += BALANCE.xp_levelup_rubi
+    if rubi > 0 and has_node("/root/EconomyManager"):
+        var em = get_node_or_null("/root/EconomyManager")
+        if em and em.has_method("add_rubi"):
+            em.call("add_rubi", rubi, "levelup")
+    GameSave.record_event("level_up", level_after - level_before)
+    AudioManager.play_sfx("streak")
+    info["levels"] = level_after - level_before
+    info["coins"] = coins
+    info["rubi"] = rubi
+    return info
+
+
+func _award_note_for_run() -> String:
+    # Linha da tela de resultado com o que desbloqueou nesta corrida.
+    var parts: Array[String] = []
+    for award_id in _run_awards:
+        var key := str(award_id)
+        parts.append("🏆 %s +R$ %d" % [GameSave.achievement_name(key), GameSave.achievement_reward(key)])
+    return " • ".join(parts)
+
+
 func _finish_run(success: bool, game_over := false) -> void:
     # P2 EconomyHandler disponível para reward/XP (cálculo espelhado)
     if screen != 2:
@@ -1666,6 +1710,7 @@ func _finish_run(success: bool, game_over := false) -> void:
                         GameSave.add_coins(_wb2)
                         reward += _wb2
             var xp_reward := 40 + int(distance / 12.0) if is_record else BALANCE.xp_replay
+            var endless_level_before: int = GameSave.xp_level()
             GameSave.add_xp(xp_reward)
             result = {
                 "success": true,
@@ -1675,7 +1720,9 @@ func _finish_run(success: bool, game_over := false) -> void:
                 "coins": collected_coins,
                 "record": is_record,
                 "distance": int(distance),
-                "xp": xp_reward
+                "xp": xp_reward,
+                "levelup": _apply_levelup_rewards(endless_level_before),
+                "award_note": _award_note_for_run()
             }
             _show_feedback("ENDLESS CONCLUÍDO!", "%dm • +R$ %d de bônus" % [int(distance), reward], VIOLET, "streak")
         else:
@@ -1739,17 +1786,25 @@ func _finish_run(success: bool, game_over := false) -> void:
                 if _wb3 > 0:
                     GameSave.add_coins(_wb3)
                     reward += _wb3
+        var level_before: int = GameSave.xp_level()
         GameSave.add_xp(xp_reward)
+        var levelup: Dictionary = _apply_levelup_rewards(level_before)
         if phase_index == 8 and no_damage:
-            GameSave.award_achievement("enchente")
+            if GameSave.award_achievement("enchente"):
+                _run_awards.append("enchente")
         if no_damage:
-            GameSave.award_badge("sem_arranhao")
+            if GameSave.award_badge("sem_arranhao"):
+                _run_awards.append("sem_arranhao")
         if phase_index == BALANCE.chapter_unlock_phase:
-            GameSave.award_achievement("busao")
-            GameSave.award_badge("capitulo1")
+            if GameSave.award_achievement("busao"):
+                _run_awards.append("busao")
+            if GameSave.award_badge("capitulo1"):
+                _run_awards.append("capitulo1")
         if phase_index == BALANCE.phase_count - 1:
-            GameSave.award_achievement("busao50")
-            GameSave.award_badge("maratonista")
+            if GameSave.award_achievement("busao50"):
+                _run_awards.append("busao50")
+            if GameSave.award_badge("maratonista"):
+                _run_awards.append("maratonista")
             GameSave.data["endless_unlocked"] = true
         result = {
             "success": true,
@@ -1768,7 +1823,9 @@ func _finish_run(success: bool, game_over := false) -> void:
             "time": elapsed,
             "coins": collected_coins,
             "record": record,
-            "xp": xp_reward
+            "xp": xp_reward,
+            "levelup": levelup,
+            "award_note": _award_note_for_run()
         }
         _show_feedback("PEGUEI O BUSÃO!", "%d estrelas • +R$ %d de bônus" % [stars, reward], YELLOW, "streak")
         _spawn_3d_burst(Vector3(player_x, 1.4, -8.0), YELLOW, 28)
@@ -4127,6 +4184,7 @@ func _sync_hud() -> void:
     for achievement in achievement_catalog:
         var id := str(achievement["id"])
         achievement["unlocked"] = GameSave.has_achievement(id) or id in GameSave.data.get("badges", [])
+        achievement["reward"] = GameSave.achievement_reward(id)
     var date_key := Time.get_date_string_from_system()
     var week_key := GameSave.weekly_key()
     var daily_progress: Dictionary = GameSave.daily_progress(date_key)

@@ -12,7 +12,9 @@ signal sink_purchased(kind: String)
 const RUBI_STARTING := 0
 const DAILY_CHEST_COOLDOWN_DAYS := 1
 const REROLL_COST_COINS := 40
-const SKIN_EXTRA_COST_RUBI := 80
+# Retenção D0–D30: era 80 (27–80 dias de baú por skin — inalcançável);
+# 15 ≈ 1–2 semanas de baú + níveis, preço de cosmético premium justo.
+const SKIN_EXTRA_COST_RUBI := 15
 
 # Eventos semanais (LiveOps) — rodízio determinístico por weekly_key % 3
 const WEEKLY_EVENTS: Array[Dictionary] = [

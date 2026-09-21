@@ -8,6 +8,7 @@ signal push_cancelled
 
 const MOCK_PATH := "user://push_mock.json"
 const STREAK_HOUR := 20
+const BALANCE = preload("res://resources/game_balance.tres")
 
 var _native := false
 var _scheduled: Dictionary = {}
@@ -55,7 +56,7 @@ func schedule_streak_push(streak: int, target_day: int) -> void:
     var title := "🔥 Streak em risco!"
     var body := "Seu ônibus sai em %d dias seguidos — corra hoje para não perder!" % streak
     if streak >= 7:
-        body = "Maratona %d dias! Não perca seu bônus de R$ %d hoje às 20h." % [streak, 100]
+        body = "Maratona %d dias! Não perca seu bônus de R$ %d hoje às 20h." % [streak, BALANCE.streak_reward]
     _scheduled = {"title": title, "body": body, "day": target_day, "hour": STREAK_HOUR, "streak": streak}
     # Mock persist
     var f := FileAccess.open(MOCK_PATH, FileAccess.WRITE)

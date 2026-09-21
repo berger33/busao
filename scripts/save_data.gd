@@ -10,6 +10,18 @@ const BACKUP_PATH := "user://corre_pro_ponto.bak.json"
 const TEMP_PATH := "user://corre_pro_ponto.tmp.json"
 const SAVE_SCHEMA_VERSION := 4
 const CLOUD_SNAPSHOT_KEYS: Array = ["schema_version","coins","hard_currency","remove_ads","phase_stars","best_times","achievements","inventory","owned_items","pet_skins","equipped_character","xp","daily_streak","max_streak","metrics","endless_best","endless_unlocked"]
+# Retenção D0–D30: conquistas e badges pagam moedas ao desbloquear (fonte
+# única de nomes/recompensas — game_3d.gd monta o catálogo daqui).
+const ACHIEVEMENT_META: Dictionary = {
+    "busao": {"name": "Peguei o busão!", "reward": 50},
+    "enchente": {"name": "Chuva sem susto", "reward": 30},
+    "dog": {"name": "Cachorro caramelo", "reward": 40},
+    "busao50": {"name": "Brasil sem freio", "reward": 150},
+    "capitulo1": {"name": "Primeiro terminal", "reward": 25},
+    "combo15": {"name": "Combo de respeito", "reward": 25},
+    "sem_arranhao": {"name": "Sem arranhão", "reward": 20},
+    "maratonista": {"name": "Maratonista", "reward": 75},
+}
 
 var data: Dictionary = {}
 var dirty := false
@@ -634,10 +646,20 @@ func equipped_character() -> String:
 func has_achievement(id: String) -> bool:
     return id in data.get("achievements", [])
 
+func achievement_name(id: String) -> String:
+    return str(ACHIEVEMENT_META.get(id, {}).get("name", id))
+
+func achievement_reward(id: String) -> int:
+    return int(ACHIEVEMENT_META.get(id, {}).get("reward", 0))
+
 func award_achievement(id: String) -> bool:
     if has_achievement(id):
         return false
     data["achievements"].append(id)
+    var reward: int = int(ACHIEVEMENT_META.get(id, {}).get("reward", 0))
+    if reward > 0:
+        add_coins(reward)
+        record_event("achievement_reward")
     _request_save()
     return true
 
@@ -848,6 +870,10 @@ func award_badge(id: String) -> bool:
     if id in data.get("badges", []):
         return false
     data["badges"].append(id)
+    var reward: int = int(ACHIEVEMENT_META.get(id, {}).get("reward", 0))
+    if reward > 0:
+        add_coins(reward)
+        record_event("badge_reward")
     _request_save()
     return true
 

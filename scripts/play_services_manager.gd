@@ -257,9 +257,11 @@ func _on_review_completed() -> void:
     print("[play] review fluxo concluído (mock)")
 
 func request_review_after_run(first_clears: int) -> void:
-    # Chamado de game_3d.gd após _finish_run; só pede após 3 first_clears e se pode
+    # Chamado de game_3d.gd após _finish_run. Retenção D0–D30: pedir após
+    # vínculo real (10 clears + 2º dia), nunca nos primeiros 15 min (era 3).
     _first_clears_for_review = first_clears
-    if first_clears >= 3 and can_request_review():
+    var login_days: int = int(GameSave.data.get("login_days", 0)) if GameSave else 0
+    if first_clears >= 10 and login_days >= 2 and can_request_review():
         # Atraso 1.2 s para não roubar foco do resultado
         await get_tree().create_timer(1.2).timeout
         request_review()

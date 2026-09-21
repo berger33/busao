@@ -389,6 +389,22 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
   QA5 X2 redefinidos: prazo autoral nas 50 + margens íntegras +
   clamp documentado; índice 50 fixa na final com deck em E/C/D).
 
+### 2026-09-21 (quick wins retenção D0–D30)
+
+- Auditoria de retenção/UX D0–D30 em `docs/AUDITORIA_RETENCAO_D0_D30.md`
+  (veredito, muros, economia e backlog P0/P1/P2).
+- Quick wins implementados: (1) dica de derrota contextual por causa
+  (atraso/fôlego) — a anterior citava "rua × calçadas", que não existe
+  nas fases autorais; (2) review após 10 clears + 2º dia (era 3 clears
+  no D0); (3) level-up paga moedas (+ Rubi a cada 5 níveis), com linha
+  na tela de vitória; (4) conquistas/badges pagam moedas (20–150) com
+  linha na vitória e valor no catálogo; (5) skin extra 80 → 15 Rubi;
+  bônus: copy do push usa `BALANCE.streak_reward`.
+- Validação: `check_gdscript.py` sem achados no código novo (só
+  pré-existentes/ambientais); QA headless pendente (sem binário Godot
+  neste sandbox); `validate_project.py` quebra em `check_paths` por bug
+  pré-existente (conteúdo de QA tratado como path).
+
 ## Regras de engenharia desta execução
 
 - Uma etapa por vez; cada etapa fecha com demonstração reproduzível
