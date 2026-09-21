@@ -1663,6 +1663,30 @@ const FASE_35: Dictionary = {
     ],
 }
 
+## ETAPA 15 — centro movimentado do lote 41-45: mesmo deck dos três
+## corredores, árvores esparsas, bancos espaçados, lixeiras e postes de
+## avenida, lojas dominando com prédios altos (3-5 pisos); tempo seco
+## fixo (volta da chuva); multidão de fundo nas calçadas (bloco
+## "multidao", lido por _rebuild_multidao) e outdoors dos dois lados a
+## cada 140 m, pulando os que caem sobre travessias (bloco "outdoors",
+## lido por _spawn_outdoors) — visual puro, sem colisão.
+const CENARIO_CENTRO_MOV: Dictionary = {
+    "faixas": {"piso_central_m": 9.9, "piso_borda_esq_m": 4.95},
+    "props": {
+        "arvore": {"glb": "arvore", "espacamento_m": 24.0},
+        "banco": {"espacamento_m": 18.0},
+        "lixeira": {"espacamento_m": 12.0},
+        "poste": {"espacamento_m": 14.0},
+    },
+    "predios": {
+        "tipo_pesos": {"tijolo": 2, "reboco": 2, "loja": 5, "obra": 1},
+        "pisos": [3, 5],
+    },
+    "clima": "limpo",
+    "multidao": {"quantidade": 12, "x_min_m": 6.5, "x_max_m": 7.4},
+    "outdoors": {"passo_m": 140.0, "x_m": 7.0, "margem_cruzamento_m": 6.0},
+}
+
 ## Fase 36 — "Chuva passageira" (PLANO_50_FASES): clima novo com desafios
 ## fáceis; poças e cones, reaprender a leitura sem elevar a velocidade.
 ## Clímax: poça em C com cone em D, E livre e seco.
@@ -1877,7 +1901,222 @@ const FASE_40: Dictionary = {
     ],
 }
 
-const LEVELS: Array = [FASE_1, FASE_2, PILOT, FASE_4, FASE_5, FASE_6, FASE_7, FASE_8, FASE_9, FASE_10, FASE_11, FASE_12, FASE_13, FASE_14, FASE_15, FASE_16, FASE_17, FASE_18, FASE_19, FASE_20, FASE_21, FASE_22, FASE_23, FASE_24, FASE_25, FASE_26, FASE_27, FASE_28, FASE_29, FASE_30, FASE_31, FASE_32, FASE_33, FASE_34, FASE_35, FASE_36, FASE_37, FASE_38, FASE_39, FASE_40]
+## Fase 41 — "A saída do escritório" (PLANO_50_FASES): pedestres,
+## floreiras e bancos em dois grupos de decisões a 140 m um do outro,
+## de volta ao tempo seco. Clímax: pedestre em E com floreira em C, D livre.
+const FASE_41: Dictionary = {
+    "id": "bairro_41",
+    "version": 1,
+    "name": "A saída do escritório",
+    "phase_index": 40,
+    "distance_m": 504.0,
+    "chunk_length_m": 28.0,
+    "chunks": 18,
+    "base_speed_mps": 8.2,
+    "deadline_seconds": 72.0,
+    "layout_seed": 141,
+    "scenery": CENARIO_CENTRO_MOV,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "bench", "lane": 0, "at_m": 72.0},
+        {"kind": "crosser", "lane": 2, "at_m": 100.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.3, "lead_m": 51.4},
+        {"kind": "bench", "lane": 1, "at_m": 100.0},
+        {"kind": "planter", "lane": 0, "at_m": 128.0},
+        {"kind": "cone", "lane": 2, "at_m": 156.0},
+        {"kind": "cone", "lane": 0, "at_m": 184.0},
+        {"kind": "bench", "lane": 2, "at_m": 212.0},
+        {"kind": "crosser", "lane": 0, "at_m": 240.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.3, "lead_m": 51.4},
+        {"kind": "planter", "lane": 1, "at_m": 240.0},
+        {"kind": "cone", "lane": 1, "at_m": 268.0},
+        {"kind": "bench", "lane": 0, "at_m": 296.0},
+        {"kind": "cone", "lane": 2, "at_m": 324.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 456.0},
+        {"kind": "coin", "lane": 1, "at_m": 464.0},
+        {"kind": "coin", "lane": 1, "at_m": 472.0},
+    ],
+}
+
+## Fase 42 — "Avenida das entregas" (PLANO_50_FASES): van, caixas e carrinho;
+## moedas sobre as caixas de C premiam a rota técnica (pulo), E/D simples.
+## Clímax: van em C com rotas E e D livres e anunciadas.
+const FASE_42: Dictionary = {
+    "id": "bairro_42",
+    "version": 1,
+    "name": "Avenida das entregas",
+    "phase_index": 41,
+    "distance_m": 532.0,
+    "chunk_length_m": 28.0,
+    "chunks": 19,
+    "base_speed_mps": 8.3,
+    "deadline_seconds": 74.0,
+    "layout_seed": 142,
+    "scenery": CENARIO_CENTRO_MOV,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "crate", "lane": 0, "at_m": 72.0},
+        {"kind": "crate", "lane": 1, "at_m": 100.0},
+        {"kind": "van", "lane": 2, "at_m": 128.0},
+        {"kind": "cart", "lane": 2, "at_m": 156.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.0, "lead_m": 67.6},
+        {"kind": "crate", "lane": 2, "at_m": 184.0},
+        {"kind": "van", "lane": 0, "at_m": 212.0},
+        {"kind": "crate", "lane": 0, "at_m": 240.0},
+        {"kind": "bench", "lane": 1, "at_m": 268.0},
+        {"kind": "crate", "lane": 1, "at_m": 296.0},
+        {"kind": "van", "lane": 1, "at_m": 324.0},
+        {"kind": "cone", "lane": 2, "at_m": 352.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 92.0},
+        {"kind": "coin", "lane": 1, "at_m": 100.0},
+        {"kind": "coin", "lane": 1, "at_m": 108.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 484.0},
+        {"kind": "coin", "lane": 1, "at_m": 492.0},
+        {"kind": "coin", "lane": 1, "at_m": 500.0},
+    ],
+}
+
+## Fase 43 — "Sinal aberto" (PLANO_50_FASES): moto, ciclista e ônibus em
+## cruzamentos separados a 112 m; três leituras, nunca simultâneas.
+## Clímax: ônibus cruza com o nariz em C, D livre e sinalizada.
+const FASE_43: Dictionary = {
+    "id": "bairro_43",
+    "version": 1,
+    "name": "Sinal aberto",
+    "phase_index": 42,
+    "distance_m": 560.0,
+    "chunk_length_m": 28.0,
+    "chunks": 20,
+    "base_speed_mps": 8.4,
+    "deadline_seconds": 76.0,
+    "layout_seed": 143,
+    "scenery": CENARIO_CENTRO_MOV,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "bench", "lane": 0, "at_m": 72.0},
+        {"kind": "moto_cross", "lane": 2, "at_m": 128.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 4.5, "lead_m": 15.2},
+        {"kind": "cone", "lane": 2, "at_m": 156.0},
+        {"kind": "planter", "lane": 1, "at_m": 184.0},
+        {"kind": "cyclist", "lane": 0, "at_m": 240.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 3.0, "lead_m": 22.8},
+        {"kind": "bench", "lane": 2, "at_m": 268.0},
+        {"kind": "cone", "lane": 0, "at_m": 296.0},
+        {"kind": "bus_cross", "lane": 0, "at_m": 352.0, "from_x": -8.0, "to_x": 8.0, "cross_mps": 2.0, "lead_m": 33.6},
+        {"kind": "planter", "lane": 2, "at_m": 380.0},
+        {"kind": "cone", "lane": 1, "at_m": 408.0},
+        {"kind": "bench", "lane": 0, "at_m": 436.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 512.0},
+        {"kind": "coin", "lane": 1, "at_m": 520.0},
+        {"kind": "coin", "lane": 1, "at_m": 528.0},
+    ],
+}
+
+## Fase 44 — "Quadra em reforma" (PLANO_50_FASES): andaime, buraco e hidrante
+## em padrão longo com respiros; saída ampla com o último cone em C.
+## Clímax: hidrante em E com cone em C na saída, D livre.
+const FASE_44: Dictionary = {
+    "id": "bairro_44",
+    "version": 1,
+    "name": "Quadra em reforma",
+    "phase_index": 43,
+    "distance_m": 560.0,
+    "chunk_length_m": 28.0,
+    "chunks": 20,
+    "base_speed_mps": 8.5,
+    "deadline_seconds": 74.0,
+    "layout_seed": 144,
+    "scenery": CENARIO_CENTRO_MOV,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "scaffold", "lane": 2, "at_m": 72.0},
+        {"kind": "pothole", "lane": 0, "at_m": 100.0},
+        {"kind": "hydrant", "lane": 1, "at_m": 128.0},
+        {"kind": "cone", "lane": 2, "at_m": 156.0},
+        {"kind": "scaffold", "lane": 0, "at_m": 184.0},
+        {"kind": "pothole", "lane": 1, "at_m": 212.0},
+        {"kind": "hydrant", "lane": 2, "at_m": 240.0},
+        {"kind": "cone", "lane": 0, "at_m": 268.0},
+        {"kind": "scaffold", "lane": 1, "at_m": 296.0},
+        {"kind": "pothole", "lane": 2, "at_m": 324.0},
+        {"kind": "hydrant", "lane": 0, "at_m": 352.0},
+        {"kind": "cone", "lane": 1, "at_m": 380.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 512.0},
+        {"kind": "coin", "lane": 1, "at_m": 520.0},
+        {"kind": "coin", "lane": 1, "at_m": 528.0},
+    ],
+}
+
+## Fase 45 — "Hora do pico" (PLANO_50_FASES): revisão do centro com obra e
+## travessias em sequência anunciada; caminho limpo até o ponto.
+## Clímax: hidrante em C com cone em D, E livre, ponto à vista.
+const FASE_45: Dictionary = {
+    "id": "bairro_45",
+    "version": 1,
+    "name": "Hora do pico",
+    "phase_index": 44,
+    "distance_m": 588.0,
+    "chunk_length_m": 28.0,
+    "chunks": 21,
+    "base_speed_mps": 8.6,
+    "deadline_seconds": 76.0,
+    "layout_seed": 145,
+    "scenery": CENARIO_CENTRO_MOV,
+    "patterns": [
+        {"kind": "cone", "lane": 1, "at_m": 44.0},
+        {"kind": "hydrant", "lane": 0, "at_m": 72.0},
+        {"kind": "cart", "lane": 2, "at_m": 128.0, "from_x": 4.9, "to_x": -5.5, "cross_mps": 1.0, "lead_m": 70.1},
+        {"kind": "scaffold", "lane": 1, "at_m": 156.0},
+        {"kind": "pothole", "lane": 2, "at_m": 184.0},
+        {"kind": "crosser", "lane": 0, "at_m": 240.0, "from_x": -4.9, "to_x": 5.5, "cross_mps": 1.3, "lead_m": 53.9},
+        {"kind": "van", "lane": 2, "at_m": 268.0},
+        {"kind": "bench", "lane": 0, "at_m": 296.0},
+        {"kind": "scaffold", "lane": 0, "at_m": 324.0},
+        {"kind": "pothole", "lane": 1, "at_m": 352.0},
+        {"kind": "cone", "lane": 2, "at_m": 380.0},
+        {"kind": "hydrant", "lane": 1, "at_m": 408.0},
+    ],
+    "coins": [
+        {"kind": "coin", "lane": 1, "at_m": 8.0},
+        {"kind": "coin", "lane": 1, "at_m": 14.0},
+        {"kind": "coin", "lane": 1, "at_m": 20.0},
+        {"kind": "coin", "lane": 1, "at_m": 260.0},
+        {"kind": "coin", "lane": 1, "at_m": 266.0},
+        {"kind": "coin", "lane": 1, "at_m": 272.0},
+        {"kind": "coin", "lane": 1, "at_m": 540.0},
+        {"kind": "coin", "lane": 1, "at_m": 548.0},
+        {"kind": "coin", "lane": 1, "at_m": 556.0},
+    ],
+}
+
+const LEVELS: Array = [FASE_1, FASE_2, PILOT, FASE_4, FASE_5, FASE_6, FASE_7, FASE_8, FASE_9, FASE_10, FASE_11, FASE_12, FASE_13, FASE_14, FASE_15, FASE_16, FASE_17, FASE_18, FASE_19, FASE_20, FASE_21, FASE_22, FASE_23, FASE_24, FASE_25, FASE_26, FASE_27, FASE_28, FASE_29, FASE_30, FASE_31, FASE_32, FASE_33, FASE_34, FASE_35, FASE_36, FASE_37, FASE_38, FASE_39, FASE_40, FASE_41, FASE_42, FASE_43, FASE_44, FASE_45]
 
 
 static func for_phase(index: int) -> Dictionary:

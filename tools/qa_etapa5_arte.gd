@@ -49,9 +49,9 @@ func _unlock_up_to_phase_3() -> void:
     save.call("record_phase", 1, 3, 10.0)
 
 
-func _unlock_up_to_phase_41() -> void:
+func _unlock_up_to_phase_46() -> void:
     var save: Node = _game.get_node("/root/GameSave")
-    for i in range(2, 40):
+    for i in range(2, 45):
         save.call("record_phase", i, 3, 10.0)
 
 
@@ -171,12 +171,12 @@ func _scenario_x() -> void:
     print("deck fase3: E=%s C=%s D=%s" % [str(cobre_e), str(cobre_c), str(cobre_d)])
     _check(cobre_e and cobre_c and cobre_d,
             "X1. fase 3: deck cobre os três corredores de corrida")
-    # ETAPA 14 — fases 1-40 viraram níveis autorais; o leiaute padrão fica nas
-    # fases ainda procedurais (ex.: fase 41, índice 40).
-    _unlock_up_to_phase_41()
-    _start_phase(40)
+    # ETAPA 15 — fases 1-45 viraram níveis autorais; o leiaute padrão fica nas
+    # fases ainda procedurais (ex.: fase 46, índice 45).
+    _unlock_up_to_phase_46()
+    _start_phase(45)
     var sem_nivel_e: bool = _deck_cobre(-3.25)
     var sem_nivel_c: bool = _deck_cobre(0.0)
-    print("deck fase41: E=%s C=%s (leiaute padrão)" % [str(sem_nivel_e), str(sem_nivel_c)])
+    print("deck fase46: E=%s C=%s (leiaute padrão)" % [str(sem_nivel_e), str(sem_nivel_c)])
     _check(not sem_nivel_e and sem_nivel_c,
             "X2. fases sem nível mantêm o leiaute padrão (rua à esquerda)")

@@ -348,6 +348,25 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
   intacto, árvore comum), reuso sem estreia e determinismo.
   Regressões 1–13 verdes (QA1 H e QA5 X2 migrados para o índice 40,
   primeira fase ainda procedural).
+- ETAPA 15 (21/09): lote 9 das 50 fases (Centro movimentado, reuso).
+  Fases 41–45 autorais em `LevelData` (bairro_41–45) com números do
+  PLANO_50_FASES (504/8,2/72; 532/8,3/74; 560/8,4/76; 560/8,5/74;
+  588/8,6/76), só com famílias já apresentadas (pedestre, floreira,
+  banco, van, caixa, carrinho, moto, ciclista, ônibus, andaime,
+  buraco, hidrante). Centro pelo kit: lojas dominando com prédios
+  altos (3–5 pisos, 16 toldos), postes de avenida, tempo seco fixo;
+  multidão de fundo nas calçadas (12 figuras por fase, deriva +
+  balanço + quique, sem colisão, fora de `entities`) e outdoors dos
+  dois lados a cada 140 m pulando travessias (8/8/6/8/8) — visual
+  puro. Ônibus com nariz em C e zona sinalizada na fase 43.
+- QA etapa 15 (6/6): dados do plano + gates intactos + cenário do
+  centro, validador nas 45 fases, montagem exata, comportamentos
+  (dois grupos SOFT, rota técnica com moedas, moto VEHICLE +
+  ciclista FULL + ônibus com zona única, hidrante só desvia,
+  multidão anda/recicla/repete, outdoors alinhados, rua de lojas,
+  seco no centro com rodízio intacto), reuso sem estreia e
+  determinismo. Regressões 1–14 verdes (QA1 H e QA5 X2 migrados para
+  o índice 45, primeira fase ainda procedural).
 
 ## Regras de engenharia desta execução
 

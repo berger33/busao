@@ -246,6 +246,9 @@ var sky_fx_root: Node3D
 var sky_fx_nodes: Array[Dictionary] = []
 var ambient_fx_root: Node3D
 var ambient_fx_nodes: Array[Dictionary] = []
+# ETAPA 15 — multidão de fundo (sem colisão; só no capítulo 41-45).
+var crowd_root: Node3D
+var crowd_nodes: Array[Dictionary] = []
 var ground_fauna_root: Node3D
 var ground_fauna_nodes: Array[Dictionary] = []
 var entities: Array[Dictionary] = []
@@ -397,6 +400,7 @@ func _process(delta: float) -> void:
     _update_fx(dt)
     _update_sky_fx(dt)
     _update_ambient_fx(dt)
+    _update_multidao(dt)
     _update_ground_fauna(dt)
     _update_sky_motion(dt)
     if screen == 2:
@@ -499,6 +503,9 @@ func _setup_world() -> void:
     ambient_fx_root = Node3D.new()
     ambient_fx_root.name = "AmbientMotion"
     world_root.add_child(ambient_fx_root)
+    crowd_root = Node3D.new()
+    crowd_root.name = "Crowd"
+    world_root.add_child(crowd_root)
     ground_fauna_root = Node3D.new()
     ground_fauna_root.name = "GroundFauna"
     world_root.add_child(ground_fauna_root)
@@ -719,6 +726,7 @@ func _clear_course() -> void:
     _destroi_world_kit()   # Lote 3: a rua e recriada no proximo _build_course
     _clear_sky_fx()
     _clear_ambient_fx()
+    _clear_multidao()
     for child in decor_root.get_children():
         child.queue_free()
     for child in entity_root.get_children():
@@ -734,6 +742,7 @@ func _build_course() -> void:
     WorldSpawner.spawn_street_decals(self, run_total)
     _rebuild_sky_fx()
     _rebuild_ambient_fx()
+    _rebuild_multidao()
     var total: float = run_total
     # ETAPA 4 - camada de desafio autoral: quando a fase tem nivel, os
     # modulos (blueprint S7/S8) substituem os loops procedurais e as gags
@@ -870,6 +879,36 @@ func _spawn_quiosques(level: Dictionary, total: float) -> void:
         i += 1
 
 
+## ETAPA 15 — outdoors do centro (fases 41-45): dos dois lados a cada
+## passo, pulando os que caem sobre travessias; visual puro, sem
+## colisão nem entrada em entities.
+func _spawn_outdoors(level: Dictionary, total: float) -> void:
+    var outdoors: Dictionary = level.get("scenery", {}).get("outdoors", {})
+    if outdoors.is_empty():
+        return
+    var passo: float = float(outdoors.get("passo_m", 140.0))
+    var desloc: float = float(outdoors.get("desloc_m", passo * 0.5))
+    var x_lado: float = float(outdoors.get("x_m", 7.0))
+    var margem: float = float(outdoors.get("margem_cruzamento_m", 6.0))
+    var cruzamentos: Array = []
+    for p in level.get("patterns", []):
+        if p.has("cross_mps"):
+            cruzamentos.append(float(p.get("at_m", 0.0)))
+    var z := desloc
+    var i := 0
+    while z < total - 10.0:
+        var livre := true
+        for at in cruzamentos:
+            if absf(z - at) < margem:
+                livre = false
+        if livre:
+            for lado in [-1.0, 1.0]:
+                _build_billboard(Vector3(lado * x_lado, 0.0, -z),
+                        _scenario_color("accent", CYAN))
+        z += passo
+        i += 1
+
+
 func _build_course_from_level(level: Dictionary, total: float) -> void:
     var level_patterns: Array = level.get("patterns", [])
     for p in level_patterns:
@@ -895,6 +934,7 @@ func _build_course_from_level(level: Dictionary, total: float) -> void:
         _spawn_entity(str(c.get("kind", "coin")), int(c.get("lane", 1)), float(c.get("at_m", 0.0)), true, true)
     _spawn_feira(level, total)
     _spawn_quiosques(level, total)
+    _spawn_outdoors(level, total)
     _create_bus_stop(total)
     call_deferred("_audit_world_geometry")
 
@@ -2085,6 +2125,74 @@ func _clear_ambient_fx() -> void:
         child.free()
     ambient_fx_nodes.clear()
 
+func _clear_multidao() -> void:
+    if crowd_root == null:
+        return
+    for child in crowd_root.get_children():
+        child.free()
+    crowd_nodes.clear()
+
+
+## ETAPA 15 — multidão de fundo do centro movimentado (fases 41-45):
+## pedestres simples (cápsula + cabeça) andando nas calçadas, fora das
+## pistas e sem colisão (nunca entram em `entities`); animação
+## simplificada: deriva em Z com reciclagem na janela da câmera,
+## balanço lateral e quique de passo.
+func _rebuild_multidao() -> void:
+    if crowd_root == null:
+        return
+    _clear_multidao()
+    var level: Dictionary = LevelData.for_phase(phase_index)
+    var cfg: Dictionary = level.get("scenery", {}).get("multidao", {})
+    if cfg.is_empty():
+        return
+    var rng := RandomNumberGenerator.new()
+    rng.seed = 9000 + phase_index
+    var quantidade := int(cfg.get("quantidade", 12))
+    var x_min := float(cfg.get("x_min_m", 6.5))
+    var x_max := float(cfg.get("x_max_m", 7.4))
+    var tons: Array = [Color("#5b6b7a"), Color("#7a6a5b"), Color("#4e5d4a"),
+            Color("#6b5b7a"), Color("#8a4a3f"), Color("#3f6b8a")]
+    for i in quantidade:
+        var lado := 1.0 if i % 2 == 0 else -1.0
+        var figura := Node3D.new()
+        figura.name = "Figura"
+        figura.set_meta("decor_kind", "figura")
+        var x := lado * rng.randf_range(x_min, x_max)
+        figura.position = Vector3(x, 0.0, rng.randf_range(-26.0, 24.0))
+        crowd_root.add_child(figura)
+        var roupa := _material(tons[rng.randi_range(0, tons.size() - 1)], 0.0, 0.8, "fabric")
+        _capsule(figura, 0.22, 1.1, Vector3(0.0, 0.95, 0.0), roupa, "Corpo")
+        _sphere(figura, 0.16, Vector3(0.0, 1.68, 0.0),
+                _material(Color("#c9a06a"), 0.0, 0.7, "skin"), "Cabeca")
+        crowd_nodes.append({
+            "node": figura,
+            "base_x": x,
+            "speed": (0.8 + rng.randf() * 0.8) * (1.0 if rng.randf() < 0.5 else -1.0),
+            "phase": rng.randf_range(0.0, TAU),
+            "bob": rng.randf_range(2.2, 3.4),
+        })
+
+
+func _update_multidao(dt: float) -> void:
+    if crowd_nodes.is_empty():
+        return
+    for item in crowd_nodes:
+        var node: Node3D = item["node"]
+        if not is_instance_valid(node):
+            continue
+        node.position.z += float(item["speed"]) * dt
+        if node.position.z > 24.0:
+            node.position.z = -26.0
+        elif node.position.z < -26.0:
+            node.position.z = 24.0
+        var fase: float = float(item["phase"])
+        var passo: float = float(item["bob"])
+        node.position.x = float(item["base_x"]) + sin(pulse * 0.9 + fase) * 0.12
+        node.position.y = absf(sin(pulse * passo + fase)) * 0.05
+        node.rotation.z = sin(pulse * passo + fase) * 0.03
+
+
 func _rebuild_ambient_fx() -> void:
     if ambient_fx_root == null:
         return
@@ -2650,14 +2758,21 @@ func _build_flags(pos: Vector3, color: Color) -> void:
     _build_flag(pos + Vector3(0.9, 0.0, -0.6), color.lightened(0.14))
 
 func _build_billboard(pos: Vector3, color: Color) -> void:
+    # ETAPA 15 — marca decor_kind=outdoor (um por outdoor).
     var outdoor_glb := _optional_glb("scene/outdoor.glb")
     if outdoor_glb != null:
         outdoor_glb.position = pos
+        outdoor_glb.set_meta("decor_kind", "outdoor")
         decor_root.add_child(outdoor_glb)
         _tint_glb(outdoor_glb, color)
         return
-    _cylinder(decor_root, 0.04, 0.04, 3.8, pos + Vector3(0.0, 1.9, 0.0), _material(Color("#39404d"), 0.15, 0.5, "metal"), "BillboardPole")
-    _box(decor_root, Vector3(2.25, 1.15, 0.08), pos + Vector3(0.0, 3.65, 0.0), _material(color, 0.0, 0.38, "paint"), "Billboard")
+    var outdoor := Node3D.new()
+    outdoor.name = "Outdoor"
+    outdoor.position = pos
+    outdoor.set_meta("decor_kind", "outdoor")
+    decor_root.add_child(outdoor)
+    _cylinder(outdoor, 0.04, 0.04, 3.8, Vector3(0.0, 1.9, 0.0), _material(Color("#39404d"), 0.15, 0.5, "metal"), "BillboardPole")
+    _box(outdoor, Vector3(2.25, 1.15, 0.08), Vector3(0.0, 3.65, 0.0), _material(color, 0.0, 0.38, "paint"), "Billboard")
 
 func _build_building(pos: Vector3, index: int, _accent: Color) -> void:
     _build_profile_building(pos, index + 4, 4.6 + float((index * 17) % 5) * 1.25, 2.3 + float(index % 3) * 0.45)
