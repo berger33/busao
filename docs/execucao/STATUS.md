@@ -7,8 +7,8 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
 
 | Etapa | Objetivo | Estado | Evidência |
 |---|---|---|---|
-| 0 | Ambiente reproduzível: Godot 4.7 compilado, import limpo, smoke headless | em andamento | build 4.7-stable (5b4e0cb0f) em compilação neste sandbox; import e smoke rodam assim que o binário sair |
-| 1 | Regra de prazo real (RunDirector): largada com contagem, relógio durante a corrida, impacto +2 s, ônibus parte no prazo | código completo, QA aguardando binário | `scripts/run_director.gd` + integração em `game_3d.gd`/`hud_3d.gd`; suíte `tools/qa_etapa1_deadline.gd` (cenários A–H) |
+| 0 | Ambiente reproduzível: Godot 4.7 compilado, import limpo, smoke headless | concluída | binário 4.7.stable.custom_build.5b4e0cb0f (headless, x11=no wayland=no); `--import` com 0 erros de recurso (540 importados); suíte QA carrega `scenes/main.tscn` e roda corridas completas headless |
+| 1 | Regra de prazo real (RunDirector): largada com contagem, relógio durante a corrida, impacto +2 s, ônibus parte no prazo | concluída | `tools/qa_etapa1_deadline.gd`: 9/9 verificações verdes (A–H, incluindo limite exato e pausa do relógio); `ETAPA1_QA_OK`, exit 0 |
 
 ## Diário
 
@@ -43,6 +43,13 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
   via bpy (mesma correção da sessão anterior).
 - Ambiente: sem X11/Wayland neste sandbox → binário Godot compilado com
   `x11=no wayland=no` (headless puro; suficiente para import + QA).
+- Import limpo: `--import` exit 0, 540 recursos; `.import` regenerados em
+  formato 4.7 (commitado). julia.glb sem Draco importou normalmente.
+- QA ETAPA 1 (21/09, 01:17 UTC): 9/9 verificações verdes — chegada adiantada,
+  chegada no limite exato do prazo (chegada antes da expiração), chegada
+  atrasada, expiração no meio do caminho com metros restantes, fôlego zerado,
+  relógio andando na corrida, relógio suspenso na pausa, +2 s por impacto e
+  prazo da fase 0 = 94,0 s (400 m / 5 m/s + 14 s de margem).
 
 ## Regras de engenharia desta execução
 
