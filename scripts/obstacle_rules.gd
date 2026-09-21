@@ -31,6 +31,7 @@ const CLASSES: Dictionary = {
     "truck": Classe.VEHICLE,
     "bus_traffic": Classe.VEHICLE,
     "motorcycle": Classe.VEHICLE,
+    "barrier": Classe.SLIDE_UNDER,
 }
 
 ## Limite lateral de colisão (m): meia largura da personagem + meia do
@@ -50,6 +51,7 @@ const HIT_WIDTHS: Dictionary = {
     "truck": 1.4,
     "bus_traffic": 1.4,
     "motorcycle": 1.0,
+    "barrier": 1.3,
 }
 
 const DEFAULT_WIDTH := 1.2

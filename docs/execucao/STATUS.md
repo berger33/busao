@@ -10,6 +10,7 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
 | 0 | Ambiente reproduzível: Godot 4.7 compilado, import limpo, smoke headless | concluída | binário 4.7.stable.custom_build.5b4e0cb0f (headless, x11=no wayland=no); `--import` com 0 erros de recurso (540 importados); suíte QA carrega `scenes/main.tscn` e roda corridas completas headless |
 | 1 | Regra de prazo real (RunDirector): largada com contagem, relógio durante a corrida, impacto +2 s, ônibus parte no prazo | concluída | `tools/qa_etapa1_deadline.gd`: 9/9 verificações verdes (A–H, incluindo limite exato e pausa do relógio); `ETAPA1_QA_OK`, exit 0 |
 | 2 | Controle preciso e colisões compreensíveis (blueprint §4/§6): matriz ação x família por classe de altura/volume, colisão pela posição real, buffer de entrada, dash sem imunidade | concluída | `tools/qa_etapa2_colisao.gd`: 10/10 verificações verdes (A–J); suíte da etapa 1 segue 9/9 (sem regressão) |
+| 3 | Primeira família SLIDE_UNDER: barreira suspensa de obra com fase de introdução (fase 3), dando função ao deslize no percurso | concluída | `tools/qa_etapa3_barreira.gd`: 5/5 verificações verdes (K–O); fases 1-2 sem barreira, fase 3 com 2; percurso determinístico |
 
 ## Diário
 
@@ -74,6 +75,19 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
 - Cachorro Caramelo: a perseguição de 10 s agora só começa no esbarrão;
   pular/desviar do cachorro é desvio limpo (antes a perseguição começava em
   qualquer encontro).
+- ETAPA 3 (21/09): barreira suspensa de obra (`barrier`) — primeira família
+  SLIDE_UNDER. ID estável no catálogo ObstacleData; classe na matriz de
+  regras (largura de colisão 1,3 m); visual procedural com vão inferior livre
+  (drop-in `assets/props/barreira.glb` quando o lote de assets chegar); entra
+  no pool de calçada e numa gag forçada a partir da fase 3 (índice 2),
+  conforme a introdução do §6. Com ela, as três ações (pular, deslizar,
+  trocar de corredor) passam a ter família dedicada no percurso.
+- Mecanismo de famílias gated: `SIDEWALK_OBSTACLES_GATED` +
+  `GATED_INTRO_PHASE` — próximas famílias do §6 (carrinho, ciclista,
+  poça...) entram pelo mesmo caminho, cada uma com sua fase de introdução.
+- QA etapa 3 (5/5): desvio limpo deslizando, dano pulando ou sem ação,
+  gate por fase (0/0/2 barreiras nas fases 1/2/3) e percurso determinístico
+  sob a mesma semente.
 
 ## Regras de engenharia desta execução
 

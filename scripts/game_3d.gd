@@ -130,6 +130,11 @@ const ROAD_OBSTACLES: Array[String] = [
 const SIDEWALK_OBSTACLES: Array[String] = [
     "old_lady", "hydrant", "payphone", "dog", "bicycle", "cone", "vendor", "bench"
 ]
+# ETAPA 3 — famílias com fase de introdução (blueprint §6): não entram no
+# ciclo base; o _build_course as acrescenta quando a fase já as apresentou.
+const SIDEWALK_OBSTACLES_GATED: Array[String] = ["barrier"]
+# Fase (índice) em que cada família gated passa a aparecer.
+const GATED_INTRO_PHASE: Dictionary = {"barrier": 2}
 const COLLECTIBLES: Dictionary = {
     "coin": "R$ 0,25",
     "coffee": "CAFÉ",
@@ -418,7 +423,7 @@ func _validate_obstacle_catalog() -> void:
         if space == "road":
             known_space = obstacle_id in ROAD_OBSTACLES
         else:
-            known_space = obstacle_id in SIDEWALK_OBSTACLES
+            known_space = obstacle_id in SIDEWALK_OBSTACLES or obstacle_id in SIDEWALK_OBSTACLES_GATED
         if not known_space:
             push_error("ObstacleData sem rota espacial: %s" % obstacle_id)
         if str(item.get("builder", "")) == "_build_pedestrian_obstacle" and obstacle_id not in ["old_lady", "vendor"]:
@@ -727,9 +732,15 @@ func _build_course() -> void:
         road_index += 1
     var sidewalk_distance: float = 34.0
     var sidewalk_index := 0
+    # ETAPA 3 — a barreira suspensa entra no pool quando a fase já a
+    # apresentou (blueprint §6: introdução na fase 3), e dá função ao deslize.
+    var sidewalk_pool: Array[String] = SIDEWALK_OBSTACLES.duplicate()
+    for gated_kind in SIDEWALK_OBSTACLES_GATED:
+        if phase_index >= int(GATED_INTRO_PHASE.get(gated_kind, 999)):
+            sidewalk_pool.append(gated_kind)
     while sidewalk_distance < total - 20.0:
         var sidewalk_lane: int = SIDEWALK_CENTER if sidewalk_index % 2 == 0 else SIDEWALK_RIGHT
-        var side_kind: String = SIDEWALK_OBSTACLES[(sidewalk_index + phase_index) % SIDEWALK_OBSTACLES.size()]
+        var side_kind: String = sidewalk_pool[(sidewalk_index + phase_index) % sidewalk_pool.size()]
         _spawn_entity(side_kind, sidewalk_lane, sidewalk_distance, false)
         sidewalk_distance += sidewalk_interval + rng.randf_range(1.0, 3.0)
         sidewalk_index += 1
@@ -759,6 +770,8 @@ func _spawn_forced_gags(total: float) -> void:
     var forced: Array[String] = []
     match phase_index:
         1: forced = ["bread", "hydrant"]
+        # ETAPA 3 — fase 3 apresenta a barreira suspensa: deslizar resolve.
+        2: forced = ["cone", "barrier"]
         3: forced = ["vendor", "pothole"]
         5: forced = ["vendor", "bicycle"]
         6: forced = ["bus_traffic", "dog"]
@@ -1483,7 +1496,8 @@ func _reaction_for(kind: String) -> String:
         "bicycle": "Bicicleta sem freio!",
         "cone": "Obra vencida!",
         "vendor": "Camelô abriu passagem!",
-        "bench": "Banco de praça não segura o Zé!"
+        "bench": "Banco de praça não segura o Zé!",
+        "barrier": "Por baixo da barra, sem medo!"
     }
     return str(reactions.get(kind, "Boa, Zé!"))
 
@@ -3059,6 +3073,24 @@ func _build_sidewalk_obstacle(parent: Node3D, kind: String) -> void:
             for side in [-0.56, 0.56]:
                 _box(parent, Vector3(0.10, 0.75, 0.12), Vector3(side, 0.37, 0.0), bench_metal, "BenchLeg")
                 _box(parent, Vector3(0.18, 0.34, 0.10), Vector3(side, 0.86, 0.04), bench_metal, "BenchArm")
+        "barrier":
+            # ETAPA 3 — barreira suspensa de obra: dois postes seguram a barra
+            # listrada com vão inferior livre; deslizar passa, pular não.
+            var barrier_glb := _optional_prop("barreira.glb")
+            if barrier_glb != null:
+                parent.add_child(barrier_glb)
+                return
+            var post_mat := _material(Color("#8a93a0"), 0.55, 0.38, "metal")
+            var bar_orange := _material(Color("#f07818"), 0.0, 0.55, "paint")
+            var bar_white := _material(Color("#e8edf2"), 0.0, 0.50, "paint")
+            for side in [-1.05, 1.05]:
+                _cylinder(parent, 0.05, 0.06, 1.9, Vector3(side, 0.95, 0.0), post_mat, "BarrierPost")
+                _box(parent, Vector3(0.34, 0.06, 0.34), Vector3(side, 0.03, 0.0), post_mat, "BarrierFoot")
+            # Barra entre 1,12 e 1,50 m: o colisor superior corresponde à barra.
+            _box(parent, Vector3(2.3, 0.38, 0.09), Vector3(0.0, 1.31, 0.0), bar_orange, "BarrierBar")
+            for stripe_i in range(4):
+                _box(parent, Vector3(0.24, 0.38, 0.095), Vector3(-0.92 + float(stripe_i) * 0.61, 1.31, 0.0), bar_white, "BarrierStripe")
+            _box(parent, Vector3(2.3, 0.10, 0.06), Vector3(0.0, 1.63, 0.0), bar_orange, "BarrierTopRail")
         _:
             _box(parent, Vector3(1.2, 0.8, 0.8), Vector3(0.0, 0.45, 0.0), red, "SidewalkHazard")
 
