@@ -2672,6 +2672,18 @@ func _build_profile_building(pos: Vector3, index: int, height: float, width: flo
         var ac := _material(Color("#d9d7d2"), 0.1, 0.6, "metal")
         var ac_y: float = clampf(1.2 + float((index * 5) % 3) * 2.8, 2.0, height - 1.4)
         _box(decor_root, Vector3(0.6, 0.4, 0.22), pos + Vector3(-width * 0.18, ac_y, -1.99), ac, "ProfileAC")
+    # Profundidade mínima de fachada: peitoris, vãos recuados e porta evitam o aspecto de cubo pintado.
+    var frame := _material(Color("#d0c6b8"), 0.0, 0.72, "concrete")
+    var glass := _material(Color("#6fa8ba"), 0.0, 0.24, "glass")
+    var rows := maxi(1, int(height / 2.4))
+    for row in rows:
+        var wy := 1.15 + float(row) * 2.25
+        if wy > height - 0.7: continue
+        for col in 2:
+            var wx := -width * 0.27 + float(col) * width * 0.54
+            _box(decor_root, Vector3(width * 0.22, 0.72, 0.06), pos + Vector3(wx, wy, -1.94), glass, "FacadeRecessedWindow")
+            _box(decor_root, Vector3(width * 0.25, 0.08, 0.12), pos + Vector3(wx, wy - 0.43, -1.98), frame, "FacadeSill")
+    _box(decor_root, Vector3(0.72, 1.35, 0.10), pos + Vector3(width * 0.30, 0.68, -1.96), _material(Color("#65483c"), 0.0, 0.68, "wood"), "FacadeDoor")
 
 func _build_shopfront(pos: Vector3, index: int, accent: Color) -> void:
     var loja_glb := _optional_glb("scene/loja.glb")
