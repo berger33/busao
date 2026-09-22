@@ -112,6 +112,9 @@ var model_root: Node3D
 var model_pivot: Node3D
 var skeleton: Skeleton3D
 var animation_player: AnimationPlayer
+# Animação procedural do herói mesh-only enquanto o rig final não está disponível.
+var mesh_parts: Dictionary = {}
+var mesh_part_rest: Dictionary = {}
 var runner_shadow: MeshInstance3D
 var current_clip := ""
 var world_mode := false
@@ -204,6 +207,7 @@ func set_character(next_id: String) -> void:
         # Hero procedural mesh-only: mantém a malha detalhada mesmo sem rig
         # Blender, enquanto o pipeline de animação avançada é preparado.
         # O root do jogo ainda fornece corrida, inclinação, salto e bob.
+        _cache_mesh_only_parts(model_root)
         _configure_mesh_shadows(model_root)
         primary_asset_loaded = true
         return
@@ -243,6 +247,8 @@ func _clear_character() -> void:
     primary_asset_loaded = false
     bone_indices.clear()
     rest_rotations.clear()
+    mesh_parts.clear()
+    mesh_part_rest.clear()
     _hair_pitch = 0.0
     _hair_pitch_vel = 0.0
     _hair_yaw = 0.0
@@ -313,6 +319,34 @@ func _skinned_meshes(node: Node) -> Array[MeshInstance3D]:
         for child in current.get_children():
             pending.append(child)
     return found
+
+func _cache_mesh_only_parts(root: Node) -> void:
+    for child in root.find_children("*", "Node3D", true, false):
+        var part_name := str(child.name)
+        if part_name in ["LeftThigh", "RightThigh", "LeftCalf", "RightCalf", "UpperArmL", "UpperArmR", "ForearmL", "ForearmR", "Torso"]:
+            mesh_parts[part_name] = child
+            mesh_part_rest[part_name] = {"position": child.position, "rotation": child.rotation}
+
+func _animate_mesh_only(stride: float, crouching: bool, jumping: bool) -> void:
+    if mesh_parts.is_empty():
+        return
+    var knee := 0.28 if crouching else (0.10 if jumping else 0.0)
+    var swing := stride * (0.42 if not crouching else 0.18)
+    _mesh_rotate("LeftThigh", swing + knee)
+    _mesh_rotate("RightThigh", -swing + knee)
+    _mesh_rotate("LeftCalf", maxf(0.0, -stride) * 0.35 + knee)
+    _mesh_rotate("RightCalf", maxf(0.0, stride) * 0.35 + knee)
+    _mesh_rotate("UpperArmL", -swing * 0.72)
+    _mesh_rotate("UpperArmR", swing * 0.72)
+    _mesh_rotate("ForearmL", 0.18)
+    _mesh_rotate("ForearmR", -0.18)
+
+func _mesh_rotate(part: String, pitch: float) -> void:
+    var node := mesh_parts.get(part) as Node3D
+    if node == null:
+        return
+    var rest: Dictionary = mesh_part_rest[part]
+    node.rotation = rest["rotation"] + Vector3(pitch, 0.0, 0.0)
 
 func _cache_skeleton() -> void:
     bone_indices.clear()
@@ -1086,7 +1120,10 @@ func set_motion(run_phase: float, is_running: bool, is_crouching: bool, jump_hei
         _play_clip(clip)
     else:
         var stride := sin(run_phase * 0.82)
-        _apply_procedural_fallback_pose(stride, is_crouching, jumping)
+        if skeleton == null:
+            _animate_mesh_only(stride, is_crouching, jumping)
+        else:
+            _apply_procedural_fallback_pose(stride, is_crouching, jumping)
     _match_playback_to_speed(speed, is_running, is_crouching, jumping)
     if runner_shadow != null:
         runner_shadow.position.y = _run_ground_y(global_position.x) + 0.025 - position.y
