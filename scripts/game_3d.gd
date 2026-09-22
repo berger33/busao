@@ -4049,7 +4049,8 @@ func _material(color: Color, metallic: float, roughness: float, surface: String 
     if surface in ["asphalt", "dirt", "sidewalk", "cobble"]:
         material.uv1_triplanar = true
         material.uv1_world_triplanar = true
-        material.uv1_triplanar_sharpness = 3.0
+        # Blend mais suave evita bordas duras e quebra a leitura de ladrilho repetido.
+        material.uv1_triplanar_sharpness = 2.15 if surface in ["asphalt", "sidewalk", "cobble"] else 3.0
     var normal: Texture2D = _normal_for_surface(surface)
     if normal != null:
         material.normal_enabled = true
@@ -4201,9 +4202,10 @@ func _texture_scale(surface: String) -> Vector3:
         "hair":
             return Vector3(3.0, 3.0, 3.0)
         "asphalt":
-            return Vector3(5.0, 5.0, 5.0)
+            # Base ampla: o normal/detail map continua legível sem repetir a placa.
+            return Vector3(4.2, 4.2, 4.2)
         "sidewalk", "cobble":
-            return Vector3(3.0, 3.0, 3.0)
+            return Vector3(2.45, 2.45, 2.45)
         "dirt":
             return Vector3(4.0, 4.0, 4.0)
         "leaves":
