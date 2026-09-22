@@ -2684,6 +2684,15 @@ func _build_profile_building(pos: Vector3, index: int, height: float, width: flo
             _box(decor_root, Vector3(width * 0.22, 0.72, 0.06), pos + Vector3(wx, wy, -1.94), glass, "FacadeRecessedWindow")
             _box(decor_root, Vector3(width * 0.25, 0.08, 0.12), pos + Vector3(wx, wy - 0.43, -1.98), frame, "FacadeSill")
     _box(decor_root, Vector3(0.72, 1.35, 0.10), pos + Vector3(width * 0.30, 0.68, -1.96), _material(Color("#65483c"), 0.0, 0.68, "wood"), "FacadeDoor")
+    # Alternância simples de varanda/grade por prédio: cria identidade sem instanciar uma nova cena.
+    if index % 3 == 0 and height > 4.0:
+        var balcony_y := minf(height - 1.0, 3.05)
+        var rail := _material(Color("#46515a"), 0.45, 0.48, "metal")
+        _box(decor_root, Vector3(width * 0.58, 0.07, 0.72), pos + Vector3(-width * 0.08, balcony_y, -2.10), rail, "BalconyDeck")
+        _box(decor_root, Vector3(width * 0.58, 0.72, 0.045), pos + Vector3(-width * 0.08, balcony_y + 0.36, -2.44), rail, "BalconyRail")
+        for post in range(5):
+            var px := -width * 0.36 + float(post) * width * 0.14
+            _box(decor_root, Vector3(0.035, 0.72, 0.06), pos + Vector3(px, balcony_y + 0.36, -2.44), rail, "BalconyPost")
 
 func _build_shopfront(pos: Vector3, index: int, accent: Color) -> void:
     var loja_glb := _optional_glb("scene/loja.glb")
