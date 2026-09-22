@@ -2488,6 +2488,9 @@ func _build_track_antigo() -> void:
             _build_asphalt_patch(Vector3(-3.25, -0.055, surface_z), 0.72 + float(i % 2) * 0.24)
         if i % 7 == 2:
             _build_manhole(Vector3(-3.25, -0.045, surface_z - 3.2))
+        # Variação determinística de umidade: poucos trechos, sem transformar a rua inteira em espelho.
+        if i % 5 == 1:
+            _build_wet_patch(Vector3(-3.25 + float((i % 3) - 1) * 0.28, -0.045, surface_z - 2.0), 0.52 + float(i % 2) * 0.18)
     for i in int(total_length / 28.0):
         var decor_z: float = -float(i) * 28.0 - 10.0
         _build_scenario_slice(decor_z, i)
@@ -2501,6 +2504,11 @@ func _build_asphalt_patch(pos: Vector3, size: float) -> void:
     mesh.scale = Vector3(1.0, 1.0, 0.58)
     var seam := _material(Color("#4b4f4f"), 0.0, 1.0, "asphalt")
     _cylinder(decor_root, size * 0.78, size * 0.68, 0.012, pos + Vector3(0.0, 0.012, 0.0), seam, "RepairSeam")
+
+func _build_wet_patch(pos: Vector3, size: float) -> void:
+    var wet := _material(Color("#354957"), 0.0, 0.28, "wet")
+    var patch := _cylinder(decor_root, size, size * 0.62, 0.012, pos, wet, "WetAsphaltPatch")
+    patch.scale = Vector3(1.0, 1.0, 0.58)
 
 func _build_manhole(pos: Vector3) -> void:
     var iron := _material(Color("#4f5960"), 0.55, 0.58, "metal")
