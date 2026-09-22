@@ -20,6 +20,9 @@ hair=mat('Hair',(0.035,0.012,0.008),.72); white=mat('EyeWhite',(.94,.94,.90),.25
 iris=mat('Iris',(.08,.025,.012),.2); sole=mat('Sole',(.015,.018,.02),.9)
 
 def add(mesh, material, pos=(0,0,0), scale=None, name='Part'):
+    # trimesh cria cápsulas/cilindros no eixo Z; o jogo usa Y como vertical.
+    # Sem esta conversão o personagem aparece deitado no corredor.
+    mesh.apply_transform(trimesh.transformations.rotation_matrix(-np.pi / 2.0, [1, 0, 0]))
     mesh.apply_translation(pos)
     if scale is not None: mesh.apply_scale(scale)
     mesh.visual.material=material; mesh.metadata['name']=name; parts.append(mesh)
