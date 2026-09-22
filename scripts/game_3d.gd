@@ -2705,6 +2705,19 @@ func _build_shopfront(pos: Vector3, index: int, accent: Color) -> void:
     _box(decor_root, Vector3(1.65, 0.28, 0.08), pos + Vector3(0.0, 2.72, -1.47), _material(accent.lightened(0.18), 0.0, 0.38, "paint"), "ShopSign")
     if index % 2 == 0:
         _box(decor_root, Vector3(0.40, 0.70, 0.44), pos + Vector3(0.0, 0.42, -1.62), _material(Color("#744d3d"), 0.0, 0.74), "ShopDoor")
+    # Vitrine modular: moldura e montantes criam profundidade sem aumentar muito o custo.
+    var trim := _material(accent.lightened(0.12), 0.0, 0.52, "metal")
+    _box(decor_root, Vector3(0.07, 0.98, 0.12), pos + Vector3(-1.08, 0.88, -1.59), trim, "ShopWindowFrame")
+    _box(decor_root, Vector3(0.07, 0.98, 0.12), pos + Vector3(1.08, 0.88, -1.59), trim, "ShopWindowFrame")
+    _box(decor_root, Vector3(2.22, 0.07, 0.12), pos + Vector3(0.0, 0.40, -1.59), trim, "ShopWindowSill")
+    _box(decor_root, Vector3(0.06, 0.88, 0.10), pos + Vector3(0.0, 0.90, -1.60), trim, "ShopWindowMullion")
+    for side in [-1.0, 1.0]:
+        _cylinder(decor_root, 0.025, 0.025, 0.92, pos + Vector3(side * 0.94, 1.88, -0.10), trim, "AwningSupport")
+    var sign_mat := _material(accent.lightened(0.22), 0.0, 0.32, "paint")
+    sign_mat.emission_enabled = true
+    sign_mat.emission = accent.lightened(0.18)
+    sign_mat.emission_energy_multiplier = 0.18
+    _box(decor_root, Vector3(1.50, 0.20, 0.045), pos + Vector3(0.0, 2.72, -1.53), sign_mat, "ShopSignFace")
 
 func _build_construction(pos: Vector3, index: int) -> void:
     var obra_glb := _optional_glb("scene/obra.glb")
