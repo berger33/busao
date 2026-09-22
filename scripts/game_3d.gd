@@ -4432,10 +4432,13 @@ func _handle_pointer_release(pos: Vector2, duration_ms: int) -> void:
     if screen == 2 and run_mode == "playing" and delta.length() > 42.0:
         if absf(delta.x) > absf(delta.y):
             _change_lane(1 if delta.x > 0.0 else -1)
+            _show_feedback("FAIXA", "movimento lateral reconhecido", BLUE, "whoosh")
         elif delta.y < 0.0:
             _jump()
+            _show_feedback("PULO", "gesto para cima reconhecido", CYAN, "jump")
         else:
             _slide()
+            _show_feedback("DESLIZE", "gesto para baixo reconhecido", VIOLET, "slide")
         return
     if screen == 2 and run_mode == "playing" and duration_ms < 360 and delta.length() < 35.0 and not Rect2(620, 36, 72, 58).has_point(pos):
         _dash()

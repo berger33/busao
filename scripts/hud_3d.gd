@@ -246,6 +246,9 @@ func _draw_run() -> void:
     draw_circle(Vector2(28 + 660 * progress, 96), 5.0, Color("#fff8e7"))
     draw_circle(Vector2(688, 96), 7.0, Color("#ffd34e"))
     _text_center(Vector2(688, 101), "●", 9, INK)
+    if bool(state.get("in_approach", false)) and not bool(state.get("boarding", false)):
+        _panel(Rect2(252, 118, 246, 30), Color(0.20, 0.78, 0.72, 0.22), 10)
+        _text_center(Vector2(375, 138), "PONTO À FRENTE • PREPARE-SE", 12, CYAN)
     if float(state.get("dash_cooldown", 0.0)) <= 0.0:
         _panel(Rect2(518, 118, 178, 30), Color(1, 0.72, 0.24, 0.15), 10)
         _text_center(Vector2(607, 138), "DASH PRONTO", 12, YELLOW)
