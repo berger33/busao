@@ -1245,14 +1245,17 @@ func _update_tutorial_hint() -> void:
         return
     var next_stage := 0
     var next_hint := "DESLIZE ← → para trocar de faixa"
-    if distance >= 18.0 and distance < 40.0:
+    if distance >= 18.0 and distance < 32.0:
         next_stage = 1
-        next_hint = "TOQUE rápido para usar o DASH"
-    elif distance >= 40.0 and distance < BALANCE.first_session_hint_distance:
+        next_hint = "TOQUE curto para usar o DASH"
+    elif distance >= 32.0 and distance < 48.0:
         next_stage = 2
-        next_hint = "↑ pula • ↓ desliza • escolha sua rota"
-    elif distance >= BALANCE.first_session_hint_distance:
+        next_hint = "DESLIZE para cima e pule o obstáculo"
+    elif distance >= 48.0 and distance < BALANCE.first_session_hint_distance:
         next_stage = 3
+        next_hint = "DESLIZE para baixo e passe sob a barra"
+    elif distance >= BALANCE.first_session_hint_distance:
+        next_stage = 4
         next_hint = "Boa leitura. Agora corra do seu jeito."
     if next_stage != tutorial_stage:
         tutorial_stage = next_stage

@@ -251,11 +251,12 @@ func _draw_run() -> void:
         _text_center(Vector2(607, 138), "DASH PRONTO", 12, YELLOW)
     else:
         _text(Vector2(535, 138), "DASH %0.1f" % float(state.get("dash_cooldown", 0.0)), 12, MUTED)
-    _panel(Rect2(20, 1195, 680, 44), Color(0.02, 0.04, 0.08, 0.55), 14)
-    _text_center(Vector2(360, 1222), "← → FAIXA     ↑ PULO     ↓ DESLIZA     TOQUE DASH", 13, Color(0.90, 0.94, 0.96, 0.85))
+    # Controles ficam ocultos durante a corrida normal: o cenário permanece
+    # limpo e o jogador só recebe uma instrução quando realmente precisa.
     if str(state.get("tutorial_hint", "")) != "" and float(state.get("distance", 0.0)) < float(state.get("first_session_hint_distance", 70.0)):
         _panel(Rect2(55, 180, 610, 58), Color(0.05, 0.16, 0.25, 0.93), 15)
         _text_center(Vector2(360, 216), str(state.get("tutorial_hint", "")), 15, CYAN)
+        _text_center(Vector2(360, 236), "gesto para agir • toque curto para dash", 10, Color("#a9dce5"))
     var _mode_run: String = str(state.get("run_mode", "playing"))
     if _mode_run == "countdown":
         draw_rect(Rect2(0, 0, 720, 1280), Color(0.02, 0.04, 0.08, 0.42))
