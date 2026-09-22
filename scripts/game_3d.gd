@@ -3458,6 +3458,9 @@ func _build_road_obstacle(parent: Node3D, kind: String) -> void:
     white_light.emission = Color("#fff1b0")
     white_light.emission_energy_multiplier = 1.6
     var tail_light := _material(Color("#cc3942"), 0.0, 0.28, "glass")
+    tail_light.emission_enabled = true
+    tail_light.emission = Color("#7d1820")
+    tail_light.emission_energy_multiplier = 0.35
     match kind:
         "car":
             _build_brazilian_car(parent, abs(parent.name.hash()) % 3, dark, chrome, glass, white_light, tail_light)
