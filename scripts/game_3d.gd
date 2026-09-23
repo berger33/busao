@@ -809,8 +809,17 @@ func _audit_world_geometry() -> void:
         var root: Node3D = pair[1]
         if root == null:
             continue
-        if root.find_children("*", "MeshInstance3D", true, false).is_empty():
+        var meshes := root.find_children("*", "MeshInstance3D", true, false)
+        if meshes.is_empty():
             push_warning("3D asset contract: raiz %s sem MeshInstance3D" % label)
+        for mesh_node in meshes:
+            var mesh_instance := mesh_node as MeshInstance3D
+            if mesh_instance.mesh == null:
+                push_warning("3D asset contract: %s sem Mesh" % mesh_instance.name)
+            if mesh_instance.scale.length() < 0.01:
+                push_warning("3D asset contract: %s com escala quase zero" % mesh_instance.name)
+            if not is_finite(mesh_instance.global_position.x) or not is_finite(mesh_instance.global_position.z):
+                push_warning("3D asset contract: %s com posição inválida" % mesh_instance.name)
 
 ## ETAPA 4 - monta o percurso a partir dos modulos do nivel (blueprint
 ## S7/S8): so a camada de desafio e autoral (padroes + moedas), o cenario
