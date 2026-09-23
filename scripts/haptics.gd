@@ -16,7 +16,7 @@ static func _allowed() -> bool:
     var save := _save_node()
     if save != null:
         var data: Dictionary = save.get("data")
-        if bool(data.get("reduced_motion", false)):
+        if bool(data.get("reduced_motion", false)) or not bool(data.get("haptics_enabled", true)):
             return false
     return true
 

@@ -74,6 +74,9 @@ func _set_defaults() -> void:
         "audio_muted": false,
         "reduced_motion": false,
         "high_contrast": false,
+        "colorblind_mode": false,
+        "haptics_enabled": true,
+        "gesture_sensitivity": 1.0,
         "hard_currency": 0,
         "remove_ads": false,
         "billing_ledger": {},
@@ -439,9 +442,13 @@ func flush() -> void:
     skip_backup_once = false
 
 func set_preference(preference: String, enabled: bool) -> void:
-    if preference not in ["reduced_motion", "high_contrast"]:
+    if preference not in ["reduced_motion", "high_contrast", "colorblind_mode", "haptics_enabled"]:
         return
     data[preference] = enabled
+    flush()
+
+func set_gesture_sensitivity(value: float) -> void:
+    data["gesture_sensitivity"] = clampf(value, 0.75, 1.35)
     flush()
 
 func coins() -> int:
