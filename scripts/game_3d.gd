@@ -3462,13 +3462,14 @@ func _build_pothole_visual(parent: Node3D) -> void:
         _box(parent, Vector3(0.20, 0.035, 0.07), Vector3(cos(angle) * 0.82, 0.075, sin(angle) * 0.82), _material(Color("#59616a"), 0.0, 0.95, "asphalt"), "BrokenAsphalt")
 
 
-func _configure_vehicle_visibility(root: Node3D) -> void:
-    # Tráfego distante deixa de consumir geometria sem desaparecer abruptamente.
+func _restore_vehicle_visibility(root: Node3D) -> void:
+    # 0 significa sem limite imposto pelo nosso código; assets podem voltar a
+    # aparecer enquanto o spawn/câmera não foi validado em dispositivo real.
     for node in root.find_children("*", "GeometryInstance3D", true, false):
         var instance := node as GeometryInstance3D
         instance.visibility_range_begin = 0.0
-        instance.visibility_range_end = 78.0
-        instance.visibility_range_end_margin = 6.0
+        instance.visibility_range_end = 0.0
+        instance.visibility_range_end_margin = 0.0
         instance.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
 
 func _build_road_obstacle(parent: Node3D, kind: String) -> void:
@@ -3478,7 +3479,9 @@ func _build_road_obstacle(parent: Node3D, kind: String) -> void:
         if replacement != null:
             parent.add_child(replacement)
             _fit_model(replacement, GLB_FIT[kind].x, GLB_FIT[kind].y)
-            _configure_vehicle_visibility(replacement)
+            # Restaura visibilidade completa para impedir regressão: o tráfego
+            # precisa existir antes de otimizar distância em runtime.
+            _restore_vehicle_visibility(replacement)
             if kind == "motorcycle":
                 _build_motoqueiro(parent, Vector3(0.0, 0.42, 0.05))
             return
