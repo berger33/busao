@@ -4561,6 +4561,14 @@ func _handle_tap(pos: Vector2) -> void:
             var haptics := not bool(GameSave.data.get("haptics_enabled", true))
             GameSave.set_preference("haptics_enabled", haptics)
             _show_feedback("VIBRAÇÃO LIGADA" if haptics else "VIBRAÇÃO DESLIGADA", "Feedback tátil configurável", CYAN, "ui_confirm")
+        elif Rect2(420, 276, 52, 32).has_point(pos):
+            var sensitivity_down := clampf(float(GameSave.data.get("gesture_sensitivity", 1.0)) - 0.10, 0.75, 1.35)
+            GameSave.set_gesture_sensitivity(sensitivity_down)
+            _show_feedback("GESTOS %.2fx" % sensitivity_down, "Swipe menor reconhece mais cedo", BLUE, "ui_confirm")
+        elif Rect2(594, 276, 72, 32).has_point(pos):
+            var sensitivity_up := clampf(float(GameSave.data.get("gesture_sensitivity", 1.0)) + 0.10, 0.75, 1.35)
+            GameSave.set_gesture_sensitivity(sensitivity_up)
+            _show_feedback("GESTOS %.2fx" % sensitivity_up, "Swipe maior evita acionamento acidental", BLUE, "ui_confirm")
         elif Rect2(70, 564, 580, 104).has_point(pos):
             _start_run(0)
         elif Rect2(70, 700, 275, 82).has_point(pos):
