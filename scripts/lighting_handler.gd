@@ -114,6 +114,12 @@ static func setup_realista(environment: WorldEnvironment, sun: DirectionalLight3
                     probe.intensity = 1.0
                     gi_root.add_child(probe)
     else:
+        # fallback mobile: mantém contato visual sem habilitar recursos caros.
+        env.adjustment_enabled = true
+        env.adjustment_brightness = 1.0
+        env.adjustment_contrast = 1.04
+        env.adjustment_saturation = 0.98
+        env.ssao_enabled = false
         # fallback mobile
         env.sdfgi_enabled = false
         env.ssao_enabled = false
@@ -121,8 +127,8 @@ static func setup_realista(environment: WorldEnvironment, sun: DirectionalLight3
         env.volumetric_fog_enabled = false
         sun.directional_shadow_max_distance = 72.0
         sun.shadow_bias = 0.045
-        sun.shadow_normal_bias = 1.2
-        sun.shadow_opacity = 0.72
+        sun.shadow_normal_bias = 0.78
+        sun.shadow_opacity = 0.76
         sun.light_angular_distance = 0.6
         # remove GI realista se existir
         if world_root != null:
