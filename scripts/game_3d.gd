@@ -4990,7 +4990,7 @@ func _ensure_lote6_particles() -> void:
         var dust := GPUParticles3D.new()
         dust.name = "Lote6_Dust"
         dust.emitting = false
-        dust.amount = 80
+        dust.amount = 56
         dust.lifetime = 0.7
         dust.visibility_aabb = AABB(Vector3(-2, 0, -2), Vector3(4, 2.5, 4))
         var mat := StandardMaterial3D.new()
@@ -5017,7 +5017,7 @@ func _ensure_lote6_particles() -> void:
         var splash := GPUParticles3D.new()
         splash.name = "Lote6_Splash"
         splash.emitting = false
-        splash.amount = 64
+        splash.amount = 40
         splash.lifetime = 0.55
         splash.visibility_aabb = AABB(Vector3(-2, 0, -2), Vector3(4, 2.2, 4))
         var smat := StandardMaterial3D.new()

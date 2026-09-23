@@ -178,7 +178,9 @@ func _atualizar_chuva(estado_nome: String, suave: Dictionary) -> void:
     var dados: Dictionary = por_estado.get(estado_nome, {})
     var quantidade := int(dados.get("quantidade", 0))
     var orcamento: Dictionary = cfg.get("orcamento", {})
-    var teto := int(orcamento.get("max_particulas_mobile", 1200))
+    var teto := int(orcamento.get("max_particulas_mobile", 900))
+    # Chuva é detalhe atmosférico, nunca deve disputar orçamento com a rua.
+    teto = mini(teto, 900)
     if _metodo != "mobile":
         teto = int(orcamento.get("max_particulas_desktop", teto))
     if quantidade > teto:
