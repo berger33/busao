@@ -298,6 +298,9 @@ var _loading_screen: Control = null
 var _cold_start_ms: int = 0
 
 func _ready() -> void:
+    var perf_probe := PerformanceProbe.new()
+    perf_probe.name = "PerformanceProbe"
+    add_child(perf_probe)
     _cold_start_ms = Time.get_ticks_msec()
     # Lote 14: LoadingScreen overlay (cold start <2.8s, barra mock 0→1)
     _loading_screen = preload("res://scripts/loading_screen.gd").new()
