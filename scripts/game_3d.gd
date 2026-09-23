@@ -3002,7 +3002,8 @@ func _build_lamp(pos: Vector3, accent: Color) -> void:
     lamp_material.emission = accent.lightened(0.20)
     lamp_material.emission_energy_multiplier = 1.5
     _sphere(decor_root, 0.12, pos + Vector3(0.0, 3.24, 0.0), lamp_material, "LampGlow")
-    _box(decor_root, Vector3(0.65, 0.06, 0.06), pos + Vector3(0.27, 3.18, 0.0), _material(Color("#3c4654"), 0.35, 0.4, "metal"), "LampArm")
+    var arm_side := -1.0 if absi(int(pos.z * 10.0)) % 2 == 0 else 1.0
+    _box(decor_root, Vector3(0.65, 0.06, 0.06), pos + Vector3(arm_side * 0.27, 3.18, 0.0), _material(Color("#3c4654"), 0.35, 0.4, "metal"), "LampArm")
 
 func _build_tree(pos: Vector3, object_scale: float) -> void:
     var arvore_glb := _optional_glb("scene/arvore.glb")
