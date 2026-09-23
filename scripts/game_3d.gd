@@ -4510,7 +4510,10 @@ func _input(event: InputEvent) -> void:
 
 func _handle_pointer_release(pos: Vector2, duration_ms: int) -> void:
     var delta := pos - touch_start
-    if screen == 2 and run_mode == "playing" and delta.length() > 42.0:
+    var gesture_scale := clampf(float(GameSave.data.get("gesture_sensitivity", 1.0)), 0.75, 1.35)
+    var swipe_threshold := 42.0 / gesture_scale
+    var tap_threshold := 35.0 / gesture_scale
+    if screen == 2 and run_mode == "playing" and delta.length() > swipe_threshold:
         if absf(delta.x) > absf(delta.y):
             _change_lane(1 if delta.x > 0.0 else -1)
             _show_feedback("FAIXA", "movimento lateral reconhecido", BLUE, "whoosh")
@@ -4521,7 +4524,7 @@ func _handle_pointer_release(pos: Vector2, duration_ms: int) -> void:
             _slide()
             _show_feedback("DESLIZE", "gesto para baixo reconhecido", VIOLET, "slide")
         return
-    if screen == 2 and run_mode == "playing" and duration_ms < 360 and delta.length() < 35.0 and not Rect2(620, 36, 72, 58).has_point(pos):
+    if screen == 2 and run_mode == "playing" and duration_ms < 360 and delta.length() < tap_threshold and not Rect2(620, 36, 72, 58).has_point(pos):
         _dash()
         return
     if screen == 4 and shop_tab == 0 and absf(delta.y) > absf(delta.x) and absf(delta.y) > 24.0:
