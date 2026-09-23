@@ -214,14 +214,6 @@ func set_character(next_id: String) -> void:
         primary_asset_loaded = true
         return
     _cache_skeleton()
-    # A Ginger usa um armature/control rig externo; até concluir o retarget
-    # dos bones no Godot, não tocar os clips importados para não colapsar a
-    # malha em uma pose inválida. Mantém a pose neutra íntegra.
-    if character_id == "ginger":
-        using_external_animation = false
-        primary_asset_loaded = true
-        _configure_mesh_shadows(model_root)
-        return
     if is_original:
         _apply_skin_tint(profile.get("skin", Color.WHITE))
         _apply_profile_palette(profile)
