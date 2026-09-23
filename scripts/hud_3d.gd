@@ -509,7 +509,10 @@ func _character_card(rect: Rect2, character: Dictionary) -> void:
     var accent: Color = character.get("accent", BLUE)
     var owned: bool = bool(character.get("owned", false))
     var equipped: bool = bool(character.get("equipped", false))
-    _panel(rect, Color("#254161") if owned else Color("#182b47"), 15)
+    var selected := equipped
+    _panel(rect, Color("#315879") if selected else (Color("#254161") if owned else Color("#182b47")), 15)
+    if selected:
+        draw_style_box(_make_outline(accent, 2.0), rect)
     draw_circle(rect.position + Vector2(42, 43), 25, Color(accent, 0.24))
     _text_center(rect.position + Vector2(42, 51), str(character.get("gender", "")), 17, accent)
     _text(rect.position + Vector2(78, 30), str(character.get("name", "Corredor")), 16, WHITE)
@@ -691,6 +694,17 @@ func _hud_icon(center: Vector2, kind: String, color: Color) -> void:
             draw_circle(center + Vector2(5, -5), 2.0, color)
         _:
             draw_circle(center, 3.0, color)
+
+func _make_outline(color: Color, width: float) -> StyleBoxFlat:
+    var box := StyleBoxFlat.new()
+    box.bg_color = Color(0, 0, 0, 0)
+    box.border_color = color
+    box.set_border_width_all(int(width))
+    box.corner_radius_top_left = 15
+    box.corner_radius_top_right = 15
+    box.corner_radius_bottom_left = 15
+    box.corner_radius_bottom_right = 15
+    return box
 
 func _panel(rect: Rect2, color: Color, radius: float = 12.0) -> void:
     # Painel de vidro fumê: sombra curta, borda fina e reflexo superior dão
