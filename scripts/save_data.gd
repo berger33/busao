@@ -65,7 +65,7 @@ func _set_defaults() -> void:
         "last_login_day": -1,
         "xp": 0,
         "badges": [],
-        "inventory": ["ze", "julia"],
+        "inventory": ["ze", "julia", "ginger"],
         "equipped_character": "julia",
         "owned_items": [],
         "pet_skins": [],
