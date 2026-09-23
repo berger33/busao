@@ -435,7 +435,10 @@ func _draw_shop() -> void:
             _billing_card(rect, packs[i])
         _text_center(Vector2(360, 1095), "compras únicas • sem loot box • teste: android.test.purchased", 10, MUTED)
     _header(_T("SHOP_TITLE"), "R$ %03d • Rubi %d" % [int(state.get("coins", 0)), int(state.get("rubi", 0))])
-    _text(Vector2(30, 126), "%d brasileiros para correr do seu jeito." % characters.size(), 16, MUTED)
+    if int(state.get("shop_tab", 0)) != 0:
+        _text(Vector2(30, 126), "%d brasileiros para correr do seu jeito." % characters.size(), 13, MUTED)
+    if int(state.get("shop_tab", 0)) == 0:
+        _draw_selected_character_summary(characters)
     # 3 abas: personagens | itens | pacotes
     _button(Rect2(30, 150, 210, 70), "PERSONAGENS", BLUE if int(state.get("shop_tab", 0)) == 0 else Color("#263958"), 14)
     _button(Rect2(250, 150, 210, 70), "ITENS", RED if int(state.get("shop_tab", 0)) == 1 else Color("#263958"), 16)
@@ -504,6 +507,15 @@ func _mask_band(y0: float, y1: float) -> void:
         var clipped_top: float = maxf(y0, band_y)
         var clipped_bottom: float = minf(y1, band_bottom)
         draw_rect(Rect2(0, clipped_top, 720, clipped_bottom - clipped_top), top.lerp(bottom, float(i) / 15.0))
+
+func _draw_selected_character_summary(characters: Array) -> void:
+    for character in characters:
+        if not bool(character.get("equipped", false)):
+            continue
+        var accent: Color = character.get("accent", BLUE)
+        _text(Vector2(30, 126), "SELECIONADO: %s • %s" % [str(character.get("name", "Corredor")), str(character.get("role", "brasileiro"))], 12, accent)
+        _text(Vector2(30, 143), "efeito: %s" % str(character.get("effect", "equilíbrio")), 11, WHITE)
+        return
 
 func _character_card(rect: Rect2, character: Dictionary) -> void:
     var accent: Color = character.get("accent", BLUE)
