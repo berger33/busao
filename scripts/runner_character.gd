@@ -200,7 +200,7 @@ func set_character(next_id: String) -> void:
     add_child(model_pivot)
     model_root.name = "HumanoOriginal" if is_original else "QuaterniusHuman"
     model_root.rotation.y = MODEL_FACING_YAW
-    var selected_scale := 0.55 if character_id == "ginger" else MODEL_SCALE
+    var selected_scale := 0.72 if character_id == "ginger" else MODEL_SCALE
     model_root.scale = Vector3.ONE * selected_scale
     model_root.position.y = MODEL_FLOOR_OFFSET
     model_pivot.add_child(model_root)
@@ -214,6 +214,14 @@ func set_character(next_id: String) -> void:
         primary_asset_loaded = true
         return
     _cache_skeleton()
+    # A Ginger usa um armature/control rig externo; até concluir o retarget
+    # dos bones no Godot, não tocar os clips importados para não colapsar a
+    # malha em uma pose inválida. Mantém a pose neutra íntegra.
+    if character_id == "ginger":
+        using_external_animation = false
+        primary_asset_loaded = true
+        _configure_mesh_shadows(model_root)
+        return
     if is_original:
         _apply_skin_tint(profile.get("skin", Color.WHITE))
         _apply_profile_palette(profile)
