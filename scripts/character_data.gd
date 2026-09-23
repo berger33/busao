@@ -346,9 +346,11 @@ const CATALOG: Array[Dictionary] = [
 ]
 
 static func all() -> Array[Dictionary]:
+    # Elenco temporariamente reduzido à Ginger até a validação visual final.
     var output: Array[Dictionary] = []
     for item in CATALOG:
-        output.append(item.duplicate(true))
+        if str(item.get("id", "")) == "ginger":
+            output.append(item.duplicate(true))
     return output
 
 static func canonical_id(id: String) -> String:

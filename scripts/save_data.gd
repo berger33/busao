@@ -65,8 +65,8 @@ func _set_defaults() -> void:
         "last_login_day": -1,
         "xp": 0,
         "badges": [],
-        "inventory": ["ze", "julia", "ginger"],
-        "equipped_character": "julia",
+        "inventory": ["ginger"],
+        "equipped_character": "ginger",
         "owned_items": [],
         "pet_skins": [],
         "achievements": [],
@@ -397,14 +397,9 @@ func _sanitize_data() -> void:
         if event_name.length() > 0 and event_name.length() <= 40:
             normalized_events[event_name] = maxi(0, int(data["metrics"]["event_counts"][raw_event]))
     data["metrics"]["event_counts"] = normalized_events
-    var equipped := SHOP_DATA.canonical_id(str(data.get("equipped_character", "julia")))
-    if not SHOP_DATA.is_character(equipped):
-        equipped = "julia"
-    data["equipped_character"] = equipped
-    if "ze" not in data["inventory"]:
-        data["inventory"].append("ze")
-    if "julia" not in data["inventory"]:
-        data["inventory"].append("julia")
+    # Elenco temporário de validação: Ginger é a única personagem ativa.
+    data["inventory"] = ["ginger"]
+    data["equipped_character"] = "ginger"
 
 func _request_save() -> void:
     dirty = true
