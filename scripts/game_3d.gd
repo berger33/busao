@@ -4553,6 +4553,14 @@ func _handle_tap(pos: Vector2) -> void:
             var high_contrast := not bool(GameSave.data.get("high_contrast", false))
             GameSave.set_preference("high_contrast", high_contrast)
             _show_feedback("ALTO CONTRASTE" if high_contrast else "CONTRASTE PADRÃO", "Leitura sem depender só de cor", YELLOW, "ui_confirm")
+        elif Rect2(420, 235, 118, 34).has_point(pos):
+            var colorblind := not bool(GameSave.data.get("colorblind_mode", false))
+            GameSave.set_preference("colorblind_mode", colorblind)
+            _show_feedback("MODO DALTONISMO" if colorblind else "CORES PADRÃO", "Estados também usam texto e ícones", BLUE, "ui_confirm")
+        elif Rect2(544, 235, 122, 34).has_point(pos):
+            var haptics := not bool(GameSave.data.get("haptics_enabled", true))
+            GameSave.set_preference("haptics_enabled", haptics)
+            _show_feedback("VIBRAÇÃO LIGADA" if haptics else "VIBRAÇÃO DESLIGADA", "Feedback tátil configurável", CYAN, "ui_confirm")
         elif Rect2(70, 564, 580, 104).has_point(pos):
             _start_run(0)
         elif Rect2(70, 700, 275, 82).has_point(pos):

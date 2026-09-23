@@ -129,6 +129,8 @@ func _draw_menu() -> void:
     _button(Rect2(510, 132, 156, 46), "SOM: OFF" if AudioManager.muted else "SOM: ON", Color("#263958"), 13)
     _button(Rect2(420, 190, 118, 38), "MOV: OFF" if bool(state.get("reduced_motion", false)) else "MOV: ON", Color("#263958"), 11)
     _button(Rect2(544, 190, 122, 38), "CONTRASTE" if bool(state.get("high_contrast", false)) else "VISUAL", Color("#263958"), 10)
+    _button(Rect2(420, 235, 118, 34), "DALTONISMO" if bool(state.get("colorblind_mode", false)) else "CORES", Color("#263958"), 10)
+    _button(Rect2(544, 235, 122, 34), "VIBRAÇÃO: ON" if bool(GameSave.data.get("haptics_enabled", true)) else "VIBRAÇÃO: OFF", Color("#263958"), 9)
     _panel(Rect2(70, 564, 580, 104), Color("#f1b72f"), 22)
     draw_rect(Rect2(90, 574, 540, 4), Color(1, 1, 1, 0.35))
     _text_center(Vector2(360, 614), _T("MENU_PLAY_NOW"), 30, INK)
