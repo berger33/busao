@@ -50,8 +50,9 @@ def loc(arm,n,f,z=0):
 def action(arm,name,end,fn):
     a=bpy.data.actions.get(name) or bpy.data.actions.new(name); a.use_fake_user=True; arm.animation_data_create(); arm.animation_data.action=a; a.frame_start=1; a.frame_end=end
     for f in range(1,end+1): reset(arm); fn(f,(f-1)/end*math.tau)
-    for c in a.fcurves:
-        for k in c.keyframe_points: k.interpolation='BEZIER'
+    # Blender 5.x usa Action Slots/Layers e não expõe mais `action.fcurves`.
+    # As curvas já são criadas pelos keyframe_insert; deixamos a interpolação
+    # padrão do Blender para manter compatibilidade entre 4.x e 5.x.
 
 def main():
     if not SRC.exists(): raise RuntimeError('Arquivo fonte ausente: '+str(SRC))
