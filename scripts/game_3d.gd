@@ -3020,11 +3020,16 @@ func _build_tree(pos: Vector3, object_scale: float) -> void:
         if imp != null:
             decor_root.add_child(imp)
         return
-    _cylinder(decor_root, 0.12 * object_scale, 0.16 * object_scale, 1.7 * object_scale, pos + Vector3(0.0, 0.85 * object_scale, 0.0), _material(Color("#67452f"), 0.0, 0.95, "wood"), "TreeTrunk")
-    var foliage := _material(Color("#3b9b69"), 0.0, 0.86, "leaves")
+    var variant := absi(int(pos.z * 10.0)) % 3
+    var trunk_color: Color = [Color("#67452f"), Color("#795238"), Color("#58412f")][variant]
+    var foliage_color: Color = [Color("#3b9b69"), Color("#2f875c"), Color("#579d62")][variant]
+    _cylinder(decor_root, 0.12 * object_scale, 0.16 * object_scale, 1.7 * object_scale, pos + Vector3(0.0, 0.85 * object_scale, 0.0), _material(trunk_color, 0.0, 0.95, "wood"), "TreeTrunk")
+    var foliage := _material(foliage_color, 0.0, 0.86, "leaves")
     _sphere(decor_root, 0.62 * object_scale, pos + Vector3(-0.28, 1.65 * object_scale, 0.0), foliage, "TreeLeaf")
     _sphere(decor_root, 0.75 * object_scale, pos + Vector3(0.28, 1.82 * object_scale, 0.0), foliage, "TreeLeaf")
     _sphere(decor_root, 0.5 * object_scale, pos + Vector3(0.0, 2.2 * object_scale, 0.0), foliage, "TreeLeaf")
+    if variant == 1:
+        _sphere(decor_root, 0.42 * object_scale, pos + Vector3(-0.48, 2.05 * object_scale, 0.12), foliage, "TreeLeafAccent")
 
 func _create_bus_stop(total: float) -> void:
     bus_stop_node = Node3D.new()
