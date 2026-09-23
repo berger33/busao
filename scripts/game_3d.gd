@@ -2087,7 +2087,16 @@ func _apply_scenario_atmosphere() -> void:
     var sky_top: Color = scenario.get("sky_top", Color("#72bed5"))
     var chapter: int = int(scenario.get("chapter_index", 0))
     var weather: String = str(scenario.get("weather", "sol"))
-    var sky_energy: float = 0.82 + clampf(float(9 - chapter) * 0.025, 0.0, 0.22)
+    # Presets de exposição: chuva/nublado reduzem contraste; entardecer preserva
+    # a paleta quente sem estourar letreiros e faróis.
+    var weather_energy := 1.0
+    var weather_ambient := 1.0
+    if weather in ["chuva", "chuva forte", "tempestade", "nublado quente"]:
+        weather_energy = 0.82
+        weather_ambient = 0.92
+    elif weather in ["fim de tarde", "sinos ao entardecer", "brisa da praia"]:
+        weather_energy = 0.91
+    var sky_energy: float = (0.82 + clampf(float(9 - chapter) * 0.025, 0.0, 0.22)) * weather_energy
     if weather in ["letreiros acesos", "sinos ao entardecer", "luzes da madrugada"]:
         sky_energy *= 0.78
     if weather in ["fim de tarde", "sinos ao entardecer", "letreiros acesos", "brisa da praia"]:
@@ -2100,10 +2109,10 @@ func _apply_scenario_atmosphere() -> void:
     sky_material.filter = true
     environment.environment.background_energy_multiplier = sky_energy
     environment.environment.ambient_light_color = scenario.get("ambient", Color("#b8d8e4"))
-    environment.environment.ambient_light_energy = 0.58 if chapter >= 7 else 0.78
+    environment.environment.ambient_light_energy = (0.58 if chapter >= 7 else 0.78) * weather_ambient
     environment.environment.fog_light_color = sky_horizon.lerp(sky_top, 0.26)
     environment.environment.fog_light_energy = 0.34 + float(chapter % 3) * 0.04
-    environment.environment.fog_density = 0.0028 if weather in ["manhã clara", "sol confortável"] else 0.0036
+    environment.environment.fog_density = 0.0044 if weather in ["chuva", "chuva forte", "tempestade"] else (0.0028 if weather in ["manhã clara", "sol confortável"] else 0.0036)
     environment.environment.fog_sky_affect = 0.18 + float(chapter % 4) * 0.025
     if sun:
         sun.light_color = scenario.get("sun", Color("#ffe0a3"))
