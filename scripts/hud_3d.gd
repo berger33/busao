@@ -517,8 +517,11 @@ func _character_card(rect: Rect2, character: Dictionary) -> void:
     _text(rect.position + Vector2(16, 91), str(character.get("description", "")), 11, MUTED)
     _text(rect.position + Vector2(16, 111), "efeito: " + str(character.get("effect", "equilíbrio")), 10, CYAN)
     var price: int = int(character.get("price", 0))
-    var action: String = "EQUIPADO" if equipped else ("USAR" if owned else "R$ %d" % price)
-    _button(Rect2(rect.end.x - 112, rect.position.y + 78, 96, 34), action, GREEN if owned else accent, 11)
+    var unlocked: bool = bool(character.get("unlocked", true))
+    var action: String = "EQUIPADO" if equipped else ("USAR" if owned else ("BLOQUEADO" if not unlocked else "R$ %d" % price))
+    var action_color: Color = GREEN if equipped else (BLUE if owned else (Color("#53647a") if not unlocked else accent))
+    _button(Rect2(rect.end.x - 112, rect.position.y + 78, 96, 34), action, action_color, 11)
+    _text(rect.position + Vector2(rect.size.x - 110, 70), "SELECIONADO" if equipped else ("ADQUIRIDO" if owned else ("DESBLOQUEIE" if not unlocked else "DISPONÍVEL")), 9, action_color)
 
 func _shop_card(rect: Rect2, title: String, subtitle: String, price: int, color: Color) -> void:
     _panel(rect, Color("#223655"), 15)
