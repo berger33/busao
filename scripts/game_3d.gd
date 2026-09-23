@@ -4368,6 +4368,7 @@ func _sync_hud() -> void:
         "retention_flags": GameSave.retention_flags(),
         "reduced_motion": bool(GameSave.data.get("reduced_motion", false)),
         "high_contrast": bool(GameSave.data.get("high_contrast", false)),
+        "colorblind_mode": bool(GameSave.data.get("colorblind_mode", false)),
         "phase_index": phase_index,
         "phase_name": str(phase.get("name", "Corre")),
         "location": str(phase.get("location", "Brasil")),

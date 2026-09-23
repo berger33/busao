@@ -72,12 +72,20 @@ func _notification(what: int) -> void:
 
 func set_state(next_state: Dictionary) -> void:
     state = next_state
+    if bool(state.get("colorblind_mode", false)):
+        state["phase_accent"] = _colorblind_accent(state.get("phase_accent", YELLOW))
     queue_redraw()
+
+func _colorblind_accent(color: Color) -> Color:
+    # Azul/laranja têm separação melhor que vermelho/verde em telas pequenas.
+    if color.is_equal_approx(RED) or color.is_equal_approx(GREEN):
+        return BLUE if color.is_equal_approx(GREEN) else GOLD
+    return color
 
 func show_feedback(title: String, detail: String, color: Color) -> void:
     feedback_title = title
     feedback_detail = detail
-    feedback_color = color
+    feedback_color = _colorblind_accent(color) if bool(state.get("colorblind_mode", false)) else color
     feedback_time = 1.05
     if not bool(state.get("reduced_motion", false)):
         feedback_flash = maxf(feedback_flash, 0.055)
