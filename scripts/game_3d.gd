@@ -301,6 +301,11 @@ func _ready() -> void:
     var perf_probe := PerformanceProbe.new()
     perf_probe.name = "PerformanceProbe"
     add_child(perf_probe)
+    if OS.get_environment("BUSAO_PERF") == "1":
+        var perf_overlay := preload("res://scripts/performance_overlay.gd").new()
+        perf_overlay.name = "PerformanceOverlay"
+        perf_overlay.probe = perf_probe
+        add_child(perf_overlay)
     _cold_start_ms = Time.get_ticks_msec()
     # Lote 14: LoadingScreen overlay (cold start <2.8s, barra mock 0→1)
     _loading_screen = preload("res://scripts/loading_screen.gd").new()
