@@ -67,8 +67,51 @@ jobs:
       - name: import headless
         run: /tmp/godot --headless --path . --import
       - name: 16 suítes de etapa
+        # Roda todas as suítes (não só até a primeira falha), guarda o log de cada
+        # uma e publica o resumo: o log do Actions não é legível fora do navegador,
+        # então o resumo vira comentário do PR e os logs viram artefato.
         run: |
+          set -uo pipefail
+          mkdir -p /tmp/suite-logs
+          resumo=/tmp/suite-logs/resumo.txt
+          : > "$resumo"
+          falhas=0
           for s in tools/qa_etapa*.gd; do
+            nome=$(basename "$s")
             echo "== $s"
-            /tmp/godot --headless --path . --script "$s" || exit 1
+            if /tmp/godot --headless --path . --script "$s" > "/tmp/suite-logs/$nome.log" 2>&1; then
+              echo "PASS $nome" | tee -a "$resumo"
+            else
+              code=$?
+              falhas=$((falhas + 1))
+              echo "FAIL $nome (exit $code)" | tee -a "$resumo"
+              echo "---- últimas 25 linhas de $nome ----"
+              tail -25 "/tmp/suite-logs/$nome.log"
+            fi
           done
+          echo
+          echo "==== RESUMO ===="
+          cat "$resumo"
+          echo "suítes com falha: $falhas"
+          if [ -n "${{ github.event.pull_request.number }}" ]; then
+            {
+              echo "### QA headless — suítes de etapa (Godot ${GODOT_VERSION:-?})"
+              echo
+              echo '```'
+              cat "$resumo"
+              echo '```'
+              echo
+              echo "Suíte(s) com falha: **$falhas**. Logs completos no artefato `qa-suite-logs` desta execução."
+            } > /tmp/suite-logs/comentario.md
+            gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/suite-logs/comentario.md || echo "não foi possível comentar no PR"
+          fi
+          exit $((falhas > 0))
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: publica logs das suítes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-suite-logs
+          path: /tmp/suite-logs
+          if-no-files-found: ignore
