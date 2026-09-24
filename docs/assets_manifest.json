@@ -17,7 +17,7 @@
       "texture_mb": 100
     }
   },
-  "asset_count": 87,
+  "asset_count": 88,
   "assets": [
     {
       "path": "assets/characters/animais/boi.glb",
@@ -345,6 +345,16 @@
       "meshes": 1,
       "vertices": 3097,
       "triangles": 4720,
+      "materials": 7,
+      "has_lod": false,
+      "status": "ok"
+    },
+    {
+      "path": "assets/characters/source/ginger+woman.glb",
+      "bytes": 1877388,
+      "meshes": 7,
+      "vertices": 27599,
+      "triangles": 54013,
       "materials": 7,
       "has_lod": false,
       "status": "ok"

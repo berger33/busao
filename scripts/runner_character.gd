@@ -43,6 +43,9 @@ const PERSONAGENS_ROOT := "res://assets/characters/personagens" # Lote 28: 20 GL
 # compartilhar a malha simplificada do elenco. O fallback mantém o jogo jogável
 # enquanto o GLB passa pela validação visual.
 const HERO_ASSET_PATH := PERSONAGENS_ROOT + "/hero_julia.glb"
+# Ginger (WIP): o GLB rigged fica em res://assets/characters/source/ ate ser
+# re-bakeado dentro do teto de 500 KB dos personagens; enquanto nao volta para
+# PERSONAGENS_ROOT, exists() e falso e o corredor usa o modelo padrao.
 const GINGER_ASSET_PATH := PERSONAGENS_ROOT + "/ginger+woman.glb"
 const MODEL_SCALE := 1.03  # 1.77*1.03=1.82 realista (era 1.18->2.09)
 const MODEL_FLOOR_OFFSET := 0.012

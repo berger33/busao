@@ -192,8 +192,10 @@ def check_visual():
     else: ok("building_kit sharpness ok")
     # lighting
     lh=(ROOT/"scripts/lighting_handler.gd").read_text(encoding="utf-8")
-    if "SHADOW_BIAS_REALISTA" in lh and "0.015" in lh: ok("lighting bias 0.015 ok")
-    else: warn("lighting bias não 0.015")
+    # L27/L24: a luz realista (default ligado, game_3d.gd:187) usa o bias firme
+    # de contato; 0.015 era o valor anterior ao tuning do lighting_handler.
+    if "SHADOW_BIAS_REALISTA: float = 0.012" in lh: ok("lighting bias 0.012 (L27) ok")
+    else: warn("lighting bias fora do valor L27 (0.012)")
     # runner scale
     rc=(ROOT/"scripts/runner_character.gd").read_text(encoding="utf-8")
     if "PLAYER_HEIGHT := 1.82" in rc: ok("PLAYER_HEIGHT 1.82 realista")

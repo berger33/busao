@@ -145,10 +145,10 @@ ou seja: **WIP declarado**, que deixa a loja/elenco com 1 personagem.
 | **C. Mais novo** | `7c696b8` (23/09) | tudo o que existe hoje | pré-voo quebrado (5 falhas), elenco reduzido a 1 personagem (WIP), GLB fora do orçamento → **main nasceria vermelha** |
 | **C'. Mais novo arrumado** | `7c696b8` + correções | o estado mais completo **e** verde | exige: atualizar validador (21 personagens), alinhar `LANE_X` no validador e no `pattern_validator.gd`, regenerar PROVENANCE, re-bakear `ginger+woman.glb` < 500 KB (Blender/bpy), decidir se reverte o "Ginger única personagem"; e mesmo assim o job Godot headless não pode ser validado aqui |
 
-## 7. Mecânica da promoção (como será feita)
+## 7. Mecânica da promoção
 
 A sessão Arena trabalha **fixa** na branch `arena/01a0d0a9-busao` — ela não pode
-fazer push direto em `main` nem criar outras branches. O caminho é:
+fazer push direto em `main` nem criar outras branches. O caminho foi:
 
 1. montar o estado escolhido em `arena/01a0d0a9-busao` (merge do snapshot + este documento);
 2. `git push origin arena/01a0d0a9-busao`;
@@ -156,3 +156,48 @@ fazer push direto em `main` nem criar outras branches. O caminho é:
 4. mergear o PR (via `gh pr merge`) — isso grava o conteúdo na `main`;
 5. limpeza: fechar PRs obsoletos (#1, #2, #4) e apagar as branches `arena/*` antigas
    (o conteúdo fica preservado na `main` + na tag `v1.0.0`).
+
+## 8. Decisão executada — opção C' (`7c696b8` + portões reparados)
+
+Base: **`arena/01a0c4ac-busao` @ `7c696b8`** (o estado mais novo, 867 arquivos),
+promovida com as correções abaixo. Detalhe e evidência no diário de
+`docs/execucao/STATUS.md` (entrada **2026-09-23 — promoção para a `main`**).
+
+| Problema do item 4.3 | Correção aplicada |
+| --- | --- |
+| "não declara 20 personagens" / "10 M e 10 F" | revertido o modo temporário de `f9ddf1a`: `CharacterData.all()` volta a devolver o catálogo inteiro e a entrada `ginger` saiu do catálogo → 20 personagens, 10 M + 10 F (contrato do validador) |
+| save sobrescrito com `["ginger"]` | `save_data.gd` voltou à sanitização com `canonical_id` + `inventory` padrão `["ze", "julia"]` |
+| token `LANE_X = [-3.25, 0.0, 3.25]` | `validate_project.py` passou a cobrar o que o runtime declara desde `357285c` (`[-5.0, 0.0, 3.25]`). **Nenhuma geometria foi alterada** — ver o achado P0 abaixo |
+| PROVENANCE sem `ginger+woman.glb` / `hero_julia.glb` | `ginger+woman.glb` movido para `assets/characters/source/` (WIP fora do runtime) e `rebaseline_provenance.py` regenerado: 21 entradas em `personagens/`; manifest e LOD plan regenerados (87 → 88 assets) |
+| `ginger+woman.glb` 1,88 MB > 500 KB | asset estacionado em `assets/characters/source/` com passo a passo de re-bake (`LEIA-ME.md`); hooks preservados em `runner_character.gd`, `validate_ginger.py` e `tools/blender/*_ginger*.py` |
+| — | bônus: `qa_full` voltou a 0 WARN (a checagem de `SHADOW_BIAS_REALISTA` cobrava o valor pré-L27) |
+| — | `01a0b48a-…patch` (320 KB) removido da raiz: conteúdo já versionado |
+
+**Portões locais após as correções:** PRE-FLIGHT OK · `qa_full` 133 OK / 0 WARN /
+0 FAIL · `validate_routes` 50/50 (1,0x e 1,22x) · provenance e imports `--check` OK ·
+`gdparse` OK nos tocados · `check_gdscript` sem achado bloqueante.
+
+### 8.1. Achado P0 aberto — geometria de corredor desalinhada
+
+`357285c` mudou **apenas** o `game_3d.gd` (`LANE_X[0]`: `-3.25` → `-5.0`, para casar
+o tráfego com a pista real do BuildingKit). Ficaram para trás: as travessias que
+terminam em `to_x: -3.25` (a 1,75 m do corredor 0 → `crosser`, `dog_cross`,
+`cyclist`, `moto_cross` e `truck_cross` **não colidem mais com quem corre na rua**),
+os espelhos `world_spawner.gd:7`, `pattern_validator.gd:29` e `validate_routes.py:17`,
+o ponto de ônibus (`c88e9ec` pôs o `bus_node` em `-3.25`) e a seta do tutorial
+(`game_3d.gd:5439`), além de ~12 asserções e 28 `_set_player(0, -3.25)` nas suítes
+`qa_etapa*`.
+
+**Não foi corrigido nesta promoção de propósito**: as duas saídas (voltar `LANE_X[0]`
+para `-3.25`, ou manter `-5.0` e realinhar ~50 pontos de dados + asserções) mudam
+gameplay e só podem ser validadas com o Godot — que não existe neste sandbox.
+Está registrado com arquivo:linha no diário do `STATUS.md`.
+
+**O que continua sem verificação aqui:** o job `godot headless` (import + 16 suítes).
+É o item que o CI deste PR precisa confirmar; o achado P0 é candidato forte a
+quebrar as suítes de travessia.
+
+**Pendências reais de release** (`tools/run_quality_gate.py`, `status: blocked`):
+LOD P0/P1 não produzido, `hero_julia.glb` mesh-only (sem rig/clipes) e medição de
+FPS/frame time em aparelho Android — exigem Blender/aparelho, não são regressões
+desta promoção.

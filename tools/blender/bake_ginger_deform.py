@@ -4,7 +4,7 @@ import bpy, os
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[2]
 SRC=ROOT/'assets/characters/source/Ginger+Woman.blend'
-OUT=ROOT/'assets/characters/personagens/ginger+woman.glb'
+OUT=ROOT/'assets/characters/source/ginger+woman.glb'
 CLIPS=['Idle_Loop','Walk_Loop','Sprint_Loop','Jump_Loop','Crouch_Idle_Loop','Crouch_Fwd_Loop','Landing']
 
 def main():

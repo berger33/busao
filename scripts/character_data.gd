@@ -152,22 +152,6 @@ const CATALOG: Array[Dictionary] = [
         "style": "atleta"
     },
     {
-        "id": "ginger",
-        "name": "Ginger Runner",
-        "gender": "F",
-        "role": "corredora",
-        "description": "personagem rigged importada do Blender",
-        "effect": "movimento realista",
-        "price": 0,
-        "skin": Color("#a66b52"),
-        "hair": Color("#24191a"),
-        "shirt": Color("#315da8"),
-        "pants": Color("#1a1a22"),
-        "shoes": Color("#f0f0ed"),
-        "accent": Color("#63c8ed"),
-        "style": "ginger"
-    },
-    {
         "id": "influencer",
         "name": "Nina Creator",
         "gender": "F",
@@ -346,11 +330,9 @@ const CATALOG: Array[Dictionary] = [
 ]
 
 static func all() -> Array[Dictionary]:
-    # Elenco temporariamente reduzido à Ginger até a validação visual final.
     var output: Array[Dictionary] = []
     for item in CATALOG:
-        if str(item.get("id", "")) == "ginger":
-            output.append(item.duplicate(true))
+        output.append(item.duplicate(true))
     return output
 
 static func canonical_id(id: String) -> String:

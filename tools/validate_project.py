@@ -117,7 +117,7 @@ def check_3d_entrypoint() -> None:
         if f'== "{batch2_id}"' not in game_3d:
             fail(f"3D runner missing gameplay effect wiring for: {batch2_id}")
     required_tokens = (
-        'const LANE_X: Array[float] = [-3.25, 0.0, 3.25]',
+        'const LANE_X: Array[float] = [-5.0, 0.0, 3.25]',
         'const ROAD_OBSTACLES',
         'const SIDEWALK_OBSTACLES',
         'var road_interval:',

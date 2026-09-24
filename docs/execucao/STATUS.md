@@ -487,6 +487,89 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
   `tools/validate_routes.py` (NOVA, lê os .gd reais): 50/50 fases com
   rota legal em 1,0x e 1,22x. Suítes `qa_etapa*` rodam no engine do usuário.
 
+### 2026-09-23 (promoção para a `main` — portões reparados + achados de geometria)
+
+Levantamento completo das 15 branches em `docs/execucao/STATUS_BRANCHES_2026-09-23.md`.
+Base promovida: `arena/01a0c4ac-busao` @ `7c696b8` (a mais nova, 867 arquivos), com os
+portões reparados — a `main` tinha só `README.md` + um `.patch` duplicado de 320 KB
+(removido; `lote2/`, `lote3/`, `lote4/` e `verificar_lotes.py` já estão versionados).
+
+**O que foi corrigido (tudo verificável sem engine):**
+
+- **Elenco volta aos 20 personagens.** Revertido o modo temporário de `f9ddf1a`
+  ("Make Ginger sole character"): `CharacterData.all()` filtrava só a Ginger e
+  `_sanitize_data()` sobrescrevia `inventory`/`equipped_character` do jogador com
+  `["ginger"]` — derrubava loja/elenco para 1 opção, violava o contrato de 20
+  personagens (10 M + 10 F) do `validate_project.py` e apagava o progresso de
+  quem já tinha save. A entrada `ginger` saiu do catálogo e a sanitização voltou
+  ao `canonical_id` + `["ze", "julia"]`.
+- **Ginger (WIP) estacionada fora do runtime.** `ginger+woman.glb` (1,88 MB;
+  7 clipes × 177 canais) movido de `assets/characters/personagens/` para
+  `assets/characters/source/`: o teto do diretório de runtime é 500 KB e o peso
+  está nas animações, não na malha (453 KB de rotações VEC4 + 317 KB de índices
+  de keyframe + 228 KB de JSON). `tools/validate_ginger.py`,
+  `tools/blender/animate_ginger.py` e `bake_ginger_deform.py` apontam para o novo
+  berço; os hooks de `runner_character.gd` ficam dormentes
+  (`ResourceLoader.exists()` → false). Passo a passo de recolocação em
+  `assets/characters/source/LEIA-ME.md`.
+- **PROVENANCE regenerado** (`rebaseline_provenance.py`): 21 entradas em
+  `personagens/` — `hero_julia.glb` (67 KB, carregado pelo runtime em
+  `HERO_ASSET_PATH`) estava fora do manifesto. `docs/assets_manifest.json` e
+  `docs/lod_plan.json` regenerados (87 → 88 assets).
+- **`qa_full` sem WARN**: a checagem de `SHADOW_BIAS_REALISTA` cobrava `0.015`,
+  valor anterior ao tuning L27 (`lighting_handler.gd` usa `0.012`, e a luz
+  realista é o default — `game_3d.gd:187`). Expectativa atualizada.
+- **Token do pré-voo**: `validate_project.py` esperava
+  `const LANE_X … [-3.25, 0.0, 3.25]`, mas o runtime declara `[-5.0, 0.0, 3.25]`
+  desde `357285c`. O portão passou a cobrar o que o jogo declara.
+
+**Portões após as correções:** PRE-FLIGHT OK · `qa_full` **133 OK / 0 WARN / 0 FAIL** ·
+`validate_routes` **50/50** fases (1,0x e 1,22x) · `rebaseline --check` OK ·
+`fix_texture_imports --check` ok=283 fixed=0 pending=0 · `gdparse` OK nos arquivos
+tocados · `check_gdscript` sem achado bloqueante (2594 UNDECLARED são ruído sem
+doc/classes + 8 UNKNOWN pré-existentes) · `validate_ginger`/`validate_hero`/
+`validate_lod_budget`/`audit_surface_materials`/`build_asset_manifest` exit 0 ·
+`run_quality_gate`: estáticos todos passando, `status: blocked` pelas 3 pendências
+reais de aparelho (LOD P0/P1, hero mesh-only, FPS/frame time).
+
+**Achado P0 — geometria de corredor desalinhada (não corrigido aqui, exige engine).**
+`357285c` (21/09 18:21, "Align traffic lane and wheel caps") mudou **só** o
+`game_3d.gd`: `LANE_X[0]` de `-3.25` para `-5.0`, para casar o tráfego com a
+pista real do BuildingKit (`x=-8.3..-1.7`, centro `-5.0`) — a `main`/Round 3 ainda
+usava `-3.25`. Ficaram para trás:
+
+1. **Travessias inertes no corredor 0.** `_resolve_entity` colide pela posição
+   real (`absf(player_x - entity_x) > hit_width(kind)` → sem colisão). As
+   travessias que terminam em `to_x: -3.25` ficam a **1,75 m** do jogador no
+   corredor 0 (`-5.0`): `crosser` 0,90 m, `dog_cross`, `cyclist` 1,10 m,
+   `moto_cross` 1,00 m, `truck_cross` 1,40 m — **nenhuma cobre**. Ou seja:
+   pedestre/cachorro/ciclista/moto/caminhão atravessando deixaram de ameaçar a
+   faixa da rua (só a calçada D, `to_x: 3.25`, segue bloqueando). As que varrem
+   a rua inteira (`cart` `±5.5`, `bus_cross`) continuam cobrindo.
+2. **Espelhos de `LANE_X` desatualizados**: `scripts/world_spawner.gd:7`
+   (decals de asfalto/bueiro nascem 1,75 m fora da pista —
+   linhas 87 e 90 usam `LANE_X[ROAD_LANE]`), `scripts/pattern_validator.gd:29` e a
+   réplica `tools/validate_routes.py:17` (validam rota com a geometria antiga).
+3. **Ponto de ônibus**: `c88e9ec` ("Align arrival bus with road center") pôs o
+   `bus_node` em `x=-3.25`, mas o tráfego do corredor 0 passa em `-5.0`
+   (`game_3d.gd:3087`). A seta do tutorial tem a mesma defasagem
+   (`game_3d.gd:5439`, array literal `[-3.25, 0.0, 3.25]`).
+4. **~12 asserções das suítes `qa_etapa*`** esperam entidade em `-3.25`
+   (ex.: `qa_etapa16_lote10.gd:316/354/457/492`, `qa_etapa10_lote4.gd:233/272`,
+   `qa_etapa11_lote5.gd:264`, `qa_etapa12_lote6.gd:326`, `qa_etapa14_lote8.gd:370`,
+   `qa_etapa15_lote9.gd:332`, `qa_etapa8_lote2.gd:189`) e 28 chamadas
+   `_set_player(0, -3.25)` usam o corredor 0 antigo.
+
+Duas saídas possíveis, **ambas precisam do Godot para validar** (por isso não
+foram aplicadas às cegas nesta promoção): (a) voltar `LANE_X[0]` para `-3.25`
+(1 linha; recupera a coerência com 107 travessias + suítes, mas reintroduz o
+veículo encostado no meio-fio que `357285c` corrigiu) ou (b) manter `-5.0` e
+realinhar travessias, espelhos, ponto de ônibus e asserções (~50 pontos de dados).
+**Não verificável neste sandbox:** o job `godot headless (import + 16 suítes)` —
+aqui não se baixa o Godot (releases do GitHub bloqueados) nem há libs X11 para
+`bpy`. É o item que o CI deste PR precisa confirmar; os achados 1 e 4 acima são
+candidatos fortes a quebrar as suítes.
+
 ## Regras de engenharia desta execução
 
 - Uma etapa por vez; cada etapa fecha com demonstração reproduzível

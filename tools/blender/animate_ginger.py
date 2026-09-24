@@ -8,7 +8,7 @@ from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[2]
 SRC=ROOT/'assets/characters/source/Ginger+Woman.blend'
-OUT=ROOT/'assets/characters/personagens/ginger+woman.glb'
+OUT=ROOT/'assets/characters/source/ginger+woman.glb'
 FPS=30
 
 def find_armature():

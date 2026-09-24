@@ -655,6 +655,23 @@
       "action": "create_lod_chain"
     },
     {
+      "path": "assets/characters/source/ginger+woman.glb",
+      "bytes": 1877388,
+      "meshes": 7,
+      "vertices": 27599,
+      "triangles": 54013,
+      "materials": 7,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
       "path": "assets/characters/animais/pombo.glb",
       "bytes": 1871528,
       "meshes": 1,
