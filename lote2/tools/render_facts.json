@@ -1,0 +1,159 @@
+{
+  "descricao": "Fatos do Godot 4.7.2 usados pelo Lote 2 (render, luz e câmera). Cada lista abaixo foi conferida nos XMLs oficiais da tag 4.7.2-stable; a coluna 'verificado' diz se a conferencia foi feita nesta rodada de trabalho ou se o identificador vem de conhecimento do engine e ainda precisa de um olhar no editor.",
+  "tag": "4.7.2-stable",
+  "fontes": {
+    "classe": "https://raw.githubusercontent.com/godotengine/godot/4.7.2-stable/doc/classes/<CLASSE>.xml"
+  },
+  "matriz_renderizador": {
+    "forward_plus": {
+      "msaa": true,
+      "scaling_3d": true,
+      "fsr2": true,
+      "ssao": true,
+      "ssil": true,
+      "ssr": true,
+      "sdfgi": true,
+      "volumetric_fog": true,
+      "glow_completo": true,
+      "pcss": true,
+      "shadow_blur": true,
+      "dof": true,
+      "auto_exposure": true,
+      "ambiente_do_ceu": true,
+      "nuvens_procedurais": true
+    },
+    "mobile": {
+      "msaa": true,
+      "scaling_3d": true,
+      "fsr2": true,
+      "ssao": false,
+      "ssil": false,
+      "ssr": false,
+      "sdfgi": false,
+      "volumetric_fog": false,
+      "glow_completo": false,
+      "pcss": false,
+      "shadow_blur": true,
+      "dof": true,
+      "auto_exposure": false,
+      "ambiente_do_ceu": true,
+      "nuvens_procedurais": true
+    },
+    "gl_compatibility": {
+      "msaa": false,
+      "scaling_3d": false,
+      "fsr2": false,
+      "ssao": true,
+      "ssil": false,
+      "ssr": false,
+      "sdfgi": false,
+      "volumetric_fog": false,
+      "glow_completo": false,
+      "pcss": false,
+      "shadow_blur": true,
+      "dof": false,
+      "auto_exposure": false,
+      "ambiente_do_ceu": false,
+      "nuvens_procedurais": true
+    }
+  },
+  "citacoes": {
+    "pcss": "Light3D.light_angular_distance: 'Note: PCSS for directional lights is only supported in the Forward+ rendering method, not Mobile or Compatibility.'",
+    "auto_exposure": "CameraAttributesPractical: 'Note: Auto-exposure is only supported in the Forward+ rendering method, not Mobile or Compatibility.'",
+    "dof": "CameraAttributesPractical: 'Note: Depth of field blur is only supported in the Forward+ and Mobile rendering methods, not Compatibility.'",
+    "ssao": "Environment.ssao_enabled: 'Note: SSAO is only supported in the Forward+ and Compatibility rendering methods, not Mobile.'",
+    "ssil": "Environment.ssil_enabled: 'Note: SSIL is only supported in the Forward+ rendering method, not Mobile or Compatibility.'",
+    "ssr": "Environment.ssr_enabled: 'Note: SSR is only supported in the Forward+ rendering method, not Mobile or Compatibility.'",
+    "sdfgi": "Environment.sdfgi_enabled: 'Note: SDFGI is only supported in the Forward+ rendering method, not Mobile or Compatibility.'",
+    "volumetric_fog": "Environment.volumetric_fog_enabled: 'Note: Volumetric fog is only supported in the Forward+ rendering method, not Mobile or Compatibility.'",
+    "glow": "Environment.glow_enabled: 'When using the Compatibility rendering method, glow uses a different implementation with some properties being unavailable and hidden from the inspector: glow_levels/*, glow_normalized, glow_strength, glow_blend_mode, glow_mix, glow_map, and glow_map_strength.'",
+    "keep_aspect": "Camera3D.KEEP_WIDTH: 'Preserves the horizontal aspect ratio... This is usually the best option for projects running in portrait mode, as taller aspect ratios will benefit from a wider vertical FOV.' / KEEP_HEIGHT (padrao): 'Preserves the vertical aspect ratio'.",
+    "sombras_direcionais": "DirectionalLight3D.directional_shadow_mode: SHADOW_PARALLEL_4_SPLITS = 2 (padrao); split_1/2/3 sao fracoes de directional_shadow_max_distance."
+  },
+  "membros": {
+    "Environment": [
+      "background_mode", "background_color", "background_energy_multiplier", "sky", "sky_rotation", "sky_custom_fov",
+      "ambient_light_source", "ambient_light_color", "ambient_light_sky_contribution", "ambient_light_energy",
+      "reflected_light_source", "tonemap_mode", "tonemap_white", "tonemap_exposure",
+      "glow_enabled", "glow_intensity", "glow_strength", "glow_bloom", "glow_blend_mode", "glow_hdr_threshold",
+      "glow_hdr_scale", "glow_hdr_luminance_cap",
+      "fog_enabled", "fog_mode", "fog_light_color", "fog_density", "fog_sky_affect", "fog_aerial_perspective",
+      "fog_height", "fog_height_density", "fog_depth_curve", "fog_depth_begin", "fog_depth_end", "fog_sun_scatter",
+      "ssao_enabled", "ssao_radius", "ssao_intensity", "ssao_power", "ssao_detail", "ssao_horizon", "ssao_sharpness",
+      "ssao_light_affect", "ssao_ao_channel_affect",
+      "ssil_enabled", "ssil_radius", "ssil_intensity", "ssil_sharpness", "ssil_normal_rejection",
+      "ssr_enabled", "ssr_max_steps", "ssr_fade_in", "ssr_fade_out", "ssr_depth_tolerance",
+      "sdfgi_enabled", "sdfgi_cascades", "sdfgi_use_occlusion", "sdfgi_bounce_feedback", "sdfgi_energy",
+      "sdfgi_read_sky_light", "sdfgi_y_scale", "sdfgi_normal_bias", "sdfgi_probe_bias",
+      "volumetric_fog_enabled", "volumetric_fog_density", "volumetric_fog_albedo", "volumetric_fog_emission",
+      "volumetric_fog_emission_energy", "volumetric_fog_gi_inject", "volumetric_fog_anisotropy",
+      "volumetric_fog_length", "volumetric_fog_detail_spread", "volumetric_fog_ambient_inject",
+      "volumetric_fog_sky_affect", "volumetric_fog_temporal_reprojection_enabled",
+      "volumetric_fog_temporal_reprojection_amount",
+      "adjustment_enabled", "adjustment_brightness", "adjustment_contrast", "adjustment_saturation",
+      "adjustment_color_correction"
+    ],
+    "DirectionalLight3D": [
+      "light_energy", "light_color", "light_specular", "light_negative", "light_bake_mode",
+      "light_volumetric_fog_energy", "light_angular_distance",
+      "shadow_enabled", "shadow_blur", "shadow_bias", "shadow_normal_bias", "shadow_opacity",
+      "shadow_caster_mask", "shadow_reverse_cull_face",
+      "directional_shadow_mode", "directional_shadow_split_1", "directional_shadow_split_2",
+      "directional_shadow_split_3", "directional_shadow_blend_splits", "directional_shadow_max_distance",
+      "directional_shadow_fade_start", "directional_shadow_pancake_size", "sky_mode",
+      "rotation_degrees", "rotation"
+    ],
+    "Camera3D": [
+      "fov", "near", "far", "keep_aspect", "attributes", "current", "cull_mask", "h_offset", "v_offset",
+      "position", "rotation", "projection", "size", "frustum_offset"
+    ],
+    "CameraAttributesPractical": [
+      "dof_blur_far_enabled", "dof_blur_near_enabled", "dof_blur_amount", "dof_blur_far_distance",
+      "dof_blur_near_distance", "dof_blur_far_transition", "dof_blur_near_transition",
+      "auto_exposure_enabled", "auto_exposure_min_sensitivity", "auto_exposure_max_sensitivity",
+      "auto_exposure_speed", "auto_exposure_scale", "exposure_multiplier", "exposure_sensitivity"
+    ],
+    "Sky": ["sky_material", "process_mode", "radiance_size"],
+    "ProceduralSkyMaterial": [
+      "sky_top_color", "sky_horizon_color", "sky_curve", "sky_energy_multiplier",
+      "ground_bottom_color", "ground_horizon_color", "ground_curve", "ground_energy_multiplier",
+      "sun_angle_max", "sun_curve", "use_debanding", "sky_cover", "sky_cover_modulate"
+    ],
+    "PhysicalSkyMaterial": [
+      "rayleigh_coefficient", "rayleigh_color", "mie_coefficient", "mie_eccentricity", "mie_color",
+      "turbidity", "sun_disk_scale", "ground_color", "energy_multiplier", "use_debanding", "night_sky"
+    ],
+    "Viewport": [
+      "msaa_3d", "scaling_3d_scale", "scaling_3d_mode", "use_debanding", "use_taa", "use_hdr_2d",
+      "screen_space_aa"
+    ],
+    "WorldEnvironment": ["environment", "camera_attributes", "compositor"],
+    "RenderingServer": ["get_current_rendering_method", "get_video_adapter_name", "get_video_adapter_api_version"],
+    "Engine": ["get_frames_per_second", "get_physics_frames_per_second", "max_fps", "time_scale"]
+  },
+  "constantes": {
+    "Environment": [
+      "BG_SKY", "BG_COLOR", "AMBIENT_SOURCE_SKY", "AMBIENT_SOURCE_COLOR", "TONE_MAPPER_ACES",
+      "TONE_MAPPER_FILMIC", "TONE_MAPPER_AGX", "FOG_MODE_DEPTH", "FOG_MODE_EXPONENTIAL",
+      "GLOW_BLEND_MODE_ADDITIVE", "GLOW_BLEND_MODE_SCREEN", "GLOW_BLEND_MODE_SOFTLIGHT",
+      "REFLECTION_SOURCE_SKY", "REFLECTION_SOURCE_DISABLED"
+    ],
+    "DirectionalLight3D": [
+      "SHADOW_ORTHOGONAL", "SHADOW_PARALLEL_2_SPLITS", "SHADOW_PARALLEL_4_SPLITS",
+      "SKY_MODE_LIGHT_AND_SKY", "SKY_MODE_LIGHT_ONLY", "SKY_MODE_SKY_ONLY"
+    ],
+    "Camera3D": ["KEEP_WIDTH", "KEEP_HEIGHT", "PROJECTION_PERSPECTIVE"],
+    "Viewport": [
+      "SCALING_3D_MODE_BILINEAR", "SCALING_3D_MODE_FSR", "SCALING_3D_MODE_FSR2", "SCALING_3D_MODE_NEAREST",
+      "MSAA_DISABLED", "MSAA_2X", "MSAA_4X", "MSAA_8X"
+    ]
+  },
+  "nao_verificado_nesta_sessao": [
+    "Viewport.MSAA_2X / MSAA_4X (a lista de constantes de MSAA nao foi lida nesta rodada; o valor e 1 = 2x, 2 = 4x, 3 = 8x)",
+    "Environment.FOG_MODE_EXPONENTIAL (o valor conferido foi FOG_MODE_DEPTH)",
+    "Engine.get_frames_per_second() (metodo padrao, mas sem XML conferido nesta rodada)",
+    "Sky.PROCESS_MODE_* (por isso o codigo nao mexe em Sky.process_mode)",
+    "Se o renderizador Mobile aceita ambiente vindo do ceu (AMBIENT_SOURCE_SKY): o codigo ativa apenas no Forward+ e cai para cor de ambiente no Mobile/Compatibilidade",
+    "Se MSAA e scaling 3D funcionam no Compatibility: o codigo trata como indisponivel (conservador)"
+  ]
+}

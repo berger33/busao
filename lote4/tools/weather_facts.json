@@ -1,0 +1,35 @@
+{
+  "tag": "4.7.2-stable",
+  "descricao": "Fatos do Godot 4.7.2 usados pelo clima (Lote 4), com a fonte de cada um.",
+  "fonte": "https://raw.githubusercontent.com/godotengine/godot/4.7.2-stable/doc/classes/<CLASSE>.xml",
+  "confirmados_nesta_rodada": [
+    "ProceduralSkyMaterial.sky_cover",
+    "ProceduralSkyMaterial.sky_cover_modulate",
+    "ProceduralSkyMaterial.sky_energy_multiplier",
+    "ProceduralSkyMaterial.sky_top_color",
+    "ProceduralSkyMaterial.sky_horizon_color",
+    "ProceduralSkyMaterial.sun_angle_max",
+    "ProceduralSkyMaterial.use_debanding",
+    "ProceduralSkyMaterial.energy_multiplier",
+    "ProceduralSkyMaterial.ground_bottom_color/ground_horizon_color/ground_curve"
+  ],
+  "citacoes": {
+    "sky_cover": "member name=\"sky_cover\" type=\"Texture2D\": 'The sky cover texture to use. This texture must use an equirectangular projection (similar to PanoramaSkyMaterial). The texture's colors will be added to the existing sky color, and will be multiplied by sky_energy_multiplier and sky_cover_modulate.'",
+    "sky_cover_modulate": "member type=\"Color\": 'The tint to apply to the sky_cover texture. This can be used to change the sky cover's colors or opacity independently of the sky energy, which is useful for day/night or weather transitions. Only effective if a texture is defined in sky_cover.'",
+    "sun_angle_max": "member type=\"float\" default=\"30.0\": 'Distance from center of sun where it fades out completely.'"
+  },
+  "armadilha": "sky_cover e Texture2D, NAO float: atribuir um numero gera erro de tipo em GDScript. A intensidade das nuvens vai em sky_cover_modulate. O autoteste do Lote 4 cobre exatamente esse caso.",
+  "consequencia_de_projeto": "Como as cores da textura sao SOMADAS ao ceu, nuvem escura nao existe por ela mesma: o ceu de tempestade vem de cinza (cor do topo/horizonte) + sky_energy_multiplier menor, e a textura so acrescenta volume.",
+  "conhecidos_estaveis": [
+    "Environment.fog_density", "Environment.fog_light_color", "Environment.fog_mode",
+    "Environment.fog_depth_begin", "Environment.fog_depth_end", "Environment.fog_sun_scatter",
+    "Environment.ambient_light_energy", "Environment.ambient_light_source",
+    "GPUParticles3D.amount/lifetime/preprocess/emitting/local_coords/visibility_aabb/fixed_fps/interpolate/draw_pass_1/process_material/randomness",
+    "ParticleProcessMaterial.direction/spread/gravity/initial_velocity_min/initial_velocity_max/scale_min/scale_max/color/emission_shape/emission_box_extents/particle_flag_align_y",
+    "ParticleProcessMaterial.EMISSION_SHAPE_BOX",
+    "MultiMesh/transform_format/TRANSFORM_3D/instance_count/set_instance_transform",
+    "ReflectionProbe.size/intensity/box_projection/update_mode/UPDATE_ONCE/UPDATE_ALWAYS/max_distance/enable_shadows",
+    "AudioStreamPlayer3D.stream/volume_db/max_distance/play/global_position",
+    "BaseMaterial3D.metallic_specular/roughness/albedo_color/cull_mode/transparency/shading_mode/vertex_color_use_as_albedo"
+  ]
+}
