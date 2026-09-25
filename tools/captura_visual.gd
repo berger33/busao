@@ -111,7 +111,7 @@ func _start(index: int) -> void:
 	if _game.run_director != null:
 		_game.run_director.countdown_left = 0.0
 	_spd = _game._phase_speed_for(index)
-	await _frames(48)
+	await _frames(6)
 
 
 func _at(dist: float, settle: int = 5) -> void:
@@ -191,7 +191,7 @@ func _tomadas() -> void:
 	if _game.hud != null:
 		_game.hud.visible = false
 	Engine.time_scale = 0.0
-	await _frames(1)
+	await get_tree().create_timer(0.25, true, false, true).timeout
 	var cam_close := Camera3D.new()
 	cam_close.name = "CapturaCloseCam"
 	cam_close.fov = 40.0
@@ -201,7 +201,7 @@ func _tomadas() -> void:
 		cam_close.global_position = pv.global_position + Vector3(1.3, 1.25, -1.95)
 		cam_close.look_at(pv.global_position + Vector3(0.0, 1.0, 0.0), Vector3.UP)
 	cam_close.current = true
-	await _frames(3)
+	await get_tree().create_timer(0.3, true, false, true).timeout
 	await _shot("09_close_personagem")
 	Engine.time_scale = 1.0
 	if _game.hud != null:
