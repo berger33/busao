@@ -124,6 +124,7 @@ var mesh_parts: Dictionary = {}
 var mesh_part_rest: Dictionary = {}
 var runner_shadow: MeshInstance3D
 var _light_rig: Node3D
+var _outline_material: ShaderMaterial
 var current_clip := ""
 var world_mode := false
 var using_external_animation := false
@@ -1291,11 +1292,45 @@ func _configure_mesh_shadows(node: Node) -> void:
 ## ilumina esta camada, então a rua não recebe luz duplicada; o sol e o
 ## ambiente continuam alcançando a personagem (máscara padrão = tudo).
 func _apply_runner_light_layer() -> void:
-    for node in find_children("*", "MeshInstance3D", true, false):
-        var mi := node as MeshInstance3D
-        if mi == null or mi.name == "RunnerShadow":
-            continue
-        mi.layers = RUNNER_VISIBILITY_LAYER
+	for node in find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		if mi == null or mi.name == "RunnerShadow" or str(mi.name).begins_with("SilhouetteShell"):
+			continue
+		mi.layers = RUNNER_VISIBILITY_LAYER
+		_attach_silhouette_shell(mi)
+
+
+## Filete escuro ao redor do corpo. A meta de contraste (≥ 3:1 contra a rua)
+## não fecha só com luz: na calçada clara o torso já está perto do branco e
+## clarear mais estoura a exposição. O contorno é que recorta a silhueta.
+func _attach_silhouette_shell(source: MeshInstance3D) -> void:
+	if source.mesh == null or source.get_parent() == null:
+		return
+	if source.get_node_or_null("SilhouetteShell") != null:
+		return
+	var shell := MeshInstance3D.new()
+	shell.name = "SilhouetteShell"
+	shell.mesh = source.mesh
+	shell.skin = source.skin
+	# O caminho do esqueleto é relativo ao MeshInstance. O casco é filho, então
+	# sobe um nível antes de repetir o caminho do original.
+	if source.skeleton != NodePath():
+		shell.skeleton = NodePath("../" + str(source.skeleton))
+	shell.transform = Transform3D.IDENTITY
+	shell.material_override = _silhouette_material()
+	shell.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	shell.layers = RUNNER_VISIBILITY_LAYER
+	source.add_child(shell)
+
+
+func _silhouette_material() -> ShaderMaterial:
+	if _outline_material != null:
+		return _outline_material
+	var shader := Shader.new()
+	shader.code = "shader_type spatial;\nrender_mode unshaded, cull_front, shadows_disabled, ambient_light_disabled;\nuniform float grow = 0.034;\nvoid vertex() {\n\tVERTEX += NORMAL * grow;\n}\nvoid fragment() {\n\tALBEDO = vec3(0.03, 0.025, 0.04);\n}\n"
+	_outline_material = ShaderMaterial.new()
+	_outline_material.shader = shader
+	return _outline_material
 
 
 ## Legibilidade de protagonista (padrão de runner mobile): a personagem nunca
@@ -1311,9 +1346,9 @@ func _build_light_rig() -> void:
     var fill := SpotLight3D.new()
     fill.name = "RunnerFill"
     fill.light_color = Color("ffd9a8")
-    # Etapa 2 (WIB-6): 1.5 deixava a camisa a ~2,1:1 contra a calçada clara
-    # (meta ≥ 3:1). 2.15 levanta o torso do lado da câmera sem acender a rua.
-    fill.light_energy = 2.15
+	# Etapa 2 (WIB-6): 2.15 ainda deixava a chuva em ~1,6:1 contra o chão.
+	# 2.7 levanta as costas (câmera de jogo em +Z) sem acender a rua.
+	fill.light_energy = 2.7
     fill.spot_range = 8.0
     fill.spot_angle = 52.0
     fill.spot_attenuation = 1.05
@@ -1330,18 +1365,28 @@ func _build_light_rig() -> void:
     rim.light_cull_mask = RUNNER_VISIBILITY_LAYER
     rim.rotation_degrees = Vector3(-35.0, -145.0, 0.0)
     _light_rig.add_child(rim)
-    # Lift ao lado do peito: envolve frente e costas, então a silhueta lê
-    # tanto na câmera de jogo (+Z) quanto no close 3/4 (−Z).
-    var lift := OmniLight3D.new()
-    lift.name = "RunnerLift"
-    lift.light_color = Color("fff4e4")
-    lift.light_energy = 1.35
-    lift.omni_range = 4.2
-    lift.omni_attenuation = 1.1
-    lift.shadow_enabled = false
-    lift.light_cull_mask = RUNNER_VISIBILITY_LAYER
-    lift.position = Vector3(0.55, 1.5, 0.15)
-    _light_rig.add_child(lift)
+	# Lift ao lado do peito: envolve frente e costas na câmera de jogo.
+	var lift := OmniLight3D.new()
+	lift.name = "RunnerLift"
+	lift.light_color = Color("fff4e4")
+	lift.light_energy = 1.7
+	lift.omni_range = 4.2
+	lift.omni_attenuation = 1.1
+	lift.shadow_enabled = false
+	lift.light_cull_mask = RUNNER_VISIBILITY_LAYER
+	lift.position = Vector3(0.55, 1.5, 0.15)
+	_light_rig.add_child(lift)
+	# Frente (−Z): o close 3/4 olha o rosto, que o fill de costas não alcança.
+	var front := OmniLight3D.new()
+	front.name = "RunnerFront"
+	front.light_color = Color("ffe6c4")
+	front.light_energy = 2.1
+	front.omni_range = 3.4
+	front.omni_attenuation = 1.15
+	front.shadow_enabled = false
+	front.light_cull_mask = RUNNER_VISIBILITY_LAYER
+	front.position = Vector3(0.35, 1.4, -1.15)
+	_light_rig.add_child(front)
 
 func _build_fallback(reason: String) -> void:
     push_warning("Humanoide Quaternius indisponível (%s); ativando fallback de diagnóstico." % reason)
