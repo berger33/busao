@@ -69,11 +69,16 @@ def render_ceu(nome: str, elev_deg: float, sun_rot_deg: float,
     buf = np.empty(w * h * 4, dtype=np.float32)
     img.pixels.foreach_get(buf)
     arr = buf.reshape(h, w, 4)
+    # Exposição pelo CÉU (percentil 70 = pixéis de céu, maioria), não pelo
+    # brilho do sol: normalizar pelo p99.7 esmagava o azul para quase preto
+    # (o halo solar é ordens de grandeza acima do céu). O sol estoura em
+    # branco suave pela curva ACES abaixo (rolloff de highlight).
     lum = arr[..., :3].max(axis=2)
     positivos = lum[lum > 0.0]
-    p99 = float(np.percentile(positivos, 99.7)) if positivos.size else 1.0
-    escala = 0.92 / max(p99, 1e-6)
-    arr[..., :3] *= escala
+    ceu = float(np.percentile(positivos, 70.0)) if positivos.size else 1.0
+    arr[..., :3] *= 0.42 / max(ceu, 1e-6)
+    c = arr[..., :3]
+    arr[..., :3] = (c * (2.51 * c + 0.03)) / (c * (2.43 * c + 0.59) + 0.14)
     np.clip(arr, 0.0, 1.0, out=arr)
     out_img = bpy.data.images.new(nome + "_ldr", w, h, alpha=False)
     out_img.pixels.foreach_set(arr.astype(np.float32).ravel())
@@ -88,11 +93,12 @@ def render_ceu(nome: str, elev_deg: float, sun_rot_deg: float,
 
 def main() -> None:
     os.makedirs(OUT, exist_ok=True)
-    # Sol a ~28° de elevação casa com sun.rotation_degrees.x=-28 do jogo;
-    # sun_rotation coloca o brilho em u≈0.61 como no ceu_tropical atual
-    # (mapeamento conferido visualmente contra o panorama legado).
-    render_ceu("ceu_tropical_v2", 28.0, -39.6, 1.6, 1.1, 1.0)
-    render_ceu("ceu_entardecer_v2", 9.0, -39.6, 3.2, 1.0, 1.0)
+    # Sol a ~28° de elevação casa com sun.rotation_degrees.x=-28 do jogo.
+    # Mapeamento medido no render anterior: u = 0.5 + sun_rotation/360
+    # (rot -39.6 pôs o brilho em u≈0.39); para u≈0.61 como no panorama
+    # legado, rot = +39.6.
+    render_ceu("ceu_tropical_v2", 28.0, 39.6, 1.6, 1.1, 1.0)
+    render_ceu("ceu_entardecer_v2", 9.0, 39.6, 3.2, 1.0, 1.0)
 
 
 main()
