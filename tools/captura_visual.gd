@@ -309,7 +309,7 @@ func _diag_close() -> void:
 		print("DIAG sol: e=", sol.light_energy, " pitch=", sol.rotation_degrees.x,
 			" yaw=", sol.rotation_degrees.y, " bias=", sol.shadow_normal_bias)
 	for nome_luz in ["RunnerFill", "RunnerRim", "RunnerLift"]:
-		var luz := _game.find_child(nome_luz, true, false)
+		var luz: Node = _game.find_child(nome_luz, true, false)
 		if luz != null and luz is Light3D:
 			print("DIAG rig: ", nome_luz, " e=", (luz as Light3D).light_energy, " vis=", luz.visible)
 

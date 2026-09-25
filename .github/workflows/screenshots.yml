@@ -54,8 +54,12 @@ jobs:
             --rendering-method gl_compatibility --rendering-driver opengl3 \
             --resolution 720x1280 --script tools/captura_visual.gd \
             2>&1 | tee captures/_log.txt || true
-          ls -lh captures/ | tee -a captures/_log.txt
+          ls -lh captures/ | tee -a captures/_log.txt || true
+          # pipefail + glob vazio faz o ls sair 2 e esconde o gate. O gate
+          # abaixo é quem exige as 9 tomadas.
+          set +o pipefail
           n=$(ls captures/*.png 2>/dev/null | wc -l)
+          set -o pipefail
           echo "pngs=$n" | tee -a captures/_log.txt
       - name: publica na branch sandbox/screenshots
         if: always()
