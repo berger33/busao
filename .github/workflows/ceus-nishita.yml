@@ -67,11 +67,7 @@ jobs:
           git add assets/textures/ceu_tropical_v2.png assets/textures/ceu_entardecer_v2.png \
                   assets/textures/ceu_tropical_v2.png.import assets/textures/ceu_entardecer_v2.png.import \
                   scripts/game_3d.gd docs/assets_manifest.json 2>/dev/null || true
-          git commit -q -m "feat(visual): céus panorama Nishita (Blender headless fisico)
-
-ceu_tropical_v2: sol 28 graus, poeira 1.6 (nevoa tropical); ceu_entardecer_v2:
-sol 9 graus, poeira 3.2 (golden hour). sun_disc off: o sol que ilumina e
-sombreia continua sendo o DirectionalLight3D do jogo; preloads trocados e
-.imports normalizados pelo fix_texture_imports."
+          git commit -q -m "feat(visual): céus panorama Nishita (Blender headless fisico)" \
+                  -m "ceu_tropical_v2: sol 28 graus, poeira 1.6 (nevoa tropical); ceu_entardecer_v2: sol 9 graus, poeira 3.2 (golden hour). sun_disc off: o sol que ilumina e sombreia continua sendo o DirectionalLight3D do jogo; preloads trocados e .imports normalizados pelo fix_texture_imports."
           git push -q origin HEAD:sandbox/ceus-nishita
           echo "publicado em sandbox/ceus-nishita"
