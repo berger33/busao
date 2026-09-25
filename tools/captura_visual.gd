@@ -30,10 +30,42 @@ func _initialize() -> void:
 	root.add_child(_game)
 	await process_frame
 	await process_frame
+	_diag_luz()
 	_unlock_all()
 	await _tomadas()
 	print("CAPTURA_OK")
 	quit(0)
+
+
+## Diagnóstico de sombras/iluminação impresso no _log.txt do CI: responde de
+## vez por que as capturas saem sem sombras direcionais (sol/ambiente/cast
+## shadow/tier reais em runtime, não o que o código "acha" que configurou).
+func _diag_luz() -> void:
+	print("DIAG metodo: ", RenderingServer.get_current_rendering_method(),
+		" driver: ", RenderingServer.get_current_rendering_driver_name())
+	for s in _game.find_children("*", "DirectionalLight3D", true, false):
+		print("DIAG luz: ", s.name, " visivel=", s.visible,
+			" sombra=", s.shadow_enabled, " energia=", s.light_energy,
+			" rot=", s.rotation_degrees, " max_dist=", s.directional_shadow_max_distance)
+	for w in _game.find_children("*", "WorldEnvironment", true, false):
+		var env = w.environment
+		if env == null:
+			continue
+		print("DIAG env: ", w.name,
+			" amb_src=", env.ambient_light_source,
+			" amb_energy=", env.ambient_light_energy,
+			" amb_color=", env.ambient_light_color,
+			" bg_src=", env.background_mode,
+			" fog=", env.fog_enabled, " fog_density=", env.fog_density,
+			" glow=", env.glow_enabled, " glow_int=", env.glow_intensity)
+	for p in _game.find_children("PredioD0", "", true, false):
+		print("DIAG predio: ", p.name, " cast_shadow=", p.cast_shadow)
+	for p in _game.find_children("Copa", "", true, false):
+		print("DIAG copa: ", p.name, " cast_shadow=", p.cast_shadow)
+		break
+	for p in _game.find_children("Deck*", "", true, false):
+		print("DIAG deck: ", p.name, " receive=", p.cast_shadow)
+		break
 
 
 func _unlock_all() -> void:

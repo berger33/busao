@@ -137,7 +137,7 @@
         0.66
       ],
       "height_map": "calcada_laje_height.png",
-      "height_scale": 0.010,
+      "height_scale": 0.01,
       "normal_scale": 1.25,
       "triplanar_sharpness": 8.0
     },
@@ -151,7 +151,7 @@
         0.58
       ],
       "height_map": "calcada_mosaico_height.png",
-      "height_scale": 0.010,
+      "height_scale": 0.01,
       "normal_scale": 1.15,
       "triplanar_sharpness": 8.0
     },
@@ -165,7 +165,7 @@
         0.56
       ],
       "height_map": "calcada_laje_height.png",
-      "height_scale": 0.010,
+      "height_scale": 0.01,
       "normal_scale": 1.2,
       "triplanar_sharpness": 8.0
     },
@@ -179,7 +179,7 @@
         0.145
       ],
       "height_map": "asfalto_height.png",
-      "height_scale": 0.010,
+      "height_scale": 0.01,
       "normal_scale": 1.1,
       "triplanar_sharpness": 8.0
     },
@@ -217,12 +217,12 @@
         0.26
       ],
       "height_map": "tijolo_height.png",
-      "height_scale": 0.010,
+      "height_scale": 0.01,
       "triplanar_sharpness": 8.0
     },
     "fachada_reboco": {
       "pbr": "reboco",
-      "uv_escala": 0.30,
+      "uv_escala": 0.3,
       "triplanar": true,
       "cor": [
         0.84,
@@ -230,7 +230,7 @@
         0.72
       ],
       "height_map": "reboco_height.png",
-      "height_scale": 0.010,
+      "height_scale": 0.01,
       "triplanar_sharpness": 8.0
     },
     "telhado": {
@@ -243,7 +243,7 @@
         0.39
       ],
       "height_map": "laje_cobertura_height.png",
-      "height_scale": 0.010,
+      "height_scale": 0.01,
       "triplanar_sharpness": 8.0
     },
     "estrutura_metalica": {
@@ -258,7 +258,7 @@
         0.5
       ],
       "height_map": "metal_pintado_height.png",
-      "height_scale": 0.010,
+      "height_scale": 0.01,
       "triplanar_sharpness": 0.0
     },
     "zincado": {
@@ -273,7 +273,7 @@
         0.66
       ],
       "height_map": "metal_zincado_height.png",
-      "height_scale": 0.010,
+      "height_scale": 0.01,
       "triplanar_sharpness": 0.0
     },
     "madeira": {
@@ -286,7 +286,7 @@
         0.21
       ],
       "height_map": "madeira_height.png",
-      "height_scale": 0.010,
+      "height_scale": 0.01,
       "triplanar_sharpness": 0.0
     },
     "canteiro": {
@@ -299,7 +299,7 @@
         0.16
       ],
       "height_map": "terra_vermelha_height.png",
-      "height_scale": 0.010,
+      "height_scale": 0.01,
       "triplanar_sharpness": 0.0
     },
     "folhagem": {
@@ -342,7 +342,8 @@
     "multimesh_limite": 8,
     "distancia_visibilidade_m": 150.0,
     "sombra_max_m": 70.0,
-    "lod_quarteiroes": 3
+    "lod_quarteiroes": 3,
+    "sombras_mundo": true
   },
   "paletas": [
     {

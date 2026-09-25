@@ -116,8 +116,10 @@ const WORLD_LENGTH_MARGIN := 80.0
 
 # --- Lote 2: constantes de render/câmera (roteiro game_3d_lote2_patch.gd) --
 const RQ_PATH := "/root/RenderQuality"      # autoload do Lote 2
-const RENDER_FOV := 54.0                    # perspectiva natural de terceira pessoa (ref abb89707)
-const RENDER_FOV_RUN := 56.0                # FOV na corrida
+# Passe visual 2: retrato em celular pede FOV mais aberta — 54/56 fechavam o
+# corredor e tiravam a sensação de velocidade nas capturas 720x1280.
+const RENDER_FOV := 58.0                    # perspectiva natural de terceira pessoa (ref abb89707)
+const RENDER_FOV_RUN := 61.0                # FOV na corrida
 const RENDER_CAMERA_Y := 2.25               # altura no ombro (ref abb89707, era 2.65 alto)
 const RENDER_CAMERA_Z := 4.85               # distância mais próxima e imersiva (era 6.2)
 const RENDER_CAMERA_FAR := 380.0            # deixa a serra/skyline entrar

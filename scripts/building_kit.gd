@@ -607,6 +607,11 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
     var telhado := float(p.get("telhado_altura_m", 0.35))
     var janela: Dictionary = p.get("janela", {})
     var faixas: Dictionary = spec.get("faixas", {})
+    # Passe visual 2: prédios projetam sombra de verdade (antes sombra=false
+    # fixo — o mundo inteiro ficava sem nenhuma sombra direcional, o maior
+    # fator de "cara de placeholder" nas capturas). Continua controlável por
+    # orçamento: "sombras_mundo": false no world_spec desliga.
+    var sombras_mundo: bool = bool(spec.get("orcamento", {}).get("sombras_mundo", true))
     for lado in [-1.0, 1.0]:
         # frente do lote: na borda externa da calcada (direita) ou no fim da
         # rua (esquerda). x_frente/x_centro sao magnitudes a partir do centro.
@@ -633,12 +638,12 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
             var frente := _malha(_box(Vector3(profundidade, altura, largura)),
                 material(spec, chave),
                 Vector3(lado * x_centro, altura * 0.5, -(z + largura * 0.5)), raiz,
-                "Predio%s%d" % [("D" if lado > 0.0 else "E"), lote], false)
+                "Predio%s%d" % [("D" if lado > 0.0 else "E"), lote], sombras_mundo)
             _marca(frente, "fachada")
             var teto := _malha(_box(Vector3(profundidade + 0.2, telhado, largura + 0.2)),
                 material(spec, "telhado"),
                 Vector3(lado * x_centro, altura + telhado * 0.5, -(z + largura * 0.5)), raiz,
-                "Telhado%s%d" % [("D" if lado > 0.0 else "E"), lote], false)
+                "Telhado%s%d" % [("D" if lado > 0.0 else "E"), lote], sombras_mundo)
             _marca(teto, "telhado")
             if tipo != "obra":
                 _build_janelas(spec, raiz, rng, janela, lado, x_frente, z, largura, andares, pe, tipo, lote)
@@ -941,7 +946,9 @@ static func build_horizon(spec: Dictionary) -> Node3D:
     var nevoa_cor := Color(0.84, 0.79, 0.70)
     if not paletas.is_empty():
         nevoa_cor = _cor(paletas[0].get("nevoa", [0.84, 0.79, 0.70]))
-    var cor := _misturar(nevoa_cor, Color(0.55, 0.58, 0.62), nevoa)
+    # nevoa = peso da cor de nevoa (antes os argumentos estavam invertidos:
+    # nevoa 0.78 produzia blocos 78% cinza, os "cartões" duros no horizonte).
+    var cor := _misturar(Color(0.55, 0.58, 0.62), nevoa_cor, nevoa)
     var mat := StandardMaterial3D.new()
     mat.albedo_color = cor
     mat.roughness = 1.0
