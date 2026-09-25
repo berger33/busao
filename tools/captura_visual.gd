@@ -227,44 +227,20 @@ func _tomadas() -> void:
 	# alta demais para ler o rig. Aqui: rua curta (ela sobrevive), clima
 	# limpo assentado, órbita grudada no peito, visibilidade forçada e
 	# _process congelado para o pisca não apagá-la no grab.
-	_start(0)
-	_at(36.0, 8)
-	_lane(1, 6)
-	_restaurar_runner()
-	_clima_para("limpo")
-	if _game.hud != null:
-		_game.hud.visible = false
-	if _game._revive_screen != null:
-		_game._revive_screen.visible = false
-	_game._revive_pending = false
-	# yaw 2.2 rad: a câmera de jogo fica em +Z (costas). cos(2.2)<0 põe a
-	# órbita em −Z, que é a frente. Raio 2.7 m e altura 0.42 = peito, 3/4.
-	# Varredura WIB-6: CAPTURA_YAWS="1.8,2.2,..." rende um close por yaw
-	# (09_close_personagem_yNNN) para calibrar o fundo contra a meta 3:1.
+	# Varredura WIB-6: CAPTURA_YAWS re-monta a tomada inteira por yaw —
+	# sem isso o céu/dto da sequência deriva (a 2ª tomada já sai 4× mais
+	# escura que a canônica) e a razão medida não vale para o run normal.
 	var yaws: Array[float] = []
 	for yaw_c in _env_list("CAPTURA_YAWS"):
 		yaws.append(float(yaw_c))
-	var varredura := not yaws.is_empty()
-	if yaws.is_empty():
-		yaws.append(2.2)
+	# yaw 2.2 rad: a câmera de jogo fica em +Z (costas). cos(2.2)<0 põe a
+	# órbita em −Z, que é a frente. Raio 2.7 m e altura 0.42 = peito, 3/4.
+	# A tomada canônica (sem sufixo) roda primeiro e sempre — é a prova.
+	await _prepara_close()
+	await _close_uma(2.2, "09_close_personagem")
 	for yaw in yaws:
-		_game._capture_radius = 2.7
-		_game._capture_height = 0.42
-		_orbit_on(yaw, -0.05)
-		_game._snap_capture_camera()
-		await _frames(6)
-		_restaurar_runner()
-		if _game._revive_screen != null:
-			_game._revive_screen.visible = false
-		_game.set_process(false)
-		_game.set_physics_process(false)
-		_diag_close()
-		var nome_09 := "09_close_personagem"
-		if varredura:
-			nome_09 += "_y%d" % int(round(yaw * 100.0))
-		await _shot(nome_09)
-		_game.set_process(true)
-		_game.set_physics_process(true)
+		await _prepara_close()
+		await _close_uma(yaw, "09_close_personagem_y%d" % int(round(yaw * 100.0)))
 	_game._capture_radius = 6.2
 	_game._capture_height = 2.0
 	_orbit_off()
@@ -307,12 +283,21 @@ func _tomadas() -> void:
 				lift.light_energy = base_lift * g
 			if front != null:
 				front.light_energy = base_front * g
+			# Repete o setup canônico de 10/11 por ganho: sem o restart,
+			# a deriva de posição/hearts (e a corrida durante os timers)
+			# torna as variantes incomparáveis entre si.
+			_start(2)
+			_at(28.0, 6)
+			_lane(1, 4)
+			_restaurar_runner()
 			_clima_para("nublado")
 			await create_timer(2.4).timeout
+			_restaurar_runner()
 			_diag_close()
 			await _shot("10_g%d" % int(round(g * 100.0)))
 			_clima_para("chuva")
 			await create_timer(2.8).timeout
+			_restaurar_runner()
 			_diag_close()
 			await _shot("11_g%d" % int(round(g * 100.0)))
 		if fill != null:
@@ -323,6 +308,40 @@ func _tomadas() -> void:
 			front.light_energy = base_front
 	_clima_para("limpo")
 	await create_timer(0.3).timeout
+
+
+## Setup canônico da tomada 09 (fase 1, 36 m, corredor 1, clima limpo).
+## A varredura chama isto ANTES de cada yaw para o estado ser idêntico
+## ao da tomada normal — qualquer desvio vira medição inválida.
+func _prepara_close() -> void:
+	_start(0)
+	_at(36.0, 8)
+	_lane(1, 6)
+	_restaurar_runner()
+	_clima_para("limpo")
+	if _game.hud != null:
+		_game.hud.visible = false
+	if _game._revive_screen != null:
+		_game._revive_screen.visible = false
+	_game._revive_pending = false
+	_game._capture_radius = 2.7
+	_game._capture_height = 0.42
+
+
+## Uma tomada de close: orbita no yaw, congela o jogo e grava o PNG.
+func _close_uma(yaw: float, nome: String) -> void:
+	_orbit_on(yaw, -0.05)
+	_game._snap_capture_camera()
+	await _frames(6)
+	_restaurar_runner()
+	if _game._revive_screen != null:
+		_game._revive_screen.visible = false
+	_game.set_process(false)
+	_game.set_physics_process(false)
+	_diag_close()
+	await _shot(nome)
+	_game.set_process(true)
+	_game.set_physics_process(true)
 
 
 ## Lista de valores de uma variável de ambiente "a,b,c" ([] se vazia).
@@ -361,6 +380,8 @@ func _diag_close() -> void:
 	var sol: DirectionalLight3D = _game.sun
 	print("DIAG close: visivel=", pv.visible if pv != null else "-",
 		" hearts=", _game.hearts,
+		" dist=", _game.distance, " elapsed=", _game.elapsed,
+		" modo=", String(_game.run_mode),
 		" player=", pv.global_position if pv != null else "null",
 		" cam=", _game.camera.global_position if _game.camera != null else "null")
 	if sol != null:
