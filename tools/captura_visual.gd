@@ -30,6 +30,7 @@ func _initialize() -> void:
 	root.add_child(_game)
 	await process_frame
 	await process_frame
+	_silenciar_iaa()
 	_diag_luz()
 	_unlock_all()
 	await _tomadas()
@@ -72,6 +73,27 @@ func _unlock_all() -> void:
 	var save: Node = _game.get_node("/root/GameSave")
 	for i in range(0, 50):
 		save.call("record_phase", i, 3, 10.0)
+
+
+## IAA mock: no CI (sem singleton nativo) o manager "acha e baixa" um update
+## alguns segundos apos o boot e o `update_downloaded` vaza o toast
+## "ATUALIZACAO PRONTA" para os quadros. A captura desconecta os sinais e
+## zera o timer do mock: nenhum toast de IAA aparece em tomada alguma.
+func _silenciar_iaa() -> void:
+	var up: Node = root.get_node_or_null("/root/InAppUpdateManager")
+	if up == null:
+		print("DIAG iaa: manager ausente (nada a silenciar)")
+		return
+	for sig_name in ["update_available", "update_downloaded", "update_failed", "update_installed"]:
+		if not up.has_signal(sig_name):
+			continue
+		var sig: Signal = up.get(sig_name)
+		for con in sig.get_connections():
+			sig.disconnect(con["callable"])
+			print("DIAG iaa: desconectado ", sig_name)
+	if "_mock_timer" in up:
+		up.set("_mock_timer", 0.0)
+	print("DIAG iaa: mock silenciado")
 
 
 func _frames(n: int) -> void:
@@ -125,6 +147,19 @@ func _lane(l: int, settle: int = 10) -> void:
 	await _frames(settle)
 
 
+## Modo captura (Lote 6): a camera do jogo orbita o runner e mira em
+## player_x direto. O follow amortiza a faixa (x*0.16) e, em faixa lateral,
+## deixa a personagem na borda do quadro — a orbita a centraliza.
+func _orbit_on(yaw: float, pitch: float) -> void:
+	_game._capture_mode = true
+	_game._capture_yaw = yaw
+	_game._capture_pitch = pitch
+
+
+func _orbit_off() -> void:
+	_game._capture_mode = false
+
+
 func _tomadas() -> void:
 	# 1. Largada — corredor C, rua do Ipê à frente.
 	_start(0)
@@ -132,14 +167,22 @@ func _tomadas() -> void:
 	_lane(1)
 	await _shot("01_largada_fase1")
 	# 2. Corrida no meio — obstáculos e moedas à frente.
+	# O fade do loader corre em relogio de parede: a 1 fps do llvmpipe,
+	# esperar so frames nao e suficiente para o fade terminar (no run
+	# anterior o titulo + "100%" vazaram no quadro 02).
+	await create_timer(4.0).timeout
 	_at(52.0)
 	await _shot("02_corrida_fase1")
 	# 3. Rua (corredor E) com tráfego e travessia do caminhão (fase 18).
+	# Orbita (modo captura): o follow amortiza a faixa (x*0.16) e deixaria a
+	# personagem na borda esquerda em E; a orbita mira em player_x direto.
 	_start(17)
 	_lane(0)
+	_orbit_on(0.0, -0.12)
 	_at(58.0, 4)
 	await _frames(24)
 	await _shot("03_rua_travessia_fase18")
+	_orbit_off()
 	# 4. Passagem de pedestres (fase 7) vista do corredor C.
 	_start(6)
 	_lane(1)
@@ -190,23 +233,23 @@ func _tomadas() -> void:
 	await create_timer(1.2).timeout
 	if _game.hud != null:
 		_game.hud.visible = false
-	Engine.time_scale = 0.0
-	await create_timer(0.25, true, false, true).timeout
-	var cam_close := Camera3D.new()
-	cam_close.name = "CapturaCloseCam"
-	cam_close.fov = 40.0
-	_game.add_child(cam_close)
+	# Close 3/4 de frente na orbita (yaw ~135 graus): camera a ~5,5 m a
+	# frente-direita do runner, olhando o peito. A Camera3D propria da
+	# versao anterior saia sem a personagem no quadro (a 1 fps o grab podia
+	# pegar o frame previo, antes da nova camera renderizar); na orbita a
+	# camera do jogo — que ja renderiza a personagem nas demais tomadas —
+	# converge em 1-2 frames.
+	_orbit_on(2.35, -0.06)
+	await _frames(8)
 	var pv: Node3D = _game.player_visual
-	if pv != null:
-		cam_close.global_position = pv.global_position + Vector3(1.3, 1.25, -1.95)
-		cam_close.look_at(pv.global_position + Vector3(0.0, 1.0, 0.0), Vector3.UP)
-	cam_close.current = true
-	await create_timer(0.3, true, false, true).timeout
+	print("DIAG close: player_global=", pv.global_position if pv != null else "null",
+		" visivel=", pv.visible if pv != null else "-",
+		" cam_global=", _game.camera.global_position if _game.camera != null else "null",
+		" cam=", _game.camera.name if _game.camera != null else "null")
 	await _shot("09_close_personagem")
-	Engine.time_scale = 1.0
+	_orbit_off()
 	if _game.hud != null:
 		_game.hud.visible = true
-	cam_close.queue_free()
 	await _frames(2)
 
 	# 10/11 — os mesmos 4 climas do rig (WIB-6): nublado e chuva FORÇADOS via

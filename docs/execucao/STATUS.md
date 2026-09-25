@@ -673,6 +673,59 @@ sessão — por isso o render de céu foi para o CI. Nota: o snapshot do
 workspace re-clonou o repo entre turnos; commits não pushados se perdem —
 pushar cedo é regra desta execução.
 
+### 2026-09-25 (branch arena/01a0d712 — revisão do set de capturas e harness corrigido)
+
+**Contexto:** sessão nova na branch `arena/01a0d712-busao` (ff-merge de
+`origin/arena/01a0d6bf-busao` @ `1f141c3`; a `main` tem só README + o .patch).
+Loop combinado (Notion "Central do Projeto"): GitHub = fonte da verdade,
+etapas no Linear (WIB-6 In Progress), entregáveis no Drive
+`Corre pro Ponto/Etapas/Etapa-02-Luz-e-Atmosfera`.
+
+**Revisão do 1º set completo de capturas pós-fix do `get_tree()`** (run
+`36099179276` → `sandbox/screenshots` @ `3c06840`, 11 tomadas 720×1280):
+- ✅ OK: chuva (11), personagem + sombra na chegada (06), rua com zebras/
+  postes/prédios de tijolo (03/10), HUD e painel de embarque.
+- ❌ 09 close: **sem a personagem no quadro** — a `Camera3D` própria apanhou
+  um frame sem a runner (a 1 fps do llvmpipe a espera de 0,3 s de parede é
+  menor que 1 frame e o `_shot` pega a 1ª textura de janela não vazia = o
+  frame anterior).
+- ❌ 03: personagem pela metade fora do quadro à esquerda — o follow amortiza
+  a faixa (`desired_x = player_x * 0.16`): em E (x=-3,25) a runner fica ~16°
+  fora do eixo, que é a borda exata do quadro retrato (meio FOV horizontal
+  ≈ 16,6° a 720×1280).
+- ❌ 03: toast "ATUALIZAÇÃO PRONTA" (IAA) vazando — o mock do
+  `InAppUpdateManager` (sem singleton nativo no CI) "baixa" o update
+  deterministicamente alguns segundos após o boot → toast via
+  `update_downloaded`.
+- ⚠️ 02: fade do loader vazou (título + 100%) — o fade corre em relogio de
+  parede e o settle por frames não basta. (01 = loader 82% é tomada
+  intencional, por decisão registrada no RESUMO_ETAPA2.)
+- ⚠️ 10: sombra levemente deslocada do pé com mancha clara dentro do blob —
+  re-verificar no próximo set.
+
+**Correções em `tools/captura_visual.gd`** (escrita atômica, 6 blocos):
+1. `_silenciar_iaa()`: desconecta os 4 sinais do `InAppUpdateManager` e zera
+   `_mock_timer` — nenhum toast de IAA em tomada alguma.
+2. Tomadas 03 e 09 passam a usar o **modo captura** do jogo (Lote 6,
+   `_capture_mode`): a orbita mira em `player_x` direto (sem amortecimento) e
+   usa a câmera do jogo — a mesma que renderiza a personagem nas 06/10.
+   Close 09 = 3/4 de frente (yaw 2,35 rad ≈ 135°, pitch -0,06, r=6,2 m).
+   Fora a `Camera3D` avulsa e o `Engine.time_scale = 0` (o card de fase não é
+   risco a 120 m + settles; a pose segue animando, melhor para o close).
+3. Tomada 02: `await create_timer(4.0)` para o fade do loader terminar antes
+   do shot.
+4. `DIAG close` (global de player/câmera + visibilidade) no log do CI.
+
+**Portões:** `check_gdscript.py tools/captura_visual.gd` — 0 problemas.
+Sem binário Godot/Xvfb neste sandbox: o set de 11 é regenerado no CI
+`screenshots` (~20 min) e re-revisado aqui. A medida de silhueta ≥ 3:1
+(pendência do RESUMO_ETAPA2 no Drive) roda sobre o 09 novo com Pillow
+(instalado no venv desta sessão).
+
+**Próximo:** set novo verde no CI → revisar 02/03/09 → atualizar pasta
+Etapa-02 no Drive (PNGs finais + RESUMO) → comentário no WIB-6 com a
+evidência → aprovação do usuário → WIB-7 (câmera).
+
 ## Regras de engenharia desta execução
 
 - Uma etapa por vez; cada etapa fecha com demonstração reproduzível
