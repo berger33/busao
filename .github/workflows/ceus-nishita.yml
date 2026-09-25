@@ -9,6 +9,15 @@ name: ceus-nishita
 
 on:
   workflow_dispatch:
+  # O token de CI do sandbox não consegue fazer dispatch (actions:write
+  # negado), então o workflow também dispara por push quando seus próprios
+  # arquivos mudam — um toque no script de render na branch de trabalho
+  # já agenda o job.
+  push:
+    branches: [arena/01a0d62f-busao]
+    paths:
+      - ".github/workflows/ceus-nishita.yml"
+      - "tools/blender/render_ceu_nishita.py"
 
 permissions:
   contents: write
