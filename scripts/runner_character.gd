@@ -1337,17 +1337,29 @@ func _grow_outline_mesh(source: Mesh) -> ArrayMesh:
         return null
     var input := source as ArrayMesh
     var output := ArrayMesh.new()
+    var grew := false
     for surface_index in input.get_surface_count():
         var arrays: Array = input.surface_get_arrays(surface_index)
-        var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-        var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
-        if vertices.size() == normals.size() and vertices.size() > 0:
-            for index in vertices.size():
-                vertices[index] = vertices[index] + normals[index] * 0.028
-            arrays[Mesh.ARRAY_VERTEX] = vertices
+        # Superfície sem normal (cartão, decalque) vem como null. Atribuir
+        # direto a PackedVector3Array aborta a função e o restante do corpo
+        # fica sem filete.
+        var vertices_var: Variant = arrays[Mesh.ARRAY_VERTEX]
+        var normals_var: Variant = arrays[Mesh.ARRAY_NORMAL]
+        if vertices_var == null or normals_var == null:
+            continue
+        var vertices: PackedVector3Array = vertices_var
+        var normals: PackedVector3Array = normals_var
+        if vertices.size() != normals.size() or vertices.size() == 0:
+            continue
+        for index in vertices.size():
+            vertices[index] = vertices[index] + normals[index] * 0.028
+        arrays[Mesh.ARRAY_VERTEX] = vertices
         for custom_slot in [Mesh.ARRAY_CUSTOM0, Mesh.ARRAY_CUSTOM1, Mesh.ARRAY_CUSTOM2, Mesh.ARRAY_CUSTOM3]:
             arrays[custom_slot] = null
         output.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+        grew = true
+    if not grew:
+        return null
     return output
 
 
