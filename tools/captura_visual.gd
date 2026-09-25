@@ -187,11 +187,11 @@ func _tomadas() -> void:
 	_start(0)
 	_at(120.0)
 	_lane(1, 6)
-	await get_tree().create_timer(1.2).timeout
+	await create_timer(1.2).timeout
 	if _game.hud != null:
 		_game.hud.visible = false
 	Engine.time_scale = 0.0
-	await get_tree().create_timer(0.25, true, false, true).timeout
+	await create_timer(0.25, true, false, true).timeout
 	var cam_close := Camera3D.new()
 	cam_close.name = "CapturaCloseCam"
 	cam_close.fov = 40.0
@@ -201,7 +201,7 @@ func _tomadas() -> void:
 		cam_close.global_position = pv.global_position + Vector3(1.3, 1.25, -1.95)
 		cam_close.look_at(pv.global_position + Vector3(0.0, 1.0, 0.0), Vector3.UP)
 	cam_close.current = true
-	await get_tree().create_timer(0.3, true, false, true).timeout
+	await create_timer(0.3, true, false, true).timeout
 	await _shot("09_close_personagem")
 	Engine.time_scale = 1.0
 	if _game.hud != null:
@@ -216,18 +216,18 @@ func _tomadas() -> void:
 	_start(2)
 	_at(24.0)
 	_lane(1, 2)
-	await get_tree().create_timer(0.8).timeout
+	await create_timer(0.8).timeout
 	if _game._clima != null:
 		_game._clima.set_state("nublado")
 	# Settle em relogio de parede: a 1 fps do llvmpipe, 320 frames = 5 min de
 	# jogo e o folego expirava no meio da sequencia (o run morria e a tela de
 	# carregamento/folego baixo vazava para o quadro).
-	await get_tree().create_timer(5.6).timeout
+	await create_timer(5.6).timeout
 	await _shot("10_clima_nublado")
 	if _game._clima != null:
 		_game._clima.set_state("chuva")
-	await get_tree().create_timer(5.6).timeout
+	await create_timer(5.6).timeout
 	await _shot("11_clima_chuva")
 	if _game._clima != null:
 		_game._clima.set_state("limpo")
-	await get_tree().create_timer(0.3).timeout
+	await create_timer(0.3).timeout
