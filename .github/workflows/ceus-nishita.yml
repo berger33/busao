@@ -58,6 +58,12 @@ jobs:
             sed -i 's|res://assets/textures/ceu_tropical.png|res://assets/textures/ceu_tropical_v2.png|' scripts/game_3d.gd
             sed -i 's|res://assets/textures/ceu_entardecer.png|res://assets/textures/ceu_entardecer_v2.png|' scripts/game_3d.gd
             /tmp/godot --headless --path . --import 2>&1 | tail -5 || true
+            # O import do CI reescreve .imports de store/docs com metadata
+            # que validate_project rejeita (localmente esses diffs são
+            # revertidos antes de validar). Mantém só os .imports novos dos
+            # céus v2 (untracked) e reverte o resto.
+            git diff --name-only | grep '\.import$' || true
+            git diff --name-only | grep '\.import$' | xargs -r git checkout --
             python3 tools/fix_texture_imports.py 2>&1 | tail -3
             python3 tools/build_asset_manifest.py 2>&1 | tail -3 || true
             echo "--- validate_project:"

@@ -22,12 +22,12 @@ def render_ceu(nome: str, elev_deg: float, sun_rot_deg: float,
     scene.render.resolution_x = 2048
     scene.render.resolution_y = 1024
     scene.render.resolution_percentage = 100
-    scene.render.image_settings.file_format = "PNG"
-    scene.render.image_settings.color_mode = "RGB"
+    scene.render.image_settings.file_format = "OPEN_EXR"
+    scene.render.image_settings.color_depth = "32"
     # Standard: o PNG é asset LDR do jogo; AgX/Filmic lavariam o azul.
     scene.view_settings.view_transform = "Standard"
     scene.view_settings.look = "None"
-    scene.render.filepath = os.path.join(OUT, nome + ".png")
+    scene.render.filepath = os.path.join(OUT, nome + ".exr")
 
     world = bpy.data.worlds.new("Ceu")
     scene.world = world
@@ -54,7 +54,35 @@ def render_ceu(nome: str, elev_deg: float, sun_rot_deg: float,
     cam = bpy.data.objects.new("PanoCam", cam_data)
     scene.collection.objects.link(cam)
     scene.camera = cam
+    # Sem pitch, a câmera panorama olha para o chão (nadir preto no centro
+    # do equiretângulo). X+90° põe o horizonte no meio da imagem.
+    cam.rotation_euler = (math.radians(90.0), 0.0, 0.0)
     bpy.ops.render.render(write_still=True)
+
+    # Nishita é físico (luminâncias de céu reais, ordens de grandeza acima
+    # de 1.0): em vez de chutar EV de exposição, normaliza pelo percentil
+    # 99.7 do EXR float e grava o PNG LDR — cor e razão sol/céu preservadas.
+    import numpy as np
+    exr_path = os.path.join(OUT, nome + ".exr")
+    img = bpy.data.images.load(exr_path)
+    w, h = img.size
+    buf = np.empty(w * h * 4, dtype=np.float32)
+    img.pixels.foreach_get(buf)
+    arr = buf.reshape(h, w, 4)
+    lum = arr[..., :3].max(axis=2)
+    positivos = lum[lum > 0.0]
+    p99 = float(np.percentile(positivos, 99.7)) if positivos.size else 1.0
+    escala = 0.92 / max(p99, 1e-6)
+    arr[..., :3] *= escala
+    np.clip(arr, 0.0, 1.0, out=arr)
+    out_img = bpy.data.images.new(nome + "_ldr", w, h, alpha=False)
+    out_img.pixels.foreach_set(arr.astype(np.float32).ravel())
+    out_img.filepath_raw = os.path.join(OUT, nome + ".png")
+    out_img.file_format = "PNG"
+    out_img.save()
+    bpy.data.images.remove(img)
+    bpy.data.images.remove(out_img)
+    os.remove(exr_path)
     print("CEU_OK", nome)
 
 
