@@ -1311,9 +1311,9 @@ func _build_light_rig() -> void:
     var fill := SpotLight3D.new()
     fill.name = "RunnerFill"
     fill.light_color = Color("ffd9a8")
-    fill.light_energy = 1.35
+    fill.light_energy = 1.5
     fill.spot_range = 8.0
-    fill.spot_angle = 42.0
+    fill.spot_angle = 46.0
     fill.spot_attenuation = 1.2
     fill.shadow_enabled = false
     fill.light_cull_mask = RUNNER_VISIBILITY_LAYER
@@ -1323,7 +1323,7 @@ func _build_light_rig() -> void:
     var rim := DirectionalLight3D.new()
     rim.name = "RunnerRim"
     rim.light_color = Color("bfe0ff")
-    rim.light_energy = 0.6
+    rim.light_energy = 0.92
     rim.shadow_enabled = false
     rim.light_cull_mask = RUNNER_VISIBILITY_LAYER
     rim.rotation_degrees = Vector3(-35.0, -145.0, 0.0)

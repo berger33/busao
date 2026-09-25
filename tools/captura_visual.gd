@@ -176,16 +176,52 @@ func _tomadas() -> void:
 			break
 	await _frames(24)
 	await _shot("08_final_fase50")
-	# 9. Close na personagem (câmera congelada perto do runner).
+	# 9. Close na personagem — Etapa 2 (WIB-6): a câmera de jogo segue o runner
+	# todo frame (lerp com dt) e o card de fase podia vazar no quadro; aqui a
+	# tomada é determinística: o countdown assenta, o HUD some, o tempo congela
+	# e uma Camera3D própria (virando `current`) faz o close sem tocar no rig
+	# de luz nem na câmera de jogo.
 	_start(0)
 	_at(30.0)
 	_lane(1, 6)
-	Engine.time_scale = 0.02
+	await _frames(30)
+	if _game.hud != null:
+		_game.hud.visible = false
+	Engine.time_scale = 0.0
+	await _frames(1)
+	var cam_close := Camera3D.new()
+	cam_close.name = "CapturaCloseCam"
+	cam_close.fov = 40.0
+	_game.add_child(cam_close)
 	var pv: Node3D = _game.player_visual
-	if pv != null and _game.camera != null:
-		var alvo: Vector3 = pv.global_position + Vector3(0.0, 1.15, 0.0)
-		_game.camera.global_position = pv.global_position + Vector3(1.35, 1.35, 1.9)
-		_game.camera.look_at(alvo, Vector3.UP)
+	if pv != null:
+		cam_close.global_position = pv.global_position + Vector3(1.25, 1.35, 2.05)
+		cam_close.look_at(pv.global_position + Vector3(0.0, 1.0, 0.0), Vector3.UP)
+	cam_close.current = true
 	await _frames(3)
 	await _shot("09_close_personagem")
 	Engine.time_scale = 1.0
+	if _game.hud != null:
+		_game.hud.visible = true
+	cam_close.queue_free()
+	await _frames(2)
+
+	# 10/11 — os mesmos 4 climas do rig (WIB-6): nublado e chuva FORÇADOS via
+	# WeatherSystem (spec re-aplica sol×0.78/0.48, névoa e molhado por cima da
+	# base da família), na câmera de jogo: prova de sombra colada no pé e do
+	# fill/rim sob luz difusa e sob luz mínima.
+	_start(2)
+	_at(24.0)
+	_lane(0, 2)
+	await _frames(20)
+	if _game._clima != null:
+		_game._clima.set_state("nublado")
+	await _frames(320)
+	await _shot("10_clima_nublado")
+	if _game._clima != null:
+		_game._clima.set_state("chuva")
+	await _frames(320)
+	await _shot("11_clima_chuva")
+	if _game._clima != null:
+		_game._clima.set_state("limpo")
+	await _frames(5)

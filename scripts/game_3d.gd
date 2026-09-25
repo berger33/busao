@@ -192,6 +192,7 @@ var _player_velocity_y: float = 0.0
 var _is_on_floor_physics: bool = true
 # Lote 24 — Luz Realista (F9 toggle; false Panorama 1024, true SDFGI/VoxelGI 4096 VSM)
 var lighting_realista_enabled: bool = true
+var _sun_energy_base: float = 1.18 # Etapa 2 (WIB-6): key da família de luz do clima atual
 var player_speed := 5.0
 var hearts := 3
 var max_hearts := 3
@@ -2126,15 +2127,63 @@ func _apply_scenario_atmosphere() -> void:
     sky_material.filter = true
     environment.environment.background_energy_multiplier = sky_energy
     environment.environment.ambient_light_color = scenario.get("ambient", Color("#b8d8e4"))
-    environment.environment.ambient_light_energy = (0.58 if chapter >= 7 else 0.78) * weather_ambient
+    # Etapa 2 (WIB-6): energia de ambiente e exposição vêm da família de luz
+    # do clima (bloco abaixo), junto com a key (sol).
     environment.environment.fog_light_color = sky_horizon.lerp(sky_top, 0.26)
     environment.environment.fog_light_energy = 0.34 + float(chapter % 3) * 0.04
     environment.environment.fog_density = 0.0044 if weather in ["chuva", "chuva forte", "tempestade"] else (0.0028 if weather in ["manhã clara", "sol confortável"] else 0.0036)
     environment.environment.fog_sky_affect = 0.18 + float(chapter % 4) * 0.025
+    # Etapa 2 (WIB-6) — famílias de luz por clima (sol/nublado/chuva/entardecer).
+    # Cada família define key (sol), exposição e ambiente juntas: sem estouro de
+    # highlight (tonemap_white segura as velas) e com o fill/rim do rig da
+    # personagem (runner_character.gd) garantindo leitura em todas elas. O
+    # WeatherSystem (Lote 4) multiplica sol/névoa/ambiente por cima via
+    # weather_spec.json — esta família é a BASE que ele re-aplica.
+    var fam := "sol"
+    var clima_estado := ""
+    if _clima != null:
+        clima_estado = str(_clima.get("_estado"))
+    if clima_estado in ["chuva", "tempestade"] or weather.findn("chuva") >= 0 or weather.findn("tempestade") >= 0:
+        fam = "chuva"
+    elif clima_estado == "nublado" or weather.findn("nublado") >= 0:
+        fam = "nublado"
+    elif chapter >= 7 or weather.findn("entardecer") >= 0 or weather.findn("fim de tarde") >= 0:
+        fam = "entardecer"
+    var sun_energy := 1.18
+    var sun_pitch := -32.0 - chapter * 1.0
+    var ambient_energy := (0.58 if chapter >= 7 else 0.78) * weather_ambient
+    var exposure := 1.06
+    var white := 1.2
+    if fam == "chuva":
+        sun_energy = 0.62
+        sun_pitch = -48.0
+        ambient_energy = 0.92 * weather_ambient
+        exposure = 1.02
+        white = 1.12
+    elif fam == "nublado":
+        sun_energy = 0.78
+        sun_pitch = -42.0
+        ambient_energy = 0.88 * weather_ambient
+        exposure = 1.05
+        white = 1.15
+    elif fam == "entardecer":
+        sun_energy = 1.05 if chapter >= 7 else 1.22
+        sun_pitch = -18.0 - (chapter % 3) * 2.0
+        exposure = 1.1
+        white = 1.28
+    else:
+        sun_energy = 1.22 if chapter < 7 else 1.05
+        sun_pitch = -38.0 - (chapter % 3) * 2.0
+        exposure = 1.06
+        white = 1.22
+    _sun_energy_base = sun_energy
+    environment.environment.ambient_light_energy = ambient_energy
+    environment.environment.tonemap_exposure = exposure
+    environment.environment.tonemap_white = white
     if sun:
         sun.light_color = scenario.get("sun", Color("#ffe0a3"))
-        sun.light_energy = 0.92 if chapter >= 7 else 1.18
-        sun.rotation_degrees = Vector3(-32.0 - chapter * 1.0, -56.0 + (chapter % 4) * 2.5, 0.0)
+        sun.light_energy = sun_energy
+        sun.rotation_degrees = Vector3(sun_pitch, -56.0 + (chapter % 4) * 2.5, 0.0)
 
 func _update_sky_motion(dt: float) -> void:
     if sky_material == null or scenario.is_empty():
@@ -2148,7 +2197,11 @@ func _update_sky_motion(dt: float) -> void:
         environment.environment.background_energy_multiplier = sky_material.energy_multiplier
     if sun:
         sun.rotation_degrees.y += sin(pulse * 0.035) * dt * 0.8
-        sun.light_energy = lerpf(sun.light_energy, (0.98 + shimmer * 0.20) if screen == 2 else 1.0, dt * 0.5)
+        # Etapa 2 (WIB-6): o "respirar" do sol parte da energia da família de luz
+        # do clima (_sun_energy_base); sem isto o lerp achata a key em ~1.0 e as
+        # famílias somem depois do primeiro segundo de jogo.
+        var alvo_sol := _sun_energy_base * ((0.92 + shimmer * 0.16) if screen == 2 else 1.0)
+        sun.light_energy = lerpf(sun.light_energy, alvo_sol, dt * 0.5)
 
 func _clear_sky_fx() -> void:
     if sky_fx_root == null:
