@@ -147,12 +147,16 @@ func _scenario_w() -> void:
             "W4. fases sem nível seguem com a árvore comum")
 
 
-# X. Deck cobre os três corredores na fase 3 (e só lá).
-func _deck_cobre(x: float) -> bool:
+# X. Chão cobre os três corredores na fase 3 (e só lá).
+# Lote 3 (building_kit, layout "rua_esquerda"): o corredor E corre na pista
+# de asfalto (PistaE, x=-8.3..-1.7) e os corredores C/D no deck da calçada
+# (CalcadaDeck, x=-1.35..4.65). A premissa antiga ("deck cobre E") era do
+# traçado anterior; o que o contrato exige é chão pisável sob os três.
+func _kit_cobre(nome: String, x: float) -> bool:
     var kit: Node3D = _game._world_kit
     if kit == null:
         return false
-    for no in kit.find_children("CalcadaDeck", "MeshInstance3D", true, false):
+    for no in kit.find_children(nome, "MeshInstance3D", true, false):
         var mi := no as MeshInstance3D
         if mi.mesh is BoxMesh:
             var tamanho: Vector3 = (mi.mesh as BoxMesh).size
@@ -163,22 +167,30 @@ func _deck_cobre(x: float) -> bool:
     return false
 
 
+func _deck_cobre(x: float) -> bool:
+    return _kit_cobre("CalcadaDeck", x)
+
+
+func _pista_cobre(x: float) -> bool:
+    return _kit_cobre("PistaE", x)
+
+
 func _scenario_x() -> void:
     _start_phase(2)
-    var cobre_e: bool = _deck_cobre(-3.25)
+    var cobre_e: bool = _pista_cobre(-3.25)
     var cobre_c: bool = _deck_cobre(0.0)
     var cobre_d: bool = _deck_cobre(3.25)
-    print("deck fase3: E=%s C=%s D=%s" % [str(cobre_e), str(cobre_c), str(cobre_d)])
+    print("chao fase3: E(pista)=%s C(deck)=%s D(deck)=%s" % [str(cobre_e), str(cobre_c), str(cobre_d)])
     _check(cobre_e and cobre_c and cobre_d,
-            "X1. fase 3: deck cobre os três corredores de corrida")
+            "X1. fase 3: chão cobre os três corredores (E na pista, C/D no deck)")
     # ETAPA 16 — as 50 fases são autorais; o índice 50 fixa na final
-    # (_start_run limita a phase_count - 1) e o deck cobre E/C/D.
+    # (_start_run limita a phase_count - 1) e o chão cobre E/C/D.
     _unlock_all_phases()
     _start_phase(50)
-    var fixa_e: bool = _deck_cobre(-3.25)
+    var fixa_e: bool = _pista_cobre(-3.25)
     var fixa_c: bool = _deck_cobre(0.0)
     var fixa_d: bool = _deck_cobre(3.25)
-    print("deck índice50: fase=%d E=%s C=%s D=%s" % [_game.phase_index + 1,
+    print("chao índice50: fase=%d E(pista)=%s C(deck)=%s D(deck)=%s" % [_game.phase_index + 1,
             str(fixa_e), str(fixa_c), str(fixa_d)])
     _check(_game.phase_index == 49 and fixa_e and fixa_c and fixa_d,
-            "X2. índice 50 fixa na final (deck cobre E/C/D)")
+            "X2. índice 50 fixa na final (chão cobre E/C/D)")

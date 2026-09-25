@@ -570,6 +570,74 @@ aqui não se baixa o Godot (releases do GitHub bloqueados) nem há libs X11 para
 `bpy`. É o item que o CI deste PR precisa confirmar; os achados 1 e 4 acima são
 candidatos fortes a quebrar as suítes.
 
+### 2026-09-25 (P0 resolvido — corredor E realinhado, opção "a"; Godot headless no sandbox)
+
+**Contexto novo:** o sandbox Arena desta sessão conseguiu baixar e rodar o
+**Godot 4.7-stable headless** (o binário chega pela branch descartável
+`sandbox/godot-cache`: um workflow baixa o zip oficial no runner e o commita;
+o sandbox clona via github.com, único caminho que o proxy deixa —
+`release-assets.githubusercontent.com` é bloqueado). Com isso, o item que as
+sessões anteriores não podiam verificar (as 16 suítes `qa_etapa*` no engine
+real) passou a ser verificável localmente. Blender 4.5 LTS headless também
+está disponível no sandbox (`/home/user/tools/blender-setup.sh`).
+
+**Decisão do achado P0 (geometria de corredor): opção "a".**
+`LANE_X[0]` voltou de `-5.0` para `-3.25`. Fundamentos:
+
+1. **As 107 travessias das 50 fases são cronometradas** (`lead_m`/`cross_mps`)
+   para que o cruzante esteja no centro do corredor **no instante da
+   passagem** — e esses centros são `-3.25/0.0/+3.25`. Com E em `-5.0`, todo
+   bloqueio de rua virava enfeite (1,75 m do jogador) e o desenho autoral de
+   dificuldade das 50 fases deixava de existir. A opção "b" exigiria
+   re-cronometrar ~50 travessias + reescrever asserções de passagem em 9
+   suítes — risco alto de mudar o balanceamento validado.
+2. **Geometria real da pista** (building_kit): x=-8.3..-1.7, 6,6 m = duas
+   faixas de 3,3 m. No trânsito à direita brasileiro, a faixa junto ao
+   meio-fio tem centro em ≈-3.35 ≈ -3.25. `-5.0` é o centro da pista inteira
+   — onde fica a linha dupla amarela, não o tráfego. O corredor E em -3.25 é
+   a faixa correta de ônibus/tráfego lento.
+3. **Tudo o mais já era -3.25**: zonas zebradas (`CrossZoneBaseRua` centrada
+   em -2.6625), decalques do `world_spawner`, espelhos do
+   `pattern_validator`/`validate_routes`, seta do tutorial e o ônibus do
+   ponto. `357285c` mudou só o runtime.
+
+**Correções aplicadas (validadas no engine):**
+
+- `game_3d.gd`: `LANE_X[0]` -5.0 → **-3.25** (comentário documenta as 3
+  razões); ônibus do ponto `bus_node` local -3.25 → **-6.5** (o pai está em
+  x=+3.25: -3.25 local dava mundo **0.0** — ônibus no meio da calçada
+  central; -6.5 local = mundo -3.25, na faixa em frente ao abrigo); seta do
+  tutorial passou a usar `LANE_X` (fonte única, sem literal).
+- `assets/characters/source/.gdignore`: **destrava o import headless**. O
+  `Ginger+Woman.blend` (ponteiro LFS de 38 MB) fazia o import abortar com
+  "Blender path is invalid… Cannot configure blender path in headless mode"
+  e nenhum asset era importado. Provável causa do job `godot headless` do CI
+  ficar 6 h pendurado até o cancelamento (run 35939153750). A pasta `source/`
+  é WIP fora do runtime; o Godot agora a ignora.
+- `qa_etapa5_arte.gd` (X1/X2): premissa modernizada — no mundo building_kit
+  o chão de E é a `PistaE` (asfalto) e o de C/D é o `CalcadaDeck`; o teste
+  antigo cobrava deck em -3.25 (traçado pré-Lote 3). A intenção do contrato
+  ("chão pisável nos três corredores") foi preservada.
+- `qa_etapa10_lote4.gd` (D5): zona sinalizada tem **7** filhos desde a placa
+  em degrau (2 bases + 5 faixas); o teste esperava 6 (base única antiga).
+- `validate_project.py`: token `LANE_X` sincronizado com o runtime.
+- Paridade: `hero_julia.glb.import` + `.uid` de `haptics`,
+  `performance_overlay`, `performance_probe` (gerados pelo import, únicos
+  sem par versionado).
+
+**Evidência (Godot 4.7-stable headless, sandbox Arena, 2026-09-25):**
+`--import` limpo (564 importados, 0 erros de recurso) · **16/16 suítes
+`qa_etapa*` PASS** (antes: etapa5/etapa10/etapa16 FAIL) · `validate_project`
+PRE-FLIGHT OK · `qa_full` 133 OK / 0 WARN / 0 FAIL · `validate_routes` 50/50
+(1,0x e 1,22x) · `rebaseline_provenance --check` OK (21 entradas) ·
+`fix_texture_imports --check` ok=284 fixed=0 pending=0 · `check_gdscript` 0
+achados bloqueantes.
+
+**Nota de processo:** o import local do Godot 4.7 reescreve os `.import`
+versionados (formato novo); esses diffs são ruído local e **não** devem ser
+commitados (os portões `fix_texture_imports`/`rebaseline` cobram o formato do
+repo). O CI importa do zero a cada run, então o estado commitado é o que vale.
+
 ## Regras de engenharia desta execução
 
 - Uma etapa por vez; cada etapa fecha com demonstração reproduzível

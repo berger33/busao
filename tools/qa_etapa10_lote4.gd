@@ -318,7 +318,9 @@ func _scenario_d() -> void:
         print("  fase 18 deveria ter 5 zonas sinalizadas (uma por pesado)")
     else:
         for z in zonas_18:
-            if (z as Node3D).get_child_count() != 6:
+            # Placa em degrau (2 bases: CrossZoneBaseRua + CrossZoneBase) +
+            # 5 faixas zebradas CrossZoneStripe = 7 filhos.
+            if (z as Node3D).get_child_count() != 7:
                 ok = false
                 print("  zona em %.0f m incompleta" % (-(z as Node3D).position.z))
     _start_phase(19)

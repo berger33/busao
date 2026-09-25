@@ -71,10 +71,15 @@ const TEXTURE_RUBBER_REAL_R = preload("res://assets/textures/borracha_realista_r
 const TEXTURE_SKIN_REAL = preload("res://assets/textures/pele_realista.png")
 const TEXTURE_SKIN_REAL_N = preload("res://assets/textures/pele_realista_normal.png")
 const TEXTURE_SKIN_REAL_R = preload("res://assets/textures/pele_realista_roughness.png")
-# A pista real do BuildingKit ocupa x=-8.3..-1.7; o centro da faixa de
-# tráfego é -5.0. Antes a rua usava -3.25, encostando os veículos no meio-fio
-# e fazendo parecer que subiam na calçada.
-const LANE_X: Array[float] = [-5.0, 0.0, 3.25]
+# A pista real do BuildingKit ocupa x=-8.3..-1.7 (6,6 m, duas faixas de 3,3 m).
+# O tráfego brasileiro anda à direita: a faixa junto ao meio-fio tem centro em
+# ≈-3.35, e é nela que o corredor E fica (-3.25). As 107 travessias das 50
+# fases e as suítes de QA são cronometradas para bloquear os corredores em
+# -3.25/0.0/+3.25; mover E para o centro da pista (-5.0, sobre a linha dupla)
+# desalinhou travessias, ônibus do ponto, decalques e seta do tutorial
+# (achado P0 de docs/execucao/STATUS.md, opção "a" aplicada com validação
+# headless Godot 4.7: 16 suítes + validate_routes 50/50).
+const LANE_X: Array[float] = [-3.25, 0.0, 3.25]
 # ETAPA 1 — margens de prazo (s) por fase, transcritas do catálogo de
 # PLANO_50_FASES_CORRE_PRO_PONTO.md: prazo = tempo de referência da rota + margem.
 const DEADLINE_MARGINS: Array = [
@@ -3081,10 +3086,13 @@ func _create_bus_stop(total: float) -> void:
     _box(bus_stop_node, Vector3(0.45, 0.62, 0.08), Vector3(-1.05, 2.65, -0.08), _material(stop_accent.lightened(0.16), 0.0, 0.6), "StopSign")
     bus_node = Node3D.new()
     bus_node.name = "YellowBus"
-    # A rua fica a oeste da calçada: o centro da pista é x=-3,25.
+    # A rua fica a oeste da calçada: o corredor E (faixa de tráfego junto ao
+    # meio-fio, mão direita brasileira) tem centro em x=-3,25. O bus_node é
+    # filho do abrigo (x=+3,25), então -6,5 local = -3,25 no mundo: o ônibus
+    # para na faixa, em frente ao ponto, alinhado a onde o jogador embarca.
     # O nariz aponta para +Z, de frente para quem chega
     # ao ponto, como um ônibus parado aguardando embarque.
-    bus_node.position = Vector3(-3.25, 0.9, 2.2)
+    bus_node.position = Vector3(-6.5, 0.9, 2.2)
     bus_node.rotation.y = PI
     bus_stop_node.add_child(bus_node)
     _build_bus_mesh(bus_node)
@@ -5436,7 +5444,7 @@ func _update_tutorial_arrow(target_visible: bool, lane: int = 1) -> void:
         return
     _tutorial_arrow.visible = target_visible and not bool(GameSave.data.get("tutorial_seen", false))
     if target_visible:
-        _tutorial_arrow.position.x = [-3.25, 0.0, 3.25][clampi(lane, 0, 2)]
+        _tutorial_arrow.position.x = LANE_X[clampi(lane, 0, 2)]
         _tutorial_arrow.position.z = player_visual.position.z - 7.0 if player_visual else -6.0
         _tutorial_arrow.rotation.y += 0.04
 
