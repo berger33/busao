@@ -111,7 +111,7 @@ func _start(index: int) -> void:
 	if _game.run_director != null:
 		_game.run_director.countdown_left = 0.0
 	_spd = _game._phase_speed_for(index)
-	await _frames(6)
+	await _frames(48)
 
 
 func _at(dist: float, settle: int = 5) -> void:
@@ -180,9 +180,12 @@ func _tomadas() -> void:
 	# todo frame (lerp com dt) e o card de fase podia vazar no quadro; aqui a
 	# tomada é determinística: o countdown assenta, o HUD some, o tempo congela
 	# e uma Camera3D própria (virando `current`) faz o close sem tocar no rig
-	# de luz nem na câmera de jogo.
+	# de luz nem na câmera de jogo. O WeatherSystem (Lote 4) re-aplica as suas
+	# bases capturadas do ready a cada 2 s (sol/névoa/ambiente); o que é da
+	# família e persiste aqui: exposição/white do tonemap, pitch da sombra e o
+	# fill/rim do rig da personagem (camada dela, sem shadow map).
 	_start(0)
-	_at(30.0)
+	_at(80.0)
 	_lane(1, 6)
 	await _frames(30)
 	if _game.hud != null:
@@ -195,7 +198,7 @@ func _tomadas() -> void:
 	_game.add_child(cam_close)
 	var pv: Node3D = _game.player_visual
 	if pv != null:
-		cam_close.global_position = pv.global_position + Vector3(1.25, 1.35, 2.05)
+		cam_close.global_position = pv.global_position + Vector3(1.3, 1.25, -1.95)
 		cam_close.look_at(pv.global_position + Vector3(0.0, 1.0, 0.0), Vector3.UP)
 	cam_close.current = true
 	await _frames(3)
@@ -212,7 +215,7 @@ func _tomadas() -> void:
 	# fill/rim sob luz difusa e sob luz mínima.
 	_start(2)
 	_at(24.0)
-	_lane(0, 2)
+	_lane(1, 2)
 	await _frames(20)
 	if _game._clima != null:
 		_game._clima.set_state("nublado")
