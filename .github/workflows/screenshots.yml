@@ -9,7 +9,7 @@ name: screenshots
 on:
   workflow_dispatch:
   push:
-    branches: [arena/01a0d62f-busao, arena/01a0d6bf-busao]
+    branches: [arena/01a0d62f-busao, arena/01a0d6bf-busao, arena/01a0d712-busao]
     paths:
       - "scripts/game_3d.gd"
       - "scripts/lighting_handler.gd"
