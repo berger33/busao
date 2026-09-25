@@ -124,7 +124,9 @@ var mesh_parts: Dictionary = {}
 var mesh_part_rest: Dictionary = {}
 var runner_shadow: MeshInstance3D
 var _light_rig: Node3D
-var _outline_material: ShaderMaterial
+var _outline_material: StandardMaterial3D
+var _outline_shells := 0
+var _outline_reported := false
 var current_clip := ""
 var world_mode := false
 var using_external_animation := false
@@ -1298,6 +1300,9 @@ func _apply_runner_light_layer() -> void:
             continue
         mi.layers = RUNNER_VISIBILITY_LAYER
         _attach_silhouette_shell(mi)
+    if _outline_shells > 0 and not _outline_reported:
+        _outline_reported = true
+        print("SILHOUETTE cascos=", _outline_shells)
 
 
 ## Filete escuro ao redor do corpo. A meta de contraste (≥ 3:1 contra a rua)
@@ -1308,28 +1313,53 @@ func _attach_silhouette_shell(source: MeshInstance3D) -> void:
         return
     if source.get_node_or_null("SilhouetteShell") != null:
         return
+    var grown := _grow_outline_mesh(source.mesh)
+    if grown == null:
+        return
     var shell := MeshInstance3D.new()
     shell.name = "SilhouetteShell"
-    shell.mesh = source.mesh
+    shell.mesh = grown
     shell.skin = source.skin
-    # O caminho do esqueleto é relativo ao MeshInstance. O casco é filho, então
-    # sobe um nível antes de repetir o caminho do original.
-    if source.skeleton != NodePath():
-        shell.skeleton = NodePath("../" + str(source.skeleton))
     shell.transform = Transform3D.IDENTITY
     shell.material_override = _silhouette_material()
     shell.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
     shell.layers = RUNNER_VISIBILITY_LAYER
     source.add_child(shell)
+    if skeleton != null:
+        shell.skeleton = shell.get_path_to(skeleton)
+    _outline_shells += 1
 
 
-func _silhouette_material() -> ShaderMaterial:
+## Empurra os vértices ao longo da normal. O shader de grow não seguia o
+## skinning no Compatibility e o casco ficava invisível, colado na malha.
+func _grow_outline_mesh(source: Mesh) -> ArrayMesh:
+    if not source is ArrayMesh:
+        return null
+    var input := source as ArrayMesh
+    var output := ArrayMesh.new()
+    for surface_index in input.get_surface_count():
+        var arrays: Array = input.surface_get_arrays(surface_index)
+        var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+        var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+        if vertices.size() == normals.size() and vertices.size() > 0:
+            for index in vertices.size():
+                vertices[index] = vertices[index] + normals[index] * 0.028
+            arrays[Mesh.ARRAY_VERTEX] = vertices
+        for custom_slot in [Mesh.ARRAY_CUSTOM0, Mesh.ARRAY_CUSTOM1, Mesh.ARRAY_CUSTOM2, Mesh.ARRAY_CUSTOM3]:
+            arrays[custom_slot] = null
+        output.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+    return output
+
+
+func _silhouette_material() -> StandardMaterial3D:
     if _outline_material != null:
         return _outline_material
-    var shader := Shader.new()
-    shader.code = "shader_type spatial;\nrender_mode unshaded, cull_front, shadows_disabled, ambient_light_disabled;\nuniform float grow = 0.034;\nvoid vertex() {\n\tVERTEX += NORMAL * grow;\n}\nvoid fragment() {\n\tALBEDO = vec3(0.03, 0.025, 0.04);\n}\n"
-    _outline_material = ShaderMaterial.new()
-    _outline_material.shader = shader
+    var mat := StandardMaterial3D.new()
+    mat.albedo_color = Color(0.02, 0.018, 0.03)
+    mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    mat.cull_mode = BaseMaterial3D.CULL_FRONT
+    mat.disable_receive_shadows = true
+    _outline_material = mat
     return _outline_material
 
 
