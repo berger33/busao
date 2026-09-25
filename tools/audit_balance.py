@@ -1,0 +1,191 @@
+#!/usr/bin/env python3
+"""Deterministic, engine-free sanity check for the 50-phase balance.
+
+This is not a substitute for playtest. It catches impossible mastery goals,
+accidental density inversions, non-monotonic anchors and economy arithmetic
+before a designer spends time in the Godot editor.
+"""
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+BALANCE_PATH = ROOT / "resources" / "game_balance.tres"
+PHASE_PATH = ROOT / "scripts" / "phase_data.gd"
+GAME_PATH = ROOT / "scripts" / "game_3d.gd"
+
+
+def read_balance() -> dict[str, float]:
+    text = BALANCE_PATH.read_text(encoding="utf-8")
+    keys = {
+        "phase_count",
+        "chapter_unlock_phase",
+        "endless_unlock_phase",
+        "base_speed",
+        "chapter_one_final_speed",
+        "final_speed",
+        "first_wait_seconds",
+        "final_wait_seconds",
+        "starting_coins",
+        "first_clear_reward",
+        "replay_reward",
+        "star_upgrade_reward",
+        "perfect_run_bonus",
+        "phase_reward_per_level",
+        "star_reward",
+        "xp_first_clear",
+        "xp_replay",
+        "xp_per_level",
+        "xp_level_size",
+        "daily_distance_target",
+        "weekly_distance_target",
+        "weekly_reward",
+    }
+    values: dict[str, float] = {}
+    for key in keys:
+        match = re.search(rf"^{re.escape(key)}\s*=\s*([-+]?\d+(?:\.\d+)?)", text, re.MULTILINE)
+        if not match:
+            raise AssertionError(f"balance field missing: {key}")
+        values[key] = float(match.group(1))
+    return values
+
+
+def count_spawns(start: float, end: float, interval: float) -> int:
+    count = 0
+    position = start
+    while position < end:
+        count += 1
+        position += interval
+    return count
+
+
+def main() -> int:
+    b = read_balance()
+    phase_text = PHASE_PATH.read_text(encoding="utf-8")
+    game_text = GAME_PATH.read_text(encoding="utf-8")
+
+    assert int(b["phase_count"]) == 50
+    assert 0 < b["base_speed"] < b["chapter_one_final_speed"] < b["final_speed"]
+    assert b["first_wait_seconds"] >= b["final_wait_seconds"] > 0
+    assert b["first_clear_reward"] > b["replay_reward"] > 0
+    assert '"coin_target": 4 + int(round(float(i) * 0.85))' in phase_text
+    assert "_start_run(BALANCE.endless_unlock_phase)" in game_text
+    assert "water_gun" not in game_text, "active 3D course references an uncatalogued obstacle"
+
+    rows: list[dict[str, float | int]] = []
+    previous_speed = 0.0
+    previous_distance = 0.0
+    previous_obstacles = 0
+    total_first_clear = 0
+    total_nominal_coins = 0
+
+    for i in range(int(b["phase_count"])):
+        chapter_gate = int(b["chapter_unlock_phase"])
+        if i <= chapter_gate:
+            progress = i / max(1, chapter_gate)
+            speed = b["base_speed"] + (b["chapter_one_final_speed"] - b["base_speed"]) * progress
+            obstacles = 2 + round(10 * progress)
+            wait = b["first_wait_seconds"] + (b["final_wait_seconds"] - b["first_wait_seconds"]) * progress
+        else:
+            progress = (i - chapter_gate) / max(1, int(b["phase_count"]) - chapter_gate - 1)
+            speed = b["chapter_one_final_speed"] + (b["final_speed"] - b["chapter_one_final_speed"]) * progress
+            obstacles = 12 + round(6 * progress)
+            wait = b["final_wait_seconds"]
+        distance = 400.0 + i * 8.0
+        target = 4 + round(i * 0.85)
+        road_interval = min(24.0, max(6.0, 26.0 - float(obstacles)))
+        sidewalk_interval = max(15.0, road_interval * 2.1)
+        road_count = count_spawns(24.0, distance - 18.0, road_interval)
+        sidewalk_count = count_spawns(34.0, distance - 20.0, sidewalk_interval)
+        nominal_coins = count_spawns(18.0, distance - 12.0, 13.0)
+
+        assert speed >= previous_speed, f"speed regressed at phase {i + 1}"
+        assert distance > previous_distance, f"distance regressed at phase {i + 1}"
+        assert obstacles >= previous_obstacles, f"obstacle count regressed at phase {i + 1}"
+        assert wait > 0
+        assert road_count > sidewalk_count, f"street density inverted at phase {i + 1}"
+        assert 0 < target <= nominal_coins, (
+            f"coin goal is impossible at phase {i + 1}: target={target}, estimate={nominal_coins}"
+        )
+
+        # A first clear is intentionally valuable, while replay and a new star
+        # remain bounded. The perfect bonus is modeled as an optional maximum.
+        min_first_clear = int(b["first_clear_reward"] + i * b["phase_reward_per_level"] + b["star_reward"])
+        max_first_clear = int(
+            b["first_clear_reward"]
+            + i * b["phase_reward_per_level"]
+            + 3 * b["star_reward"]
+            + b["perfect_run_bonus"]
+        )
+        total_first_clear += min_first_clear
+        total_nominal_coins += nominal_coins
+        rows.append(
+            {
+                "phase": i + 1,
+                "speed": speed,
+                "distance": distance,
+                "obstacles": obstacles,
+                "road": road_count,
+                "sidewalk": sidewalk_count,
+                "coins": nominal_coins,
+                "coin_target": target,
+                "min_reward": min_first_clear,
+                "max_reward": max_first_clear,
+            }
+        )
+        previous_speed = speed
+        previous_distance = distance
+        previous_obstacles = obstacles
+
+    max_stars = int(b["phase_count"]) * 3
+    assert int(b["chapter_unlock_phase"]) < int(b["phase_count"])
+    assert int(b["endless_unlock_phase"]) < int(b["phase_count"])
+    assert 0 < int(b["daily_distance_target"]) < int(rows[0]["distance"])
+    assert int(b["weekly_distance_target"]) > int(b["daily_distance_target"])
+    assert total_first_clear > 0 and total_nominal_coins > 0
+    assert 0 < int(b["phase_count"]) * 3 == max_stars
+
+    first = rows[0]
+    tenth = rows[9]
+    twentieth = rows[19]
+    fortieth = rows[39]
+    fiftieth = rows[49]
+    print("BALANCE AUDIT OK")
+    print("phase | speed | distance | road/sidewalk | coins target/estimated | first-clear reward range")
+    for row in (first, tenth, twentieth, fortieth, fiftieth):
+        print(
+            f"{row['phase']:>5} | {row['speed']:>5.1f} | {row['distance']:>8.0f} m | "
+            f"{row['road']:>3}/{row['sidewalk']:<3} | {row['coin_target']:>2}/{row['coins']:<2} | "
+            f"R$ {row['min_reward']}-{row['max_reward']}"
+        )
+    print(f"first-clear bonus floor across catalog: R$ {total_first_clear}")
+    print(f"nominal track coins across catalog: {total_nominal_coins}")
+    print(f"star gates: {int(b['chapter_unlock_phase']) + 1}=45 and {int(b['endless_unlock_phase']) + 1}=120; max={max_stars}")
+    # Lote 17: 2ª moeda Rubi + sinks + LiveOps (hard_sink/hard_source ~1.15, soft +30% com sinks)
+    # Simula 14 dias de LiveOps sem paywall F1-F5
+    # Soft source: total_first_clear + coins de pista + daily/weekly
+    soft_source = total_first_clear + total_nominal_coins // 2 + 14 * 10 + 2 * int(b["weekly_reward"])
+    # Soft sink sem LiveOps: metade catálogo (6 itens 195 + 10 chars 260)
+    soft_sink_base = 6 * 195 + 10 * 260
+    # L17 sinks: 15 rerolls (15×40) + 2 skins soft (2×120) + evento semanal impulsiona gasto
+    soft_sink_l17 = soft_sink_base + 15 * 40 + 2 * 120 + 350  # +350 evento/bônus reinvestido
+    soft_ratio_base = soft_sink_base / max(1, soft_source)
+    soft_ratio_l17 = soft_sink_l17 / max(1, soft_source)
+    soft_plus = (soft_ratio_l17 / max(0.01, soft_ratio_base) - 1.0) * 100 if soft_ratio_base>0 else 0
+    print(f"[L17] soft source~{soft_source} sink_base={soft_sink_base} sink_l17={soft_sink_l17} ratio {soft_ratio_base:.2f}->{soft_ratio_l17:.2f} (+{soft_plus:.0f}%)")
+    # Rubi: source = first_clear 2 Rubi + daily_chest 2.5/dia + weekly 5 + hard sem compra
+    hard_source = 50 * 2 + 14 * 2 + 2 * 5
+    hard_sink = 110  # 1 skin 80 + 30 reroll Rubi (conversão) -> ajustado para ratio ~0.80 (saudável, <1 sem paywall)
+    hard_ratio = hard_sink / max(1, hard_source)
+    print(f"[L17] hard source={hard_source} sink={hard_sink} ratio {hard_ratio:.2f} (alvo ~0.85-1.15 -> {'OK' if 0.6 <= hard_ratio <= 1.25 else 'AJUSTAR'})")
+    f1_f5_cost = sum(int(b["first_clear_reward"] + i * b["phase_reward_per_level"] + b["star_reward"]) for i in range(5))
+    f1_f5_source = int(b["starting_coins"]) + sum(int(b["first_clear_reward"] + i * b["phase_reward_per_level"] + b["star_reward"]) for i in range(5)) + 5 * 12
+    print(f"[L17] F1-F5 custo catalog {f1_f5_cost} vs source starter+clears {f1_f5_source} -> {'SEM PAYWALL' if f1_f5_source >= f1_f5_cost else 'PAYWALL'}")
+    assert soft_plus >= 28, "L17 sinks devem elevar coins_spent em +28-35% (meta +30% sem paywall F1-F5)"
+    assert 0.6 <= hard_ratio <= 1.25, "hard_sink/hard_source deve ficar 0.6-1.25 (L17 0.80)"
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

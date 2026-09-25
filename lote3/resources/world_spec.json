@@ -1,0 +1,451 @@
+{
+  "versao": 3,
+  "seed": 20260918,
+  "_notas": {
+    "papel": "Fonte unica de verdade do leiaute do cenario. O jogo (scripts/building_kit.gd) e o auditor (tools/audit_world.py) leem ESTE arquivo: nenhuma medida de rua, altura de predio ou paleta deve ficar solta no codigo.",
+    "origem": "Medidas tiradas da imagem de referencia: faixa de pedestres central de lajes de pedra, guias rebaixadas nos dois lados, duas pistas com linha dupla amarela junto das guias, calcadas laterais com arvores e mobiliario, predios de 2 a 3 pavimentos ao fundo e horizonte lavado pela nevoa.",
+    "convencao": "x = lateral (0 = eixo da faixa central), y = altura, z = longitudinal (negativo para frente). Comprimento do quarteirao igual ao do jogo: 28 m."
+  },
+  "quarteirao": {
+    "comprimento_m": 28.0,
+    "variacao_comprimento_m": 3.0,
+    "quarteiroes_visiveis": 5
+  },
+  "faixas": {
+    "layout": "rua_esquerda",
+    "piso_central_m": 6.0,
+    "piso_borda_esq_m": 1.35,
+    "guia_largura_m": 0.35,
+    "guia_altura_m": 0.15,
+    "pista_m": 6.6,
+    "calcada_lateral_m": 2.5,
+    "linha_amarela_modo": "junto_guia",
+    "linha_amarela_largura_m": 0.12,
+    "linha_amarela_afastamento_m": 0.3,
+    "linha_amarela_entre_m": 0.2,
+    "limite_lateral_m": 14.2
+  },
+  "lajes": {
+    "tamanho_m": [
+      0.55,
+      0.8
+    ],
+    "junta_m": 0.014,
+    "altura_m": 0.05,
+    "mosaico_lado_m": 0.42,
+    "mosaico_variacao_m": 0.06,
+    "paver_largura_m": 0.22,
+    "paver_comprimento_m": 0.44
+  },
+  "predios": {
+    "pisos": [
+      2,
+      3
+    ],
+    "pe_direito_m": 3.4,
+    "variacao_altura_m": 1.2,
+    "largura_lote_m": [
+      7.0,
+      12.0
+    ],
+    "recuo_calcada_m": 0.35,
+    "profundidade_m": 9.0,
+    "telhado_altura_m": 0.35,
+    "janela": {
+      "largura_m": 1.2,
+      "altura_m": 1.5,
+      "peitoril_m": 0.9,
+      "colunas_por_lote": [
+        2,
+        4
+      ],
+      "moldura_largura_m": 0.12
+    },
+    "tipo_pesos": {
+      "tijolo": 4,
+      "reboco": 3,
+      "loja": 2,
+      "obra": 1
+    },
+    "loja": {
+      "toldo_altura_m": 2.6,
+      "toldo_profundidade_m": 1.1,
+      "porta_largura_m": 1.6,
+      "porta_altura_m": 2.4
+    }
+  },
+  "props": {
+    "poste": {
+      "espacamento_m": 2.2,
+      "lado": "junto_guia",
+      "raio_m": 0.06,
+      "altura_m": 0.95
+    },
+    "arvore": {
+      "espacamento_m": 8.0,
+      "lado": "calcada",
+      "tronco_altura_m": 2.4,
+      "tronco_raio_m": 0.14,
+      "copa_raio_m": 1.7
+    },
+    "esfera_verde": {
+      "por_quarteirao": 2,
+      "raio_m": 0.35,
+      "material": "metal_pintado"
+    },
+    "banco": {
+      "espacamento_m": 14.0,
+      "lado": "calcada"
+    },
+    "lixeira": {
+      "espacamento_m": 18.0,
+      "lado": "calcada"
+    },
+    "hidrante": {
+      "probabilidade": 0.15,
+      "lado": "calcada"
+    },
+    "folhas_no_chao": {
+      "por_quarteirao": 34,
+      "raio_m": 0.05
+    }
+  },
+  "horizonte": {
+    "distancia_min_m": 180.0,
+    "distancia_max_m": 420.0,
+    "altura_m": [
+      10.0,
+      34.0
+    ],
+    "largura_m": [
+      12.0,
+      40.0
+    ],
+    "caixa_dagua_probabilidade": 0.25,
+    "passo_m": 24.0,
+    "lado_m": 34.0,
+    "nevoa": 0.78
+  },
+  "materiais": {
+    "piso_central": {
+      "pbr": "calcada_laje",
+      "uv_escala": 0.62,
+      "triplanar": false,
+      "cor": [
+        0.71,
+        0.7,
+        0.66
+      ]
+    },
+    "calcada_lateral": {
+      "pbr": "calcada_mosaico",
+      "uv_escala": 0.9,
+      "triplanar": false,
+      "cor": [
+        0.63,
+        0.62,
+        0.58
+      ]
+    },
+    "guia": {
+      "pbr": "calcada_laje",
+      "uv_escala": 1.6,
+      "triplanar": false,
+      "cor": [
+        0.6,
+        0.59,
+        0.56
+      ]
+    },
+    "pista": {
+      "pbr": "asfalto",
+      "uv_escala": 0.22,
+      "triplanar": true,
+      "cor": [
+        0.13,
+        0.13,
+        0.145
+      ]
+    },
+    "linha_amarela": {
+      "pbr": "metal_pintado",
+      "uv_escala": 1.0,
+      "triplanar": false,
+      "rugosidade": 0.55,
+      "cor": [
+        1.0,
+        0.82,
+        0.1
+      ]
+    },
+    "fachada_tijolo": {
+      "pbr": "tijolo",
+      "uv_escala": 0.45,
+      "triplanar": false,
+      "cor": [
+        0.56,
+        0.33,
+        0.26
+      ]
+    },
+    "fachada_reboco": {
+      "pbr": "reboco",
+      "uv_escala": 0.55,
+      "triplanar": false,
+      "cor": [
+        0.84,
+        0.8,
+        0.72
+      ]
+    },
+    "telhado": {
+      "pbr": "laje_cobertura",
+      "uv_escala": 0.5,
+      "triplanar": false,
+      "cor": [
+        0.42,
+        0.41,
+        0.39
+      ]
+    },
+    "estrutura_metalica": {
+      "pbr": "metal_pintado",
+      "uv_escala": 0.7,
+      "triplanar": false,
+      "metalico": 0.6,
+      "rugosidade": 0.45,
+      "cor": [
+        0.45,
+        0.47,
+        0.5
+      ]
+    },
+    "zincado": {
+      "pbr": "metal_zincado",
+      "uv_escala": 0.8,
+      "triplanar": false,
+      "metalico": 0.75,
+      "rugosidade": 0.35,
+      "cor": [
+        0.62,
+        0.64,
+        0.66
+      ]
+    },
+    "madeira": {
+      "pbr": "madeira",
+      "uv_escala": 0.9,
+      "triplanar": false,
+      "cor": [
+        0.45,
+        0.32,
+        0.21
+      ]
+    },
+    "canteiro": {
+      "pbr": "terra_vermelha",
+      "uv_escala": 1.2,
+      "triplanar": false,
+      "cor": [
+        0.24,
+        0.2,
+        0.16
+      ]
+    },
+    "folhagem": {
+      "pbr": null,
+      "cor": [
+        0.16,
+        0.3,
+        0.13
+      ],
+      "uv_escala": 1.0,
+      "triplanar": false,
+      "rugosidade": 0.85
+    },
+    "esfera_verde": {
+      "pbr": null,
+      "cor": [
+        0.1,
+        0.42,
+        0.22
+      ],
+      "uv_escala": 1.0,
+      "triplanar": false,
+      "rugosidade": 0.18
+    },
+    "vidro": {
+      "pbr": null,
+      "cor": [
+        0.1,
+        0.13,
+        0.18
+      ],
+      "uv_escala": 1.0,
+      "triplanar": false,
+      "rugosidade": 0.12,
+      "metalico": 0.0
+    }
+  },
+  "orcamento": {
+    "malhas_max_por_quarteirao": 64,
+    "multimesh_limite": 8,
+    "distancia_visibilidade_m": 150.0,
+    "sombra_max_m": 70.0,
+    "lod_quarteiroes": 3
+  },
+  "paletas": [
+    {
+      "nome": "manha_limpa",
+      "sol": [
+        1.0,
+        0.93,
+        0.8
+      ],
+      "nevoa": [
+        0.84,
+        0.79,
+        0.7
+      ],
+      "sombra": [
+        0.33,
+        0.39,
+        0.48
+      ],
+      "ceu_alto": [
+        0.32,
+        0.48,
+        0.72
+      ],
+      "ceu_horizonte": [
+        0.82,
+        0.8,
+        0.76
+      ],
+      "sol_rotacao": [
+        -9.0,
+        170.0,
+        0.0
+      ],
+      "sol_energia": 1.1,
+      "energia_ambiente": 0.62,
+      "nevoa_densidade": 0.5,
+      "exposicao": 0.51,
+      "nuvens": 0.3
+    },
+    {
+      "nome": "tarde_dourada",
+      "sol": [
+        1.0,
+        0.84,
+        0.62
+      ],
+      "nevoa": [
+        0.86,
+        0.75,
+        0.6
+      ],
+      "sombra": [
+        0.3,
+        0.35,
+        0.45
+      ],
+      "ceu_alto": [
+        0.28,
+        0.42,
+        0.66
+      ],
+      "ceu_horizonte": [
+        0.88,
+        0.78,
+        0.64
+      ],
+      "sol_rotacao": [
+        -5.0,
+        200.0,
+        0.0
+      ],
+      "sol_energia": 1.2,
+      "energia_ambiente": 0.55,
+      "nevoa_densidade": 0.58,
+      "exposicao": 0.48,
+      "nuvens": 0.38
+    },
+    {
+      "nome": "nublado",
+      "sol": [
+        0.86,
+        0.88,
+        0.92
+      ],
+      "nevoa": [
+        0.82,
+        0.82,
+        0.82
+      ],
+      "sombra": [
+        0.38,
+        0.41,
+        0.46
+      ],
+      "ceu_alto": [
+        0.52,
+        0.56,
+        0.62
+      ],
+      "ceu_horizonte": [
+        0.84,
+        0.84,
+        0.82
+      ],
+      "sol_rotacao": [
+        -26.0,
+        160.0,
+        0.0
+      ],
+      "sol_energia": 0.75,
+      "energia_ambiente": 0.8,
+      "nevoa_densidade": 0.66,
+      "exposicao": 0.56,
+      "nuvens": 0.62
+    },
+    {
+      "nome": "noite_urbana",
+      "sol": [
+        0.52,
+        0.6,
+        0.78
+      ],
+      "nevoa": [
+        0.3,
+        0.34,
+        0.44
+      ],
+      "sombra": [
+        0.16,
+        0.2,
+        0.3
+      ],
+      "ceu_alto": [
+        0.06,
+        0.08,
+        0.16
+      ],
+      "ceu_horizonte": [
+        0.24,
+        0.26,
+        0.34
+      ],
+      "sol_rotacao": [
+        -38.0,
+        150.0,
+        0.0
+      ],
+      "sol_energia": 0.35,
+      "energia_ambiente": 0.42,
+      "nevoa_densidade": 0.44,
+      "exposicao": 0.62,
+      "nuvens": 0.25
+    }
+  ]
+}

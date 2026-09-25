@@ -1,0 +1,9 @@
+{
+  "exposicao": 0.5062,
+  "tonemap_white": 1.0,
+  "brilho": 1.02,
+  "contraste": 1.06,
+  "saturacao": 0.94,
+  "alvo_laje": 0.5,
+  "modelo": "Godot 4.7.2 tonemap.glsl (ACES/BakingLab, bias 1.8) + bcs"
+}

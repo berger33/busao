@@ -1,0 +1,1509 @@
+{
+  "schema": 1,
+  "source": "docs/assets_manifest.json",
+  "policy": {
+    "lod1_distance_m": 24,
+    "lod2_distance_m": 48,
+    "lod_cull_distance_m": 85,
+    "preserve_source_assets": true
+  },
+  "items": [
+    {
+      "path": "assets/characters/personagens/julia.glb",
+      "bytes": 531180,
+      "meshes": 1,
+      "vertices": 5357,
+      "triangles": 8460,
+      "materials": 13,
+      "has_lod": false,
+      "status": "review",
+      "priority": "P0_HERO",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/personagens/hero_julia.glb",
+      "bytes": 67464,
+      "meshes": 26,
+      "vertices": 3804,
+      "triangles": 7504,
+      "materials": 26,
+      "has_lod": false,
+      "status": "review",
+      "priority": "P0_HERO",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/personagens/motoboy.glb",
+      "bytes": 396588,
+      "meshes": 1,
+      "vertices": 3229,
+      "triangles": 4952,
+      "materials": 8,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P0_HERO",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/personagens/carlos.glb",
+      "bytes": 394796,
+      "meshes": 1,
+      "vertices": 3201,
+      "triangles": 4904,
+      "materials": 8,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P0_HERO",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/personagens/bia.glb",
+      "bytes": 390024,
+      "meshes": 1,
+      "vertices": 3125,
+      "triangles": 4768,
+      "materials": 8,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P0_HERO",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/personagens/camila.glb",
+      "bytes": 387024,
+      "meshes": 1,
+      "vertices": 3097,
+      "triangles": 4720,
+      "materials": 7,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P0_HERO",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/personagens/cida.glb",
+      "bytes": 387024,
+      "meshes": 1,
+      "vertices": 3097,
+      "triangles": 4720,
+      "materials": 7,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P0_HERO",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/personagens/clara.glb",
+      "bytes": 387020,
+      "meshes": 1,
+      "vertices": 3097,
+      "triangles": 4720,
+      "materials": 7,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P0_HERO",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/personagens/deise.glb",
+      "bytes": 387024,
+      "meshes": 1,
+      "vertices": 3097,
+      "triangles": 4720,
+      "materials": 7,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P0_HERO",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/personagens/influencer.glb",
+      "bytes": 387036,
+      "meshes": 1,
+      "vertices": 3097,
+      "triangles": 4720,
+      "materials": 7,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P0_HERO",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/personagens/maria.glb",
+      "bytes": 387024,
+      "meshes": 1,
+      "vertices": 3097,
+      "triangles": 4720,
+      "materials": 7,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P0_HERO",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/personagens/marta.glb",
+      "bytes": 387020,
+      "meshes": 1,
+      "vertices": 3097,
+      "triangles": 4720,
+      "materials": 7,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P0_HERO",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/personagens/zilda.glb",
+      "bytes": 387024,
+      "meshes": 1,
+      "vertices": 3097,
+      "triangles": 4720,
+      "materials": 7,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P0_HERO",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/personagens/chico.glb",
+      "bytes": 383068,
+      "meshes": 1,
+      "vertices": 3030,
+      "triangles": 4636,
+      "materials": 7,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P0_HERO",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/personagens/tiao.glb",
+      "bytes": 380060,
+      "meshes": 1,
+      "vertices": 2982,
+      "triangles": 4552,
+      "materials": 7,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P0_HERO",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/personagens/beto.glb",
+      "bytes": 373068,
+      "meshes": 1,
+      "vertices": 2867,
+      "triangles": 4384,
+      "materials": 7,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P0_HERO",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/personagens/joao.glb",
+      "bytes": 373072,
+      "meshes": 1,
+      "vertices": 2867,
+      "triangles": 4384,
+      "materials": 7,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P0_HERO",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/personagens/luan.glb",
+      "bytes": 373072,
+      "meshes": 1,
+      "vertices": 2867,
+      "triangles": 4384,
+      "materials": 7,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P0_HERO",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/personagens/nilo.glb",
+      "bytes": 373068,
+      "meshes": 1,
+      "vertices": 2867,
+      "triangles": 4384,
+      "materials": 7,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P0_HERO",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/personagens/professor.glb",
+      "bytes": 373088,
+      "meshes": 1,
+      "vertices": 2867,
+      "triangles": 4384,
+      "materials": 7,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P0_HERO",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/personagens/ze.glb",
+      "bytes": 373068,
+      "meshes": 1,
+      "vertices": 2867,
+      "triangles": 4384,
+      "materials": 7,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P0_HERO",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/vehicles/carro.glb",
+      "bytes": 1795700,
+      "meshes": 5,
+      "vertices": 50884,
+      "triangles": 25976,
+      "materials": 20,
+      "has_lod": false,
+      "status": "review",
+      "priority": "P1_VEHICLES",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/vehicles/car.glb",
+      "bytes": 1609364,
+      "meshes": 5,
+      "vertices": 45570,
+      "triangles": 23264,
+      "materials": 20,
+      "has_lod": false,
+      "status": "review",
+      "priority": "P1_VEHICLES",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/vehicles/car_azul.glb",
+      "bytes": 1609364,
+      "meshes": 5,
+      "vertices": 45570,
+      "triangles": 23264,
+      "materials": 20,
+      "has_lod": false,
+      "status": "review",
+      "priority": "P1_VEHICLES",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/vehicles/car_prata.glb",
+      "bytes": 1609364,
+      "meshes": 5,
+      "vertices": 45570,
+      "triangles": 23264,
+      "materials": 20,
+      "has_lod": false,
+      "status": "review",
+      "priority": "P1_VEHICLES",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/animais/caramelo.glb",
+      "bytes": 2348216,
+      "meshes": 1,
+      "vertices": 41307,
+      "triangles": 20832,
+      "materials": 15,
+      "has_lod": false,
+      "status": "review",
+      "priority": "P1_VEHICLES",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/vehicles/bus_traffic.glb",
+      "bytes": 1395396,
+      "meshes": 5,
+      "vertices": 39335,
+      "triangles": 20048,
+      "materials": 21,
+      "has_lod": false,
+      "status": "review",
+      "priority": "P1_VEHICLES",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/vehicles/onibus.glb",
+      "bytes": 1386892,
+      "meshes": 5,
+      "vertices": 39259,
+      "triangles": 20048,
+      "materials": 21,
+      "has_lod": false,
+      "status": "review",
+      "priority": "P1_VEHICLES",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/vehicles/truck.glb",
+      "bytes": 959156,
+      "meshes": 5,
+      "vertices": 27041,
+      "triangles": 13640,
+      "materials": 21,
+      "has_lod": false,
+      "status": "review",
+      "priority": "P1_VEHICLES",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/vehicles/truck_vermelho.glb",
+      "bytes": 959156,
+      "meshes": 5,
+      "vertices": 27041,
+      "triangles": 13640,
+      "materials": 21,
+      "has_lod": false,
+      "status": "review",
+      "priority": "P1_VEHICLES",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/animais/caranguejo.glb",
+      "bytes": 1114228,
+      "meshes": 1,
+      "vertices": 19680,
+      "triangles": 9840,
+      "materials": 4,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P1_VEHICLES",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/vehicles/bicycle.glb",
+      "bytes": 609060,
+      "meshes": 3,
+      "vertices": 17256,
+      "triangles": 8720,
+      "materials": 12,
+      "has_lod": false,
+      "status": "review",
+      "priority": "P1_VEHICLES",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/vehicles/motorcycle.glb",
+      "bytes": 430568,
+      "meshes": 3,
+      "vertices": 12169,
+      "triangles": 6184,
+      "materials": 11,
+      "has_lod": false,
+      "status": "review",
+      "priority": "P1_VEHICLES",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/vehicles/motorcycle_verde.glb",
+      "bytes": 430568,
+      "meshes": 3,
+      "vertices": 12169,
+      "triangles": 6184,
+      "materials": 11,
+      "has_lod": false,
+      "status": "review",
+      "priority": "P1_VEHICLES",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/props/carrinho.glb",
+      "bytes": 140232,
+      "meshes": 1,
+      "vertices": 3768,
+      "triangles": 1884,
+      "materials": 9,
+      "has_lod": false,
+      "status": "review",
+      "priority": "P1_VEHICLES",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/scene/predio3.glb",
+      "bytes": 88228,
+      "meshes": 1,
+      "vertices": 2372,
+      "triangles": 1196,
+      "materials": 8,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P2_ARCHITECTURE",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/scene/predio2.glb",
+      "bytes": 72144,
+      "meshes": 1,
+      "vertices": 1892,
+      "triangles": 956,
+      "materials": 8,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P2_ARCHITECTURE",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/scene/arvore.glb",
+      "bytes": 741364,
+      "meshes": 1,
+      "vertices": 21120,
+      "triangles": 10560,
+      "materials": 2,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P3_VEGETATION",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/source/ginger+woman.glb",
+      "bytes": 1877388,
+      "meshes": 7,
+      "vertices": 27599,
+      "triangles": 54013,
+      "materials": 7,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/animais/pombo.glb",
+      "bytes": 1871528,
+      "meshes": 1,
+      "vertices": 33156,
+      "triangles": 16980,
+      "materials": 14,
+      "has_lod": false,
+      "status": "review",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/animais/boi.glb",
+      "bytes": 1864508,
+      "meshes": 1,
+      "vertices": 32895,
+      "triangles": 16648,
+      "materials": 10,
+      "has_lod": false,
+      "status": "review",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/animais/cavalo.glb",
+      "bytes": 1833324,
+      "meshes": 1,
+      "vertices": 32356,
+      "triangles": 16416,
+      "materials": 8,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/animais/urubu.glb",
+      "bytes": 1695524,
+      "meshes": 1,
+      "vertices": 30164,
+      "triangles": 15280,
+      "materials": 8,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/animais/gaivota.glb",
+      "bytes": 1691852,
+      "meshes": 1,
+      "vertices": 30138,
+      "triangles": 15252,
+      "materials": 8,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/animais/passaro.glb",
+      "bytes": 1692148,
+      "meshes": 1,
+      "vertices": 30156,
+      "triangles": 15252,
+      "materials": 8,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/animais/macaco.glb",
+      "bytes": 1624864,
+      "meshes": 1,
+      "vertices": 28916,
+      "triangles": 14656,
+      "materials": 5,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/animais/capivara.glb",
+      "bytes": 1448468,
+      "meshes": 1,
+      "vertices": 25415,
+      "triangles": 12896,
+      "materials": 7,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/collectibles/pastel.glb",
+      "bytes": 539816,
+      "meshes": 1,
+      "vertices": 15360,
+      "triangles": 7680,
+      "materials": 2,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/scene/barraca.glb",
+      "bytes": 508492,
+      "meshes": 1,
+      "vertices": 14808,
+      "triangles": 7404,
+      "materials": 8,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/props/hidrante.glb",
+      "bytes": 423164,
+      "meshes": 1,
+      "vertices": 12000,
+      "triangles": 6000,
+      "materials": 3,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/humanos_originais/Humano_F.glb",
+      "bytes": 359544,
+      "meshes": 1,
+      "vertices": 2648,
+      "triangles": 4540,
+      "materials": 7,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/humanos_originais/Humano_M.glb",
+      "bytes": 353136,
+      "meshes": 1,
+      "vertices": 2543,
+      "triangles": 4384,
+      "materials": 7,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/collectibles/sugarcane.glb",
+      "bytes": 243376,
+      "meshes": 1,
+      "vertices": 6864,
+      "triangles": 3432,
+      "materials": 3,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/collectibles/bread.glb",
+      "bytes": 238236,
+      "meshes": 1,
+      "vertices": 6744,
+      "triangles": 3372,
+      "materials": 2,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/sky_fx/drone.glb",
+      "bytes": 240244,
+      "meshes": 1,
+      "vertices": 6720,
+      "triangles": 3360,
+      "materials": 5,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/sky_fx/aviao.glb",
+      "bytes": 221436,
+      "meshes": 1,
+      "vertices": 6221,
+      "triangles": 3200,
+      "materials": 3,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/scene/palmeira.glb",
+      "bytes": 204828,
+      "meshes": 1,
+      "vertices": 5730,
+      "triangles": 3056,
+      "materials": 3,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/collectibles/umbrella.glb",
+      "bytes": 204188,
+      "meshes": 1,
+      "vertices": 5738,
+      "triangles": 2904,
+      "materials": 3,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/collectibles/coffee.glb",
+      "bytes": 151732,
+      "meshes": 1,
+      "vertices": 5520,
+      "triangles": 2760,
+      "materials": 3,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/props/orelhao.glb",
+      "bytes": 159308,
+      "meshes": 1,
+      "vertices": 4388,
+      "triangles": 2172,
+      "materials": 6,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/scene/portao.glb",
+      "bytes": 139444,
+      "meshes": 1,
+      "vertices": 3948,
+      "triangles": 1988,
+      "materials": 1,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/props/cone.glb",
+      "bytes": 137508,
+      "meshes": 1,
+      "vertices": 3864,
+      "triangles": 1932,
+      "materials": 2,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/scene/caixa_dagua.glb",
+      "bytes": 134180,
+      "meshes": 1,
+      "vertices": 3768,
+      "triangles": 1900,
+      "materials": 2,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/scene/terminal.glb",
+      "bytes": 142140,
+      "meshes": 1,
+      "vertices": 3688,
+      "triangles": 1844,
+      "materials": 11,
+      "has_lod": false,
+      "status": "review",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/scene/obra.glb",
+      "bytes": 133672,
+      "meshes": 1,
+      "vertices": 3656,
+      "triangles": 1840,
+      "materials": 6,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/collectibles/guarana.glb",
+      "bytes": 126912,
+      "meshes": 1,
+      "vertices": 3416,
+      "triangles": 1740,
+      "materials": 4,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/props/banco.glb",
+      "bytes": 118412,
+      "meshes": 1,
+      "vertices": 3320,
+      "triangles": 1660,
+      "materials": 2,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/scene/quiosque.glb",
+      "bytes": 115476,
+      "meshes": 1,
+      "vertices": 3096,
+      "triangles": 1560,
+      "materials": 8,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/props/ponto.glb",
+      "bytes": 111752,
+      "meshes": 1,
+      "vertices": 2992,
+      "triangles": 1496,
+      "materials": 8,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/scene/igreja.glb",
+      "bytes": 91864,
+      "meshes": 1,
+      "vertices": 2382,
+      "triangles": 1202,
+      "materials": 9,
+      "has_lod": false,
+      "status": "review",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/props/poste.glb",
+      "bytes": 83388,
+      "meshes": 1,
+      "vertices": 2288,
+      "triangles": 1144,
+      "materials": 3,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/scene/guarita.glb",
+      "bytes": 71532,
+      "meshes": 1,
+      "vertices": 1828,
+      "triangles": 952,
+      "materials": 9,
+      "has_lod": false,
+      "status": "review",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/collectibles/coxinha.glb",
+      "bytes": 61396,
+      "meshes": 1,
+      "vertices": 1682,
+      "triangles": 900,
+      "materials": 2,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/props/lixeira.glb",
+      "bytes": 66204,
+      "meshes": 1,
+      "vertices": 1776,
+      "triangles": 888,
+      "materials": 4,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/scene/bandeira.glb",
+      "bytes": 54884,
+      "meshes": 1,
+      "vertices": 1496,
+      "triangles": 816,
+      "materials": 2,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/scene/ipe_amarelo.glb",
+      "bytes": 53704,
+      "meshes": 1,
+      "vertices": 2136,
+      "triangles": 712,
+      "materials": 4,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/scene/casa_favela.glb",
+      "bytes": 53696,
+      "meshes": 1,
+      "vertices": 1344,
+      "triangles": 672,
+      "materials": 8,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/collectibles/pix.glb",
+      "bytes": 48836,
+      "meshes": 1,
+      "vertices": 1180,
+      "triangles": 600,
+      "materials": 3,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/scene/outdoor.glb",
+      "bytes": 37700,
+      "meshes": 1,
+      "vertices": 1000,
+      "triangles": 500,
+      "materials": 3,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/scene/varal.glb",
+      "bytes": 41464,
+      "meshes": 1,
+      "vertices": 1000,
+      "triangles": 500,
+      "materials": 7,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/scene/colonial.glb",
+      "bytes": 32136,
+      "meshes": 1,
+      "vertices": 726,
+      "triangles": 362,
+      "materials": 8,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/scene/casa.glb",
+      "bytes": 26156,
+      "meshes": 1,
+      "vertices": 606,
+      "triangles": 302,
+      "materials": 6,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/scene/loja.glb",
+      "bytes": 31580,
+      "meshes": 1,
+      "vertices": 528,
+      "triangles": 264,
+      "materials": 10,
+      "has_lod": false,
+      "status": "review",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/collectibles/coin.glb",
+      "bytes": 34644,
+      "meshes": 1,
+      "vertices": 384,
+      "triangles": 252,
+      "materials": 3,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/scene/pothole.glb",
+      "bytes": 16036,
+      "meshes": 1,
+      "vertices": 364,
+      "triangles": 212,
+      "materials": 3,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/props/barreira.glb",
+      "bytes": 15628,
+      "meshes": 1,
+      "vertices": 576,
+      "triangles": 192,
+      "materials": 3,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/collectibles/golden.glb",
+      "bytes": 10380,
+      "meshes": 1,
+      "vertices": 24,
+      "triangles": 12,
+      "materials": 3,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/collectibles/pass.glb",
+      "bytes": 12624,
+      "meshes": 1,
+      "vertices": 24,
+      "triangles": 12,
+      "materials": 2,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    }
+  ],
+  "next_step": "Criar LOD0/LOD1/LOD2 para P0_HERO e P1_VEHICLES"
+}

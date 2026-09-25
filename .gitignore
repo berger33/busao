@@ -1,0 +1,24 @@
+# Godot generated files
+.godot/
+
+# Python caches
+__pycache__/
+*.pyc
+.import/
+export.cfg
+*.tmp
+
+# Local builds and editor exports
+build/
+android/build/
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# User save data (normally under user://)
+*.save
+
+# Previews gerados pelos scripts Blender (regeneraveis)
+tools/blender/out/
+captures/*.png
