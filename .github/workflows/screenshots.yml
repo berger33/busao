@@ -60,6 +60,13 @@ jobs:
           CAPTURA_YAWS: ${{ inputs.captura_yaws }}
           CAPTURA_RIG: ${{ inputs.captura_rig }}
         run: |
+          # Varredura versionada (push) quando o dispatch não passou inputs.
+          if [ -z "$CAPTURA_YAWS$CAPTURA_RIG" ] && [ -f tools/captura_sweep.env ]; then
+            set -a
+            . tools/captura_sweep.env
+            set +a
+          fi
+          echo "sweep yaws='$CAPTURA_YAWS' rig='$CAPTURA_RIG'"
           mkdir -p captures
           set -o pipefail
           xvfb-run -a -s "-screen 0 800x1400x24" /tmp/godot --path . \
