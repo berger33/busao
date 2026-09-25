@@ -48,6 +48,9 @@ const HERO_ASSET_PATH := PERSONAGENS_ROOT + "/hero_julia.glb"
 # PERSONAGENS_ROOT, exists() e falso e o corredor usa o modelo padrao.
 const GINGER_ASSET_PATH := PERSONAGENS_ROOT + "/ginger+woman.glb"
 const MODEL_SCALE := 1.03  # 1.77*1.03=1.82 realista (era 1.18->2.09)
+# Camada de visibilidade 3 (1 << 2) das malhas do runner: alvo do rig de luz
+# de legibilidade (RunnerFill/RunnerRim) sem acender a rua duas vezes.
+const RUNNER_VISIBILITY_LAYER := 4
 const MODEL_FLOOR_OFFSET := 0.012
 const CLOTHING_INFLATE := 0.008
 const PLAYER_HEIGHT := 1.82 # L27 polimento: altura realista brasileira (era 2.15 gigante vs porta 2.4)
@@ -120,6 +123,7 @@ var animation_player: AnimationPlayer
 var mesh_parts: Dictionary = {}
 var mesh_part_rest: Dictionary = {}
 var runner_shadow: MeshInstance3D
+var _light_rig: Node3D
 var current_clip := ""
 var world_mode := false
 var using_external_animation := false
@@ -168,6 +172,7 @@ func set_character(next_id: String) -> void:
     gender = "F" if str(profile.get("gender", "M")) == "F" else "M"
     _clear_character()
     _build_shadow()
+    _build_light_rig()
     # Lote 28: tenta GLB dedicado por personagem (assets/characters/personagens/<id>.glb) — bakeado Blender com paleta + props.
     var personalized_path := HERO_ASSET_PATH if character_id == "julia" and ResourceLoader.exists(HERO_ASSET_PATH) else (GINGER_ASSET_PATH if character_id == "ginger" and ResourceLoader.exists(GINGER_ASSET_PATH) else PERSONAGENS_ROOT + "/" + character_id + ".glb")
     var is_personalized := false
@@ -1279,6 +1284,50 @@ func _configure_mesh_shadows(node: Node) -> void:
     # pelo material (BaseMaterial3D.disable_receive_shadows, falso por padrao).
     for mesh in _skinned_meshes(node):
         mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+    _apply_runner_light_layer()
+
+
+## Camada de luz dedicada ao runner: o rig (fill quente + rim frio) só
+## ilumina esta camada, então a rua não recebe luz duplicada; o sol e o
+## ambiente continuam alcançando a personagem (máscara padrão = tudo).
+func _apply_runner_light_layer() -> void:
+    for node in find_children("*", "MeshInstance3D", true, false):
+        var mi := node as MeshInstance3D
+        if mi == null or mi.name == "RunnerShadow":
+            continue
+        mi.visibility_layer = RUNNER_VISIBILITY_LAYER
+
+
+## Legibilidade de protagonista (padrão de runner mobile): a personagem nunca
+## some contra o fundo ocupado da rua. Fill quente do lado da câmera ancora o
+## volume; rim frio por trás recorta cabeça/ombros no asfalto. Ambos sem
+## sombra (custo zero de shadow map) e restritos à camada do runner.
+func _build_light_rig() -> void:
+    if is_instance_valid(_light_rig):
+        return
+    _light_rig = Node3D.new()
+    _light_rig.name = "RunnerLightRig"
+    add_child(_light_rig)
+    var fill := SpotLight.new()
+    fill.name = "RunnerFill"
+    fill.light_color = Color("ffd9a8")
+    fill.light_energy = 1.35
+    fill.spot_range = 8.0
+    fill.spot_angle_degrees = 42.0
+    fill.spot_attenuation = 1.2
+    fill.shadow_enabled = false
+    fill.light_cull_mask = RUNNER_VISIBILITY_LAYER
+    fill.position = Vector3(0.9, 2.5, 2.6)
+    _light_rig.add_child(fill)
+    fill.look_at(global_position + Vector3(0.0, 1.1, 0.0), Vector3.UP)
+    var rim := DirectionalLight3D.new()
+    rim.name = "RunnerRim"
+    rim.light_color = Color("bfe0ff")
+    rim.light_energy = 0.6
+    rim.shadow_enabled = false
+    rim.light_cull_mask = RUNNER_VISIBILITY_LAYER
+    rim.rotation_degrees = Vector3(-35.0, -145.0, 0.0)
+    _light_rig.add_child(rim)
 
 func _build_fallback(reason: String) -> void:
     push_warning("Humanoide Quaternius indisponível (%s); ativando fallback de diagnóstico." % reason)

@@ -63,11 +63,13 @@ static func setup_realista(environment: WorldEnvironment, sun: DirectionalLight3
             env.ssao_enabled = false
 
         # Contraste físico mais natural: preserva detalhes nas altas luzes
-        # enquanto mantém as sombras azuladas do céu.
+        # enquanto mantém as sombras azuladas do céu. Passe visual 1:
+        # saturação acima de 1.0 (era 0.96, lavado para celular) — runner
+        # mobile pede cor viva; contraste um ponto acima para o sol bater.
         env.adjustment_enabled = true
         env.adjustment_brightness = 1.0
-        env.adjustment_contrast = 1.08
-        env.adjustment_saturation = 0.96
+        env.adjustment_contrast = 1.12
+        env.adjustment_saturation = 1.06
 
         # sombra 4096 VSM nítida a 0.5 m
         sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
@@ -115,10 +117,12 @@ static func setup_realista(environment: WorldEnvironment, sun: DirectionalLight3
                     gi_root.add_child(probe)
     else:
         # fallback mobile: mantém contato visual sem habilitar recursos caros.
+        # Passe visual 1: mesma direção do modo realista (cor viva + contraste),
+        # com metade do impulso para não estourar em tela OLED.
         env.adjustment_enabled = true
         env.adjustment_brightness = 1.0
-        env.adjustment_contrast = 1.04
-        env.adjustment_saturation = 0.98
+        env.adjustment_contrast = 1.10
+        env.adjustment_saturation = 1.05
         env.ssao_enabled = false
         # fallback mobile
         env.sdfgi_enabled = false

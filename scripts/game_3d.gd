@@ -501,9 +501,11 @@ func _setup_world() -> void:
     environment.environment.tonemap_exposure = 1.06
     environment.environment.tonemap_white = 1.2
     environment.environment.glow_enabled = true
-    environment.environment.glow_intensity = 0.42
+    # Passe visual 1 (mobile): brilho um pouco mais presente e limiar mais
+    # baixo — highlights do sol/latas/pintura amarela ganham vida sem véu.
+    environment.environment.glow_intensity = 0.5
     environment.environment.glow_bloom = 0.08
-    environment.environment.glow_hdr_threshold = 1.15
+    environment.environment.glow_hdr_threshold = 1.05
     environment.environment.fog_enabled = true
     environment.environment.fog_light_color = Color("#ebd9be") # névoa dourada de fim de tarde (ref abb89707)
     environment.environment.fog_light_energy = 0.52

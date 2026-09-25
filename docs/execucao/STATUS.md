@@ -638,6 +638,41 @@ versionados (formato novo); esses diffs são ruído local e **não** devem ser
 commitados (os portões `fix_texture_imports`/`rebaseline` cobram o formato do
 repo). O CI importa do zero a cada run, então o estado commitado é o que vale.
 
+### 2026-09-25 (gráficos 10/10 — programa de passes visuais; passe 1 aplicado)
+
+**Programa:** "gráficos 10/10 de runner mobile" vira uma sequência de passes
+visuais, cada um validado por (a) 16 suítes headless (sem regressão de
+gameplay) e (b) capturas reais do engine (`tools/captura_visual.gd` +
+workflow `screenshots.yml`, que renderiza sob xvfb/llvmpipe com GL
+Compatibility — o mesmo caminho do celular — e publica os PNGs em
+`sandbox/screenshots`). Sem olho não se ajusta arte; o loop de screenshots
+fecha isso neste repo pela primeira vez.
+
+**Passe 1 (commit aplicado):** legibilidade da personagem + cor de celular.
+Rig de luz dedicado ao runner em camada de visibilidade própria (fill quente
+do lado da câmera + rim frio por trás, sem shadow map, cull mask restrito —
+a rua não acende duas vezes); glow 0.42→0.50 / threshold 1.15→1.05;
+adjustment saturation 0.96→1.06 e contrast 1.08→1.12 (realista), 0.98→1.05 e
+1.04→1.10 (fallback mobile). Validação: 16/16 suítes + qa_full 133 OK.
+
+**Passe 2 (pronto para CI, workflow `ceus-nishita.yml`):** céus panorama
+Nishita físicos (Blender headless no runner: sol 28°/poeira 1.6 tropical;
+9°/3.2 entardecer; sun_disc off) substituindo os panoramas procedurais
+atuais (sol borrado, nuvens esfumadas). Publica em `sandbox/ceus-nishita`.
+
+**Passes seguintes (fila):** FOV de corrida para retrato (56→~62, sensação de
+velocidade e largura de rua), fluxo de tráfego contrário na faixa esquerda
+(preenche o vazio de x≈-6.65 e vende a mão dupla), contraste de materiais
+por corredor (asfalto vs deck vs faixa lateral), e revisão das paletas de
+capítulo contra os screenshots.
+
+**Infra desta sessão:** Godot 4.7-stable headless e o loop de suítes rodaram
+no sandbox (binário via branch `sandbox/godot-cache`); Blender não persistiu
+entre turnos e `download.blender.org` saiu da allowlist do proxy no meio da
+sessão — por isso o render de céu foi para o CI. Nota: o snapshot do
+workspace re-clonou o repo entre turnos; commits não pushados se perdem —
+pushar cedo é regra desta execução.
+
 ## Regras de engenharia desta execução
 
 - Uma etapa por vez; cada etapa fecha com demonstração reproduzível

@@ -21,3 +21,4 @@ android/build/
 
 # Previews gerados pelos scripts Blender (regeneraveis)
 tools/blender/out/
+captures/*.png

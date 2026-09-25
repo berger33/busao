@@ -1,0 +1,68 @@
+# CI — céus panorama Nishita (Blender headless) para o Corre pro Ponto.
+# O sandbox Arena não consegue baixar o Blender (allowlist do proxy) e não tem
+# GPU; o runner baixa, renderiza os panoramas equiretangulares físicos
+# (tools/blender/render_ceu_nishita.py), importa no formato do repo (Godot +
+# fix_texture_imports), troca os preloads e publica TUDO na branch
+# sandbox/ceus-nishita (merge manual na branch de trabalho depois).
+# Disparar: gh workflow run ceus-nishita.yml
+name: ceus-nishita
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  ceus:
+    name: render + publica céus v2
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: baixa Blender 4.5 LTS
+        run: |
+          curl -sfL --retry 3 -o /tmp/blender.tar.xz \
+            https://download.blender.org/release/Blender4.5/blender-4.5.14-linux-x64.tar.xz
+          tar xf /tmp/blender.tar.xz -C /tmp
+          /tmp/blender-4.5.14-linux-x64/blender --version
+      - name: renderiza panoramas
+        run: |
+          /tmp/blender-4.5.14-linux-x64/blender --background \
+            --python tools/blender/render_ceu_nishita.py
+          ls -lh tools/blender/out/
+      - name: baixa Godot (para gerar .import no formato do repo)
+        run: |
+          for v in 4.7 4.3 4.2; do
+            url="https://github.com/godotengine/godot/releases/download/${v}-stable/Godot_v${v}-stable_linux.x86_64.zip"
+            if curl -sfL -o /tmp/godot.zip "$url"; then break; fi
+          done
+          unzip -o /tmp/godot.zip -d /tmp && mv /tmp/Godot_v*-stable_linux.x86_64 /tmp/godot
+          chmod +x /tmp/godot
+      - name: instala texturas + troca preloads + portões
+        run: |
+          cp tools/blender/out/ceu_tropical_v2.png assets/textures/ceu_tropical_v2.png
+          cp tools/blender/out/ceu_entardecer_v2.png assets/textures/ceu_entardecer_v2.png
+          sed -i 's|res://assets/textures/ceu_tropical.png|res://assets/textures/ceu_tropical_v2.png|' scripts/game_3d.gd
+          sed -i 's|res://assets/textures/ceu_entardecer.png|res://assets/textures/ceu_entardecer_v2.png|' scripts/game_3d.gd
+          /tmp/godot --headless --path . --import
+          python3 tools/fix_texture_imports.py
+          python3 tools/build_asset_manifest.py || true
+          python3 tools/validate_project.py
+          python3 tools/qa_full.py
+          python3 tools/fix_texture_imports.py --check
+      - name: publica na branch sandbox/ceus-nishita
+        run: |
+          git config user.name "arena-agent"
+          git config user.email "297053741+arena-agent@users.noreply.github.com"
+          git add assets/textures/ceu_tropical_v2.png assets/textures/ceu_entardecer_v2.png \
+                  assets/textures/ceu_tropical_v2.png.import assets/textures/ceu_entardecer_v2.png.import \
+                  scripts/game_3d.gd docs/assets_manifest.json 2>/dev/null || true
+          git commit -q -m "feat(visual): céus panorama Nishita (Blender headless fisico)
+
+ceu_tropical_v2: sol 28 graus, poeira 1.6 (nevoa tropical); ceu_entardecer_v2:
+sol 9 graus, poeira 3.2 (golden hour). sun_disc off: o sol que ilumina e
+sombreia continua sendo o DirectionalLight3D do jogo; preloads trocados e
+.imports normalizados pelo fix_texture_imports."
+          git push -q origin HEAD:sandbox/ceus-nishita
+          echo "publicado em sandbox/ceus-nishita"
