@@ -20,6 +20,13 @@ func _initialize() -> void:
 	DirAccess.make_dir_recursive_absolute(SHOT_DIR)
 	var packed: PackedScene = load("res://scenes/main.tscn")
 	_game = packed.instantiate()
+	# Guard fatal: se algum script do jogo falhou ao compilar, a cena
+	# instancia "oca" (sem métodos) e as capturas saem sem o jogo — já
+	# aconteceu com SpotLight vs SpotLight3D no CI. Não aceitar PNGs ocos.
+	if _game == null or not _game.has_method("_start_run"):
+		print("CAPTURA_FALHOU: main.tscn instanciou sem game_3d.gd funcional (script não compilou?)")
+		quit(1)
+		return
 	root.add_child(_game)
 	await process_frame
 	await process_frame

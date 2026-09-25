@@ -1295,7 +1295,7 @@ func _apply_runner_light_layer() -> void:
         var mi := node as MeshInstance3D
         if mi == null or mi.name == "RunnerShadow":
             continue
-        mi.visibility_layer = RUNNER_VISIBILITY_LAYER
+        mi.layers = RUNNER_VISIBILITY_LAYER
 
 
 ## Legibilidade de protagonista (padrão de runner mobile): a personagem nunca
@@ -1308,12 +1308,12 @@ func _build_light_rig() -> void:
     _light_rig = Node3D.new()
     _light_rig.name = "RunnerLightRig"
     add_child(_light_rig)
-    var fill := SpotLight.new()
+    var fill := SpotLight3D.new()
     fill.name = "RunnerFill"
     fill.light_color = Color("ffd9a8")
     fill.light_energy = 1.35
     fill.spot_range = 8.0
-    fill.spot_angle_degrees = 42.0
+    fill.spot_angle = 42.0
     fill.spot_attenuation = 1.2
     fill.shadow_enabled = false
     fill.light_cull_mask = RUNNER_VISIBILITY_LAYER

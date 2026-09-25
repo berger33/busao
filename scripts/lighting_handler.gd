@@ -58,7 +58,9 @@ static func setup_realista(environment: WorldEnvironment, sun: DirectionalLight3
             # rodas e encontros parede/piso sem escurecer o cenário inteiro.
             env.ssao_radius = 2.0
             env.ssao_intensity = SSAO_INTENSITY
-            env.ssao_direct_light_affect = 0.28
+            # Godot 4: ssao_light_affect (o nome *_direct_* era Godot 3 e
+            # explodia em runtime toda vez que o SSAO era aplicado).
+            env.ssao_light_affect = 0.28
         else:
             env.ssao_enabled = false
 

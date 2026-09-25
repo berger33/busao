@@ -62,7 +62,7 @@ jobs:
           git checkout -q --orphan shots-publish
           git reset -q
           mkdir -p captures
-          git add captures
+          git add -f captures
           git add -f tools/captura_visual.gd .github/workflows/screenshots.yml 2>/dev/null || true
           git commit -q -m "shots: ${GITHUB_SHA:0:7} ($(date -u +%Y-%m-%dT%H:%MZ))"
           git push -qf origin shots-publish:sandbox/screenshots
