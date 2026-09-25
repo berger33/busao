@@ -185,9 +185,9 @@ func _tomadas() -> void:
 	# família e persiste aqui: exposição/white do tonemap, pitch da sombra e o
 	# fill/rim do rig da personagem (camada dela, sem shadow map).
 	_start(0)
-	_at(80.0)
+	_at(120.0)
 	_lane(1, 6)
-	await _frames(30)
+	await get_tree().create_timer(1.2).timeout
 	if _game.hud != null:
 		_game.hud.visible = false
 	Engine.time_scale = 0.0
@@ -216,15 +216,18 @@ func _tomadas() -> void:
 	_start(2)
 	_at(24.0)
 	_lane(1, 2)
-	await _frames(20)
+	await get_tree().create_timer(0.8).timeout
 	if _game._clima != null:
 		_game._clima.set_state("nublado")
-	await _frames(320)
+	# Settle em relogio de parede: a 1 fps do llvmpipe, 320 frames = 5 min de
+	# jogo e o folego expirava no meio da sequencia (o run morria e a tela de
+	# carregamento/folego baixo vazava para o quadro).
+	await get_tree().create_timer(5.6).timeout
 	await _shot("10_clima_nublado")
 	if _game._clima != null:
 		_game._clima.set_state("chuva")
-	await _frames(320)
+	await get_tree().create_timer(5.6).timeout
 	await _shot("11_clima_chuva")
 	if _game._clima != null:
 		_game._clima.set_state("limpo")
-	await _frames(5)
+	await get_tree().create_timer(0.3).timeout
