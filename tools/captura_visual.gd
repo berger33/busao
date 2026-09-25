@@ -239,20 +239,32 @@ func _tomadas() -> void:
 	_game._revive_pending = false
 	# yaw 2.2 rad: a câmera de jogo fica em +Z (costas). cos(2.2)<0 põe a
 	# órbita em −Z, que é a frente. Raio 2.7 m e altura 0.42 = peito, 3/4.
-	_game._capture_radius = 2.7
-	_game._capture_height = 0.42
-	_orbit_on(2.2, -0.05)
-	_game._snap_capture_camera()
-	await _frames(6)
-	_restaurar_runner()
-	if _game._revive_screen != null:
-		_game._revive_screen.visible = false
-	_game.set_process(false)
-	_game.set_physics_process(false)
-	_diag_close()
-	await _shot("09_close_personagem")
-	_game.set_process(true)
-	_game.set_physics_process(true)
+	# Varredura WIB-6: CAPTURA_YAWS="1.8,2.2,..." rende um close por yaw
+	# (09_close_personagem_yNNN) para calibrar o fundo contra a meta 3:1.
+	var yaws: Array[float] = []
+	for yaw_c in _env_list("CAPTURA_YAWS"):
+		yaws.append(float(yaw_c))
+	var varredura := not yaws.is_empty()
+	if yaws.is_empty():
+		yaws.append(2.2)
+	for yaw in yaws:
+		_game._capture_radius = 2.7
+		_game._capture_height = 0.42
+		_orbit_on(yaw, -0.05)
+		_game._snap_capture_camera()
+		await _frames(6)
+		_restaurar_runner()
+		if _game._revive_screen != null:
+			_game._revive_screen.visible = false
+		_game.set_process(false)
+		_game.set_physics_process(false)
+		_diag_close()
+		var nome_09 := "09_close_personagem"
+		if varredura:
+			nome_09 += "_y%d" % int(round(yaw * 100.0))
+		await _shot(nome_09)
+		_game.set_process(true)
+		_game.set_physics_process(true)
 	_game._capture_radius = 6.2
 	_game._capture_height = 2.0
 	_orbit_off()
@@ -275,8 +287,54 @@ func _tomadas() -> void:
 	await create_timer(2.8).timeout
 	_diag_close()
 	await _shot("11_clima_chuva")
+	# Varredura WIB-6: CAPTURA_RIG="1.5,2.0,..." ganha Fill/Lift/Front
+	# (máscara só do runner — não acende a rua) e repete 10/11 como
+	# 10_gNNN/11_gNNN para calibrar a camisa contra a meta 3:1 na chuva.
+	var ganhos: Array[float] = []
+	for g_c in _env_list("CAPTURA_RIG"):
+		ganhos.append(float(g_c))
+	if not ganhos.is_empty():
+		var fill := _game.find_child("RunnerFill", true, false) as Light3D
+		var lift := _game.find_child("RunnerLift", true, false) as Light3D
+		var front := _game.find_child("RunnerFront", true, false) as Light3D
+		var base_fill := fill.light_energy if fill != null else 0.0
+		var base_lift := lift.light_energy if lift != null else 0.0
+		var base_front := front.light_energy if front != null else 0.0
+		for g in ganhos:
+			if fill != null:
+				fill.light_energy = base_fill * g
+			if lift != null:
+				lift.light_energy = base_lift * g
+			if front != null:
+				front.light_energy = base_front * g
+			_clima_para("nublado")
+			await create_timer(2.4).timeout
+			_diag_close()
+			await _shot("10_g%d" % int(round(g * 100.0)))
+			_clima_para("chuva")
+			await create_timer(2.8).timeout
+			_diag_close()
+			await _shot("11_g%d" % int(round(g * 100.0)))
+		if fill != null:
+			fill.light_energy = base_fill
+		if lift != null:
+			lift.light_energy = base_lift
+		if front != null:
+			front.light_energy = base_front
 	_clima_para("limpo")
 	await create_timer(0.3).timeout
+
+
+## Lista de valores de uma variável de ambiente "a,b,c" ([] se vazia).
+func _env_list(chave: String) -> Array:
+	var bruto := OS.get_environment(chave).strip_edges()
+	if bruto.is_empty():
+		return []
+	var fora: Array = []
+	for parte in bruto.split(","):
+		if not parte.strip_edges().is_empty():
+			fora.append(parte.strip_edges())
+	return fora
 
 
 func _restaurar_runner() -> void:

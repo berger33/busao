@@ -8,8 +8,17 @@ name: screenshots
 
 on:
   workflow_dispatch:
+    inputs:
+      captura_yaws:
+        description: "varredura de yaw do close 09 (ex.: 1.8,2.2,2.6,3.0,3.4,3.8,4.2,4.6)"
+        required: false
+        default: ""
+      captura_rig:
+        description: "ganhos do rig RunnerFill/Lift/Front p/ 10 e 11 (ex.: 1.5,2.0,2.5)"
+        required: false
+        default: ""
   push:
-    branches: [arena/01a0d62f-busao, arena/01a0d6bf-busao, arena/01a0d712-busao, arena/01a0d882-busao]
+    branches: [arena/01a0d62f-busao, arena/01a0d6bf-busao, arena/01a0d712-busao, arena/01a0d882-busao, arena/01a0da73-busao]
     paths:
       - "scripts/game_3d.gd"
       - "scripts/lighting_handler.gd"
@@ -47,6 +56,9 @@ jobs:
       - name: import headless
         run: /tmp/godot --headless --path . --import
       - name: renderiza sob xvfb (llvmpipe, GL Compatibility = caminho do celular)
+        env:
+          CAPTURA_YAWS: ${{ inputs.captura_yaws }}
+          CAPTURA_RIG: ${{ inputs.captura_rig }}
         run: |
           mkdir -p captures
           set -o pipefail
