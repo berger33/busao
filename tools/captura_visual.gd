@@ -43,16 +43,23 @@ func _frames(n: int) -> void:
 func _shot(nome: String) -> void:
 	# process_frame (e não frame_post_draw): o rasterizer dummy do headless
 	# nunca emite frame_post_draw e o await penduraria; sob Xvfb o texture
-	# da janela já contém o quadro anterior desenhado.
-	await process_frame
-	await process_frame
-	var tex: Texture2D = root.get_texture()
-	if tex == null:
-		print("  shot %s: rasterizer dummy sem textura de janela — pulado" % nome)
-		return
-	var img: Image = tex.get_image()
-	if img == null or img.is_empty():
-		print("  shot %s: rasterizer dummy sem imagem de janela — pulado" % nome)
+	# da janela já contém o quadro anterior desenhado. A janela pode levar
+	# alguns frames para materializar a textura após o boot — insiste até 60.
+	var img: Image = null
+	var dummy := RenderingServer.get_current_rendering_driver_name() == "dummy"
+	for tentativa in range(2 if dummy else 60):
+		await process_frame
+		if tentativa < 1 or dummy:
+			continue
+		var tex: Texture2D = root.get_texture()
+		if tex == null:
+			continue
+		img = tex.get_image()
+		if img != null and not img.is_empty():
+			break
+		img = null
+	if img == null:
+		print("  shot %s: sem imagem de janela após 60 frames (dummy rasterizer?) — pulado" % nome)
 		return
 	var caminho := SHOT_DIR + "/" + nome + ".png"
 	var err := img.save_png(caminho)

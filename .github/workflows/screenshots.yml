@@ -46,12 +46,16 @@ jobs:
       - name: renderiza sob xvfb (llvmpipe, GL Compatibility = caminho do celular)
         run: |
           mkdir -p captures
+          set -o pipefail
           xvfb-run -a -s "-screen 0 800x1400x24" /tmp/godot --path . \
             --rendering-method gl_compatibility --rendering-driver opengl3 \
-            --resolution 720x1280 --script tools/captura_visual.gd
-          ls -lh captures/
-          test -n "$(ls -A captures 2>/dev/null)" || { echo "nenhuma captura"; exit 1; }
+            --resolution 720x1280 --script tools/captura_visual.gd \
+            2>&1 | tee captures/_log.txt || true
+          ls -lh captures/ | tee -a captures/_log.txt
+          n=$(ls captures/*.png 2>/dev/null | wc -l)
+          echo "pngs=$n" | tee -a captures/_log.txt
       - name: publica na branch sandbox/screenshots
+        if: always()
         run: |
           git config user.name "arena-agent"
           git config user.email "297053741+arena-agent@users.noreply.github.com"
@@ -63,3 +67,7 @@ jobs:
           git commit -q -m "shots: ${GITHUB_SHA:0:7} ($(date -u +%Y-%m-%dT%H:%MZ))"
           git push -qf origin shots-publish:sandbox/screenshots
           echo "publicado em sandbox/screenshots"
+      - name: gate — exige as 9 tomadas
+        run: |
+          n=$(ls captures/*.png 2>/dev/null | wc -l)
+          test "$n" -ge 9 || { echo "só $n PNGs — ver captures/_log.txt na branch sandbox/screenshots"; exit 1; }
