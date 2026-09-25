@@ -301,6 +301,8 @@ var _splash_particles: GPUParticles3D = null
 var _capture_mode := false
 var _capture_yaw := 0.0
 var _capture_pitch := -0.12
+var _capture_radius := 6.2   # distância da órbita; o close (WIB-6) aproxima
+var _capture_height := 2.0   # altura acima do alvo; 2.0 = enquadramento de jogo
 
 var _loading_screen: Control = null
 var _cold_start_ms: int = 0
@@ -2072,10 +2074,8 @@ func _update_camera(dt: float) -> void:
         camera_shake = 0.0
     # modo captura: órbita livre ao redor do corredor (Lote 6)
     if _capture_mode:
-        var orbit_target := Vector3(player_x, 1.05 + player_visual.position.y * 0.12, -1.2)
-        var r := 6.2
-        var cp := cos(_capture_pitch)
-        var off := Vector3(sin(_capture_yaw) * r * cp, sin(_capture_pitch) * 2.2 + 2.0, cos(_capture_yaw) * r * cp) + shake_offset
+        var orbit_target := _capture_orbit_target()
+        var off := _capture_offset() + shake_offset
         var desired_cap := orbit_target + off
         camera.position = camera.position.lerp(desired_cap, minf(1.0, dt * 6.0))
         camera.look_at(orbit_target, Vector3.UP)
@@ -2098,6 +2098,31 @@ func _update_camera(dt: float) -> void:
     camera.fov = lerpf(camera.fov, desired_fov, minf(1.0, dt * 4.0))
     camera.look_at(target, Vector3.UP)
 
+## Alvo da órbita de captura: peito do runner, não o chão.
+func _capture_orbit_target() -> Vector3:
+    var y_vis := 0.0
+    if player_visual != null:
+        y_vis = player_visual.position.y
+    return Vector3(player_x, 1.05 + y_vis * 0.12, -1.2)
+
+func _capture_offset() -> Vector3:
+    var cp := cos(_capture_pitch)
+    return Vector3(
+        sin(_capture_yaw) * _capture_radius * cp,
+        sin(_capture_pitch) * 2.2 + _capture_height,
+        cos(_capture_yaw) * _capture_radius * cp)
+
+## Coloca a câmera no alvo da órbita no mesmo frame. O lerp com dt travado
+## em 0,05 (CI a 1 fps) demora vários segundos de parede para convergir.
+func _snap_capture_camera() -> void:
+    if camera == null:
+        return
+    _capture_mode = true
+    var alvo := _capture_orbit_target()
+    camera.position = alvo + _capture_offset()
+    if alvo.distance_to(camera.position) > 0.05:
+        camera.look_at(alvo, Vector3.UP)
+
 func _apply_scenario_atmosphere() -> void:
     if environment == null or sky_material == null:
         return
@@ -2117,12 +2142,6 @@ func _apply_scenario_atmosphere() -> void:
     var sky_energy: float = (0.82 + clampf(float(9 - chapter) * 0.025, 0.0, 0.22)) * weather_energy
     if weather in ["letreiros acesos", "sinos ao entardecer", "luzes da madrugada"]:
         sky_energy *= 0.78
-    if weather in ["fim de tarde", "sinos ao entardecer", "letreiros acesos", "brisa da praia"]:
-        sky_material.panorama = TEXTURE_SKY_SUNSET
-    elif weather in ["nublado quente"]:
-        sky_material.panorama = TEXTURE_SKY_CLOUDY
-    else:
-        sky_material.panorama = TEXTURE_SKY_PANORAMA
     sky_material.energy_multiplier = sky_energy
     sky_material.filter = true
     environment.environment.background_energy_multiplier = sky_energy
@@ -2180,10 +2199,21 @@ func _apply_scenario_atmosphere() -> void:
     environment.environment.ambient_light_energy = ambient_energy
     environment.environment.tonemap_exposure = exposure
     environment.environment.tonemap_white = white
+    # O panorama segue a FAMÍLIA, não só a string do cenário. Sem isto, um
+    # nublado/chuva forçado pelo WeatherSystem (ou uma transição no meio)
+    # deixava o céu de sol por baixo da névoa.
+    if fam == "chuva" or fam == "nublado":
+        sky_material.panorama = TEXTURE_SKY_CLOUDY
+    elif fam == "entardecer" or weather in ["fim de tarde", "sinos ao entardecer", "letreiros acesos", "brisa da praia"]:
+        sky_material.panorama = TEXTURE_SKY_SUNSET
+    else:
+        sky_material.panorama = TEXTURE_SKY_PANORAMA
     if sun:
         sun.light_color = scenario.get("sun", Color("#ffe0a3"))
         sun.light_energy = sun_energy
         sun.rotation_degrees = Vector3(sun_pitch, -56.0 + (chapter % 4) * 2.5, 0.0)
+    print("[luz] familia=%s pitch=%.1f sol=%.2f expo=%.2f white=%.2f amb=%.2f" % [
+        fam, sun_pitch, sun_energy, exposure, white, ambient_energy])
 
 func _update_sky_motion(dt: float) -> void:
     if sky_material == null or scenario.is_empty():

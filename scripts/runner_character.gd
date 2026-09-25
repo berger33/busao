@@ -1311,23 +1311,37 @@ func _build_light_rig() -> void:
     var fill := SpotLight3D.new()
     fill.name = "RunnerFill"
     fill.light_color = Color("ffd9a8")
-    fill.light_energy = 1.5
+    # Etapa 2 (WIB-6): 1.5 deixava a camisa a ~2,1:1 contra a calçada clara
+    # (meta ≥ 3:1). 2.15 levanta o torso do lado da câmera sem acender a rua.
+    fill.light_energy = 2.15
     fill.spot_range = 8.0
-    fill.spot_angle = 46.0
-    fill.spot_attenuation = 1.2
+    fill.spot_angle = 52.0
+    fill.spot_attenuation = 1.05
     fill.shadow_enabled = false
     fill.light_cull_mask = RUNNER_VISIBILITY_LAYER
-    fill.position = Vector3(0.9, 2.5, 2.6)
+    fill.position = Vector3(0.9, 2.2, 2.4)
     _light_rig.add_child(fill)
-    fill.look_at(global_position + Vector3(0.0, 1.1, 0.0), Vector3.UP)
+    fill.look_at(global_position + Vector3(0.0, 1.05, 0.0), Vector3.UP)
     var rim := DirectionalLight3D.new()
     rim.name = "RunnerRim"
     rim.light_color = Color("bfe0ff")
-    rim.light_energy = 0.92
+    rim.light_energy = 1.55
     rim.shadow_enabled = false
     rim.light_cull_mask = RUNNER_VISIBILITY_LAYER
     rim.rotation_degrees = Vector3(-35.0, -145.0, 0.0)
     _light_rig.add_child(rim)
+    # Lift ao lado do peito: envolve frente e costas, então a silhueta lê
+    # tanto na câmera de jogo (+Z) quanto no close 3/4 (−Z).
+    var lift := OmniLight3D.new()
+    lift.name = "RunnerLift"
+    lift.light_color = Color("fff4e4")
+    lift.light_energy = 1.35
+    lift.omni_range = 4.2
+    lift.omni_attenuation = 1.1
+    lift.shadow_enabled = false
+    lift.light_cull_mask = RUNNER_VISIBILITY_LAYER
+    lift.position = Vector3(0.55, 1.5, 0.15)
+    _light_rig.add_child(lift)
 
 func _build_fallback(reason: String) -> void:
     push_warning("Humanoide Quaternius indisponível (%s); ativando fallback de diagnóstico." % reason)

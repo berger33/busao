@@ -8,7 +8,7 @@ const SHADOW_RESOLUTION_MOBILE: int = 2048
 const SHADOW_RESOLUTION_REALISTA: int = 4096
 const SHADOW_MAX_DISTANCE_REALISTA: float = 96.0
 const SHADOW_BIAS_REALISTA: float = 0.012 # sombra de contato mais firme, sem peter-panning
-const SHADOW_NORMAL_BIAS_REALISTA: float = 0.45 # L27: peter-panning 1.2→0.45
+const SHADOW_NORMAL_BIAS_REALISTA: float = 0.28 # WIB-6: contato no pé, sem acne no asfalto
 const SHADOW_OPACITY_REALISTA: float = 0.82
 const SDFGI_ENABLED: bool = true
 const VOXELGI_SIZE: Vector3 = Vector3(28.0, 12.0, 28.0) # por quarteirão
@@ -93,7 +93,9 @@ static func setup_realista(environment: WorldEnvironment, sun: DirectionalLight3
         var sky: Sky = environment.environment.sky
         if sky != null and sky.sky_material is PanoramaSkyMaterial:
             (sky.sky_material as PanoramaSkyMaterial).energy_multiplier = 0.96
-            sun.light_angular_distance = 1.2
+            # 1.2° espalhava a penumbra e a sombra parecia solta do pé no
+            # retrato 720×1280. 0.65° ainda é suave, mas gruda no contato.
+            sun.light_angular_distance = 0.65
         # ReflectionProbe por quarteirão (28 m) + VoxelGI
         if world_root != null:
             var method := _get_rendering_method()

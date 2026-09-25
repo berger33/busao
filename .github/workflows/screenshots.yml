@@ -9,10 +9,11 @@ name: screenshots
 on:
   workflow_dispatch:
   push:
-    branches: [arena/01a0d62f-busao, arena/01a0d6bf-busao, arena/01a0d712-busao]
+    branches: [arena/01a0d62f-busao, arena/01a0d6bf-busao, arena/01a0d712-busao, arena/01a0d882-busao]
     paths:
       - "scripts/game_3d.gd"
       - "scripts/lighting_handler.gd"
+      - "scripts/weather_system.gd"
       - "scripts/render_quality.gd"
       - "scripts/runner_character.gd"
       - "scripts/building_kit.gd"

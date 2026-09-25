@@ -484,6 +484,29 @@ func get_wetness() -> float:
     return _molhado
 
 
+## Assenta o clima no alvo no mesmo frame. A transição normal leva 5 s de
+## jogo (`transicoes.estado_s`); no CI a ~1 fps cada frame avança no máximo
+## 50 ms de jogo, então o lerp nunca termina e a tomada sai no meio.
+## O jogo continua usando `set_state` (suave). Isto é para prova visual.
+func snap_state(nome: String) -> void:
+    if spec.is_empty() or not spec.get("estados", {}).has(nome):
+        push_warning("[clima] snap ignorado: estado desconhecido %s" % nome)
+        return
+    _estado = nome
+    _estado_suave = _estado_do_spec(nome).duplicate(true)
+    _agendar_relampago()
+    _aplicar_estado()
+    _molhado = _alvo_molhado
+    _molhado_aplicado = -1.0
+    _aplicar_molhado(_molhado)
+    if _pocas != null:
+        var cfg_pocas: Dictionary = spec.get("pocas", {})
+        _pocas.visible = _molhado >= float(cfg_pocas.get("aparecer_em", 0.45))
+    _tempo_reassert = float(_transicao.get("reaplicar_s", 2.0))
+    print("[clima] snap estado=%s molhado=%.2f chuva=%d" % [
+        _estado, _molhado, _quantidade_de_chuva()])
+
+
 func is_raining() -> bool:
     if _chuva == null:
         return _quantidade_de_chuva() > 0
@@ -669,13 +692,24 @@ func _achar_camera() -> Camera3D:
 
 ## Captura os valores base (do perfil do Lote 2, ou do ambiente que ja existe).
 func _capturar_bases() -> void:
-    if _sol == null:
+    # WarmSun é a key. O primeiro DirectionalLight3D da árvore pode ser o
+    # RunnerRim (rig da personagem, sem sombra) — aplicar o multiplicador
+    # do clima nele apagava o recorte da silhueta.
+    if _sol == null or String(_sol.name) != "WarmSun":
         var luzes := get_tree().root.find_children("*", "DirectionalLight3D", true, false)
+        var fallback: DirectionalLight3D = null
         for no in luzes:
             var d := no as DirectionalLight3D
-            if d != null and d.name != "LuzRelampago":
+            if d == null or d.name == "LuzRelampago" or d.name == "RunnerRim":
+                continue
+            if d.name == "WarmSun":
                 _sol = d
+                fallback = d
                 break
+            if fallback == null and d.shadow_enabled:
+                fallback = d
+        if _sol == null or String(_sol.name) != "WarmSun":
+            _sol = fallback
     if _env == null:
         var ambientes := get_tree().root.find_children("*", "WorldEnvironment", true, false)
         if not ambientes.is_empty():

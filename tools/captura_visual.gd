@@ -125,6 +125,7 @@ func _shot(nome: String) -> void:
 	var caminho := SHOT_DIR + "/" + nome + ".png"
 	var err := img.save_png(caminho)
 	print("  shot %s: %s (err=%d, %dx%d)" % [nome, caminho, err, img.get_width(), img.get_height()])
+	_medir_silhueta(img, nome)
 
 
 func _start(index: int) -> void:
@@ -219,58 +220,178 @@ func _tomadas() -> void:
 			break
 	await _frames(24)
 	await _shot("08_final_fase50")
-	# 9. Close na personagem — Etapa 2 (WIB-6): a câmera de jogo segue o runner
-	# todo frame (lerp com dt) e o card de fase podia vazar no quadro; aqui a
-	# tomada é determinística: o countdown assenta, o HUD some, o tempo congela
-	# e uma Camera3D própria (virando `current`) faz o close sem tocar no rig
-	# de luz nem na câmera de jogo. O WeatherSystem (Lote 4) re-aplica as suas
-	# bases capturadas do ready a cada 2 s (sol/névoa/ambiente); o que é da
-	# família e persiste aqui: exposição/white do tonemap, pitch da sombra e o
-	# fill/rim do rig da personagem (camada dela, sem shadow map).
+	# 9. Close 3/4 de frente — Etapa 2 (WIB-6).
+	# Aos 120 m a runner apanhava, hearts caía a 0 e o pisca de
+	# invulnerabilidade NÃO restaurava player_visual.visible (game_3d
+	# 1414-1417). O set anterior saiu com visivel=false e a câmera a 6 m,
+	# alta demais para ler o rig. Aqui: rua curta (ela sobrevive), clima
+	# limpo assentado, órbita grudada no peito, visibilidade forçada e
+	# _process congelado para o pisca não apagá-la no grab.
 	_start(0)
-	_at(120.0)
+	_at(36.0, 8)
 	_lane(1, 6)
-	await create_timer(1.2).timeout
+	_restaurar_runner()
+	_clima_para("limpo")
 	if _game.hud != null:
 		_game.hud.visible = false
-	# Close 3/4 de frente na orbita (yaw ~135 graus): camera a ~5,5 m a
-	# frente-direita do runner, olhando o peito. A Camera3D propria da
-	# versao anterior saia sem a personagem no quadro (a 1 fps o grab podia
-	# pegar o frame previo, antes da nova camera renderizar); na orbita a
-	# camera do jogo — que ja renderiza a personagem nas demais tomadas —
-	# converge em 1-2 frames.
-	_orbit_on(2.35, -0.06)
-	await _frames(8)
-	var pv: Node3D = _game.player_visual
-	print("DIAG close: player_global=", pv.global_position if pv != null else "null",
-		" visivel=", pv.visible if pv != null else "-",
-		" cam_global=", _game.camera.global_position if _game.camera != null else "null",
-		" cam=", _game.camera.name if _game.camera != null else "null")
+	if _game._revive_screen != null:
+		_game._revive_screen.visible = false
+	_game._revive_pending = false
+	# yaw 2.2 rad: a câmera de jogo fica em +Z (costas). cos(2.2)<0 põe a
+	# órbita em −Z, que é a frente. Raio 2.7 m e altura 0.42 = peito, 3/4.
+	_game._capture_radius = 2.7
+	_game._capture_height = 0.42
+	_orbit_on(2.2, -0.05)
+	_game._snap_capture_camera()
+	await _frames(6)
+	_restaurar_runner()
+	if _game._revive_screen != null:
+		_game._revive_screen.visible = false
+	_game.set_process(false)
+	_game.set_physics_process(false)
+	_diag_close()
 	await _shot("09_close_personagem")
+	_game.set_process(true)
+	_game.set_physics_process(true)
+	_game._capture_radius = 6.2
+	_game._capture_height = 2.0
 	_orbit_off()
 	if _game.hud != null:
 		_game.hud.visible = true
 	await _frames(2)
 
-	# 10/11 — os mesmos 4 climas do rig (WIB-6): nublado e chuva FORÇADOS via
-	# WeatherSystem (spec re-aplica sol×0.78/0.48, névoa e molhado por cima da
-	# base da família), na câmera de jogo: prova de sombra colada no pé e do
-	# fill/rim sob luz difusa e sob luz mínima.
+	# 10/11 — nublado e chuva ASSENTADOS (snap), não no meio do lerp de 5 s
+	# de jogo. A 1 fps o set_state nunca chegava no alvo (molhado 0.23 / 0.14
+	# no set anterior) e o céu continuava o panorama de sol.
 	_start(2)
-	_at(24.0)
-	_lane(1, 2)
-	await create_timer(0.8).timeout
-	if _game._clima != null:
-		_game._clima.set_state("nublado")
-	# Settle em relogio de parede: a 1 fps do llvmpipe, 320 frames = 5 min de
-	# jogo e o folego expirava no meio da sequencia (o run morria e a tela de
-	# carregamento/folego baixo vazava para o quadro).
-	await create_timer(5.6).timeout
+	_at(28.0, 6)
+	_lane(1, 4)
+	_restaurar_runner()
+	_clima_para("nublado")
+	await create_timer(2.4).timeout
+	_diag_close()
 	await _shot("10_clima_nublado")
-	if _game._clima != null:
-		_game._clima.set_state("chuva")
-	await create_timer(5.6).timeout
+	_clima_para("chuva")
+	await create_timer(2.8).timeout
+	_diag_close()
 	await _shot("11_clima_chuva")
-	if _game._clima != null:
-		_game._clima.set_state("limpo")
+	_clima_para("limpo")
 	await create_timer(0.3).timeout
+
+
+func _restaurar_runner() -> void:
+	_game.hearts = maxi(int(_game.hearts), 3)
+	_game.invulnerability = 0.0
+	var pv: Node3D = _game.player_visual
+	if pv != null:
+		pv.visible = true
+
+
+## Snap do WeatherSystem + família de luz no mesmo frame. O reapply do clima
+## (2 s de jogo) não alcança a tomada: a 1 fps isso seria ~40 s de parede.
+func _clima_para(nome: String) -> void:
+	if _game._clima != null and _game._clima.has_method("snap_state"):
+		_game._clima.snap_state(nome)
+	if _game.has_method("_apply_scenario_atmosphere"):
+		_game._apply_scenario_atmosphere()
+	if _game._clima != null:
+		_game._clima.set("_tempo_reassert", 2.0)
+
+
+func _diag_close() -> void:
+	var pv: Node3D = _game.player_visual
+	var sol: DirectionalLight3D = _game.sun
+	print("DIAG close: visivel=", pv.visible if pv != null else "-",
+		" hearts=", _game.hearts,
+		" player=", pv.global_position if pv != null else "null",
+		" cam=", _game.camera.global_position if _game.camera != null else "null")
+	if sol != null:
+		print("DIAG sol: e=", sol.light_energy, " pitch=", sol.rotation_degrees.x,
+			" yaw=", sol.rotation_degrees.y, " bias=", sol.shadow_normal_bias)
+	for nome_luz in ["RunnerFill", "RunnerRim", "RunnerLift"]:
+		var luz := _game.find_child(nome_luz, true, false)
+		if luz != null and luz is Light3D:
+			print("DIAG rig: ", nome_luz, " e=", (luz as Light3D).light_energy, " vis=", luz.visible)
+
+
+func _rel_lum(valor: float) -> float:
+	var s := clampf(valor / 255.0, 0.0, 1.0)
+	if s <= 0.04045:
+		return s / 12.92
+	return pow((s + 0.055) / 1.055, 2.4)
+
+
+## Contraste da camisa (rosa) contra a rua ao lado. Meta WIB-6: ≥ 3:1.
+## Estouro = fração de pixels com luminância > 245 (exposição estourada).
+func _medir_silhueta(img: Image, nome: String) -> void:
+	var w := img.get_width()
+	var h := img.get_height()
+	var shirt_sum := 0.0
+	var shirt_n := 0
+	var min_x := w
+	var max_x := 0
+	var min_y := h
+	var max_y := 0
+	var blown := 0
+	var amostras := 0
+	for y in range(0, h, 4):
+		for x in range(0, w, 4):
+			amostras += 1
+			var c := img.get_pixel(x, y)
+			var rl := (0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b) * 255.0
+			if rl > 245.0:
+				blown += 1
+			if y < int(h * 0.28) or y > int(h * 0.82):
+				continue
+			if x < int(w * 0.12) or x > int(w * 0.88):
+				continue
+			var r := c.r * 255.0
+			var g := c.g * 255.0
+			var b := c.b * 255.0
+			if r > 72.0 and r > g + 16.0 and r > b + 8.0 and g < 190.0 and b < 175.0:
+				shirt_n += 1
+				shirt_sum += rl
+				min_x = mini(min_x, x)
+				max_x = maxi(max_x, x)
+				min_y = mini(min_y, y)
+				max_y = maxi(max_y, y)
+	var blown_pct := 100.0 * float(blown) / float(maxi(1, amostras))
+	if shirt_n < 15:
+		print("SILHUETA %s sem_camisa n=%d estouro=%.2f%%" % [nome, shirt_n, blown_pct])
+		return
+	var shirt_lum := shirt_sum / float(shirt_n)
+	var bg_sum := 0.0
+	var bg_n := 0
+	var y1 := mini(h - 1, max_y + int(float(max_y - min_y) * 0.85))
+	for y2 in range(min_y, y1, 3):
+		for x2 in range(maxi(0, min_x - 42), maxi(0, min_x - 6), 3):
+			var amostra := _lum_rua(img, x2, y2)
+			if amostra < 0.0:
+				continue
+			bg_sum += amostra
+			bg_n += 1
+		for x3 in range(mini(w - 1, max_x + 6), mini(w, max_x + 42), 3):
+			var amostra_dir := _lum_rua(img, x3, y2)
+			if amostra_dir < 0.0:
+				continue
+			bg_sum += amostra_dir
+			bg_n += 1
+	if bg_n < 8:
+		print("SILHUETA %s camisa=%.1f sem_fundo n=%d estouro=%.2f%%" % [nome, shirt_lum, shirt_n, blown_pct])
+		return
+	var bg_lum := bg_sum / float(bg_n)
+	var rs := _rel_lum(shirt_lum)
+	var rb := _rel_lum(bg_lum)
+	var ratio := (maxf(rs, rb) + 0.05) / (minf(rs, rb) + 0.05)
+	print("SILHUETA %s ratio=%.2f camisa=%.1f rua=%.1f n=%d estouro=%.2f%%" % [
+		nome, ratio, shirt_lum, bg_lum, shirt_n, blown_pct])
+
+
+func _lum_rua(img: Image, x: int, y: int) -> float:
+	var c := img.get_pixel(x, y)
+	var r := c.r * 255.0
+	var g := c.g * 255.0
+	var b := c.b * 255.0
+	if r > 72.0 and r > g + 16.0 and r > b + 8.0:
+		return -1.0
+	return 0.2126 * r + 0.7152 * g + 0.0722 * b

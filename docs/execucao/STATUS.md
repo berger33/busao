@@ -22,6 +22,12 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
 
 ## Diário
 
+### 2026-09-25 (Etapa 2 / WIB-6 — continuação)
+
+- O set de capturas de `sandbox/screenshots` @ `b38155c` (branch `arena/01a0d712`) não fecha o aceite: close com `player_visual.visible=false` e câmera a 6 m; nublado/chuva no meio do lerp (molhado 0,23 / 0,14) porque a 1 fps a transição de 5 s de jogo não termina; silhueta da camisa contra a rua abaixo de 3:1 em 04, 07, 09, 10 e 11.
+- Correção nesta branch (`arena/01a0d882`): `WeatherSystem.snap_state` assenta o clima no frame; o harness força limpo/nublado/chuva e mede `SILHUETA` no log; close 3/4 de frente a 2,7 m com a runner restaurada e o `_process` congelado; rig ganha `RunnerLift` e fill/rim mais fortes; o clima não pode mais escrever no `RunnerRim`; bias de contato 0,28 e sol 0,65°.
+- Prova visual: CI `screenshots` desta branch. Meta: ratio ≥ 3:1 nas tomadas 02/04/09/10/11 e estouro < 2%.
+
 ### 2026-09-20 (sessão original, recuperada)
 
 - ETAPA 1 implementada por completo: RunDirector extraído de `game_3d.gd`
