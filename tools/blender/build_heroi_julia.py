@@ -613,6 +613,140 @@ def esculpir_rosto(obj):
 
 
 # -----------------------------------------------------------------------------
+# 4d. Fase 3 — olhos e cabelo em cards alpha-scissor (mobile-safe)
+# -----------------------------------------------------------------------------
+def _mat_principled(nome, cor, rough=0.5, transmission=0.0):
+    m = D.materials.new(nome)
+    m.use_nodes = True
+    b = m.node_tree.nodes.get("Principled BSDF")
+    b.inputs["Base Color"].default_value = (*cor, 1.0)
+    b.inputs["Roughness"].default_value = rough
+    if transmission and "Transmission Weight" in b.inputs:
+        b.inputs["Transmission Weight"].default_value = transmission
+        b.inputs["IOR"].default_value = 1.38
+    return m
+
+
+def _card(nome, pontos, mat, uvs=((0, 0), (1, 0), (1, 1), (0, 1))):
+    """Quad frente-e-verso. Cards não se cruzam quase coplanares: evita shimmer."""
+    me = D.meshes.new(nome)
+    me.from_pydata(pontos, [], [(0, 1, 2, 3)])
+    me.update()
+    uv = me.uv_layers.new(name="UVMap")
+    for loop, co in zip(me.uv_layers.active.data, uvs):
+        loop.uv = co
+    o = D.objects.new(nome, me)
+    bpy.context.scene.collection.objects.link(o)
+    o.data.materials.append(mat)
+    return o
+
+
+def material_cabelo_alpha():
+    """Máscara binária embutida; glTF exporta MASK, nunca BLEND/alpha sorting."""
+    img = D.images.new("julia_cabelo_alpha", width=128, height=256, alpha=True)
+    px = []
+    for y in range(256):
+        v = y / 255.0
+        for x in range(128):
+            u = x / 127.0
+            # cinco fios largos + borda que afunila na ponta, sem semitransparência
+            largura = 0.46 * (0.28 + 0.72 * v)
+            dentro = abs(u - 0.5) < largura
+            fio = (math.sin(u * 34.0 + v * 8.0) > -0.78)
+            a = 1.0 if dentro and fio else 0.0
+            # castanho com variação longitudinal já na textura
+            c = 0.055 + 0.035 * math.sin(u * 31.0) ** 2
+            px.extend((c * 1.35, c * 0.62, c * 0.32, a))
+    img.pixels.foreach_set(px)
+    # Fonte versionada e cópia packed no GLB; 128x256 mantém o custo mobile baixo.
+    tex_dir = REPO / "assets" / "textures" / "heroi"
+    tex_dir.mkdir(parents=True, exist_ok=True)
+    img.filepath_raw = str(tex_dir / "julia_cabelo_alpha.png")
+    img.file_format = "PNG"
+    img.save()
+    img.pack()
+    m = D.materials.new("CabeloJulia_alpha_scissor")
+    m.use_nodes = True
+    nt = m.node_tree
+    b = nt.nodes.get("Principled BSDF")
+    tex = nt.nodes.new("ShaderNodeTexImage")
+    tex.image = img
+    nt.links.new(tex.outputs["Color"], b.inputs["Base Color"])
+    # O exporter 4.5 infere MASK do nó de comparação (alpha >= 0.5). Ligar o
+    # alpha direto gera BLEND e reintroduz ordenação/shimmer em mobile.
+    clip = nt.nodes.new("ShaderNodeMath")
+    clip.operation = "GREATER_THAN"
+    clip.inputs[1].default_value = 0.5
+    nt.links.new(tex.outputs["Alpha"], clip.inputs[0])
+    nt.links.new(clip.outputs[0], b.inputs["Alpha"])
+    b.inputs["Roughness"].default_value = 0.68
+    if hasattr(m, "surface_render_method"):
+        m.surface_render_method = "DITHERED"
+    m.alpha_threshold = 0.5
+    m.use_transparency_overlap = False
+    m.diffuse_color = (0.07, 0.025, 0.012, 1.0)
+    return m
+
+
+def criar_olhos_e_cards():
+    pecas = []
+    esclera = _mat_principled("Olho_Esclera", (0.82, 0.86, 0.82), 0.28)
+    iris = _mat_principled("Olho_Iris_NormalRadial", (0.055, 0.16, 0.10), 0.34)
+    # Normal radial procedural: anéis concêntricos finos convertidos em bump.
+    int_ = iris.node_tree
+    ib = int_.nodes.get("Principled BSDF")
+    icoord = int_.nodes.new("ShaderNodeTexCoord")
+    ivor = int_.nodes.new("ShaderNodeTexVoronoi")
+    ivor.distance = "EUCLIDEAN"; ivor.feature = "DISTANCE_TO_EDGE"
+    ivor.inputs["Scale"].default_value = 38.0
+    ibump = int_.nodes.new("ShaderNodeBump")
+    ibump.inputs["Strength"].default_value = 0.28
+    ibump.inputs["Distance"].default_value = 0.001
+    int_.links.new(icoord.outputs["Generated"], ivor.inputs["Vector"])
+    int_.links.new(ivor.outputs["Distance"], ibump.inputs["Height"])
+    int_.links.new(ibump.outputs["Normal"], ib.inputs["Normal"])
+    cornea = _mat_principled("Olho_Cornea_RefractionBarata", (0.92, 0.98, 1.0), 0.06, 0.78)
+    escuro = _mat_principled("Sobrancelha_Cilios", (0.035, 0.012, 0.007), 0.72)
+
+    for lado, s in (("l", 1.0), ("r", -1.0)):
+        # Esfera achatada encaixada na órbita, olhando para -Y.
+        for nome, loc, escala, mat, seg in (
+            (f"esclera_{lado}", (s * 0.034, -0.074, 1.588), (0.025, 0.010, 0.015), esclera, 20),
+            (f"iris_{lado}", (s * 0.034, -0.0842, 1.588), (0.0095, 0.0012, 0.0095), iris, 16),
+            (f"cornea_{lado}", (s * 0.034, -0.0855, 1.588), (0.0115, 0.0017, 0.0115), cornea, 16),
+        ):
+            bpy.ops.mesh.primitive_uv_sphere_add(segments=seg, ring_count=max(8, seg // 2), location=loc)
+            o = bpy.context.object; o.name = nome; o.scale = escala
+            bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+            o.data.materials.append(mat); pecas.append(o)
+        # Pálpebras, sobrancelhas e cílios: cards curvos em planos separados.
+        x0, x1 = s * 0.061, s * 0.008
+        pecas.append(_card(f"sobrancelha_{lado}", [(x0,-0.098,1.609),(x1,-0.099,1.611),(x1,-0.098,1.616),(x0,-0.097,1.617)], escuro))
+        pecas.append(_card(f"cilios_{lado}", [(x0,-0.096,1.589),(x1,-0.097,1.590),(x1,-0.097,1.593),(x0,-0.096,1.592)], escuro))
+        pele = D.materials.get("PeleJulia") or material("PeleJulia", (0.74, 0.52, 0.40))
+        pecas.append(_card(f"palpebra_sup_{lado}", [(x0,-0.094,1.593),(x1,-0.095,1.594),(x1,-0.094,1.598),(x0,-0.093,1.597)], pele))
+
+    cabelo = material_cabelo_alpha()
+    # Franja: quatro cards escalonados, afastados 2 mm entre si.
+    for i in range(4):
+        x0 = -0.074 + i * 0.037
+        x1 = x0 + 0.041
+        y = -0.086 - i * 0.0007
+        pecas.append(_card(f"franja_{i+1}", [(x0,y,1.690),(x1,y,1.688),(x1,y-0.004,1.612),(x0,y-0.003,1.620)], cabelo))
+    # Calota em 6 cards e rabo de cavalo exatamente em 5 mechas.
+    for i in range(6):
+        a0 = -1.05 + i * 0.42; a1 = a0 + 0.52
+        pecas.append(_card(f"calota_{i+1}", [(0.085*math.sin(a0),0.020,1.705),(0.085*math.sin(a1),0.020,1.705),
+                    (0.091*math.sin(a1),0.055,1.585),(0.091*math.sin(a0),0.055,1.585)], cabelo))
+    for i in range(5):
+        off = (i - 2) * 0.018
+        pecas.append(_card(f"rabo_mecha_{i+1}", [(off-0.023,0.080,1.635),(off+0.023,0.080,1.635),
+                    (off+0.014,0.105+0.006*i,1.455),(off-0.014,0.105+0.006*i,1.455)], cabelo))
+    log("Fase 3: 2 olhos (esclera/íris/córnea), pálpebras, sobrancelhas/cílios e cabelo alpha-scissor")
+    return pecas
+
+
+# -----------------------------------------------------------------------------
 # 5. Normalização de escala e contato com o solo
 # -----------------------------------------------------------------------------
 def normalizar(obj, altura=ALTURA_ALVO, piso=PISO_OFFSET):
@@ -661,7 +795,12 @@ def exportar(obj, nome="heroi_julia_base"):
     obj.data.materials.clear()
     obj.data.materials.append(mat)
 
-    ativar(obj)
+    # Fase 3 mantém olhos/cards como objetos separados para materiais próprios.
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in bpy.context.scene.objects:
+        if o.type == "MESH":
+            o.select_set(True)
+    bpy.context.view_layer.objects.active = obj
     glb = OUT_DIR / f"{nome}.glb"
     bpy.ops.export_scene.gltf(
         filepath=str(glb),
@@ -688,8 +827,13 @@ def main():
     esculpir_rosto(corpo)
     juntar(corpo, criar_maos())
     normalizar(corpo)
+    criar_olhos_e_cards()
 
     m = metricas(corpo)
+    extras = [o for o in bpy.context.scene.objects if o.type == "MESH" and o != corpo]
+    m["fase3_objetos"] = len(extras)
+    m["rabo_mechas"] = len([o for o in extras if o.name.startswith("rabo_mecha_")])
+    m["alpha_mode"] = "MASK (alpha cutoff 0.5)"
     glb, blend = exportar(corpo)
     m["glb_kb"] = round(glb.stat().st_size / 1024, 1)
     m["gate_tris"] = TRIS_MIN <= m["tris"] <= TRIS_MAX
