@@ -24,3 +24,6 @@ Imagens geradas como referência de direção de arte — não são capturas do 
 | 9 | `9_fase2_closeup_pele.png` | Close-up da pele bakeada: variação de tom, AO nas dobras e microrrelevo de poro. |
 | 10 | `10_bracos_corrigidos.png` | Três linhas: Fase 1 (barro), PBR com os braços tortos e a versão corrigida (máscara lateral do tronco + cadeia do braço em reta). |
 | 11 | `11_mao_detalhe.png` | Close da mão refeita: palha própria (laje) com dedos nascendo de dentro da palma. |
+| 12 | `12_turnaround_fase2.png` | Turnaround 4 vistas (frente/3-4/lado/costas) do GLB da Fase 2 reconstruído do zero em 26/09/2026 — `assets/characters/source/heroi_julia/heroi_julia_pbr.glb` (1.672 KB, PBR + rosto esculpido). Ver `docs/execucao/HEROI_REBUILD_2026-09-26.md`. |
+| 13 | `13_mao_detalhe_fase2.png` | Close da mão no GLB reconstruído (`tools/blender/render_detalhe.py --alvo mao`): palma em laje, 4 dedos nascendo dentro da palma, polegar lateral. |
+| 14 | `14_rosto_detalhe.png` | Close do rosto no GLB reconstruído (`render_detalhe.py --alvo rosto`): órbitas, nariz, boca, queixo e orelhas esculpidos (Fase 3 parcial — ainda sem cabelo). |
