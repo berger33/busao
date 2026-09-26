@@ -18,7 +18,7 @@ on:
         required: false
         default: ""
   push:
-    branches: [arena/01a0d62f-busao, arena/01a0d6bf-busao, arena/01a0d712-busao, arena/01a0d882-busao, arena/01a0da73-busao]
+    branches: [arena/01a0d62f-busao, arena/01a0d6bf-busao, arena/01a0d712-busao, arena/01a0d882-busao, arena/01a0da73-busao, arena/01a0db36-busao]
     paths:
       - "scripts/game_3d.gd"
       - "scripts/lighting_handler.gd"
@@ -27,6 +27,8 @@ on:
       - "scripts/runner_character.gd"
       - "scripts/building_kit.gd"
       - "resources/world_spec.json"
+      - "resources/weather_spec.json"
+      - "tools/captura_sweep.env"
       - "assets/textures/**"
       - "assets/characters/personagens/**"
       - "tools/captura_visual.gd"

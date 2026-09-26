@@ -10,6 +10,8 @@ extends SceneTree
 ## Código de saída 0 = capturas gravadas.
 
 const SHOT_DIR := "res://captures"
+## Yaw do close 09 (rad) — varredura WIB-6 v2, 25/09: 3.8 = 3,20:1.
+const CLOSE_YAW := 3.8
 
 var _game = null
 var _spd := 8.0
@@ -233,11 +235,13 @@ func _tomadas() -> void:
 	var yaws: Array[float] = []
 	for yaw_c in _env_list("CAPTURA_YAWS"):
 		yaws.append(float(yaw_c))
-	# yaw 2.2 rad: a câmera de jogo fica em +Z (costas). cos(2.2)<0 põe a
-	# órbita em −Z, que é a frente. Raio 2.7 m e altura 0.42 = peito, 3/4.
+	# yaw 3.8 rad (escolhido na varredura v2 de 25/09, sandbox/screenshots
+	# @ 2ea72a3): órbita no hemisfério da frente, 3/4 com fundo de tijolo e
+	# árvore em vez da faixa branca da zebragem. Único yaw ≥ 3:1 — 3,20:1,
+	# estouro 1,2% (o 2.2 antigo dava 1,25:1). Raio 2.7 m, altura 0.42 = peito.
 	# A tomada canônica (sem sufixo) roda primeiro e sempre — é a prova.
 	await _prepara_close()
-	await _close_uma(2.2, "09_close_personagem")
+	await _close_uma(CLOSE_YAW, "09_close_personagem")
 	for yaw in yaws:
 		await _prepara_close()
 		await _close_uma(yaw, "09_close_personagem_y%d" % int(round(yaw * 100.0)))
@@ -269,20 +273,15 @@ func _tomadas() -> void:
 	var ganhos: Array[float] = []
 	for g_c in _env_list("CAPTURA_RIG"):
 		ganhos.append(float(g_c))
-	if not ganhos.is_empty():
-		var fill := _game.find_child("RunnerFill", true, false) as Light3D
-		var lift := _game.find_child("RunnerLift", true, false) as Light3D
-		var front := _game.find_child("RunnerFront", true, false) as Light3D
-		var base_fill := fill.light_energy if fill != null else 0.0
-		var base_lift := lift.light_energy if lift != null else 0.0
-		var base_front := front.light_energy if front != null else 0.0
+	# O ganho agora vem do clima (weather_spec.json `rig_ganho`, ×2,5 em
+	# nublado/chuva). A varredura fixa o ganho via `rig_gain_override` sobre
+	# a energia BASE — multiplicar a energia atual somaria os dois ganhos, e
+	# o reassert do clima (2 s) desfaria o valor no meio dos timers.
+	var runner: Node = _game.player_visual
+	if not ganhos.is_empty() and runner != null and "rig_gain_override" in runner:
 		for g in ganhos:
-			if fill != null:
-				fill.light_energy = base_fill * g
-			if lift != null:
-				lift.light_energy = base_lift * g
-			if front != null:
-				front.light_energy = base_front * g
+			runner.set("rig_gain_override", g)
+			runner.call("_apply_rig_gain")
 			# Repete o setup canônico de 10/11 por ganho: sem o restart,
 			# a deriva de posição/hearts (e a corrida durante os timers)
 			# torna as variantes incomparáveis entre si.
@@ -300,12 +299,7 @@ func _tomadas() -> void:
 			_restaurar_runner()
 			_diag_close()
 			await _shot("11_g%d" % int(round(g * 100.0)))
-		if fill != null:
-			fill.light_energy = base_fill
-		if lift != null:
-			lift.light_energy = base_lift
-		if front != null:
-			front.light_energy = base_front
+		runner.set("rig_gain_override", -1.0)
 	_clima_para("limpo")
 	await create_timer(0.3).timeout
 
@@ -391,6 +385,8 @@ func _diag_close() -> void:
 		var luz: Node = _game.find_child(nome_luz, true, false)
 		if luz != null and luz is Light3D:
 			print("DIAG rig: ", nome_luz, " e=", (luz as Light3D).light_energy, " vis=", luz.visible)
+	if pv != null and pv.has_method("get_rig_gain"):
+		print("DIAG rig: ganho=", pv.call("get_rig_gain"))
 
 
 func _rel_lum(valor: float) -> float:

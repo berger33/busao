@@ -39,6 +39,8 @@ var _y_piso := 0.0
 
 var _rng := RandomNumberGenerator.new()
 var _sol: DirectionalLight3D = null
+# Dono do rig da personagem (runner_character.gd) — recebe `rig_ganho`.
+var _runner_rig: Node = null
 var _env: Environment = null
 var _ceu_material: Material = null
 var _camera: Camera3D = null
@@ -547,6 +549,19 @@ func _aplicar_estado() -> void:
                 float(suave.get("turbidez_extra", 0.0)), float(suave.get("cinza", 0.0)))
     _alvo_molhado = float(suave.get("molhado_alvo", 0.0))
     _atualizar_chuva(_estado, suave)
+    _aplicar_rig(float(suave.get("rig_ganho", 1.0)))
+
+
+## Etapa 2 (WIB-6): ganho do rig da personagem por clima (Fill/Lift/Front).
+## Entra no lerp da transição como os outros números do estado.
+func _aplicar_rig(ganho: float) -> void:
+    if _runner_rig == null or not is_instance_valid(_runner_rig):
+        _runner_rig = null
+        var achado := get_tree().root.find_child("RunnerLightRig", true, false)
+        if achado != null and achado.get_parent() != null and achado.get_parent().has_method("set_rig_gain"):
+            _runner_rig = achado.get_parent()
+    if _runner_rig != null:
+        _runner_rig.call("set_rig_gain", ganho)
 
 
 func _aplicar_nuvens(nuvens: float, turbidez_extra: float, cinza: float) -> void:

@@ -23,7 +23,8 @@
       "ambiente_multiplicador": 1.0,
       "molhado_alvo": 0.0,
       "turbidez_extra": 0.0,
-      "cinza": 0.0
+      "cinza": 0.0,
+      "rig_ganho": 1.0
     },
     "nublado": {
       "nome_pt": "nublado",
@@ -33,7 +34,8 @@
       "ambiente_multiplicador": 1.08,
       "molhado_alvo": 0.1,
       "turbidez_extra": 2.5,
-      "cinza": 0.45
+      "cinza": 0.45,
+      "rig_ganho": 2.5
     },
     "chuva": {
       "nome_pt": "chuva",
@@ -43,7 +45,8 @@
       "ambiente_multiplicador": 1.18,
       "molhado_alvo": 0.8,
       "turbidez_extra": 5.0,
-      "cinza": 0.7
+      "cinza": 0.7,
+      "rig_ganho": 2.5
     },
     "tempestade": {
       "nome_pt": "tempestade",
@@ -53,7 +56,8 @@
       "ambiente_multiplicador": 1.28,
       "molhado_alvo": 1.0,
       "turbidez_extra": 7.0,
-      "cinza": 0.85
+      "cinza": 0.85,
+      "rig_ganho": 2.5
     }
   },
   "chuva": {

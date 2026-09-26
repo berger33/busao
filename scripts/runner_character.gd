@@ -124,6 +124,13 @@ var mesh_parts: Dictionary = {}
 var mesh_part_rest: Dictionary = {}
 var runner_shadow: MeshInstance3D
 var _light_rig: Node3D
+# Etapa 2 (WIB-6): energia base de Fill/Lift/Front (clima limpo) e o ganho
+# atual. O WeatherSystem chama set_rig_gain() com `rig_ganho` do
+# weather_spec.json (varredura 25/09: ×2,5 em nublado/chuva).
+var _rig_base_energy: Dictionary = {}
+var _rig_gain := 1.0
+## > 0 fixa o ganho e ignora o clima (varredura CAPTURA_RIG do harness).
+var rig_gain_override := -1.0
 var _outline_material: StandardMaterial3D
 var _outline_shells := 0
 var _outline_reported := false
@@ -1429,6 +1436,28 @@ func _build_light_rig() -> void:
     front.light_cull_mask = RUNNER_VISIBILITY_LAYER
     front.position = Vector3(0.35, 1.4, -1.15)
     _light_rig.add_child(front)
+    for luz in [fill, lift, front]:
+        _rig_base_energy[luz] = luz.light_energy
+    _apply_rig_gain()
+
+
+## Multiplica Fill/Lift/Front (o Rim fica fixo — recorte, não volume).
+## Nuvem e chuva derrubam a key: sem o ganho a camisa some contra a rua
+## (chuva 2,1:1 no set de 25/09; ×2,5 subiu para 2,5:1 e o nublado para 3,5:1).
+func set_rig_gain(ganho: float) -> void:
+    _rig_gain = maxf(0.0, ganho)
+    _apply_rig_gain()
+
+
+func get_rig_gain() -> float:
+    return rig_gain_override if rig_gain_override > 0.0 else _rig_gain
+
+
+func _apply_rig_gain() -> void:
+    var g := get_rig_gain()
+    for luz in _rig_base_energy.keys():
+        if is_instance_valid(luz):
+            (luz as Light3D).light_energy = float(_rig_base_energy[luz]) * g
 
 func _build_fallback(reason: String) -> void:
     push_warning("Humanoide Quaternius indisponível (%s); ativando fallback de diagnóstico." % reason)
