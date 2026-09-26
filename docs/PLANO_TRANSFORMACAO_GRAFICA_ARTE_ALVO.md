@@ -32,9 +32,19 @@ Transformar o visual 3D in-game atual para atingir exatamente a qualidade artís
 - **Protagonista:** Uniforme esportivo brasileiro (amarelo canário com detalhes verdes), tênis esportivo e mochila de corrida.
 - **HUD Mobile Vibrante:** Tipografia com stroke/outline de alto contraste em qualquer iluminação, ícones 3D e botão de pause estilizado.
 
+### ✨ Etapa 6: Partículas e Efeitos de Luz Dinâmica (WIB-18: DONE)
+- **Burst Estelar nas Moedas R$:** 14 partículas douradas com arco de dispersão vertical e emissão $3.6\times$ ao coletar moedas.
+- **Auras Radiais de Power-ups:** 20 partículas temáticas (azul café/turbo, verde guaraná, dourado bilhete único).
+- **Speed VFX:** Efeito visual de velocidade com FOV boost responsivo durante o Dash.
+
+### 🕊️ Etapa 7: Micro-animações de Cenário & Vida Urbana (WIB-19: DONE)
+- **Revoada Dinâmica de Pombos:** Pássaros urbanos pousados no asfalto/calçada que decolam em arcos suaves conforme o corredor se aproxima em alta velocidade.
+- **Folhas de Ipê ao Vento:** Dispersão e turbilhonamento de pétalas/folhas amarelas floridas de Ipê ao longo do quarteirão.
+- **Cenografia Viva:** Ambientação dinâmica com MultiMesh otimizada para Adreno 610 (GPU Mobile).
+
 ---
 
-## 📊 Status Final: 100% CONCLUÍDO (5/5 Etapas Green)
+## 📊 Status Final: 100% CONCLUÍDO (7/7 Etapas Green)
 - **Suíte QA:** 133/133 checks aprovados (0 avisos, 0 falhas).
-- **Linear:** Issues WIB-13 a WIB-17 marcadas como Done.
+- **Linear:** Issues WIB-13 a WIB-19 marcadas como Done.
 - **Git:** Sincronizado e com push ativo na branch `arena/01a0db52-busao`.
