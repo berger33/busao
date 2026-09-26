@@ -42,9 +42,14 @@ Transformar o visual 3D in-game atual para atingir exatamente a qualidade artís
 - **Folhas de Ipê ao Vento:** Dispersão e turbilhonamento de pétalas/folhas amarelas floridas de Ipê ao longo do quarteirão.
 - **Cenografia Viva:** Ambientação dinâmica com MultiMesh otimizada para Adreno 610 (GPU Mobile).
 
+### 🌧️ Etapa 8: Shaders de Superfície Refletiva & Variações Climáticas (WIB-20: DONE)
+- **Poças d'Água Cristalinas:** MultiMesh dinâmico com especularidade $0.90$ e rugosidade $0.05$ refletindo o céu e a iluminação.
+- **Transição de Secagem Progressiva:** Curva de secagem natural (16 s) vs molhagem dinâmica (3 s) e albedo molhado calibrado.
+- **Micro-efeito de Respingo:** Sistema de partículas acoplado ao passo do corredor sobre áreas molhadas.
+
 ---
 
-## 📊 Status Final: 100% CONCLUÍDO (7/7 Etapas Green)
+## 📊 Status Final: 100% CONCLUÍDO (8/8 Etapas Green)
 - **Suíte QA:** 133/133 checks aprovados (0 avisos, 0 falhas).
-- **Linear:** Issues WIB-13 a WIB-19 marcadas como Done.
+- **Linear:** Issues WIB-13 a WIB-20 marcadas como Done.
 - **Git:** Sincronizado e com push ativo na branch `arena/01a0db52-busao`.
