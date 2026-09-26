@@ -22,6 +22,16 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
 
 ## Diário
 
+### 2026-09-26 (Etapa 4 / WIB-8 — Materiais e Leitura em Tela Pequena)
+
+- Consolidação e calibração dos materiais PBR para tela pequena (WIB-8):
+  - **Pele Humana**: SSS suave (0.18), especularidade não plástica (0.28), normal scale (0.52) e textura de poros/rugosidade para resposta difusa e macia à luz.
+  - **Tecidos e Jeans**: Normal map de alta frequência, clearcoat suave (0.10, roughness 0.42) reproduzindo reflexão difusa de microfibras sem brilho sintético uniforme.
+  - **Superfícies Urbanas e Vegetação**: Asfalto, lajes e mosaicos via ORMMaterial3D com triplanar world e roughness maps dedicados; folhagem com roughness 0.85 (eliminado reflexo plástico).
+  - **Metais e Vidro**: Clearcoat 0.85 no vidro e metalicidade calibrada em estruturas urbanas.
+  - **Legibilidade a 30 cm**: Alto contraste de valores entre o personagem e os pavimentos (asfalto vs calçada) garantindo leitura clara do personagem a 1/6 da tela.
+- Validação: `audit_surface_materials.py` 0 findings · `qa_full.py` 133 OK / 0 WARN / 0 FAIL.
+
 ### 2026-09-26 (Etapa 3 / WIB-7 — Câmera e Sensação de Corrida)
 
 - Implementado o refinamento da câmera mobile retrato para a Etapa 3 (WIB-7):

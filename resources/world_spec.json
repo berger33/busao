@@ -322,7 +322,7 @@
       ],
       "uv_escala": 1.0,
       "triplanar": false,
-      "rugosidade": 0.18
+      "rugosidade": 0.85
     },
     "vidro": {
       "pbr": null,
