@@ -22,11 +22,11 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
 
 ## Diário
 
-### 2026-09-26 (Herói 10/10 — Fase 3 cabelo e olhos concluída)
+### 2026-09-26 (Herói 10/10 — Fase 3 rosto completo concluída)
 
-- `build_heroi_julia.py` ganhou a seção 4d: esclera/íris/córnea separadas, normal radial da íris, pálpebras, sobrancelhas, cílios, franja e rabo de cavalo em exatamente 5 mechas.
-- Cabelo mobile-safe com textura 128×256 e glTF `alphaMode=MASK` (cutoff 0,5), sem `BLEND`/ordenação de transparência; 27 peças novas preservadas pelo pipeline de bake/export.
-- Gates anteriores verdes: corpo 35.952 tris, 1,720 m, sola 0,012 m, 0 não-manifold; atlas 61,2%; GLB PBR 1.812,4 KB. Runtime intacto (`HERO OK MESH-ONLY`).
+- `build_heroi_julia.py` consolidou a seção 4d: lábios/narinas, esclera/íris/pupila/córnea separadas, normal radial da íris, pálpebras superiores/inferiores, sobrancelhas, cílios, franja e rabo de cavalo em exatamente 5 mechas.
+- Cabelo mobile-safe com glTF `alphaMode=MASK` (cutoff 0,5), sem `BLEND`/ordenação no cabelo; a única peça transparente por blend é a córnea. Íris e cabelo geram texturas próprias versionadas.
+- Gates anteriores verdes: corpo 35.952 tris, extras Fase 3 4.158 tris, total GLB 40.110 tris, 1,720 m, sola 0,012 m, 0 não-manifold; atlas 61,2%; GLB PBR 1.971,9 KB com 6 imagens embutidas. Runtime intacto (`HERO OK MESH-ONLY`).
 - Evidências: `15_turnaround_fase3.png`, `16_rosto_fase3.png`; detalhes em `docs/execucao/HEROI_FASE3.md`.
 
 ### 2026-09-26 (Herói 10/10 — reconstrução do GLB Fase 1+2 + turnaround fresco)
@@ -828,7 +828,7 @@ evidência → aprovação do usuário → WIB-7 (câmera).
 
 ### 2026-09-26 — Herói 10/10: Fase 3 fechada
 
-- `build_heroi_julia.py` gera olhos (esclera, íris com normal radial e córnea), pálpebras, sobrancelhas/cílios e cabelo em cards alpha-scissor.
-- Cabelo: franja + calota em cards e 5 mechas de rabo de cavalo; máscara binária 128×256, sem alpha blend/ordenação.
-- Gate geométrico preservado: 35.952 tris, 1,720 m, sola 0,012 m, 0 não-manifold; GLB mesh-only 772,3 KB.
-- Evidência: `docs/arte_alvo_final/15_rosto_detalhe_fase3.png`; detalhes em `docs/execucao/HEROI_FASE3.md`.
+- `build_heroi_julia.py` gera rosto completo: lábios com volume, narinas, olhos (esclera, íris radial, pupila e córnea), pálpebras, sobrancelhas/cílios e cabelo em cards alpha-scissor.
+- Cabelo: franja + calota em cards e 5 mechas de rabo de cavalo; glTF `alphaMode=MASK` no material `CabeloJulia_alpha_scissor`, sem alpha blend/ordenação no cabelo.
+- Gate preservado: 40.110 tris totais, 1,720 m, sola 0,012 m, 0 não-manifold no corpo; GLB mesh-only 952,2 KB; GLB PBR 1.971,9 KB com 6 imagens embutidas.
+- Evidências: `docs/arte_alvo_final/15_turnaround_fase3.png` e `docs/arte_alvo_final/16_rosto_fase3.png`; detalhes em `docs/execucao/HEROI_FASE3.md`.
