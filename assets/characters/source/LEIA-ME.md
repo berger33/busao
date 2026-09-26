@@ -35,3 +35,18 @@ save). Esse modo foi **revertido** na promoção para a `main` porque quebrava o
 contrato de 20 personagens, derrubava a loja/elenco para 1 opção e sobrescrevia
 o save do jogador. O encadeamento dos hooks (`runner_character.gd`,
 `tools/validate_ginger.py`) foi preservado para o trabalho continuar.
+
+## Heroína Júlia — braços/mãos WIP (`heroi_julia_bracos_maos_wip.glb`)
+
+Export intermediário gerado por `tools/blender/build_heroi_julia.py` +
+`tools/blender/bake_heroi_julia.py` após a correção de braços e mãos de
+2026-09-26. Mantido aqui porque ainda **não é runtime**: falta Fase 3
+(rosto/cabelo/olhos), Fase 4 (rig/skin) e Fase 6 (roupa/integração). O GLB tem
+PBR embarcado e serve como checkpoint visual/regenerável do corpo base.
+
+Gates do checkpoint:
+
+- 39.104 triângulos, 93,1% quads, 1,720 m de altura.
+- 0 arestas não-manifold.
+- UV atlas 61,1% ocupado.
+- GLB PBR 1,74 MB (abaixo do teto WIP de 2 MB), sem Draco.

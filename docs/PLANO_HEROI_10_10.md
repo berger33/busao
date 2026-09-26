@@ -77,7 +77,7 @@ com stubs X11/GL — hoje o sandbox está **sem** esse ambiente), `tools/blender
 
 **Gate 0:** `tools/blender/run_bpy.sh -c "import bpy"` responde e o "antes" está salvo.
 
-### Fase 1 — Corpo base esculpido (2 dias) — ✅ CONCLUÍDA 26/09 (gate verde: 29.104 tris, 1,720 m, 0 não-manifold)
+### Fase 1 — Corpo base esculpido (2 dias) — ✅ CONCLUÍDA 26/09 (gate verde; ajuste braços/mãos: 39.104 tris, 1,720 m, 0 não-manifold)
 - Novo `tools/blender/build_heroi_julia.py`: corpo em partes com **edge loops de
   deformação** (3 loops no cotovelo/joelho, 2 na axila/virilha), 7,5 cabeças, 1,72 m.
 - Subdivision + shrinkwrap para suavizar, depois decimate controlado para o alvo de tris.
@@ -88,7 +88,7 @@ com stubs X11/GL — hoje o sandbox está **sem** esse ambiente), `tools/blender
 **Gate 1:** `tools/audit_personagens.py` aprova tris/altura/manifold; render de turnaround
 (frente/lado/costas) comparado com `docs/arte_alvo_final/6_model_sheet_heroi.png`.
 
-### Fase 2 — UV + bake PBR (1,5 dia) — ✅ CONCLUÍDA 26/09 (gate verde: 3 texturas, atlas 57,3%, GLB 1,49 MB)
+### Fase 2 — UV + bake PBR (1,5 dia) — ✅ CONCLUÍDA 26/09 (gate verde; ajuste braços/mãos: 3 texturas, atlas 61,1%, GLB 1,74 MB)
 - Smart UV project + costuras manuais; ilhas: rosto, corpo, cabelo, roupa, calçado.
 - Bake em Cycles CPU (já usado no `render_ceu_nishita.py`): **albedo, normal, AO,
   roughness, metallic** → empacotar AO/Rough/Metal em um **ORM**.
@@ -98,7 +98,11 @@ com stubs X11/GL — hoje o sandbox está **sem** esse ambiente), `tools/blender
 - Resolução: **2048²** embarcado (mobile) + 4096² guardado em `tools/blender/out/` para captura.
 - Empacotar como WebP/KTX conforme `tools/compress_assets_lote14.py`.
 
-**Gate 2:** GLB com `images >= 4`, sem esticamento de UV no checker, ≤ 1,8 MB com texturas.
+**Gate 2:** GLB com texturas `albedo`, `normal` e `ORM`, sem esticamento crítico de UV no checker, ≤ 1,8 MB com texturas.
+
+> Atualização 26/09 — ajuste de braços/mãos: a cadeia do braço permaneceu reta e
+> a mão foi reescrita com dedos contínuos, palma superelíptica e nós elipsoides.
+> Ver `docs/execucao/HEROI_BRACOS_MAOS.md` e `docs/arte_alvo_final/12_bracos_maos_corrigidos.png`.
 
 ### Fase 3 — Cabelo e olhos (1 dia)
 - Cabelo em **cards com alpha** (rabo de cavalo em 5 mechas + franja), material

@@ -27,11 +27,11 @@
     },
     {
       "path": "assets/characters/personagens/hero_julia.glb",
-      "bytes": 67464,
-      "meshes": 26,
+      "bytes": 62316,
+      "meshes": 23,
       "vertices": 3804,
       "triangles": 7504,
-      "materials": 26,
+      "materials": 23,
       "has_lod": false,
       "status": "review",
       "priority": "P0_HERO",
@@ -661,6 +661,57 @@
       "vertices": 27599,
       "triangles": 54013,
       "materials": 7,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "assets/characters/source/heroi_julia_bracos_maos_wip.glb",
+      "bytes": 1778212,
+      "meshes": 1,
+      "vertices": 23354,
+      "triangles": 39104,
+      "materials": 1,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "tools/blender/out/heroi_julia_base.glb",
+      "bytes": 706004,
+      "meshes": 1,
+      "vertices": 19594,
+      "triangles": 39104,
+      "materials": 1,
+      "has_lod": false,
+      "status": "ok",
+      "priority": "P4_PROPS",
+      "lod_targets": {
+        "lod0": "100%",
+        "lod1": "55%",
+        "lod2": "22%"
+      },
+      "action": "create_lod_chain"
+    },
+    {
+      "path": "tools/blender/out/heroi_julia_pbr.glb",
+      "bytes": 1778212,
+      "meshes": 1,
+      "vertices": 23354,
+      "triangles": 39104,
+      "materials": 1,
       "has_lod": false,
       "status": "ok",
       "priority": "P4_PROPS",

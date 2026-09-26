@@ -347,43 +347,80 @@ def loops_de_deformacao(obj):
 
 
 # -----------------------------------------------------------------------------
-# 4b. Mãos: 5 dedos separados (o Skin do corpo só entrega a palma como bloco)
+# 4b. Mãos: 5 dedos separados, contínuos e arredondados
 # -----------------------------------------------------------------------------
-# Dedo = 3 falanges em cápsulas levemente cônicas, ligadas à palma. Cada dedo
-# é uma ilha fechada — o rig da Fase 4 usa thumb/index/middle/ring/pinky_01..03.
+# A primeira versão resolvia o gate "tem 5 dedos", mas ainda lia como mão de
+# boneco: palma em bloco com tampa reta e 3 cápsulas soltas por dedo. Esta versão
+# gera cada dedo como UM tubo orgânico contínuo, com estreitamento nos nós e ponta
+# arredondada; a palma é um volume superelíptico que entra no antebraço para
+# esconder a emenda. O resultado é mais limpo para rig/skin depois e elimina as
+# faixas escuras de AO que apareciam entre falanges separadas.
 DEDOS = [
-    # (nome, offset_x_na_palma, offset_y, comprimento, raio_base)
-    ("index", 0.027, -0.004, 0.070, 0.0095),
-    ("middle", 0.009, -0.006, 0.076, 0.0100),
-    ("ring", -0.009, -0.005, 0.069, 0.0093),
-    ("pinky", -0.026, -0.002, 0.055, 0.0081),
+    # (nome, offset_x_na_palma, offset_y, comprimento, raio_x, raio_y)
+    ("index",  0.023, -0.004, 0.068, 0.0067, 0.0082),
+    ("middle", 0.007, -0.006, 0.074, 0.0071, 0.0086),
+    ("ring",  -0.009, -0.005, 0.068, 0.0067, 0.0081),
+    ("pinky", -0.024, -0.002, 0.055, 0.0059, 0.0072),
 ]
-POLEGAR = ("thumb", 0.036, -0.002, 0.056, 0.0112)
+POLEGAR = ("thumb", 0.034, -0.002, 0.054, 0.0078, 0.0090)
 
 
-def _capsula(nome, p0, p1, r0, r1, seg=10):
-    """Tronco de cone fechado entre dois pontos (falange)."""
-    p0, p1 = Vector(p0), Vector(p1)
-    eixo = (p1 - p0)
-    comp = eixo.length
-    quat = eixo.to_track_quat("Z", "Y")
+def _base_perpendicular(tangente: Vector):
+    """Dois eixos estáveis perpendiculares à tangente do tubo."""
+    t = Vector(tangente)
+    if t.length < 1e-6:
+        t = Vector((0.0, 0.0, -1.0))
+    t.normalize()
+    # prefere o eixo global X para a largura dos dedos; quando paralelo demais,
+    # troca para Y. Mantém as mãos espelhadas sem torção brusca.
+    ref = Vector((1.0, 0.0, 0.0))
+    if abs(t.dot(ref)) > 0.86:
+        ref = Vector((0.0, 1.0, 0.0))
+    n1 = ref - t * ref.dot(t)
+    n1.normalize()
+    n2 = t.cross(n1)
+    n2.normalize()
+    return n1, n2
+
+
+def _tubo_organico(nome, centros, raios, seg=14, fechar_inicio=True, fechar_fim=True):
+    """Tubo elíptico ao longo de uma sequência de centros.
+
+    `raios` é uma lista de (rx, ry). A malha é fechada nas pontas para manter
+    gate não-manifold = 0, mas as bases dos dedos/palma ficam sobrepostas dentro
+    da palma/antebraço e não aparecem no render.
+    """
     me = D.meshes.new(nome)
     verts, faces = [], []
-    for i, (r, z) in enumerate(((r0, 0.0), (r1, comp))):
+    centros = [Vector(c) for c in centros]
+    for i, c in enumerate(centros):
+        if i == 0:
+            tang = centros[1] - centros[0]
+        elif i == len(centros) - 1:
+            tang = centros[-1] - centros[-2]
+        else:
+            tang = centros[i + 1] - centros[i - 1]
+        n1, n2 = _base_perpendicular(tang)
+        rx, ry = raios[i]
         for k in range(seg):
             a = k / seg * TAU
-            local = Vector((r * math.cos(a), r * math.sin(a), z))
-            verts.append(tuple(p0 + quat @ local))
-    for k in range(seg):
-        kn = (k + 1) % seg
-        faces.append((k, kn, seg + kn, seg + k))
-    base = len(verts)
-    verts.append(tuple(p0))
-    verts.append(tuple(p1))
-    for k in range(seg):
-        kn = (k + 1) % seg
-        faces.append((base, kn, k))
-        faces.append((base + 1, seg + k, seg + kn))
+            verts.append(tuple(c + n1 * (rx * math.cos(a)) + n2 * (ry * math.sin(a))))
+    for i in range(len(centros) - 1):
+        v0, v1 = i * seg, (i + 1) * seg
+        for k in range(seg):
+            kn = (k + 1) % seg
+            faces.append((v0 + k, v0 + kn, v1 + kn, v1 + k))
+    if fechar_inicio:
+        ci = len(verts)
+        verts.append(tuple(centros[0]))
+        for k in range(seg):
+            faces.append((ci, (k + 1) % seg, k))
+    if fechar_fim:
+        cf = len(verts)
+        verts.append(tuple(centros[-1]))
+        base = (len(centros) - 1) * seg
+        for k in range(seg):
+            faces.append((cf, base + k, base + (k + 1) % seg))
     me.from_pydata(verts, [], faces)
     me.update()
     for p in me.polygons:
@@ -393,36 +430,48 @@ def _capsula(nome, p0, p1, r0, r1, seg=10):
     return o
 
 
-def _laje_palma(nome, centro, largura, espessura, comprimento, seg=14):
-    """Palma: tubo elíptico achatado e afunilado (punho -> nós dos dedos)."""
+def _laje_palma(nome, centro, largura, espessura, comprimento, seg=18):
+    """Palma anatômica arredondada, sem tampa quadrada visível.
+
+    A versão com contorno recortado deixava triângulos/fendas no close-up. Esta
+    mantém uma superelipse lisa (boa para rig e bake), estreita no punho e nos
+    nós, e os nós dos dedos são adicionados como pequenas almofadas elipsoides em
+    `criar_maos()` para quebrar a borda reta sem criar artefatos.
+    """
     cx, cy, cz = centro
     perfis = [
-        (0.00, largura * 0.40, espessura * 0.46),   # encaixe no punho
-        (0.30, largura * 0.50, espessura * 0.50),
-        (0.72, largura * 0.50, espessura * 0.45),
-        (1.00, largura * 0.46, espessura * 0.38),   # linha dos nós
+        (-0.18, largura * 0.25, espessura * 0.34,  0.003),  # entra no antebraço
+        ( 0.00, largura * 0.34, espessura * 0.42,  0.001),
+        ( 0.24, largura * 0.48, espessura * 0.52, -0.001),
+        ( 0.58, largura * 0.52, espessura * 0.50, -0.002),
+        ( 0.86, largura * 0.48, espessura * 0.44, -0.003),
+        ( 1.00, largura * 0.40, espessura * 0.32, -0.004),  # linha dos nós
     ]
     me = D.meshes.new(nome)
     verts, faces = [], []
-    for t, rx, ry in perfis:
+    exp = 0.62  # seção retângulo-arredondado, não cilindro
+    for t, rx, ry, yoff in perfis:
         z = cz - comprimento * t
         for k in range(seg):
             a = k / seg * TAU
-            verts.append((cx + rx * math.cos(a), cy + ry * math.sin(a), z))
+            ca, sa = math.cos(a), math.sin(a)
+            x = math.copysign(abs(ca) ** exp, ca) * rx
+            y = math.copysign(abs(sa) ** exp, sa) * ry
+            verts.append((cx + x, cy + yoff + y, z))
     for i in range(len(perfis) - 1):
         v0, v1 = i * seg, (i + 1) * seg
         for k in range(seg):
             kn = (k + 1) % seg
             faces.append((v0 + k, v0 + kn, v1 + kn, v1 + k))
-    topo = len(verts)
-    verts.append((cx, cy, cz))
-    base = len(verts)
-    verts.append((cx, cy, cz - comprimento))
-    ult = (len(perfis) - 1) * seg
+    ci = len(verts)
+    verts.append((cx, cy + perfis[0][3], cz - comprimento * perfis[0][0]))
+    cf = len(verts)
+    verts.append((cx, cy + perfis[-1][3], cz - comprimento * perfis[-1][0]))
+    last = (len(perfis) - 1) * seg
     for k in range(seg):
         kn = (k + 1) % seg
-        faces.append((topo, kn, k))
-        faces.append((base, ult + k, ult + kn))
+        faces.append((ci, kn, k))
+        faces.append((cf, last + k, last + kn))
     me.from_pydata(verts, [], faces)
     me.update()
     for f in me.polygons:
@@ -432,51 +481,135 @@ def _laje_palma(nome, centro, largura, espessura, comprimento, seg=14):
     return o
 
 
+def _elipsoide(nome, centro, raios, seg_u=14, seg_v=7):
+    """Elipsoide pequeno para nós dos dedos/polpa, fechado e suave.
+
+    Usa polos únicos (não anéis degenerados) para manter gate não-manifold = 0.
+    """
+    cx, cy, cz = centro
+    rx, ry, rz = raios
+    verts, faces = [], []
+    top = len(verts)
+    verts.append((cx, cy, cz + rz))
+    # anéis intermediários, sem duplicar os polos
+    for i in range(1, seg_v):
+        v = i / seg_v
+        phi = math.pi / 2 - v * math.pi
+        cp, sp = math.cos(phi), math.sin(phi)
+        for j in range(seg_u):
+            a = j / seg_u * TAU
+            verts.append((cx + rx * cp * math.cos(a), cy + ry * cp * math.sin(a), cz + rz * sp))
+    bottom = len(verts)
+    verts.append((cx, cy, cz - rz))
+    # topo
+    first = 1
+    for j in range(seg_u):
+        jn = (j + 1) % seg_u
+        faces.append((top, first + j, first + jn))
+    # faixas intermediárias
+    ring_count = seg_v - 1
+    for r in range(ring_count - 1):
+        a = 1 + r * seg_u
+        b = 1 + (r + 1) * seg_u
+        for j in range(seg_u):
+            jn = (j + 1) % seg_u
+            faces.append((a + j, a + jn, b + jn, b + j))
+    # base
+    last = 1 + (ring_count - 1) * seg_u
+    for j in range(seg_u):
+        jn = (j + 1) % seg_u
+        faces.append((bottom, last + jn, last + j))
+    me = D.meshes.new(nome)
+    me.from_pydata(verts, [], faces)
+    me.update()
+    for f in me.polygons:
+        f.use_smooth = True
+    o = D.objects.new(nome, me)
+    bpy.context.scene.collection.objects.link(o)
+    return o
+
+
+def _dedo_continuo(nome, base, comprimento, rx, ry, curva_y=-0.012, seg=14):
+    """Dedo inteiro, com nós discretos e ponta arredondada, sem falanges soltas."""
+    bx, by, bz = base
+    # t, raio relativo. Os vales em 0.32/0.66 marcam articulações sem quebrar a
+    # malha; a sequência final fecha como polpa arredondada.
+    perfil = [
+        (0.00, 1.10), (0.10, 1.03), (0.30, 0.88),
+        (0.43, 0.98), (0.62, 0.85), (0.76, 0.92),
+        # ponta em semiesfera: mais anéis com queda curta, sem cone pontudo
+        (0.88, 0.80), (0.93, 0.70), (0.970, 0.48),
+        (0.992, 0.22), (1.000, 0.035),
+    ]
+    centros, raios = [], []
+    for t, escala in perfil:
+        # dedos relaxados: descem e avançam milímetros para frente, com leve
+        # curvatura para dentro da palma (sem pose de garra).
+        y = by + curva_y * (t ** 1.25)
+        z = bz - comprimento * t
+        centros.append((bx, y, z))
+        raios.append((rx * escala, ry * escala))
+    return _tubo_organico(nome, centros, raios, seg=seg)
+
+
+def _polegar_continuo(nome, base, lado, comprimento, rx, ry, seg=14):
+    """Polegar como tubo angulado lateral/frente, não cilindro colado."""
+    bx, by, bz = base
+    pts = [
+        (bx,                    by,          bz),
+        (bx + lado * 0.010,     by - 0.009,  bz - comprimento * 0.20),
+        (bx + lado * 0.020,     by - 0.020,  bz - comprimento * 0.48),
+        (bx + lado * 0.027,     by - 0.031,  bz - comprimento * 0.76),
+        (bx + lado * 0.030,     by - 0.035,  bz - comprimento * 0.96),
+        (bx + lado * 0.031,     by - 0.036,  bz - comprimento),
+    ]
+    esc = [1.06, 1.00, 0.92, 0.76, 0.40, 0.06]
+    return _tubo_organico(nome, pts, [(rx * e, ry * e) for e in esc], seg=seg)
+
+
 def criar_maos():
-    """Palma + 5 dedos por mão, todos partindo da linha dos nós da palma."""
+    """Palma + 5 dedos por mão, com proporção e encaixe visual no antebraço."""
     pecas = []
-    largura = 0.082      # mão de mulher adulta: ~8,2 cm de largura
-    espessura = 0.030
-    comprimento = 0.060  # do punho até os nós
+    largura = 0.080      # ~8 cm: palma estilizada, não pá quadrada
+    espessura = 0.028
+    comprimento = 0.067  # punho -> linha dos nós
     for lado, s in (("l", 1.0), ("r", -1.0)):
-        px_ = s * (X_PUNHO + 0.004)
+        px_ = s * (X_PUNHO + 0.002)
         py_ = -0.012
-        # começa ACIMA do nó do punho para a laje penetrar o antebraço
-        # (sem isso aparecia a tampa chata da palma flutuando abaixo do braço)
-        z_punho = Z_PUNHO - 0.004
-        pecas.append(_laje_palma(f"palma_{lado}", (px_, py_, z_punho),
-                                 largura, espessura, comprimento))
+        # Entra 14 mm no antebraço; o cap da palma fica escondido e não aparece
+        # como placa reta sob o punho.
+        z_punho = Z_PUNHO + 0.014
+        pecas.append(_laje_palma(
+            f"palma_{lado}", (px_, py_, z_punho), largura, espessura, comprimento
+        ))
         z_nos = z_punho - comprimento
 
-        for nome, dx, dy, comp, raio in DEDOS:
+        for nome, dx, dy, comp, rx, ry in DEDOS:
+            # A base fica alguns mm dentro da palma para soldar visualmente e
+            # impedir frestas escuras na linha dos nós.
             x = px_ + s * dx
             y = py_ + dy
-            # começa 8 mm acima da linha dos nós: o dedo nasce dentro da palma
-            z = z_nos + 0.008
-            r = raio
-            for i, f in enumerate((0.45, 0.32, 0.23)):
-                comp_f = comp * f
-                p0 = (x, y - 0.006 * i, z)
-                p1 = (x, y - 0.006 * (i + 1), z - comp_f)
-                r_next = r * 0.87
-                pecas.append(_capsula(f"{nome}_{i+1:02d}_{lado}", p0, p1, r, r_next))
-                z -= comp_f
-                r = r_next
+            z = z_nos + 0.012
+            # pequena almofada do nó do dedo: mascara a borda da palma e dá
+            # leitura de mão real sem precisar boolean/soldagem destrutiva.
+            pecas.append(_elipsoide(
+                f"knuckle_{nome}_{lado}",
+                (x, y - 0.004, z_nos + 0.010),
+                (rx * 1.28, 0.0105, 0.0105),
+            ))
+            pecas.append(_dedo_continuo(
+                f"{nome}_{lado}", (x, y, z), comp, rx, ry, curva_y=-0.010
+            ))
 
-        # Polegar: sai da LATERAL da palma, apontando para frente e para baixo
-        nome, dx, dy, comp, raio = POLEGAR
-        x = px_ + s * dx
-        y = py_ + dy
-        z = z_punho - 0.014
-        r = raio
-        for i, f in enumerate((0.42, 0.33, 0.25)):
-            comp_f = comp * f
-            p0 = (x + s * 0.008 * i, y - 0.013 * i, z)
-            p1 = (x + s * 0.008 * (i + 1), y - 0.013 * (i + 1), z - comp_f * 0.82)
-            r_next = r * 0.86
-            pecas.append(_capsula(f"{nome}_{i+1:02d}_{lado}", p0, p1, r, r_next))
-            z -= comp_f * 0.82
-            r = r_next
+        nome, dx, dy, comp, rx, ry = POLEGAR
+        pecas.append(_polegar_continuo(
+            f"{nome}_{lado}",
+            (px_ + s * dx, py_ + dy - 0.001, z_punho - 0.026),
+            s,
+            comp,
+            rx,
+            ry,
+        ))
     return pecas
 
 
@@ -486,6 +619,9 @@ def juntar(corpo, pecas):
         p.select_set(True)
     bpy.context.view_layer.objects.active = corpo
     bpy.ops.object.join()
+    # Remove normais facetadas residuais nas peças adicionadas.
+    for poly in corpo.data.polygons:
+        poly.use_smooth = True
     log(f"mãos unidas: {len(corpo.data.polygons)} faces")
     return corpo
 

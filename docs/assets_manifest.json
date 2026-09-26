@@ -17,7 +17,7 @@
       "texture_mb": 100
     }
   },
-  "asset_count": 88,
+  "asset_count": 91,
   "assets": [
     {
       "path": "assets/characters/animais/boi.glb",
@@ -356,6 +356,16 @@
       "vertices": 27599,
       "triangles": 54013,
       "materials": 7,
+      "has_lod": false,
+      "status": "ok"
+    },
+    {
+      "path": "assets/characters/source/heroi_julia_bracos_maos_wip.glb",
+      "bytes": 1778212,
+      "meshes": 1,
+      "vertices": 23354,
+      "triangles": 39104,
+      "materials": 1,
       "has_lod": false,
       "status": "ok"
     },
@@ -898,6 +908,26 @@
       "materials": 21,
       "has_lod": false,
       "status": "review"
+    },
+    {
+      "path": "tools/blender/out/heroi_julia_base.glb",
+      "bytes": 706004,
+      "meshes": 1,
+      "vertices": 19594,
+      "triangles": 39104,
+      "materials": 1,
+      "has_lod": false,
+      "status": "ok"
+    },
+    {
+      "path": "tools/blender/out/heroi_julia_pbr.glb",
+      "bytes": 1778212,
+      "meshes": 1,
+      "vertices": 23354,
+      "triangles": 39104,
+      "materials": 1,
+      "has_lod": false,
+      "status": "ok"
     }
   ],
   "summary": {
