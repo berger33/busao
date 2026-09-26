@@ -112,6 +112,10 @@
     "folhas_no_chao": {
       "por_quarteirao": 34,
       "raio_m": 0.05
+    },
+    "passaro": {
+      "por_quarteirao": 4,
+      "raio_m": 0.12
     }
   },
   "horizonte": {

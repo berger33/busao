@@ -393,6 +393,7 @@ static func build_chunk(spec: Dictionary, index: int, base_z: float = 0.0) -> No
     _build_arvores(spec, raiz, rng, comprimento)
     _build_mobiliario(spec, raiz, rng, comprimento, faixas, visibilidade)
     _build_folhas(spec, raiz, rng, comprimento, visibilidade)
+    _build_passaros(spec, raiz, rng, comprimento, visibilidade)
 
     var contagem := {"malhas": 0, "multimesh": 0}
     _contar(raiz, contagem)
@@ -933,6 +934,26 @@ static func _build_folhas(spec: Dictionary, raiz: Node3D, rng: RandomNumberGener
         xforms.append(_xform(Vector3(x, 0.155, -z), Vector3.ONE, rng.randf_range(0.0, TAU)))
     _multimesh(_box(Vector3(raio * 2.0, 0.006, raio * 2.0)), material(spec, "folhagem"),
             xforms, raiz, "Folhas", false, visibilidade)
+
+
+static func _build_passaros(spec: Dictionary, raiz: Node3D, rng: RandomNumberGenerator,
+        comprimento: float, visibilidade: float) -> void:
+    var cfg: Dictionary = spec.get("props", {}).get("passaro", {})
+    var quantas := int(cfg.get("por_quarteirao", 0))
+    if quantas <= 0:
+        return
+    var xforms: Array = []
+    for i in range(quantas):
+        var lado := 1.0 if rng.randf() < 0.5 else -1.0
+        var x := lado * rng.randf_range(1.2, 3.6)
+        var no_chao := rng.randf() < 0.6
+        var y := 0.16 if no_chao else rng.randf_range(2.0, 3.8)
+        var z := rng.randf_range(1.5, comprimento - 1.5)
+        var rot_y := rng.randf_range(0.0, TAU)
+        xforms.append(_xform(Vector3(x, y, -z), Vector3(0.16, 0.12, 0.22), rot_y))
+    _multimesh(_box(Vector3.ONE), material(spec, "zincado"),
+            xforms, raiz, "Passaros", false, visibilidade)
+
 
 # Horizonte (skyline lavado pela nevoa)
 # ---------------------------------------------------------------------------

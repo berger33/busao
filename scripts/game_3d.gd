@@ -2395,15 +2395,26 @@ func _update_ground_fauna(dt: float) -> void:
     for item in ground_fauna_nodes:
         var node: Node3D = item["node"]
         var phase_offset: float = float(item["phase"])
+        var kind: String = str(item.get("kind", ""))
         # Durante a corrida as aves varrem com o mundo; paradas, elas só
         # passeiam no lugar, mantendo o cenário vivo também atrás do menu.
         var scroll: float = player_speed * dt if screen == 2 and run_mode == "playing" else 0.0
         node.position.z += scroll + sin(pulse * 0.5 + phase_offset) * dt * 0.05
         node.position.x += cos(pulse * 0.33 + phase_offset) * dt * 0.04
-        node.position.x = clampf(node.position.x, 4.0, 4.62)
+        # Revoada dinâmica: pombos e pássaros levantam voo quando o corredor se aproxima
+        if kind in ["pombo", "passaro", "gaivota"] and screen == 2 and run_mode == "playing":
+            if node.position.z > -16.0 and node.position.z < 6.0:
+                node.position.y += dt * 2.4
+                node.position.x += dt * 1.2
+                node.rotation.y += dt * 1.5
+                node.rotation.x = -0.25
+        node.position.x = clampf(node.position.x, 3.8, 6.5)
         if node.position.z > 12.0:
             node.position.z = -70.0 - fx_rng.randf_range(0.0, 40.0)
             node.position.x = 3.9 + fx_rng.randf_range(0.0, 0.55)
+            node.position.y = 0.08
+            node.rotation.x = 0.0
+            node.rotation.y = 0.0
 
 func _clear_ambient_fx() -> void:
     if ambient_fx_root == null:
