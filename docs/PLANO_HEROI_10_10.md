@@ -1,5 +1,7 @@
 # Plano do Herói 10/10 — do boneco atual ao personagem da arte-alvo
 
+> Execução das fases 0 e 1: `docs/execucao/HEROI_FASE0_FASE1.md`
+>
 > Base: comparação entre o print real do build (26/09) e `docs/arte_alvo_final/1_gameplay_avenida.png`.
 > Substitui operacionalmente o `docs/PLANO_HEROI_REALISTA.md` (que ficou em Marco 1 sem execução).
 
@@ -68,14 +70,14 @@ com stubs X11/GL — hoje o sandbox está **sem** esse ambiente), `tools/blender
 
 ## 3. Fases
 
-### Fase 0 — Ambiente e baseline (0,5 dia)
+### Fase 0 — Ambiente e baseline (0,5 dia) — ✅ CONCLUÍDA 26/09
 - `sh tools/blender/make_env.sh` para reconstruir `venv-blender` + stubs.
 - Capturar 3 shots do herói atual (frente, 3/4 correndo, close) como "antes".
 - Congelar as métricas da tabela 1.1 em `docs/quality_baseline.json`.
 
 **Gate 0:** `tools/blender/run_bpy.sh -c "import bpy"` responde e o "antes" está salvo.
 
-### Fase 1 — Corpo base esculpido (2 dias)
+### Fase 1 — Corpo base esculpido (2 dias) — ✅ CONCLUÍDA 26/09 (gate verde: 29.104 tris, 1,720 m, 0 não-manifold)
 - Novo `tools/blender/build_heroi_julia.py`: corpo em partes com **edge loops de
   deformação** (3 loops no cotovelo/joelho, 2 na axila/virilha), 7,5 cabeças, 1,72 m.
 - Subdivision + shrinkwrap para suavizar, depois decimate controlado para o alvo de tris.
