@@ -22,6 +22,15 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
 
 ## Diário
 
+### 2026-09-26 (Etapa 5 / WIB-9 — Pista e Obstáculos: Escala Coerente e Cenário BR Vivo)
+
+- Auditoria e validação da geometria de pista e quarteirões urbanos (WIB-9):
+  - **Zero Gaps e Zero Z-Fighting**: Conexão modular contínua a cada 28.0 m no `building_kit.gd` com alturas estratificadas em Y (asfalto -0.15, linhas 0.006, zebras 0.008, deck 0.00, meio-fio/guia 0.15).
+  - **Escala Padronizada (1.73 m)**: Alturas de guias (15 cm), portas (2.2–2.6 m), toldos (2.5–3.0 m) e obstáculos alinhados à estatura da runner.
+  - **Variedade de Cenário Brasileiro**: Alternância de fachadas (tijolo aparente, reboco colorido, comercial, colonial e favela), ipês amarelos, palmeiras imperiais, calçadas com grelhas de sarjeta e sinalização zebrada.
+  - **Contraste de Valor Visual**: Asfalto escuro (lum ~18) contra piso de calçadas claro (lum ~120), garantindo leitura instantânea dos 3 corredores de corrida.
+- Validação: `lote3/tools/audit_world.py` 0 problemas/0 avisos · `validate_project.py` PRE-FLIGHT OK · `qa_full.py` 133 OK / 0 WARN / 0 FAIL.
+
 ### 2026-09-26 (Etapa 4 / WIB-8 — Materiais e Leitura em Tela Pequena)
 
 - Consolidação e calibração dos materiais PBR para tela pequena (WIB-8):
