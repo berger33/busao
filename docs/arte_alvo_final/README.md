@@ -13,3 +13,9 @@ Cinco imagens conceituais do resultado esperado do jogo depois das 9 etapas do
 | 5 | `5_loja_personagens.png` | Loja de personagens | Pódio 3D do corredor equipado, grade rolável de perfis brasileiros, cards bloqueados com preço em R$, streak diária, estrelas e CTAs |
 
 Imagens geradas como referência de direção de arte — não são capturas do build.
+
+## Extra
+
+| # | Arquivo | Uso |
+| --- | --- | --- |
+| 6 | `6_model_sheet_heroi.png` | Model sheet da heroína Júlia (frente/lado/costas + insets de rosto, mão, sola, mechas de cabelo e topologia). Referência de produção para `tools/blender/build_heroi_julia.py`, descrito em `docs/PLANO_HEROI_10_10.md`. Sem marcas registradas. |
