@@ -118,3 +118,38 @@ lado — liam como um rastelo. Agora:
 Resultado: `docs/arte_alvo_final/10_bracos_corrigidos.png` (linha 1 = corpo da
 Fase 1, linha 2 = PBR com os braços tortos, linha 3 = versão corrigida) e
 `docs/arte_alvo_final/11_mao_detalhe.png` (close da mão).
+---
+
+## Correção final desta sessão — braços + mãos em PBR (26/09)
+
+A revisão anterior alinhou os braços, mas o close ainda denunciava a mão como
+peças coladas. A nova revisão em `tools/blender/build_heroi_julia.py` faz:
+
+- punho mais fino (`0,024 m`) e cadeia ombro→punho mantida em reta;
+- dedos gerados como **tubos contínuos**, sem cápsulas separadas por falange;
+- raízes dos dedos enterradas no último terço da palma para eliminar dedos
+  flutuando;
+- pontas arredondadas por anéis progressivos, sem corte reto;
+- polegar reposicionado para baixo e junto da palma, removendo o aspecto de
+  “barbatana” lateral;
+- bake PBR refeito após a alteração da malha.
+
+### Gate final
+
+| Item | Valor | Status |
+| --- | ---: | --- |
+| Triângulos | **36.624** | ✅ dentro de 24k–46k |
+| Quads | **93,7%** | ✅ |
+| Arestas não-manifold | **0** | ✅ |
+| Cobertura UV | **59,6%** | ✅ acima de 45% |
+| GLB PBR | **1.622,8 KB** | ✅ abaixo de 2.048 KB |
+
+Novas evidências versionadas:
+
+- `docs/arte_alvo_final/12_bracos_maos_final_pbr.png` — turnaround final em PBR;
+- `docs/arte_alvo_final/13_mao_final_closeup_pbr.png` — close final da mão;
+- `assets/characters/source/heroi_julia_fase2_pbr_bracos_maos_ok.glb` — GLB WIP
+  salvo fora do runtime (a pasta `source/` tem `.gdignore`). O runtime
+  `assets/characters/personagens/hero_julia.glb` fica intacto até a Fase 4–6
+  entregar rig/animações/roupa.
+
