@@ -2094,14 +2094,18 @@ func _update_camera(dt: float) -> void:
     var desired_z := RENDER_CAMERA_Z + sin(run_phase * 0.8) * 0.025
     var desired_x := player_x * 0.20
     if run_mode == "boarding":
-        # Enquadramento cinematográfico durante o embarque
-        desired_x = lerpf(desired_x, 1.25, 0.4)
-        target = Vector3(player_x * 0.4 + 0.6, 1.30, -8.0)
+        # Enquadramento cinematográfico durante o embarque no ponto de ônibus
+        desired_x = lerpf(desired_x, 1.45, 0.45)
+        desired_y = lerpf(desired_y, 1.95, 0.40)
+        desired_z = lerpf(desired_z, 4.2, 0.35)
+        target = Vector3(player_x * 0.4 + 0.75, 1.35, -7.5)
     var desired := Vector3(desired_x, desired_y, desired_z) + shake_offset
     camera.position = camera.position.lerp(desired, minf(1.0, dt * 5.5))
     var speed_boost := clampf((motion_speed - 5.0) * 0.60, 0.0, 3.5)
     var dash_boost := 2.5 if dash_timer > 0.0 else 0.0
     var desired_fov: float = RENDER_FOV_RUN if reduced_motion else RENDER_FOV_RUN + speed_boost + dash_boost
+    if run_mode == "boarding":
+        desired_fov = 46.0
     camera.fov = lerpf(camera.fov, desired_fov, minf(1.0, dt * 3.5))
     camera.look_at(target, Vector3.UP)
     if not reduced_motion and run_mode == "playing" and absf(lane_change_velocity) > 0.05:
