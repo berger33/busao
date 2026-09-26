@@ -1,0 +1,298 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 4.5 (Core Profile) Mesa 25.2.8-0ubuntu0.24.04.2 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 20.1.2, 256 bits)
+libpulse.so.0: cannot open shared object file: No such file or directory
+libpulse.so.0: cannot open shared object file: No such file or directory
+ALSA lib confmisc.c:855:(parse_card) cannot find card '0'
+ALSA lib conf.c:5208:(_snd_config_evaluate) function snd_func_card_inum returned error: No such file or directory
+ALSA lib confmisc.c:422:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:5208:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1342:(snd_func_refer) error evaluating name
+ALSA lib conf.c:5208:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:5731:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib pcm.c:2721:(snd_pcm_open_noupdate) Unknown PCM default
+ERROR: Condition "status < 0" is true. Returning: ERR_CANT_OPEN
+   at: init_output_device (drivers/alsa/audio_driver_alsa.cpp:97)
+WARNING: All audio drivers failed, falling back to the dummy driver.
+     at: initialize (servers/audio/audio_server.cpp:258)
+
+== CAPTURA VISUAL (frames reais do engine) ==
+[locale] pronto locale=pt_BR csv_keys=68
+[economy] pronto Rubi=0 chest={ "date": "2026-09-26", "claimed": false, "soft": 25, "hard": 1, "streak": 0, "day_in_cycle": 1 } weekly={ "id": "semana_normal", "title": "Semana Normal", "desc": "fluxo equilibrado • sem bônus", "accent": (0.3294, 0.8196, 0.5451, 1.0), "weekly_key": "2960" }
+[update] pronto nativo=false
+[push] pronto nativo=false
+[render] metodo=gl_compatibility adaptador='llvmpipe (LLVM 20.1.2, 256 bits)' api=4.5 (Core Profile) Mesa 25.2.8-0ubuntu0.24.04.2 degrau=gl_compatibility-alto
+[ads] manager pronto | nativo=false consent=false remove_ads=false
+[billing] manager pronto | nativo=false catalog=5
+[play] manager pronto | games_nativo=false review_nativo=false
+[analytics] pronto | firebase=false ga=false crash=false consent=false session=1790396243-4139
+[remote] pronto | nativo=false defaults={ "ad_interstitial_cooldown": 90.0, "rewarded_coins_multiplier": 2.0, "price_motoboy": 260, "price_tenis": 200, "ad_freq": 2, "ad_rewarded_double_enabled": true, "weekly_distance_target": 2500, "starter_pack_enabled": true }
+[ads] SDK nativo ausente — modo mock (editor)
+[analytics] consent revogado — pausando envios
+[ads] consent mock: NPA padrao (sem personalizacao)
+[billing] SDK nativo ausente — modo mock (editor)
+[play] sign_in mock…
+DIAG iaa: mock silenciado
+DIAG metodo: gl_compatibility driver: opengl3
+DIAG luz: WarmSun visivel=true sombra=true energia=1.45000004768372 rot=(-28.0, -56.0, 0.0) max_dist=96.0
+DIAG luz: RunnerRim visivel=true sombra=false energia=1.54999995231628 rot=(-35.0, -145.0, 0.0) max_dist=100.0
+DIAG env: BrazilianSky amb_src=2 amb_energy=0.72000002861023 amb_color=(0.7216, 0.8471, 0.8941, 1.0) bg_src=2 fog=true fog_density=0.00279999990016 glow=true glow_int=0.5
+  -- tomada fase 1
+[luz] familia=sol pitch=-38.0 sol=1.22 expo=1.06 white=1.22 amb=0.78
+WARNING:  (albedo res://assets/textures/pbr/reboco_albedo.png): Height mapping is not supported on triplanar materials. Ignoring height mapping in favor of triplanar mapping.
+     at: _update_shader (scene/resources/material.cpp:1502)
+     GDScript backtrace (most recent call first):
+         [0] _malha (res://scripts/building_kit.gd:283)
+         [1] _build_predios (res://scripts/building_kit.gd:640)
+         [2] build_chunk (res://scripts/building_kit.gd:392)
+         [3] setup (res://scripts/building_kit.gd:1032)
+         [4] _setup_world_kit (res://scripts/game_3d.gd:5048)
+         [5] _build_course (res://scripts/game_3d.gd:772)
+         [6] _start_run (res://scripts/game_3d.gd:727)
+         [7] _start (res://tools/captura_visual.gd:135)
+         [8] _tomadas (res://tools/captura_visual.gd:168)
+         [9] _initialize (res://tools/captura_visual.gd:38)
+[world] quarteirao 0: 28.0 m, 44 malhas (9 multimesh)
+[world] quarteirao 1: 28.0 m, 59 malhas (10 multimesh)
+[world] quarteirao 2: 28.0 m, 66 malhas (11 multimesh)
+[world] quarteirao 3: 28.0 m, 52 malhas (12 multimesh)
+[world] quarteirao 4: 28.0 m, 56 malhas (11 multimesh)
+[luz] familia=sol pitch=-38.0 sol=1.22 expo=1.06 white=1.22 amb=0.78
+[world] quarteirao 0: 28.0 m, 44 malhas (9 multimesh)
+[world] quarteirao 1: 28.0 m, 59 malhas (10 multimesh)
+[world] quarteirao 2: 28.0 m, 66 malhas (11 multimesh)
+[world] quarteirao 3: 28.0 m, 52 malhas (12 multimesh)
+[world] quarteirao 4: 28.0 m, 56 malhas (11 multimesh)
+  shot 01_largada_fase1: res://captures/01_largada_fase1.png (err=0, 720x1280)
+SILHUETA 01_largada_fase1 ratio=6.28 camisa=149.2 rua=17.9 n=44 estouro=0.42%
+[clima] bases: sol=1.45 nevoa=0.00 ambiente=1.15 nuvens=0.18
+[clima] sonda de reflexo desligada no renderizador gl_compatibility
+[clima] sistema pronto | metodo=gl_compatibility | estados=limpo,nublado,chuva,tempestade
+[p2] push streak avaliado
+[lote15] analytics gate consent=false enabled=false
+[update] check mock…
+[lote18] In-App Update check disparado
+[lote14] cold start 22221 ms (alvo <2800)
+[push] mock agendado streak=1 dia=20723 Seu ônibus sai em 1 dias seguidos — corra hoje para não perder!
+[remote] fetch mock…
+[play] sign-in mock OK
+[ads] rewarded mock ready
+[update] mock update disponível v2 (flexível)
+[ads] interstitial mock ready
+[update] check mock…
+[update] start flexível mock…
+[lote15] RemoteConfig pronto: { "ad_interstitial_cooldown": 90.0, "rewarded_coins_multiplier": 2.0, "price_motoboy": 260, "price_tenis": 200, "ad_freq": 2, "ad_rewarded_double_enabled": true, "weekly_distance_target": 2500, "starter_pack_enabled": true }
+[remote] config_ready { "ad_interstitial_cooldown": 90.0, "rewarded_coins_multiplier": 2.0, "price_motoboy": 260, "price_tenis": 200, "ad_freq": 2, "ad_rewarded_double_enabled": true, "weekly_distance_target": 2500, "starter_pack_enabled": true }
+[update] mock update disponível v2 (flexível)
+[update] mock flexível baixado — pronto para instalar (snackbar)
+[update] start flexível mock…
+[update] complete mock — reiniciaria app (Test Lab)
+  shot 02_corrida_fase1: res://captures/02_corrida_fase1.png (err=0, 720x1280)
+SILHUETA 02_corrida_fase1 ratio=4.56 camisa=168.3 rua=61.4 n=5812 estouro=0.74%
+  -- tomada fase 18
+[luz] familia=nublado pitch=-42.0 sol=0.78 expo=1.05 white=1.15 amb=0.81
+[world] quarteirao 0: 28.0 m, 44 malhas (9 multimesh)
+[world] quarteirao 1: 28.0 m, 59 malhas (10 multimesh)
+[world] quarteirao 2: 28.0 m, 66 malhas (11 multimesh)
+[world] quarteirao 3: 28.0 m, 52 malhas (12 multimesh)
+[world] quarteirao 4: 28.0 m, 56 malhas (11 multimesh)
+WARNING: Subsurface scattering is only available when using the Forward+ renderer.
+     at: set_code (drivers/gles3/storage/material_storage.cpp:3164)
+     GDScript backtrace (most recent call first):
+         [0] _apply_skin_tint (res://scripts/runner_character.gd:552)
+         [1] set_character (res://scripts/runner_character.gd:236)
+         [2] _ready (res://scripts/runner_character.gd:163)
+         [3] _ready (res://scripts/world_character.gd:31)
+         [4] _build_motoqueiro (res://scripts/game_3d.gd:3677)
+         [5] _build_road_obstacle (res://scripts/game_3d.gd:3606)
+         [6] _spawn_entity (res://scripts/game_3d.gd:1110)
+         [7] _build_course_from_level (res://scripts/game_3d.gd:1024)
+         [8] _build_course (res://scripts/game_3d.gd:784)
+         [9] _start_run (res://scripts/game_3d.gd:727)
+         [10] _start (res://tools/captura_visual.gd:135)
+         [11] _tomadas (res://tools/captura_visual.gd:182)
+         [12] _shot (res://tools/captura_visual.gd:130)
+SILHOUETTE cascos=1
+[clima] estado=nublado molhado_alvo=0.00 chuva=0
+[world] quarteirao 5: 28.0 m, 62 malhas (12 multimesh)
+[update] mock update disponível v2 (flexível)
+[update] mock flexível baixado — pronto para instalar (snackbar)
+[update] complete mock — reiniciaria app (Test Lab)
+[update] failed no_update
+[update] failed not_downloaded
+[update] failed not_downloaded
+[render] medicao: luminancia min 0.000 | estouro 4.3% | escala 1.00 | gl_compatibility-alto
+  shot 03_rua_travessia_fase18: res://captures/03_rua_travessia_fase18.png (err=0, 720x1280)
+SILHUETA 03_rua_travessia_fase18 ratio=6.18 camisa=144.5 rua=11.6 n=5342 estouro=0.09%
+  -- tomada fase 7
+[luz] familia=nublado pitch=-42.0 sol=0.78 expo=1.05 white=1.15 amb=0.88
+[world] quarteirao 0: 28.0 m, 44 malhas (9 multimesh)
+[world] quarteirao 1: 28.0 m, 59 malhas (10 multimesh)
+[world] quarteirao 2: 28.0 m, 66 malhas (11 multimesh)
+[world] quarteirao 3: 28.0 m, 52 malhas (12 multimesh)
+[world] quarteirao 4: 28.0 m, 56 malhas (11 multimesh)
+[clima] estado=chuva molhado_alvo=0.05 chuva=700
+[world] quarteirao 5: 28.0 m, 62 malhas (12 multimesh)
+[render] medicao: luminancia min 0.037 | estouro 35.2% | escala 1.00 | gl_compatibility-alto
+  shot 04_pedestres_fase7: res://captures/04_pedestres_fase7.png (err=0, 720x1280)
+SILHUETA 04_pedestres_fase7 ratio=3.74 camisa=159.1 rua=67.1 n=9085 estouro=0.11%
+  -- tomada fase 9
+[luz] familia=chuva pitch=-48.0 sol=0.62 expo=1.02 white=1.12 amb=0.92
+[world] quarteirao 0: 28.0 m, 44 malhas (9 multimesh)
+[world] quarteirao 1: 28.0 m, 59 malhas (10 multimesh)
+[world] quarteirao 2: 28.0 m, 66 malhas (11 multimesh)
+[world] quarteirao 3: 28.0 m, 52 malhas (12 multimesh)
+[world] quarteirao 4: 28.0 m, 56 malhas (11 multimesh)
+[clima] estado=limpo molhado_alvo=0.43 chuva=0
+  shot 05_calcada_d_fase9: res://captures/05_calcada_d_fase9.png (err=0, 720x1280)
+SILHUETA 05_calcada_d_fase9 ratio=2.94 camisa=97.8 rua=179.8 n=92 estouro=43.01%
+  -- tomada fase 20
+[luz] familia=nublado pitch=-42.0 sol=0.78 expo=1.05 white=1.15 amb=0.81
+[world] quarteirao 0: 28.0 m, 44 malhas (9 multimesh)
+[world] quarteirao 1: 28.0 m, 59 malhas (10 multimesh)
+[world] quarteirao 2: 28.0 m, 66 malhas (11 multimesh)
+[world] quarteirao 3: 28.0 m, 52 malhas (12 multimesh)
+[world] quarteirao 4: 28.0 m, 56 malhas (11 multimesh)
+[clima] estado=tempestade molhado_alvo=0.41 chuva=1150
+[world] quarteirao 5: 28.0 m, 62 malhas (12 multimesh)
+[world] quarteirao 6: 28.0 m, 66 malhas (12 multimesh)
+[world] quarteirao 7: 28.0 m, 61 malhas (11 multimesh)
+[world] quarteirao 8: 28.0 m, 56 malhas (11 multimesh)
+[world] quarteirao 9: 28.0 m, 63 malhas (11 multimesh)
+[world] quarteirao 10: 28.0 m, 61 malhas (12 multimesh)
+[world] quarteirao 11: 28.0 m, 60 malhas (12 multimesh)
+[world] quarteirao 12: 28.0 m, 60 malhas (10 multimesh)
+[world] quarteirao 13: 28.0 m, 57 malhas (11 multimesh)
+[world] quarteirao 14: 28.0 m, 58 malhas (11 multimesh)
+[world] quarteirao 15: 28.0 m, 68 malhas (13 multimesh)
+[world] quarteirao 16: 28.0 m, 54 malhas (11 multimesh)
+[world] quarteirao 17: 28.0 m, 64 malhas (13 multimesh)
+[world] quarteirao 18: 28.0 m, 53 malhas (11 multimesh)
+[world] quarteirao 19: 28.0 m, 58 malhas (13 multimesh)
+[world] quarteirao 20: 28.0 m, 57 malhas (11 multimesh)
+[render] medicao: luminancia min 0.001 | estouro 1.8% | escala 1.00 | gl_compatibility-alto
+[render] pronto: gl_compatibility-alto escala 1.00 luminancia min 0.001
+[world] quarteirao 21: 28.0 m, 56 malhas (12 multimesh)
+  shot 06_chegada_onibus_fase20: res://captures/06_chegada_onibus_fase20.png (err=0, 720x1280)
+SILHUETA 06_chegada_onibus_fase20 ratio=3.14 camisa=105.4 rua=27.4 n=1176 estouro=0.00%
+  -- tomada fase 25
+[luz] familia=chuva pitch=-48.0 sol=0.62 expo=1.02 white=1.12 amb=0.92
+[world] quarteirao 0: 28.0 m, 67 malhas (12 multimesh)
+[world] quarteirao 1: 28.0 m, 68 malhas (12 multimesh)
+[world] quarteirao 2: 28.0 m, 62 malhas (12 multimesh)
+[world] quarteirao 3: 28.0 m, 81 malhas (13 multimesh)
+[world] quarteirao 4: 28.0 m, 57 malhas (11 multimesh)
+[clima] estado=limpo molhado_alvo=0.86 chuva=0
+[world] quarteirao 5: 28.0 m, 63 malhas (12 multimesh)
+[world] quarteirao 6: 28.0 m, 63 malhas (12 multimesh)
+[world] quarteirao 7: 28.0 m, 63 malhas (12 multimesh)
+[world] quarteirao 8: 28.0 m, 63 malhas (11 multimesh)
+[world] quarteirao 9: 28.0 m, 67 malhas (13 multimesh)
+[world] quarteirao 10: 28.0 m, 62 malhas (11 multimesh)
+[world] quarteirao 11: 28.0 m, 68 malhas (12 multimesh)
+[world] quarteirao 12: 28.0 m, 58 malhas (11 multimesh)
+[world] quarteirao 13: 28.0 m, 60 malhas (12 multimesh)
+[world] quarteirao 14: 28.0 m, 57 malhas (11 multimesh)
+  shot 07_ponto_igreja_fase25: res://captures/07_ponto_igreja_fase25.png (err=0, 720x1280)
+SILHUETA 07_ponto_igreja_fase25 ratio=1.14 camisa=162.8 rua=151.8 n=110 estouro=2.54%
+  -- tomada fase 50
+[luz] familia=entardecer pitch=-18.0 sol=1.05 expo=1.10 white=1.28 amb=0.58
+[world] quarteirao 0: 28.0 m, 55 malhas (12 multimesh)
+[world] quarteirao 1: 28.0 m, 53 malhas (12 multimesh)
+[world] quarteirao 2: 28.0 m, 46 malhas (12 multimesh)
+[world] quarteirao 3: 28.0 m, 55 malhas (13 multimesh)
+[world] quarteirao 4: 28.0 m, 57 malhas (12 multimesh)
+[world] quarteirao 5: 28.0 m, 56 malhas (13 multimesh)
+[world] quarteirao 6: 28.0 m, 57 malhas (12 multimesh)
+[world] quarteirao 7: 28.0 m, 53 malhas (13 multimesh)
+[world] quarteirao 8: 28.0 m, 65 malhas (12 multimesh)
+[world] quarteirao 9: 28.0 m, 46 malhas (12 multimesh)
+[world] quarteirao 10: 28.0 m, 60 malhas (11 multimesh)
+[world] quarteirao 11: 28.0 m, 49 malhas (12 multimesh)
+[world] quarteirao 12: 28.0 m, 61 malhas (12 multimesh)
+[world] quarteirao 13: 28.0 m, 53 malhas (13 multimesh)
+[world] quarteirao 14: 28.0 m, 57 malhas (11 multimesh)
+[world] quarteirao 15: 28.0 m, 53 malhas (13 multimesh)
+[world] quarteirao 16: 28.0 m, 56 malhas (11 multimesh)
+[world] quarteirao 17: 28.0 m, 61 malhas (14 multimesh)
+[world] quarteirao 18: 28.0 m, 48 malhas (11 multimesh)
+[world] quarteirao 19: 28.0 m, 63 malhas (13 multimesh)
+[world] quarteirao 20: 28.0 m, 54 malhas (11 multimesh)
+[world] quarteirao 21: 28.0 m, 57 malhas (13 multimesh)
+[world] quarteirao 22: 28.0 m, 48 malhas (11 multimesh)
+[world] quarteirao 23: 28.0 m, 59 malhas (13 multimesh)
+[world] quarteirao 24: 28.0 m, 52 malhas (11 multimesh)
+[render] medicao: luminancia min 0.000 | estouro 4.4% | escala 1.00 | gl_compatibility-alto
+[world] quarteirao 25: 28.0 m, 53 malhas (12 multimesh)
+[render] medicao: luminancia min 0.008 | estouro 0.0% | escala 1.00 | gl_compatibility-alto
+  shot 08_final_fase50: res://captures/08_final_fase50.png (err=0, 720x1280)
+SILHUETA 08_final_fase50 ratio=2.50 camisa=90.8 rua=28.1 n=1664 estouro=0.00%
+  -- tomada fase 1
+[luz] familia=sol pitch=-38.0 sol=1.22 expo=1.06 white=1.22 amb=0.78
+[world] quarteirao 0: 28.0 m, 44 malhas (9 multimesh)
+[world] quarteirao 1: 28.0 m, 59 malhas (10 multimesh)
+[world] quarteirao 2: 28.0 m, 66 malhas (11 multimesh)
+[world] quarteirao 3: 28.0 m, 52 malhas (12 multimesh)
+[world] quarteirao 4: 28.0 m, 56 malhas (11 multimesh)
+[clima] snap estado=limpo molhado=0.00 chuva=0
+[luz] familia=sol pitch=-38.0 sol=1.22 expo=1.06 white=1.22 amb=0.78
+DIAG close: visivel=true hearts=3 dist=37.21 elapsed=6.79545454545454 modo=playing player=(0.0, 0.005905, 0.0) cam=(-1.649952, 1.361228, -3.332944)
+DIAG sol: e=1.22841536998749 pitch=-37.9999961853027 yaw=-55.916690826416 bias=0.28000000119209
+DIAG rig: RunnerFill e=2.70000004768372 vis=true
+DIAG rig: RunnerRim e=1.54999995231628 vis=true
+DIAG rig: RunnerLift e=1.70000004768372 vis=true
+DIAG rig: RunnerFront e=2.09999990463257 vis=true
+DIAG rig: ganho=1.0
+  shot 09_close_personagem: res://captures/09_close_personagem.png (err=0, 720x1280)
+SILHUETA 09_close_personagem ratio=2.08 camisa=150.6 rua=216.9 n=1162 estouro=29.27%
+  -- tomada fase 3
+[luz] familia=sol pitch=-38.0 sol=1.22 expo=1.06 white=1.22 amb=0.78
+[world] quarteirao 0: 28.0 m, 44 malhas (9 multimesh)
+[world] quarteirao 1: 28.0 m, 59 malhas (10 multimesh)
+[world] quarteirao 2: 28.0 m, 66 malhas (11 multimesh)
+[world] quarteirao 3: 28.0 m, 52 malhas (12 multimesh)
+[world] quarteirao 4: 28.0 m, 56 malhas (11 multimesh)
+[clima] estado=chuva molhado_alvo=0.00 chuva=700
+[clima] snap estado=nublado molhado=0.10 chuva=0
+[luz] familia=nublado pitch=-42.0 sol=0.78 expo=1.05 white=1.15 amb=0.88
+[render] medicao: luminancia min 0.025 | estouro 5.1% | escala 1.00 | gl_compatibility-alto
+[render] pronto: gl_compatibility-alto escala 1.00 luminancia min 0.025
+DIAG close: visivel=true hearts=3 dist=32.752 elapsed=5.56666666666666 modo=playing player=(0.0, 0.008819, 0.0) cam=(-0.001926, 2.245791, 4.848448)
+DIAG sol: e=1.1083756685257 pitch=-42.0 yaw=-55.7182197570801 bias=0.28000000119209
+DIAG rig: RunnerFill e=6.75 vis=true
+DIAG rig: RunnerRim e=1.54999995231628 vis=true
+DIAG rig: RunnerLift e=4.25 vis=true
+DIAG rig: RunnerFront e=5.25 vis=true
+DIAG rig: ganho=2.5
+  shot 10_clima_nublado: res://captures/10_clima_nublado.png (err=0, 720x1280)
+SILHUETA 10_clima_nublado ratio=4.42 camisa=152.8 rua=51.1 n=8569 estouro=0.25%
+[clima] snap estado=chuva molhado=0.80 chuva=700
+[luz] familia=chuva pitch=-48.0 sol=0.62 expo=1.02 white=1.12 amb=0.92
+[render] medicao: luminancia min 0.011 | estouro 1.1% | escala 1.00 | gl_compatibility-alto
+DIAG close: visivel=true hearts=3 dist=38.8240000000001 elapsed=6.71666666666666 modo=playing player=(0.0, 0.03304, 0.0) cam=(-0.000001, 2.244553, 4.854582)
+DIAG sol: e=0.69031023979187 pitch=-48.0 yaw=-55.6432151794434 bias=0.28000000119209
+DIAG rig: RunnerFill e=6.75 vis=true
+DIAG rig: RunnerRim e=1.54999995231628 vis=true
+DIAG rig: RunnerLift e=4.25 vis=true
+DIAG rig: RunnerFront e=5.25 vis=true
+DIAG rig: ganho=2.5
+  shot 11_clima_chuva: res://captures/11_clima_chuva.png (err=0, 720x1280)
+SILHUETA 11_clima_chuva ratio=2.87 camisa=104.6 rua=34.3 n=10701 estouro=0.11%
+[clima] snap estado=limpo molhado=0.00 chuva=0
+[luz] familia=sol pitch=-38.0 sol=1.22 expo=1.06 white=1.22 amb=0.78
+CAPTURA_OK
+total 11M
+-rw-r--r-- 1 runner runner  26K Sep 26 04:17 01_largada_fase1.png
+-rw-r--r-- 1 runner runner 1.4M Sep 26 04:18 02_corrida_fase1.png
+-rw-r--r-- 1 runner runner 932K Sep 26 04:19 03_rua_travessia_fase18.png
+-rw-r--r-- 1 runner runner 1.4M Sep 26 04:20 04_pedestres_fase7.png
+-rw-r--r-- 1 runner runner 1.1M Sep 26 04:20 05_calcada_d_fase9.png
+-rw-r--r-- 1 runner runner 887K Sep 26 04:21 06_chegada_onibus_fase20.png
+-rw-r--r-- 1 runner runner 521K Sep 26 04:21 07_ponto_igreja_fase25.png
+-rw-r--r-- 1 runner runner 969K Sep 26 04:22 08_final_fase50.png
+-rw-r--r-- 1 runner runner 1.3M Sep 26 04:22 09_close_personagem.png
+-rw-r--r-- 1 runner runner 1.4M Sep 26 04:23 10_clima_nublado.png
+-rw-r--r-- 1 runner runner 1.3M Sep 26 04:23 11_clima_chuva.png
+-rw-r--r-- 1 runner runner  18K Sep 26 04:23 _log.txt
+pngs=11

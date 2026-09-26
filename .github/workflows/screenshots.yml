@@ -1,0 +1,101 @@
+# CI — capturas visuais do jogo (frames reais renderizados no engine).
+# O sandbox Arena e muitos devs não têm GPU/display; o runner do GitHub tem
+# mesa/llvmpipe + xvfb, então os PNGs saem de lá e são publicados na branch
+# sandbox/screenshots para revisão (a Arena os busca via github.com).
+# Disparar: gh workflow run screenshots.yml  (ou automático em push que toque
+# nos caminhos de arte abaixo).
+name: screenshots
+
+on:
+  workflow_dispatch:
+    inputs:
+      captura_yaws:
+        description: "varredura de yaw do close 09 (ex.: 1.8,2.2,2.6,3.0,3.4,3.8,4.2,4.6)"
+        required: false
+        default: ""
+      captura_rig:
+        description: "ganhos do rig RunnerFill/Lift/Front p/ 10 e 11 (ex.: 1.5,2.0,2.5)"
+        required: false
+        default: ""
+  push:
+    branches: [arena/01a0d62f-busao, arena/01a0d6bf-busao, arena/01a0d712-busao, arena/01a0d882-busao, arena/01a0da73-busao, arena/01a0db36-busao, arena/01a0db52-busao]
+    paths:
+      - "scripts/game_3d.gd"
+      - "scripts/lighting_handler.gd"
+      - "scripts/weather_system.gd"
+      - "scripts/render_quality.gd"
+      - "scripts/runner_character.gd"
+      - "scripts/building_kit.gd"
+      - "resources/world_spec.json"
+      - "resources/weather_spec.json"
+      - "tools/captura_sweep.env"
+      - "assets/textures/**"
+      - "assets/characters/personagens/**"
+      - "tools/captura_visual.gd"
+      - "tools/generate_procedural_hero.py"
+      - ".github/workflows/screenshots.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  shots:
+    name: render + publica capturas
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: baixa Godot (fallback de versão)
+        run: |
+          for v in 4.7 4.3 4.2; do
+            url="https://github.com/godotengine/godot/releases/download/${v}-stable/Godot_v${v}-stable_linux.x86_64.zip"
+            echo "tentando $url"
+            if curl -sfL -o /tmp/godot.zip "$url"; then break; fi
+          done
+          test -f /tmp/godot.zip || { echo "nenhum binário Godot disponível"; exit 1; }
+          unzip -o /tmp/godot.zip -d /tmp && mv /tmp/Godot_v*-stable_linux.x86_64 /tmp/godot
+          chmod +x /tmp/godot && /tmp/godot --version
+      - name: import headless
+        run: /tmp/godot --headless --path . --import
+      - name: renderiza sob xvfb (llvmpipe, GL Compatibility = caminho do celular)
+        env:
+          CAPTURA_YAWS: ${{ inputs.captura_yaws }}
+          CAPTURA_RIG: ${{ inputs.captura_rig }}
+        run: |
+          # Varredura versionada (push) quando o dispatch não passou inputs.
+          if [ -z "$CAPTURA_YAWS$CAPTURA_RIG" ] && [ -f tools/captura_sweep.env ]; then
+            set -a
+            . tools/captura_sweep.env
+            set +a
+          fi
+          echo "sweep yaws='$CAPTURA_YAWS' rig='$CAPTURA_RIG'"
+          mkdir -p captures
+          set -o pipefail
+          xvfb-run -a -s "-screen 0 800x1400x24" /tmp/godot --path . \
+            --rendering-method gl_compatibility --rendering-driver opengl3 \
+            --resolution 720x1280 --script tools/captura_visual.gd \
+            2>&1 | tee captures/_log.txt || true
+          ls -lh captures/ | tee -a captures/_log.txt || true
+          # pipefail + glob vazio faz o ls sair 2 e esconde o gate. O gate
+          # abaixo é quem exige as 9 tomadas.
+          set +o pipefail
+          n=$(ls captures/*.png 2>/dev/null | wc -l)
+          set -o pipefail
+          echo "pngs=$n" | tee -a captures/_log.txt
+      - name: publica na branch sandbox/screenshots
+        if: always()
+        run: |
+          git config user.name "arena-agent"
+          git config user.email "297053741+arena-agent@users.noreply.github.com"
+          git checkout -q --orphan shots-publish
+          git reset -q
+          mkdir -p captures
+          git add -f captures
+          git add -f tools/captura_visual.gd .github/workflows/screenshots.yml 2>/dev/null || true
+          git commit -q -m "shots: ${GITHUB_SHA:0:7} ($(date -u +%Y-%m-%dT%H:%MZ))"
+          git push -qf origin shots-publish:sandbox/screenshots
+          echo "publicado em sandbox/screenshots"
+      - name: gate — exige as 9 tomadas
+        run: |
+          n=$(ls captures/*.png 2>/dev/null | wc -l)
+          test "$n" -ge 9 || { echo "só $n PNGs — ver captures/_log.txt na branch sandbox/screenshots"; exit 1; }
