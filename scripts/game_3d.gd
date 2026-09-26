@@ -4023,26 +4023,29 @@ func _build_collectible(parent: Node3D, kind: String) -> void:
     var coletavel_glb := _optional_glb("collectibles/" + kind + ".glb")
     if coletavel_glb != null:
         coletavel_glb.name = "Collectible3D_" + kind
-        # Auditoria proporção realista: humano 1.82, coin real 0.05 vs 0.60 raw => escala 0.083
-        var _collect_scale := 0.45
+        # Escalas estilizadas mobile: moedas e colecionáveis bem visíveis e brilhantes
+        var _collect_scale := 0.48
         match kind:
-            "coin": _collect_scale = 0.12  # 0.60*0.12=0.072 diam 7.2cm
-            "golden": _collect_scale = 0.15
-            "pass": _collect_scale = 0.16
-            "bread": _collect_scale = 0.32
-            "pastel": _collect_scale = 0.26
-            "coxinha": _collect_scale = 0.22
-            "coffee": _collect_scale = 0.30
-            "guarana": _collect_scale = 0.28
-            "pix": _collect_scale = 0.30
-            "sugarcane": _collect_scale = 0.35
-            "umbrella": _collect_scale = 0.75
-            _: _collect_scale = 0.30
+            "coin": _collect_scale = 0.55
+            "golden": _collect_scale = 0.50
+            "pass": _collect_scale = 0.48
+            "bread": _collect_scale = 0.48
+            "pastel": _collect_scale = 0.48
+            "coxinha": _collect_scale = 0.52
+            "coffee": _collect_scale = 0.48
+            "guarana": _collect_scale = 0.48
+            "pix": _collect_scale = 0.50
+            "sugarcane": _collect_scale = 0.52
+            "umbrella": _collect_scale = 0.70
+            _: _collect_scale = 0.48
         coletavel_glb.scale = Vector3.ONE * _collect_scale
         parent.add_child(coletavel_glb)
-        var glow_glb := _material(Color(color, 0.10), 0.0, 0.8, "glass")
+        var glow_glb := _material(Color(color, 0.18), 0.0, 0.8, "glass")
         glow_glb.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-        _sphere(parent, 0.14, Vector3.ZERO, glow_glb, "Glow") # 0.14 vs 0.36 proporcional
+        glow_glb.emission_enabled = true
+        glow_glb.emission = color
+        glow_glb.emission_energy_multiplier = 0.85
+        _sphere(parent, 0.35, Vector3.ZERO, glow_glb, "Glow")
         return
     var mat := _material(color, 0.12 if kind in ["coin", "golden"] else 0.0, 0.28, "metal" if kind in ["coin", "golden"] else "paint")
     mat.emission_enabled = true
