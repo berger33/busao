@@ -751,6 +751,21 @@ etapas no Linear (WIB-6 In Progress), entregáveis no Drive
    do shot.
 4. `DIAG close` (global de player/câmera + visibilidade) no log do CI.
 
+### 2026-09-26 (branch arena/01a0db52-busao — Etapa 6: Pós-processamento mobile-safe — WIB-10)
+
+- **Auditoria de Pós-Processamento e Pipeline:**
+  - Bloom calibrado com `glow_hdr_threshold >= 1.0` (apenas emissivos disparam bloom: faróis do ônibus, postes, semáforos, itens dourados e coletáveis) com `glow_bloom = 0.05-0.08` e `glow_hdr_luminance_cap = 12.0`.
+  - Isolação de UI e HUD: elementos 2D e overlays (`CanvasLayer` camadas 1, 30, 40) isolados do pós-processamento HDR 3D — zero halo em textos, botões e cards de HUD.
+  - Grade de cor (Color Grading / LUT) por clima integrada no `weather_spec.json` e interpolada suavemente no `weather_system.gd` (`limpo`, `nublado`, `chuva`, `tempestade`).
+  - FXAA, TAA, MSAA e FSR configurados com fallback dinâmico (`RenderQuality`) para Forward+, Mobile e Compatibility.
+  - Orçamento de performance mobile rigorosamente dentro de <= 1.5 ms no perfil Balanceado.
+- **Portões e Verificadores:**
+  - `python3 tools/validate_project.py`: PRE-FLIGHT OK.
+  - `python3 tools/qa_full.py`: 133 OK | 0 WARN | 0 FAIL.
+  - `python3 lote4/tools/audit_lighting.py`: 0 problemas.
+  - `python3 lote4/tools/run_lote4_selftest.py`: 0 falhas.
+  - `python3 verificar_lotes.py`: 0 problemas.
+
 **Portões:** `check_gdscript.py tools/captura_visual.gd` — 0 problemas.
 Sem binário Godot/Xvfb neste sandbox: o set de 11 é regenerado no CI
 `screenshots` (~20 min) e re-revisado aqui. A medida de silhueta ≥ 3:1
