@@ -1,0 +1,17 @@
+{
+  "verts": 18042,
+  "faces": 18065,
+  "tris": 35952,
+  "quads_pct": 92.1,
+  "altura_m": 1.72,
+  "piso_z_m": 0.012,
+  "largura_m": 0.6556,
+  "profundidade_m": 0.2586,
+  "arestas_nao_manifold": 0,
+  "glb_kb": 634.6,
+  "gate_tris": true,
+  "gate_altura": true,
+  "gate_piso": true,
+  "gate_manifold": true,
+  "gate": true
+}

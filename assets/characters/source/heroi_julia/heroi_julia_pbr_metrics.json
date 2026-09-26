@@ -1,0 +1,20 @@
+{
+  "res": 2048,
+  "samples": 24,
+  "faces": 18065,
+  "cobertura_uv": 0.612,
+  "res_normal_orm": 1024,
+  "texturas": [
+    "julia_albedo.jpg",
+    "julia_normal.jpg",
+    "julia_orm.jpg"
+  ],
+  "kb_albedo": 385.9,
+  "kb_normal": 164.3,
+  "kb_orm": 244.1,
+  "glb_kb": 1672.5,
+  "gate_texturas": true,
+  "gate_cobertura": true,
+  "gate_glb": true,
+  "gate": true
+}

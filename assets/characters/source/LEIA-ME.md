@@ -35,3 +35,28 @@ save). Esse modo foi **revertido** na promoção para a `main` porque quebrava o
 contrato de 20 personagens, derrubava a loja/elenco para 1 opção e sobrescrevia
 o save do jogador. O encadeamento dos hooks (`runner_character.gd`,
 `tools/validate_ginger.py`) foi preservado para o trabalho continuar.
+
+## Herói 10/10 (`heroi_julia/`)
+
+Pipeline *Herói 10/10* (`docs/PLANO_HEROI_10_10.md`), reconstruído do zero em
+26/09/2026 (ver `docs/execucao/HEROI_REBUILD_2026-09-26.md`). Não é asset de
+runtime: o jogo segue usando `personagens/hero_julia.glb` (placeholder) até a
+Fase 6.
+
+| Item | Estado |
+| --- | --- |
+| `heroi_julia_base.glb` / `.blend` | Fase 1: corpo esculpido (Skin+QuadriFlow, 35.952 tris, 92,1% quads, 1,72 m, 0 não-manifold) **+ rosto esculpido** (órbita, nariz, boca, queixo, orelhas — Fase 3 parcial, sem cabelo) |
+| `heroi_julia_pbr.glb` / `.blend` | Fase 2: UV (atlas 61,2%) + bake albedo 2K / normal 1K / ORM 1K embutidos — **1.672 KB** (teto do plano: 2.048 KB), gate verde |
+| `*_metrics.json` | Métricas dos gates das Fases 1 e 2 |
+| Contrato de runtime | **não cumprido** — sem rig (Fase 4), sem clipes (Fase 5), sem roupa (Fase 6); 1,67 MB > 500 KB |
+
+Reproduzir (o `tools/blender/out/` é regenerável e gitignored; estas cópias
+existem para não perder o estado entre sessões):
+
+```sh
+sh tools/blender/make_env.sh                                              # venv bpy 4.5
+sh tools/blender/run_bpy.sh tools/blender/build_heroi_julia.py            # Fase 1 (~7 s)
+sh tools/blender/run_bpy.sh tools/blender/bake_heroi_julia.py --res 2048 --samples 24   # Fase 2 (~13 min, 2 núcleos)
+sh tools/blender/run_bpy.sh tools/blender/render_turnaround.py tools/blender/out/heroi_julia_pbr.glb tools/blender/out/turnaround.png
+sh tools/blender/run_bpy.sh tools/blender/render_detalhe.py tools/blender/out/heroi_julia_pbr.glb tools/blender/out/mao.png --alvo mao
+```

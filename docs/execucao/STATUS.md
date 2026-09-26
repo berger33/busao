@@ -22,6 +22,14 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
 
 ## Diário
 
+### 2026-09-26 (Herói 10/10 — reconstrução do GLB Fase 1+2 + turnaround fresco)
+
+- Ambiente bpy 4.5.14 recriado do zero (`make_env.sh`, ~25 s) e pipeline da heroína reexecutado: Fase 1 (7 s) + Fase 2 bake 2K/24 samples (~13 min em 2 núcleos) com **gate verde** (atlas 61,2%, GLB 1.672 KB ≤ 2.048, 0 não-manifold).
+- **Descoberta:** o `build_heroi_julia.py` versionado já inclui a seção 4c *Rosto (Fase 3)* — órbitas, arco superciliar, nariz, lábios, queixo, maçãs e orelhas esculpidos (35.952 tris, +10% vs último estado documentado). Ainda faltam globos oculares, pálpebras e cabelo.
+- Renders de evidência: `docs/arte_alvo_final/12_turnaround_fase2.png`, `13_mao_detalhe_fase2.png`, `14_rosto_detalhe.png`; novo utilitário `tools/blender/render_detalhe.py` (closes automáticos de mão/rosto).
+- GLBs e .blends persistidos em `assets/characters/source/heroi_julia/` (berço WIP, `.gdignore`); texturas de `assets/textures/heroi/` regeneradas para a malha com rosto. Runtime intacto (`validate_hero.py` MESH-ONLY, `validate_project.py` PRE-FLIGHT OK).
+- Detalhes: `docs/execucao/HEROI_REBUILD_2026-09-26.md`.
+
 ### 2026-09-26 (Etapa 5 / WIB-9 — Pista e Obstáculos: Escala Coerente e Cenário BR Vivo)
 
 - Auditoria e validação da geometria de pista e quarteirões urbanos (WIB-9):
