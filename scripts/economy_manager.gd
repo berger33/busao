@@ -88,23 +88,22 @@ func spend_rubi(amount: int, reason: String = "") -> bool:
     print("[economy] -%d Rubi (%s) saldo=%d" % [amount, reason, get_rubi()])
     return true
 
-# ---- Daily Chest (soft + Rubi, 1/dia, sem aleatoriedade paga) ----
+# ---- Daily Chest (soft + Rubi, 1/dia, progressivo D1-D7, sem aleatoriedade paga) ----
 func get_daily_chest_status(date_key: String = "") -> Dictionary:
     var key: String = date_key if date_key != "" else Time.get_date_string_from_system()
     var claimed: bool = str(GameSave.data.get("daily_chest_date", "")) == key
-    # Recompensa determinística por dia: 5/10/15 soft + 1/2/3 Rubi via hash do dia
-    var day_num: int = 0
-    # Usa Time.get_unix_time_from_datetime_dict para derivar day number
-    var dict := Time.get_datetime_dict_from_system(false)
-    dict["hour"] = 0; dict["minute"] = 0; dict["second"] = 0
-    day_num = int(Time.get_unix_time_from_datetime_dict(dict) / 86400.0)
-    var soft: int = 5 + (day_num % 3) * 5  # 5,10,15
-    var hard: int = 1 + (day_num % 3)      # 1,2,3
+    # Calendário D1–D7 progressivo por streak de baú (1 a 7 dias)
+    var current_streak: int = int(GameSave.data.get("daily_chest_streak", 0))
+    var day_in_cycle: int = (current_streak % 7) + 1
+    var soft_table := [0, 25, 35, 50, 75, 100, 140, 250]
+    var hard_table := [0, 1, 2, 2, 3, 4, 5, 10]
+    var soft: int = soft_table[clampi(day_in_cycle, 1, 7)]
+    var hard: int = hard_table[clampi(day_in_cycle, 1, 7)]
     # Bonus semanal: se evento motoboy, +2 Rubi no chest
     var weekly := get_weekly_event()
     if weekly.get("id", "") == "semana_motoboy":
         hard += 1
-    return {"date": key, "claimed": claimed, "soft": soft, "hard": hard, "streak": int(GameSave.data.get("daily_chest_streak", 0))}
+    return {"date": key, "claimed": claimed, "soft": soft, "hard": hard, "streak": current_streak, "day_in_cycle": day_in_cycle}
 
 func can_claim_daily_chest(date_key: String = "") -> bool:
     var st := get_daily_chest_status(date_key)

@@ -912,7 +912,17 @@ func record_endless_result(success: bool, elapsed_seconds: float, distance: int)
     _request_save()
 
 func add_xp(amount: int) -> void:
-    data["xp"] = int(data.get("xp", 0)) + maxi(0, amount)
+    if amount <= 0:
+        return
+    var old_level := xp_level()
+    data["xp"] = int(data.get("xp", 0)) + amount
+    var new_level := xp_level()
+    if new_level > old_level:
+        var level_diff := new_level - old_level
+        # Recompensa por subir de nível (payoff de progressão): 30 moedas + 1 Rubi por nível
+        add_coins(level_diff * 30)
+        add_hard_currency(level_diff * 1)
+        record_event("level_up", level_diff)
     _request_save()
 
 func xp() -> int:

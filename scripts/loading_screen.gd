@@ -63,4 +63,4 @@ func _draw() -> void:
     var pct := "%d%%" % int(progress * 100)
     draw_string(ThemeDB.fallback_font, Vector2(cx - 18, bar_y + 28), pct, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(MUTED.r, MUTED.g, MUTED.b, alpha))
     # dica
-    draw_string(ThemeDB.fallback_font, Vector2(cx - 132, size.y - 42), "Dica: rua tem mais moedas • calçada tem mais segurança", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(MUTED.r, MUTED.g, MUTED.b, alpha*0.85))
+    draw_string(ThemeDB.fallback_font, Vector2(cx - 150, size.y - 42), "Dica: desvie dos obstáculos • pegue o ônibus antes da partida!", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(MUTED.r, MUTED.g, MUTED.b, alpha*0.85))

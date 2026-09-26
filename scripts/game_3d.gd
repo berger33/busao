@@ -668,6 +668,8 @@ func _start_run(index: int) -> void:
     motion_speed = 0.0
     lane_change_velocity = 0.0
     course_root.position.z = 0.0
+    if phase_index == 0 and not bool(GameSave.data.get("tutorial_seen", false)):
+        _show_feedback("PEGUE O BUSÃO!", "Atravesse a avenida e alcance o ponto a tempo", GOLD, "coin")
     var equipped: String = CHARACTER_DATA.canonical_id(GameSave.equipped_character())
     if equipped == "motoboy":
         speed_boost_timer = 9999.0
@@ -1274,23 +1276,23 @@ func _update_tutorial_hint() -> void:
         return
     var next_stage := 0
     var next_hint := "DESLIZE ← → para trocar de faixa"
-    if distance >= 18.0 and distance < 32.0:
+    if distance >= 18.0 and distance < 36.0:
         next_stage = 1
-        next_hint = "TOQUE curto para usar o DASH"
-    elif distance >= 32.0 and distance < 48.0:
+        next_hint = "DESLIZE ↑ para pular o obstáculo"
+    elif distance >= 36.0 and distance < 54.0:
         next_stage = 2
-        next_hint = "DESLIZE para cima e pule o obstáculo"
-    elif distance >= 48.0 and distance < BALANCE.first_session_hint_distance:
+        next_hint = "DESLIZE ↓ para passar sob a barra"
+    elif distance >= 54.0 and distance < BALANCE.first_session_hint_distance:
         next_stage = 3
-        next_hint = "DESLIZE para baixo e passe sob a barra"
+        next_hint = "TOQUE para dar DASH e ganhar impulso"
     elif distance >= BALANCE.first_session_hint_distance:
         next_stage = 4
-        next_hint = "Boa leitura. Agora corra do seu jeito."
+        next_hint = "Boa leitura! Agora corra do seu jeito."
     if next_stage != tutorial_stage:
         tutorial_stage = next_stage
         GameSave.record_event("tutorial_step")
     tutorial_hint = next_hint
-    if tutorial_stage >= 3:
+    if tutorial_stage >= 4 or distance >= BALANCE.first_session_hint_distance:
         GameSave.data["tutorial_seen"] = true
         GameSave.flush()
         tutorial_hint = ""

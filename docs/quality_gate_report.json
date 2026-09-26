@@ -3,7 +3,7 @@
   "checks": {
     "hero": {
       "exit_code": 0,
-      "stdout": "HERO OK MESH-ONLY: 67464 bytes | partes 9/9 | clips pendentes: Idle_Loop, Walk_Loop, Sprint_Loop, Jump_Loop, Crouch_Fwd_Loop",
+      "stdout": "HERO OK MESH-ONLY: 62316 bytes | partes 9/9 | clips pendentes: Idle_Loop, Walk_Loop, Sprint_Loop, Jump_Loop, Crouch_Fwd_Loop",
       "stderr": "",
       "passed": true
     },
