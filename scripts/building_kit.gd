@@ -174,19 +174,20 @@ static func material(spec: Dictionary, chave: String) -> Material:
             mat.uv1_triplanar_sharpness = 3.0
     # anisotropia 16x para PBR 4K sem blur em rasante
     mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
-    # L27 polimento: height parallax 0.025 (pbr/*_height.png 16-bit gerado no Lote22)
-    if cfg.has("height_map") and mat is ORMMaterial3D:
+    # Altura de relevo / heightmap parallax (só ativa se escala > 0.0)
+    var h_scale := float(cfg.get("height_scale", 0.0))
+    if cfg.has("height_map") and h_scale > 0.0001 and mat is ORMMaterial3D:
         var height_tex: Texture2D = _textura(String(cfg["height_map"]))
         if height_tex != null:
             mat.heightmap_enabled = true
             mat.heightmap_texture = height_tex
-            mat.heightmap_scale = float(cfg.get("height_scale", 0.025))
-    elif cfg.has("height_map") and mat is StandardMaterial3D:
+            mat.heightmap_scale = h_scale
+    elif cfg.has("height_map") and h_scale > 0.0001 and mat is StandardMaterial3D:
         var height_tex2: Texture2D = _textura(String(cfg["height_map"]))
         if height_tex2 != null:
             mat.heightmap_enabled = true
             mat.heightmap_texture = height_tex2
-            mat.heightmap_scale = float(cfg.get("height_scale", 0.025))
+            mat.heightmap_scale = h_scale
     if chave == "vidro" and mat is StandardMaterial3D:
         var sm := mat as StandardMaterial3D
         sm.clearcoat_enabled = true
@@ -564,7 +565,7 @@ static func _build_lajes(spec: Dictionary, raiz: Node3D, rng: RandomNumberGenera
                 prof = rng.randf_range(float(faixa[0]), float(faixa[1]))
                 prof = minf(prof, comprimento - z)
             xforms.append(_xform(
-                Vector3(x + largura * 0.5, 0.10 + altura * 0.5, -(z + prof * 0.5)),
+                Vector3(x + largura * 0.5, 0.15 + altura * 0.5, -(z + prof * 0.5)),
                 Vector3(largura - junta, altura, prof - junta)))
             z += prof + junta
         x += largura + junta
@@ -575,7 +576,7 @@ static func _build_mosaicos(spec: Dictionary, raiz: Node3D, rng: RandomNumberGen
     var lajes: Dictionary = spec.get("lajes", {})
     var lado_m := float(lajes.get("mosaico_lado_m", 0.42))
     var variacao := float(lajes.get("mosaico_variacao_m", 0.06))
-    var altura := float(lajes.get("altura_m", 0.05))
+    var altura := float(lajes.get("altura_m", 0.004))
     var borda_esq := float(faixas.get("piso_borda_esq_m", 1.35))
     var piso := float(faixas.get("piso_central_m", 6.0))
     var calcada := float(faixas.get("calcada_lateral_m", 2.5))
@@ -589,10 +590,10 @@ static func _build_mosaicos(spec: Dictionary, raiz: Node3D, rng: RandomNumberGen
         while x < fim - 0.05:
             var x_lado := minf(lado_m + rng.randf_range(-variacao, variacao), fim - x)
             xforms.append(_xform(
-                Vector3(x + x_lado * 0.5, 0.10 + altura * 0.5, -(z + z_lado * 0.5)),
-                Vector3(x_lado - 0.01, altura, z_lado - 0.01)))
-            x += x_lado + 0.01
-        z += z_lado + 0.01
+                Vector3(x + x_lado * 0.5, 0.15 + altura * 0.5, -(z + z_lado * 0.5)),
+                Vector3(x_lado - 0.005, altura, z_lado - 0.005)))
+            x += x_lado + 0.005
+        z += z_lado + 0.005
     _multimesh(_box(Vector3.ONE), material(spec, "calcada_lateral"), xforms, raiz, "Mosaicos", false, 0.0)
 
 static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGenerator,

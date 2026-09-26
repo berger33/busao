@@ -30,8 +30,8 @@
       0.55,
       0.8
     ],
-    "junta_m": 0.014,
-    "altura_m": 0.05,
+    "junta_m": 0.002,
+    "altura_m": 0.004,
     "mosaico_lado_m": 0.42,
     "mosaico_variacao_m": 0.06,
     "paver_largura_m": 0.22,
