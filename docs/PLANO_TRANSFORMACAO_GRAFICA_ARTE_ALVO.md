@@ -47,9 +47,14 @@ Transformar o visual 3D in-game atual para atingir exatamente a qualidade artís
 - **Transição de Secagem Progressiva:** Curva de secagem natural (16 s) vs molhagem dinâmica (3 s) e albedo molhado calibrado.
 - **Micro-efeito de Respingo:** Sistema de partículas acoplado ao passo do corredor sobre áreas molhadas.
 
+### 🚌 Etapa 9: Câmera Cinemática de Embarque no Ônibus & Telas de Fim de Corrida (WIB-21: DONE)
+- **Câmera Cinemática de Embarque:** Pan dinâmico e aproximação suave lateral/frontal da porta do ônibus (`y: 1.95m`, `z: 4.2m`, `FOV: 46°`).
+- **Animação de Sucesso:** Feedback sonoro e visual ao cruzar a catraca/porta do ônibus urbano.
+- **Telas de Resultado Estilizadas:** Cards translúcidos com acabamento moderno, exibição nítida de moedas R$, tempo e estrelas de maestria.
+
 ---
 
-## 📊 Status Final: 100% CONCLUÍDO (8/8 Etapas Green)
+## 📊 Status Final: 100% CONCLUÍDO (9/9 Etapas Green)
 - **Suíte QA:** 133/133 checks aprovados (0 avisos, 0 falhas).
-- **Linear:** Issues WIB-13 a WIB-20 marcadas como Done.
+- **Linear:** Issues WIB-13 a WIB-21 marcadas como Done.
 - **Git:** Sincronizado e com push ativo na branch `arena/01a0db52-busao`.
