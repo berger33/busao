@@ -62,14 +62,14 @@ const TIERS := {
     ],
 }
 
-## Cores de partida do Lote 2 (a referencia pede sol creme e sombra azulada).
-const SUN_CREAM := Color(1.0, 0.93, 0.8)
-const SKY_TOP := Color(0.32, 0.48, 0.72)
-const SKY_HORIZON := Color(0.82, 0.8, 0.76)
-const GROUND_BOTTOM := Color(0.36, 0.35, 0.35)
-const GROUND_HORIZON := Color(0.72, 0.69, 0.63)
-const FOG_CREAM := Color(0.84, 0.79, 0.7)
-const SHADOW_TINT := Color(0.33, 0.39, 0.48)
+## Cores de partida: céu tropical radiante, sol quente e sombras suaves preenchidas.
+const SUN_CREAM := Color(1.0, 0.96, 0.88)
+const SKY_TOP := Color(0.18, 0.52, 0.92)
+const SKY_HORIZON := Color(0.78, 0.86, 0.96)
+const GROUND_BOTTOM := Color(0.42, 0.40, 0.38)
+const GROUND_HORIZON := Color(0.76, 0.74, 0.70)
+const FOG_CREAM := Color(0.88, 0.92, 0.98)
+const SHADOW_TINT := Color(0.48, 0.54, 0.65)
 
 var _method := "forward_plus"
 var _adaptor := "?"
@@ -319,16 +319,16 @@ func _configure_environment(env: Environment, boost: float) -> void:
     var fog := _color_of("fog_color", FOG_CREAM)
     fog = Color(fog.r * boost, fog.g * boost, fog.b * boost, 1.0)
     env.fog_light_color = fog
-    env.fog_density = float(_profile.get("fog_density", 0.5))
-    env.fog_depth_begin = float(_profile.get("fog_begin", 30.0))
-    env.fog_depth_end = float(_profile.get("fog_end", 260.0))
+    env.fog_density = minf(0.015, float(_profile.get("fog_density", 0.002)))
+    env.fog_depth_begin = float(_profile.get("fog_begin", 80.0))
+    env.fog_depth_end = float(_profile.get("fog_end", 600.0))
     env.fog_sun_scatter = 0.25
     if _method == "forward_plus":
         env.fog_aerial_perspective = 0.35
     env.adjustment_enabled = true
-    env.adjustment_brightness = float(_profile.get("brightness", 1.02))
-    env.adjustment_contrast = float(_profile.get("contrast", 1.06))
-    env.adjustment_saturation = float(_profile.get("saturation", 0.94))
+    env.adjustment_brightness = float(_profile.get("brightness", 1.04))
+    env.adjustment_contrast = float(_profile.get("contrast", 1.08))
+    env.adjustment_saturation = float(_profile.get("saturation", 1.12))
 
 
 func _configure_sky(env: Environment) -> void:

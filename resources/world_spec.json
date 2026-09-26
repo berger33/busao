@@ -132,13 +132,13 @@
       "uv_escala": 0.42,
       "triplanar": true,
       "cor": [
-        0.71,
-        0.7,
-        0.66
+        0.82,
+        0.80,
+        0.76
       ],
       "height_map": "calcada_laje_height.png",
-      "height_scale": 0.01,
-      "normal_scale": 1.25,
+      "height_scale": 0.0,
+      "normal_scale": 0.20,
       "triplanar_sharpness": 8.0
     },
     "calcada_lateral": {
@@ -146,13 +146,13 @@
       "uv_escala": 0.85,
       "triplanar": true,
       "cor": [
-        0.63,
-        0.62,
-        0.58
+        0.78,
+        0.76,
+        0.72
       ],
       "height_map": "calcada_mosaico_height.png",
-      "height_scale": 0.01,
-      "normal_scale": 1.15,
+      "height_scale": 0.0,
+      "normal_scale": 0.20,
       "triplanar_sharpness": 8.0
     },
     "guia": {
@@ -160,13 +160,13 @@
       "uv_escala": 1.4,
       "triplanar": true,
       "cor": [
-        0.6,
-        0.59,
-        0.56
+        0.75,
+        0.75,
+        0.74
       ],
       "height_map": "calcada_laje_height.png",
-      "height_scale": 0.01,
-      "normal_scale": 1.2,
+      "height_scale": 0.0,
+      "normal_scale": 0.20,
       "triplanar_sharpness": 8.0
     },
     "pista": {
@@ -174,25 +174,25 @@
       "uv_escala": 0.08,
       "triplanar": true,
       "cor": [
-        0.13,
-        0.13,
-        0.145
+        0.24,
+        0.25,
+        0.27
       ],
       "height_map": "asfalto_height.png",
-      "height_scale": 0.01,
-      "normal_scale": 1.1,
+      "height_scale": 0.0,
+      "normal_scale": 0.25,
       "triplanar_sharpness": 8.0
     },
     "linha_amarela": {
       "pbr": "metal_pintado",
       "uv_escala": 1.0,
       "triplanar": false,
-      "rugosidade": 0.55,
-      "normal_scale": 0.9,
+      "rugosidade": 0.35,
+      "normal_scale": 0.3,
       "cor": [
         1.0,
-        0.82,
-        0.1
+        0.84,
+        0.08
       ]
     },
     "faixa_branca": {
@@ -350,77 +350,77 @@
       "nome": "manha_limpa",
       "sol": [
         1.0,
-        0.93,
-        0.8
+        0.96,
+        0.88
       ],
       "nevoa": [
-        0.84,
-        0.79,
-        0.7
+        0.88,
+        0.92,
+        0.98
       ],
       "sombra": [
-        0.33,
-        0.39,
-        0.48
+        0.48,
+        0.54,
+        0.65
       ],
       "ceu_alto": [
-        0.32,
-        0.48,
-        0.72
+        0.18,
+        0.52,
+        0.92
       ],
       "ceu_horizonte": [
-        0.82,
-        0.8,
-        0.76
+        0.78,
+        0.86,
+        0.96
       ],
       "sol_rotacao": [
-        -9.0,
-        170.0,
+        -42.0,
+        160.0,
         0.0
       ],
-      "sol_energia": 1.1,
-      "energia_ambiente": 0.62,
-      "nevoa_densidade": 0.5,
-      "exposicao": 0.51,
-      "nuvens": 0.3
+      "sol_energia": 1.45,
+      "energia_ambiente": 1.15,
+      "nevoa_densidade": 0.002,
+      "exposicao": 0.52,
+      "nuvens": 0.18
     },
     {
       "nome": "tarde_dourada",
       "sol": [
         1.0,
-        0.84,
-        0.62
+        0.88,
+        0.68
       ],
       "nevoa": [
-        0.86,
-        0.75,
-        0.6
+        0.92,
+        0.84,
+        0.72
       ],
       "sombra": [
-        0.3,
-        0.35,
-        0.45
+        0.42,
+        0.48,
+        0.58
       ],
       "ceu_alto": [
-        0.28,
-        0.42,
-        0.66
+        0.24,
+        0.46,
+        0.82
       ],
       "ceu_horizonte": [
-        0.88,
-        0.78,
-        0.64
+        0.94,
+        0.82,
+        0.68
       ],
       "sol_rotacao": [
-        -5.0,
-        200.0,
+        -32.0,
+        190.0,
         0.0
       ],
-      "sol_energia": 1.2,
-      "energia_ambiente": 0.55,
-      "nevoa_densidade": 0.58,
-      "exposicao": 0.48,
-      "nuvens": 0.38
+      "sol_energia": 1.35,
+      "energia_ambiente": 1.05,
+      "nevoa_densidade": 0.003,
+      "exposicao": 0.50,
+      "nuvens": 0.22
     },
     {
       "nome": "nublado",
