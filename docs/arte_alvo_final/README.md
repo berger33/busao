@@ -23,4 +23,5 @@ Imagens geradas como referência de direção de arte — não são capturas do 
 | 8 | `8_fase2_pbr.png` | Fase 1 (barro, em cima) × Fase 2 (albedo/normal/ORM bakeados, embaixo). |
 | 9 | `9_fase2_closeup_pele.png` | Close-up da pele bakeada: variação de tom, AO nas dobras e microrrelevo de poro. |
 | 10 | `10_bracos_corrigidos.png` | Três linhas: Fase 1 (barro), PBR com os braços tortos e a versão corrigida (máscara lateral do tronco + cadeia do braço em reta). |
-| 11 | `11_mao_detalhe.png` | Close da mão refeita: palha própria (laje) com dedos nascendo de dentro da palma. |
+| 11 | `11_mao_detalhe.png` | Close da mão refeita: palma própria (laje) com dedos nascendo de dentro da palma. |
+| 12 | `12_fase3_rosto.png` | Fase 3A: close de validação do rosto da Júlia em frente, 3/4 e perfil — crânio, olhos, sobrancelhas, nariz e boca, ainda sem cabelo. Ver `docs/execucao/HEROI_FASE3_ROSTO.md`. |

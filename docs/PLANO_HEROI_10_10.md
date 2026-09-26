@@ -100,13 +100,29 @@ com stubs X11/GL — hoje o sandbox está **sem** esse ambiente), `tools/blender
 
 **Gate 2:** GLB com `images >= 4`, sem esticamento de UV no checker, ≤ 1,8 MB com texturas.
 
-### Fase 3 — Cabelo e olhos (1 dia)
-- Cabelo em **cards com alpha** (rabo de cavalo em 5 mechas + franja), material
-  `alpha_scissor` (mobile-safe, sem ordenação por transparência).
-- Olho: esclera + córnea separada com `refraction` barata, íris com normal radial.
-- Sobrancelha e cílios como cards finos.
+### Fase 3A — Rosto (em validação, 26/09)
+- Build: `tools/blender/build_rosto_heroi_julia.py`; execução e gate em
+  `docs/execucao/HEROI_FASE3_ROSTO.md`.
+- Crânio/mandíbula e orelhas próprios; olhos com esclera, íris, pupila e brilho
+  separados; pálpebras, sobrancelhas, cílios, nariz/narinas e lábios em volume.
+- Preview de revisão: `docs/arte_alvo_final/12_fase3_rosto.png` (frente, 3/4,
+  perfil). A saída fica em `tools/blender/out/` enquanto aguarda aprovação — o
+  asset de runtime não é substituído antes disso.
+- **Escopo bloqueado:** sem cabelo de couro cabeludo, franja, rabo de cavalo,
+  cards alpha ou material `Hair` nesta parte. Sobrancelhas e cílios contam como
+  elementos faciais, não como penteado.
 
-**Gate 3:** close a 2 m com rosto legível; sem shimmer de alpha em movimento a 60 FPS.
+**Gate 3A:** close a 2 m com rosto legível; 16 grupos faciais presentes; nenhum
+objeto de cabelo; GLB sem Draco. ✅ técnico — ⏳ validação visual do usuário.
+
+### Fase 3B — Cabelo (depois da aprovação do rosto)
+- Cabelo em **cards com alpha** (raiz, franja, cachos e rabo de cavalo em cinco
+  mechas), material `alpha_scissor` mobile-safe, sem ordenação por transparência.
+- Só começa após a identidade, escala de olhos, nariz, boca e sobrancelhas da
+  Fase 3A estarem aprovadas.
+
+**Gate 3B:** close a 2 m com rosto+cabelo legíveis; sem shimmer de alpha em
+movimento a 60 FPS.
 
 ### Fase 4 — Rig e skinning (1,5 dia)
 - Armature de **60 ossos**: contrato atual (`pelvis`, `spine_01..03`, `neck_01`, `Head`,
@@ -172,7 +188,7 @@ com stubs X11/GL — hoje o sandbox está **sem** esse ambiente), `tools/blender
 | 0 Ambiente/baseline | 0,5 | 0,5 |
 | 1 Corpo | 2,0 | 2,5 |
 | 2 UV + bake PBR | 1,5 | 4,0 |
-| 3 Cabelo/olhos | 1,0 | 5,0 |
+| 3A Rosto · 3B Cabelo | 1,0 + validação | 5,0 + validação |
 | 4 Rig/skin | 1,5 | 6,5 |
 | 5 Animações | 2,0 | 8,5 |
 | 6 Integração/luz/LOD | 1,0 | 9,5 |
