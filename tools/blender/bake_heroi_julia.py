@@ -342,8 +342,13 @@ def main():
     TEX_DIR.mkdir(parents=True, exist_ok=True)
     bpy.ops.wm.open_mainfile(filepath=str(BASE_BLEND))
     scene = bpy.context.scene
-    obj = next(o for o in scene.objects if o.type == "MESH")
-    log(f"objeto: {obj.name}, {len(obj.data.polygons)} faces")
+    # A Fase 3 (build_heroi_julia.py) adicionou olhos/cabelo/sobrancelha/cílio
+    # como objetos separados — cada um já tem seu próprio material (não
+    # dependem de bake Cycles). Só o corpo ("JuliaBase") passa por UV+bake
+    # aqui; os extras seguem intactos até o export final.
+    obj = scene.objects.get("JuliaBase") or next(o for o in scene.objects if o.type == "MESH")
+    extras = [o for o in scene.objects if o.type == "MESH" and o is not obj]
+    log(f"objeto: {obj.name}, {len(obj.data.polygons)} faces (+{len(extras)} extras da Fase 3)")
 
     desdobrar(obj)
     cobertura = cobertura_uv(obj)
@@ -381,7 +386,14 @@ def main():
     obj.data.materials.clear()
     obj.data.materials.append(final)
 
-    ativar(obj)
+    # Export final: corpo texturizado + todos os extras da Fase 3 (eles já
+    # trazem seus próprios materiais/imagens do build_heroi_julia.py).
+    bpy.ops.object.select_all(action="DESELECT")
+    obj.select_set(True)
+    for extra in extras:
+        extra.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+
     glb = OUT_DIR / "heroi_julia_pbr.glb"
     bpy.ops.export_scene.gltf(
         filepath=str(glb),
@@ -395,10 +407,15 @@ def main():
     )
     bpy.ops.wm.save_as_mainfile(filepath=str(OUT_DIR / "heroi_julia_pbr.blend"))
 
+    tris_extras = sum(sum(len(p.vertices) - 2 for p in e.data.polygons) for e in extras)
+    faces_extras = sum(len(e.data.polygons) for e in extras)
     m = {
         "res": res,
         "samples": args.samples,
-        "faces": len(obj.data.polygons),
+        "faces_corpo": len(obj.data.polygons),
+        "faces_extras": faces_extras,
+        "tris_extras": tris_extras,
+        "extras": sorted(e.name for e in extras),
         "cobertura_uv": cobertura,
         "res_normal_orm": args.res_normal,
         "texturas": [p_alb.name, p_nrm.name, p_orm.name],

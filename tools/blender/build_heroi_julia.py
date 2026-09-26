@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Herói 10/10 — Fase 1: corpo base esculpido da heroína Júlia.
+"""Herói 10/10 — Fase 1-3: corpo, rosto, olhos e cabelo da heroína Júlia.
 
-Plano: docs/PLANO_HEROI_10_10.md (Fase 1 — Corpo base esculpido).
-Referência visual: docs/arte_alvo_final/6_model_sheet_heroi.png
+Plano: docs/PLANO_HEROI_10_10.md (Fase 1 — Corpo base esculpido; Fase 3 —
+cabelo e olhos). Referência visual: docs/arte_alvo_final/6_model_sheet_heroi.png
 
 Por que um script novo em vez de corrigir `build_humanos.py`: aquele pipeline
 gera membros por revolução de anéis (tubos lofted), sem edge loops de
@@ -11,10 +11,23 @@ esqueleto de arestas + modificador Skin (volume orgânico contínuo), passa por
 Subdivision e é **retopologizado por QuadriFlow** em quads distribuídos, o que
 dá loops utilizáveis em cotovelo, joelho, ombro e quadril.
 
+A Fase 3 (seção "6" abaixo) adiciona objetos separados do corpo — olhos
+(esclera+córnea), sobrancelhas, cílios e cabelo — cada um com seu próprio
+material. Eles nascem no MESMO espaço de coordenadas pré-normalização do
+corpo (ver `ROSTO` em "4c") e recebem a mesma escala/deslocamento em
+`normalizar()`, então ficam alinhados ao rosto esculpido sem precisar de
+parenting nem de re-hierarquia.
+
 Saídas (em tools/blender/out/):
-  heroi_julia_base.glb    corpo base sem rig (Fase 4 adiciona armature)
+  heroi_julia_base.glb    corpo+rosto+olhos+cabelo sem rig (Fase 4 adiciona armature)
   heroi_julia_base.blend  cena para iteração
-  heroi_julia_metrics.json métricas do gate da Fase 1
+  heroi_julia_metrics.json métricas do gate da Fase 1/3
+
+Texturas novas da Fase 3 (não dependem de bake Cycles — são geradas por numpy
+e gravadas direto, o bake da Fase 2 continua bakeando só a pele):
+  assets/textures/heroi/julia_cabelo_alpha.png  atlas de cartões com alpha (cabelo/sobrancelha/cílio)
+  assets/textures/heroi/julia_olho_albedo.jpg   esclera + íris
+  assets/textures/heroi/julia_olho_normal.jpg   normal radial da íris
 
 Uso: tools/blender/run_bpy.sh tools/blender/build_heroi_julia.py
 """
@@ -26,6 +39,7 @@ from pathlib import Path
 
 import bpy
 import bmesh
+import numpy as np
 from mathutils import Vector
 
 TAU = math.tau
@@ -33,6 +47,8 @@ D = bpy.data
 REPO = Path(__file__).resolve().parents[2]
 OUT_DIR = REPO / "tools" / "blender" / "out"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
+TEX_DIR = REPO / "assets" / "textures" / "heroi"
+TEX_DIR.mkdir(parents=True, exist_ok=True)
 
 # --- Alvos do gate da Fase 1 -------------------------------------------------
 ALTURA_ALVO = 1.72          # m, heroína adulta (model sheet: 168-172 cm)
@@ -613,41 +629,548 @@ def esculpir_rosto(obj):
 
 
 # -----------------------------------------------------------------------------
-# 5. Normalização de escala e contato com o solo
+# 5. Utilitários de malha/textura reaproveitados por olhos, cabelo, sobrancelha
+#    e cílios (Fase 3): cartões (ribbons) planos e calotas esféricas (olho).
 # -----------------------------------------------------------------------------
-def normalizar(obj, altura=ALTURA_ALVO, piso=PISO_OFFSET):
-    ativar(obj)
+def _fita(nome, pontos, larguras, eixos, uv_rect):
+    """Cartão plano (ribbon): N pontos centrais, largura e eixo de largura por
+    ponto. UV mapeia t=0 (base) -> topo do retângulo do atlas, t=1 (ponta) ->
+    base — usado por cabelo, franja, sobrancelha e cílio (mesma função, o que
+    muda é a trajetória e o retângulo do atlas).
+    """
+    u0, v0, u1, v1 = uv_rect
+    n = len(pontos)
+    verts, uvs = [], []
+    for i in range(n):
+        t = i / (n - 1)
+        p, w, eixo = pontos[i], larguras[i] * 0.5, eixos[i]
+        verts.append(tuple(p - eixo * w))
+        verts.append(tuple(p + eixo * w))
+        v = v0 + (v1 - v0) * t
+        uvs.append((u0, v))
+        uvs.append((u1, v))
+    faces = [(i * 2, i * 2 + 1, (i + 1) * 2 + 1, (i + 1) * 2) for i in range(n - 1)]
+    me = D.meshes.new(nome)
+    me.from_pydata(verts, [], faces)
+    me.update()
+    uvlayer = me.uv_layers.new(name="UVMap")
+    for poly in me.polygons:
+        for li in poly.loop_indices:
+            uvlayer.data[li].uv = uvs[me.loops[li].vertex_index]
+    for p in me.polygons:
+        p.use_smooth = False
+    o = D.objects.new(nome, me)
+    bpy.context.scene.collection.objects.link(o)
+    return o
+
+
+def _hemisferio(nome, centro, raio, frente, ang_max_graus, seg_u=16, seg_v=8):
+    """Calota esférica aberta (dome) apontando para `frente`. UV polar: o
+    ápice (ang=0) cai no centro do quadrado de textura, a borda (ang_max) cai
+    no círculo unitário — usado pelo globo ocular (esclera+íris no mesmo
+    mapa) e pela córnea.
+    """
+    centro = Vector(centro)
+    frente = Vector(frente).normalized()
+    ref = Vector((0.0, 0.0, 1.0)) if abs(frente.z) < 0.9 else Vector((1.0, 0.0, 0.0))
+    lado = frente.cross(ref).normalized()
+    cima = lado.cross(frente).normalized()
+    ang_max = math.radians(ang_max_graus)
+
+    verts = [tuple(centro + frente * raio)]
+    uvs = [(0.5, 0.5)]
+    aneis = []
+    for j in range(1, seg_v + 1):
+        polar = ang_max * (j / seg_v)
+        anel = []
+        for i in range(seg_u):
+            az = i / seg_u * TAU
+            dirv = frente * math.cos(polar) + (lado * math.cos(az) + cima * math.sin(az)) * math.sin(polar)
+            verts.append(tuple(centro + dirv * raio))
+            r = polar / ang_max
+            uvs.append((0.5 + 0.5 * r * math.cos(az), 0.5 + 0.5 * r * math.sin(az)))
+            anel.append(len(verts) - 1)
+        aneis.append(anel)
+
+    faces = []
+    for i in range(seg_u):
+        i2 = (i + 1) % seg_u
+        faces.append((0, aneis[0][i], aneis[0][i2]))
+    for j in range(len(aneis) - 1):
+        a0, a1 = aneis[j], aneis[j + 1]
+        for i in range(seg_u):
+            i2 = (i + 1) % seg_u
+            faces.append((a0[i], a0[i2], a1[i2], a1[i]))
+
+    me = D.meshes.new(nome)
+    me.from_pydata(verts, [], faces)
+    me.update()
+    uvlayer = me.uv_layers.new(name="UVMap")
+    for poly in me.polygons:
+        for li in poly.loop_indices:
+            uvlayer.data[li].uv = uvs[me.loops[li].vertex_index]
+    for p in me.polygons:
+        p.use_smooth = True
+    o = D.objects.new(nome, me)
+    bpy.context.scene.collection.objects.link(o)
+    return o
+
+
+def _salvar_imagem_numpy(nome, rgba, caminho, srgb=True):
+    """Grava um array numpy (H, W, 3|4) float 0..1 como PNG/JPEG e recarrega
+    do disco — o GLB embute o arquivo salvo, não o buffer em memória (mesma
+    armadilha documentada em bake_heroi_julia.py::salvar()).
+    """
+    h, w = rgba.shape[0], rgba.shape[1]
+    if rgba.shape[2] == 3:
+        rgba = np.concatenate([rgba, np.ones((h, w, 1), dtype=np.float32)], axis=2)
+    img = D.images.new(nome, w, h, alpha=True)
+    img.colorspace_settings.name = "sRGB" if srgb else "Non-Color"
+    buf = np.flipud(np.clip(rgba, 0.0, 1.0)).astype(np.float32)
+    img.pixels.foreach_set(buf.reshape(-1))
+    img.filepath_raw = str(caminho)
+    if caminho.suffix.lower() in (".jpg", ".jpeg"):
+        img.file_format = "JPEG"
+        bpy.context.scene.render.image_settings.quality = 90
+    else:
+        img.file_format = "PNG"
+    img.save()
+    D.images.remove(img)
+    return D.images.load(str(caminho))
+
+
+# -----------------------------------------------------------------------------
+# 6. Cabelo, olhos, sobrancelhas e cílios (Fase 3)
+# -----------------------------------------------------------------------------
+# Marcos derivados de ROSTO (seção "4c"); tudo em espaço pré-normalização.
+CABELO = {
+    "rabo_x": 0.0, "rabo_y": 0.096, "rabo_z": 1.598,   # elástico do rabo de cavalo
+    "comprimento": 0.400,
+    "largura_base": 0.050,
+    "largura_ponta": 0.009,
+}
+OLHO = {
+    "raio_esclera": 0.0118,
+    "raio_cornea": 0.0092,
+    "ang_esclera": 62.0,   # graus visíveis pela órbita esculpida
+    "ang_cornea": 30.0,
+    "recuo": 0.006,        # m que o centro do globo fica ATRÁS de ROSTO["olho_y"]
+    "toe_out_graus": 4.0,  # leve divergência natural do olhar
+}
+
+
+def _forma_mecha(uu, vv, variante=0):
+    """Cartão de mecha: silhueta afunilada da raiz (vv=0) à ponta (vv=1) com
+    fios internos (listras) e gradiente raiz-escura -> ponta-clara."""
+    largura_local = 1.0 - 0.55 * vv
+    dist_centro = np.abs(uu - 0.5) * 2.0
+    alpha = np.clip((largura_local - dist_centro) / 0.06, 0.0, 1.0)
+
+    freq = 9.0 + variante * 2.0
+    fase = variante * 1.7
+    linhas = 0.5 + 0.5 * np.sin((uu * freq + fase) * TAU)
+    tom = 0.30 + 0.65 * vv
+    escuro = np.array([0.045, 0.028, 0.024])
+    claro = np.array([0.24, 0.15, 0.10])
+    brilho = np.array([0.36, 0.24, 0.16])
+    base = escuro[None, None, :] * (1 - tom)[..., None] + claro[None, None, :] * tom[..., None]
+    cor = base * (0.78 + 0.22 * linhas)[..., None]
+    cor = cor + brilho[None, None, :] * (0.10 * np.clip(linhas - 0.7, 0.0, 1.0))[..., None]
+    return alpha, np.clip(cor, 0.0, 1.0)
+
+
+def _forma_sobrancelha(uu, vv):
+    """Feixe de fios finos (não um bloco sólido): linhas paralelas em arco
+    com folgas entre elas — mesma lógica do cílio, só mais larga/densa. Sem
+    ondulação de alta frequência por fio (isso lia como rabisco no render)."""
+    centro = 0.5 + 0.10 * np.sin(uu * math.pi)
+    n = 5
+    alpha = np.zeros_like(uu)
+    for k in range(n):
+        offset = (k / (n - 1) - 0.5) * 0.095
+        largura = 0.0085 * (1.0 - 0.30 * np.abs(uu - 0.5) * 2.0)
+        d = np.abs(vv - (centro + offset))
+        alpha = np.maximum(alpha, np.clip((largura - d) / 0.006, 0.0, 1.0))
+    fade_ponta = np.clip(np.minimum(uu, 1.0 - uu) / 0.05, 0.0, 1.0)
+    alpha = alpha * fade_ponta
+    cor = np.tile(np.array([0.090, 0.055, 0.040]), uu.shape + (1,))
+    return alpha, cor
+
+
+def _forma_cilio(uu, vv):
+    alpha = np.zeros_like(uu)
+    n = 7
+    for k in range(n):
+        cx = (k + 0.5) / n
+        curva = 0.10 * math.sin(cx * math.pi)
+        cx_v = cx + curva * vv
+        largura = 0.011 * (1.0 - 0.6 * vv)
+        d = np.abs(uu - cx_v)
+        fio = np.clip((largura - d) / 0.006, 0.0, 1.0) * np.clip((0.85 - vv) / 0.15, 0.0, 1.0)
+        alpha = np.maximum(alpha, fio)
+    cor = np.tile(np.array([0.03, 0.02, 0.02]), uu.shape + (1,))
+    return alpha, cor
+
+
+def gerar_atlas_cabelo(cel=128):
+    """Atlas 2x2 (cel px cada): mecha_a, mecha_b, sobrancelha, cílio.
+
+    As 5 mechas do rabo reaproveitam mecha_a/mecha_b em rodízio (igual à
+    técnica padrão de hair-cards em jogos, onde poucos cartões de textura
+    cobrem várias tiras de geometria) — mantém o atlas minúsculo.
+    """
+    W, H = cel * 2, cel * 2
+    rgba = np.zeros((H, W, 4), dtype=np.float32)
+    u = (np.arange(cel) + 0.5) / cel
+    v = (np.arange(cel) + 0.5) / cel
+    uu, vv = np.meshgrid(u, v)
+
+    celulas = {}
+    layout = [("mecha_a", 0, 0, 0), ("mecha_b", 1, 0, 1), ("sobrancelha", 0, 1, None), ("cilio", 1, 1, None)]
+    for nome, col, row, var in layout:
+        if nome.startswith("mecha"):
+            alpha, cor = _forma_mecha(uu, vv, variante=var)
+        elif nome == "sobrancelha":
+            alpha, cor = _forma_sobrancelha(uu, vv)
+        else:
+            alpha, cor = _forma_cilio(uu, vv)
+        x0, y0 = col * cel, row * cel
+        rgba[y0:y0 + cel, x0:x0 + cel, :3] = cor
+        rgba[y0:y0 + cel, x0:x0 + cel, 3] = alpha
+        # Retângulo em coordenadas UV (v=0 embaixo, padrão OpenGL/Blender).
+        # t=0 (base/raiz) mapeia para o topo da célula, t=1 (ponta) para a base.
+        v_topo = 1.0 - row / 2.0
+        v_base = 1.0 - (row + 1) / 2.0
+        celulas[nome] = (col / 2.0 + 0.02, v_topo - 0.02, (col + 1) / 2.0 - 0.02, v_base + 0.02)
+    return rgba, celulas
+
+
+def gerar_texturas_olho(res=160):
+    """Albedo (esclera+íris+pupila) e normal radial da íris, num só disco."""
+    xs = (np.arange(res) + 0.5) / res * 2.0 - 1.0
+    ys = (np.arange(res) + 0.5) / res * 2.0 - 1.0
+    uu, vv = np.meshgrid(xs, ys)
+    r = np.sqrt(uu * uu + vv * vv)
+    ang = np.arctan2(vv, uu)
+
+    raio_pupila, raio_iris = 0.20, 0.52
+    cor_pupila = np.array([0.015, 0.015, 0.015])
+    cor_iris_a = np.array([0.26, 0.16, 0.06])
+    cor_iris_b = np.array([0.11, 0.065, 0.03])
+    cor_esclera = np.array([0.93, 0.91, 0.89])
+
+    veia = 0.05 * np.clip(np.sin(ang * 9.0 + r * 22.0) - 0.75, 0.0, 1.0)
+    esclera = cor_esclera[None, None, :] * (1 - veia)[..., None] + np.array([0.85, 0.55, 0.5])[None, None, :] * veia[..., None]
+
+    raios_iris = 0.5 + 0.5 * np.sin(ang * 24.0)
+    iris = cor_iris_a[None, None, :] * raios_iris[..., None] + cor_iris_b[None, None, :] * (1 - raios_iris)[..., None]
+    limbo = np.clip((r - raio_iris + 0.045) / 0.045, 0.0, 1.0)
+    iris = iris * (1.0 - 0.55 * limbo[..., None])
+
+    cor = np.where((r < raio_pupila)[..., None], cor_pupila[None, None, :],
+                    np.where((r < raio_iris)[..., None], iris, esclera))
+    cor = np.clip(cor, 0.0, 1.0)
+
+    frac = np.clip((r - raio_pupila) / max(1e-4, raio_iris - raio_pupila), 0.0, 1.0)
+    dentro_iris = (r >= raio_pupila) & (r < raio_iris)
+    altura = np.where(dentro_iris, 0.5 * np.sin(ang * 24.0) * frac, 0.0)
+    dy, dx = np.gradient(altura)
+    forca = 6.0
+    nx, ny, nz = -dx * forca, -dy * forca, np.ones_like(altura)
+    norma = np.sqrt(nx * nx + ny * ny + nz * nz)
+    nx, ny, nz = nx / norma, ny / norma, nz / norma
+    normal = np.stack([nx * 0.5 + 0.5, ny * 0.5 + 0.5, nz * 0.5 + 0.5], axis=-1)
+    return cor, normal
+
+
+def material_alpha_scissor(imagem):
+    """Cartão com corte de alpha (sem ordenação por transparência): o nó
+    Math>GREATER_THAN antes do Alpha do BSDF é o padrão que o exportador
+    glTF do Blender 4.5 detecta como `alphaMode=MASK` (ver
+    io_scene_gltf2 blender/exp/material/search_node_tree.py::detect_alpha_clip).
+    `blend_method`/`alpha_threshold` ficam só para a pré-visualização no
+    Blender; quem decide o alphaMode exportado é o grafo de nós.
+    """
+    nome = "alpha_scissor"
+    m = D.materials.get(nome) or D.materials.new(nome)
+    m.use_nodes = True
+    m.blend_method = "CLIP"
+    m.alpha_threshold = 0.5
+    m.use_backface_culling = False
+    nt = m.node_tree
+    nt.nodes.clear()
+    out = nt.nodes.new("ShaderNodeOutputMaterial")
+    bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")
+    nt.links.new(bsdf.outputs["BSDF"], out.inputs["Surface"])
+
+    tex = nt.nodes.new("ShaderNodeTexImage")
+    tex.image = imagem
+    tex.image.colorspace_settings.name = "sRGB"
+    nt.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
+
+    corte = nt.nodes.new("ShaderNodeMath")
+    corte.operation = "GREATER_THAN"
+    corte.inputs[1].default_value = 0.5
+    nt.links.new(tex.outputs["Alpha"], corte.inputs[0])
+    nt.links.new(corte.outputs["Value"], bsdf.inputs["Alpha"])
+
+    bsdf.inputs["Roughness"].default_value = 0.55
+    if "Specular IOR Level" in bsdf.inputs:
+        bsdf.inputs["Specular IOR Level"].default_value = 0.30
+    return m
+
+
+def material_esclera(albedo, normal):
+    m = D.materials.get("OlhoEsclera") or D.materials.new("OlhoEsclera")
+    m.use_nodes = True
+    nt = m.node_tree
+    nt.nodes.clear()
+    out = nt.nodes.new("ShaderNodeOutputMaterial")
+    bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")
+    nt.links.new(bsdf.outputs["BSDF"], out.inputs["Surface"])
+
+    t_alb = nt.nodes.new("ShaderNodeTexImage")
+    t_alb.image = albedo
+    t_alb.image.colorspace_settings.name = "sRGB"
+    nt.links.new(t_alb.outputs["Color"], bsdf.inputs["Base Color"])
+
+    t_nrm = nt.nodes.new("ShaderNodeTexImage")
+    t_nrm.image = normal
+    t_nrm.image.colorspace_settings.name = "Non-Color"
+    nrm = nt.nodes.new("ShaderNodeNormalMap")
+    nrm.inputs["Strength"].default_value = 0.6
+    nt.links.new(t_nrm.outputs["Color"], nrm.inputs["Color"])
+    nt.links.new(nrm.outputs["Normal"], bsdf.inputs["Normal"])
+
+    bsdf.inputs["Roughness"].default_value = 0.20
+    return m
+
+
+def material_cornea():
+    """Córnea: `refraction barata` = Transmission Weight alto num casco fino
+    (exporta como KHR_materials_transmission no glTF), em vez de um caminho
+    de refração recursivo caro — é o dome à frente da íris que dá o brilho
+    de vidro sem custo de renderização em tempo real."""
+    m = D.materials.get("OlhoCornea") or D.materials.new("OlhoCornea")
+    m.use_nodes = True
+    m.blend_method = "BLEND"
+    nt = m.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    bsdf.inputs["Base Color"].default_value = (0.97, 0.98, 1.0, 1.0)
+    bsdf.inputs["Roughness"].default_value = 0.04
+    bsdf.inputs["IOR"].default_value = 1.376
+    if "Transmission Weight" in bsdf.inputs:
+        bsdf.inputs["Transmission Weight"].default_value = 1.0
+    return m
+
+
+def criar_olhos():
+    """Globo ocular em duas peças: esclera+íris (calota com o disco de
+    textura) e córnea (calota menor, transmissiva, sobre a íris)."""
+    albedo, normal = gerar_texturas_olho()
+    p_alb = TEX_DIR / "julia_olho_albedo.jpg"
+    p_nrm = TEX_DIR / "julia_olho_normal.jpg"
+    img_alb = _salvar_imagem_numpy("julia_olho_albedo", albedo, p_alb, srgb=True)
+    img_nrm = _salvar_imagem_numpy("julia_olho_normal", normal, p_nrm, srgb=False)
+    mat_esclera = material_esclera(img_alb, img_nrm)
+    mat_cornea = material_cornea()
+
+    pecas = []
+    for lado, s in (("l", 1.0), ("r", -1.0)):
+        cx = s * ROSTO["olho_x"]
+        cy = ROSTO["olho_y"] + OLHO["recuo"]
+        cz = ROSTO["olho_z"]
+        toe = math.radians(OLHO["toe_out_graus"]) * s
+        frente = Vector((math.sin(toe), -math.cos(toe), 0.0))
+
+        esclera = _hemisferio(f"olho_esclera_{lado}", (cx, cy, cz), OLHO["raio_esclera"],
+                               frente, OLHO["ang_esclera"])
+        esclera.data.materials.append(mat_esclera)
+        pecas.append(esclera)
+
+        centro_cornea = Vector((cx, cy, cz)) + frente * (OLHO["raio_esclera"] * 0.72)
+        cornea = _hemisferio(f"olho_cornea_{lado}", tuple(centro_cornea), OLHO["raio_cornea"],
+                              frente, OLHO["ang_cornea"])
+        cornea.data.materials.append(mat_cornea)
+        pecas.append(cornea)
+    log(f"olhos: {len(pecas)} peças (esclera+córnea x2)")
+    return pecas
+
+
+def criar_sobrancelhas_e_cilios(mat, celulas):
+    pecas = []
+    for lado, s in (("l", 1.0), ("r", -1.0)):
+        # Sobrancelha: arco acima da órbita, sobre o arco superciliar esculpido.
+        seg = 6
+        pontos, larguras, eixos = [], [], []
+        x0 = s * (ROSTO["olho_x"] - 0.016)
+        x1 = s * (ROSTO["olho_x"] + 0.030)
+        for i in range(seg + 1):
+            t = i / seg
+            x = x0 + (x1 - x0) * t
+            arco = math.sin(t * math.pi)
+            # y bem à frente do arco superciliar esculpido (que já projeta a
+            # pele para fora ~7mm): sem essa folga o cartão entra na pele e
+            # cria z-fighting (lido como um retalho sólido no render).
+            pontos.append(Vector((x, ROSTO["olho_y"] - 0.016, ROSTO["sobrancelha_z"] - 0.004 + 0.006 * arco)))
+            larguras.append(0.013 * (1.0 - 0.30 * abs(t - 0.5) * 2.0))
+            eixos.append(Vector((0.0, 0.0, 1.0)))
+        obj = _fita(f"sobrancelha_{lado}", pontos, larguras, eixos, celulas["sobrancelha"])
+        obj.data.materials.append(mat)
+        pecas.append(obj)
+
+        # Cílios: ao longo da pálpebra superior, curva "cat-eye" na ponta externa.
+        seg = 6
+        pontos, larguras, eixos = [], [], []
+        x0 = s * (ROSTO["olho_x"] - 0.028)
+        x1 = s * (ROSTO["olho_x"] + 0.032)
+        for i in range(seg + 1):
+            t = i / seg
+            x = x0 + (x1 - x0) * t
+            arco = math.sin(t * math.pi)
+            y = ROSTO["olho_y"] - 0.010 - 0.006 * (t if s * (x1 - x0) > 0 else 0.0)
+            pontos.append(Vector((x, y, ROSTO["olho_z"] + 0.013 + 0.005 * arco)))
+            larguras.append(0.009 * (0.35 + 0.65 * arco))
+            eixos.append(Vector((0.0, -0.35, 1.0)).normalized())
+        obj = _fita(f"cilio_{lado}", pontos, larguras, eixos, celulas["cilio"])
+        obj.data.materials.append(mat)
+        pecas.append(obj)
+    log(f"sobrancelhas + cílios: {len(pecas)} cartões")
+    return pecas
+
+
+def criar_cabelo(mat, celulas):
+    """Rabo de cavalo em 5 mechas (leque a partir do elástico) + franja."""
+    pecas = []
+    rabo = Vector((CABELO["rabo_x"], CABELO["rabo_y"], CABELO["rabo_z"]))
+    n_mechas = 5
+    seg = 7
+    for m_i in range(n_mechas):
+        fan_t = (m_i / (n_mechas - 1)) - 0.5   # -0.5 .. 0.5
+        ang_fan = fan_t * math.radians(72.0)
+        fase = m_i * 1.7
+        comp = CABELO["comprimento"] * (1.0 - 0.08 * abs(fan_t))
+        pontos, larguras, eixos = [], [], []
+        for i in range(seg + 1):
+            t = i / seg
+            z = rabo.z - comp * t
+            y = rabo.y + comp * (0.24 * t + 0.11 * math.sin(t * math.pi))
+            x = rabo.x + math.sin(ang_fan) * comp * 0.60 * t + 0.010 * math.sin(t * math.pi * 2.0 + fase)
+            pontos.append(Vector((x, y, z)))
+            larguras.append(CABELO["largura_base"] * (1 - t) + CABELO["largura_ponta"] * t)
+            eixos.append(Vector((math.cos(ang_fan), math.sin(ang_fan) * 0.4, 0.0)).normalized())
+        rect = celulas["mecha_a"] if m_i % 2 == 0 else celulas["mecha_b"]
+        obj = _fita(f"cabelo_mecha_{m_i:02d}", pontos, larguras, eixos, rect)
+        obj.data.materials.append(mat)
+        pecas.append(obj)
+
+    # Franja: cartões curtos caindo sobre a testa, bem acima da sobrancelha
+    # (curta — não pode encostar na linha do olho).
+    n_franja = 6
+    largura_total = 0.100
+    for i in range(n_franja):
+        cx = -largura_total / 2.0 + largura_total * i / (n_franja - 1)
+        seg = 4
+        comp = 0.032 + 0.006 * math.sin(i * 1.3)
+        pontos, larguras, eixos = [], [], []
+        for j in range(seg + 1):
+            t = j / seg
+            z = 1.660 - comp * t
+            y = -0.088 + 0.006 * t
+            x = cx + 0.007 * math.sin(t * math.pi)
+            pontos.append(Vector((x, y, z)))
+            larguras.append(0.020 * (1.0 - 0.30 * t))
+            eixos.append(Vector((1.0, 0.0, 0.0)))
+        rect = celulas["mecha_a"] if i % 2 == 0 else celulas["mecha_b"]
+        obj = _fita(f"franja_{i:02d}", pontos, larguras, eixos, rect)
+        obj.data.materials.append(mat)
+        pecas.append(obj)
+    log(f"cabelo: {len(pecas)} cartões (5 mechas + {n_franja} franja)")
+    return pecas
+
+
+def montar_cabelo_e_rosto():
+    """Gera o atlas alpha (cabelo/sobrancelha/cílio) e todas as peças novas
+    da Fase 3. Retorna a lista de objetos (nenhum é unido ao corpo — cada um
+    carrega seu próprio material de cartão/olho)."""
+    atlas, celulas = gerar_atlas_cabelo()
+    img_atlas = _salvar_imagem_numpy("julia_cabelo_alpha", atlas, TEX_DIR / "julia_cabelo_alpha.png", srgb=True)
+    mat_cartao = material_alpha_scissor(img_atlas)
+
+    pecas = []
+    pecas += criar_olhos()
+    pecas += criar_sobrancelhas_e_cilios(mat_cartao, celulas)
+    pecas += criar_cabelo(mat_cartao, celulas)
+    return pecas
+
+
+# -----------------------------------------------------------------------------
+# 7. Normalização de escala e contato com o solo
+# -----------------------------------------------------------------------------
+def normalizar(corpo, extras=(), altura=ALTURA_ALVO, piso=PISO_OFFSET):
+    """Escala/posiciona o corpo pela sua própria bbox e aplica a MESMA escala e
+    deslocamento em Z a `extras` (olhos/cabelo/sobrancelha/cílio) — todos
+    nasceram no mesmo espaço de coordenadas do corpo (origem em (0,0,0)), então
+    a transformação rígida os mantém colados ao rosto esculpido."""
+    objetos = [corpo] + list(extras)
+
+    ativar(corpo)
     bpy.context.view_layer.update()
-    zs = [(obj.matrix_world @ v.co).z for v in obj.data.vertices]
-    z_min, z_max = min(zs), max(zs)
-    escala = altura / (z_max - z_min)
-    obj.scale = (escala, escala, escala)
-    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-    zs = [(obj.matrix_world @ v.co).z for v in obj.data.vertices]
-    obj.location.z += piso - min(zs)
-    bpy.ops.object.transform_apply(location=True, rotation=False, scale=False)
-    return obj
+    zs = [(corpo.matrix_world @ v.co).z for v in corpo.data.vertices]
+    escala = altura / (max(zs) - min(zs))
+    for obj in objetos:
+        ativar(obj)
+        obj.scale = (escala, escala, escala)
+        bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+
+    ativar(corpo)
+    bpy.context.view_layer.update()
+    zs = [(corpo.matrix_world @ v.co).z for v in corpo.data.vertices]
+    desloc_z = piso - min(zs)
+    for obj in objetos:
+        ativar(obj)
+        obj.location.z += desloc_z
+        bpy.ops.object.transform_apply(location=True, rotation=False, scale=False)
+    return corpo
 
 
-def metricas(obj):
-    me = obj.data
-    tris = sum(len(p.vertices) - 2 for p in me.polygons)
-    quads = sum(1 for p in me.polygons if len(p.vertices) == 4)
-    zs = [v.co.z for v in me.vertices]
-    xs = [v.co.x for v in me.vertices]
-    ys = [v.co.y for v in me.vertices]
+def metricas(corpo, extras=()):
+    def contar(obj):
+        me = obj.data
+        tris = sum(len(p.vertices) - 2 for p in me.polygons)
+        return len(me.vertices), len(me.polygons), tris
+
+    v_c, f_c, t_c = contar(corpo)
+    quads = sum(1 for p in corpo.data.polygons if len(p.vertices) == 4)
+    zs = [v.co.z for v in corpo.data.vertices]
+    xs = [v.co.x for v in corpo.data.vertices]
+    ys = [v.co.y for v in corpo.data.vertices]
+    # O gate de manifold é só do corpo: cartões de cabelo/sobrancelha/cílio são
+    # planos de propósito (toda aresta é de contorno) e os olhos são calotas
+    # abertas — nenhum dos dois é "fechado" por natureza, então não entram
+    # nessa contagem (mesma leitura usada nos hair-cards de qualquer engine).
     nao_manifold = 0
     bm = bmesh.new()
-    bm.from_mesh(me)
+    bm.from_mesh(corpo.data)
     for e in bm.edges:
         if len(e.link_faces) != 2:
             nao_manifold += 1
     bm.free()
+
+    v_e = f_e = t_e = 0
+    for obj in extras:
+        vv, ff, tt = contar(obj)
+        v_e += vv
+        f_e += ff
+        t_e += tt
+
     return {
-        "verts": len(me.vertices),
-        "faces": len(me.polygons),
-        "tris": tris,
-        "quads_pct": round(100.0 * quads / max(1, len(me.polygons)), 1),
+        "verts_corpo": v_c, "faces_corpo": f_c, "tris_corpo": t_c,
+        "verts_extras": v_e, "faces_extras": f_e, "tris_extras": t_e,
+        "verts": v_c + v_e,
+        "faces": f_c + f_e,
+        "tris": t_c + t_e,
+        "quads_pct": round(100.0 * quads / max(1, f_c), 1),
         "altura_m": round(max(zs) - min(zs), 4),
         "piso_z_m": round(min(zs), 4),
         "largura_m": round(max(xs) - min(xs), 4),
@@ -656,12 +1179,17 @@ def metricas(obj):
     }
 
 
-def exportar(obj, nome="heroi_julia_base"):
+def exportar(corpo, extras=(), nome="heroi_julia_base"):
     mat = material("PeleJulia", (0.74, 0.52, 0.40), rough=0.52)
-    obj.data.materials.clear()
-    obj.data.materials.append(mat)
+    corpo.data.materials.clear()
+    corpo.data.materials.append(mat)
 
-    ativar(obj)
+    bpy.ops.object.select_all(action="DESELECT")
+    corpo.select_set(True)
+    for obj in extras:
+        obj.select_set(True)
+    bpy.context.view_layer.objects.active = corpo
+
     glb = OUT_DIR / f"{nome}.glb"
     bpy.ops.export_scene.gltf(
         filepath=str(glb),
@@ -687,10 +1215,14 @@ def main():
     densificar_cabeca(corpo)
     esculpir_rosto(corpo)
     juntar(corpo, criar_maos())
-    normalizar(corpo)
 
-    m = metricas(corpo)
-    glb, blend = exportar(corpo)
+    log("Fase 3 — olhos, sobrancelhas, cílios e cabelo")
+    extras = montar_cabelo_e_rosto()
+
+    normalizar(corpo, extras)
+
+    m = metricas(corpo, extras)
+    glb, blend = exportar(corpo, extras)
     m["glb_kb"] = round(glb.stat().st_size / 1024, 1)
     m["gate_tris"] = TRIS_MIN <= m["tris"] <= TRIS_MAX
     m["gate_altura"] = 1.70 <= m["altura_m"] <= 1.75

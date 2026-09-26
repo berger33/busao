@@ -22,6 +22,31 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
 
 ## Diário
 
+### 2026-09-26 (Herói 10/10 — Fase 3 concluída: cabelo, olhos, sobrancelha e cílio)
+
+- `tools/blender/build_heroi_julia.py` ganhou a seção "Fase 3": olhos
+  (esclera+córnea separadas, íris com normal radial gerado por numpy/gradiente),
+  sobrancelha e cílio (cartões finos de fios empilhados) e cabelo (rabo de
+  cavalo em 5 mechas + franja, atlas de 4 células). Tudo em objetos próprios
+  (não juntados ao corpo), alinhados ao rosto esculpido pela mesma
+  escala/deslocamento de `normalizar()`.
+- Material `alpha_scissor` usa um nó `Math>Greater Than` explícito antes do
+  Alpha do BSDF — é o padrão que o exportador glTF do Blender 4.5 reconhece
+  como `alphaMode=MASK` (o `material.blend_method` sozinho não basta nessa
+  versão, ele não decide mais o alphaMode exportado). Confirmado no GLB:
+  `alpha_scissor` → `MASK`; córnea → `KHR_materials_transmission` +
+  `KHR_materials_ior` (refração barata, sem custo de raytrace real).
+- `tools/blender/bake_heroi_julia.py` ajustado para bakear só o corpo
+  (`JuliaBase`) e reexportar os extras da Fase 3 intactos junto no GLB final.
+- **Gate 3 verde:** 37.078 tris totais (35.952 corpo + 1.126 extras, dentro de
+  24k–46k), GLB final 1.755,6 KB (≤ 2.048), 6 texturas embutidas, 0 arestas
+  não-manifold no corpo. Gates 1/2 seguem verdes sem regressão.
+- Renders: `docs/arte_alvo_final/15_turnaround_fase3.png`,
+  `16_rosto_fase3_olhos_cabelo.png`. Detalhes/limitações conhecidas:
+  `docs/execucao/HEROI_FASE3.md`.
+- Runtime intacto: `tools/validate_hero.py` → `HERO OK MESH-ONLY`;
+  `tools/validate_project.py` → `PRE-FLIGHT OK`; `tools/qa_full.py` → 0 FAIL.
+
 ### 2026-09-26 (Herói 10/10 — reconstrução do GLB Fase 1+2 + turnaround fresco)
 
 - Ambiente bpy 4.5.14 recriado do zero (`make_env.sh`, ~25 s) e pipeline da heroína reexecutado: Fase 1 (7 s) + Fase 2 bake 2K/24 samples (~13 min em 2 núcleos) com **gate verde** (atlas 61,2%, GLB 1.672 KB ≤ 2.048, 0 não-manifold).
