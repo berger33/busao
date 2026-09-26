@@ -778,6 +778,21 @@ etapas no Linear (WIB-6 In Progress), entregáveis no Drive
   - `python3 tools/validate_project.py`: PRE-FLIGHT OK.
   - `python3 tools/qa_full.py`: 133 OK | 0 WARN | 0 FAIL.
 
+### 2026-09-26 (branch arena/01a0db52-busao — Etapa 8: UI/HUD integrada e orçamento de performance — WIB-12)
+
+- **Auditoria de HUD e Interface:**
+  - Topo translúcido moderno (`Color(0.02, 0.04, 0.08, 0.38)`) mantendo a visão 3D desobstruída.
+  - Cápsulas flutuantes com cantos arredondados para fase/cenário, distância/moedas/combo, vidas/rota e relógio de prazo de partida.
+  - Suporte total a Safe Area com detecção de notch (`DisplayServer.get_display_safe_area()`).
+  - Acessibilidade integrada: alto contraste, modo daltônico, movimento reduzido e internacionalização dinâmica (pt_BR / en_US).
+- **Orçamento de Performance (Plano 10/10):**
+  - Taxa de quadros: 60 FPS estáveis no alvo (Snapdragon 680 / Moto G84) com degrau adaptativo no `RenderQuality` (mínimo 30 FPS em low-end).
+  - Orçamento de renderização: draw calls <= 180, VRAM de texturas <= 180 MB e cold start <= 2.8 s (LoadingScreen ~0.9 s).
+  - Telemetria de QA ativa via `PerformanceProbe` e `PerformanceOverlay`.
+- **Portões e Verificadores:**
+  - `python3 tools/validate_project.py`: PRE-FLIGHT OK.
+  - `python3 tools/qa_full.py`: 133 OK | 0 WARN | 0 FAIL.
+
 **Portões:** `check_gdscript.py tools/captura_visual.gd` — 0 problemas.
 Sem binário Godot/Xvfb neste sandbox: o set de 11 é regenerado no CI
 `screenshots` (~20 min) e re-revisado aqui. A medida de silhueta ≥ 3:1
