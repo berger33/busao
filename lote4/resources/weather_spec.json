@@ -237,14 +237,14 @@
       2.4,
       0.8
     ],
-    "rugosidade": 0.06,
+    "rugosidade": 0.05,
     "cor": [
       0.05,
-      0.06,
       0.07,
-      1.0
+      0.09,
+      0.95
     ],
-    "especular": 0.85,
+    "especular": 0.9,
     "aparecer_em": 0.45,
     "afastamento_guia_m": 0.5,
     "altura_do_piso_m": 0.006
