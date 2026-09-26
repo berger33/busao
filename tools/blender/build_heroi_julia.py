@@ -491,6 +491,128 @@ def juntar(corpo, pecas):
 
 
 # -----------------------------------------------------------------------------
+# 4c. Rosto (Fase 3): densificar o crânio e esculpir órbita, nariz, boca e queixo
+# -----------------------------------------------------------------------------
+# Marcos anatômicos no espaço do build (frente = -Y), antes da normalização.
+ROSTO = {
+    "olho_z": 1.588, "olho_x": 0.034, "olho_y": -0.080,
+    "sobrancelha_z": 1.610,
+    "nariz_z": 1.560, "nariz_y": -0.104,
+    "boca_z": 1.526, "boca_y": -0.092,
+    "queixo_z": 1.497,
+    "maca_z": 1.566, "maca_x": 0.058,
+}
+
+
+def densificar_cabeca(obj, z_min=1.470, cortes=1):
+    """Subdivide só as faces do crânio: o QuadriFlow distribui triângulos por
+    área e a cabeça fica grossa demais para receber órbita/nariz/boca."""
+    me = obj.data
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    faces = [f for f in bm.faces if f.calc_center_median().z > z_min]
+    if faces:
+        bmesh.ops.subdivide_edges(
+            bm,
+            edges=list({e for f in faces for e in f.edges}),
+            cuts=cortes,
+            use_grid_fill=True,
+        )
+    bm.to_mesh(me)
+    bm.free()
+    me.update()
+    log(f"crânio densificado: {len(me.polygons)} faces")
+    return obj
+
+
+def _gauss(v, centro, raios):
+    """Peso 0..1 com queda gaussiana elíptica em torno de um marco do rosto."""
+    dx = (v.x - centro[0]) / raios[0]
+    dy = (v.y - centro[1]) / raios[1]
+    dz = (v.z - centro[2]) / raios[2]
+    d2 = dx * dx + dy * dy + dz * dz
+    return math.exp(-d2 * 2.2)
+
+
+def esculpir_rosto(obj):
+    """Órbita ocular escavada, arco superciliar, nariz, lábios e queixo.
+
+    Tudo por deslocamento gaussiano: cada marco empurra os vértices próximos
+    numa direção, com queda suave — o equivalente procedural do pincel de
+    escultura com falloff.
+    """
+    R = ROSTO
+    me = obj.data
+    bm = bmesh.new()
+    bm.from_mesh(me)
+
+    # (centro, raios, direção, amplitude)
+    brushes = []
+    for s in (1.0, -1.0):
+        # órbita: empurra para DENTRO (y positivo = costas)
+        brushes.append(((s * R["olho_x"], R["olho_y"], R["olho_z"]),
+                        (0.030, 0.030, 0.019), (0.0, 1.0, 0.0), 0.0135))
+        # arco superciliar: volume para fora, acima da órbita
+        brushes.append(((s * R["olho_x"], R["olho_y"] - 0.004, R["sobrancelha_z"]),
+                        (0.036, 0.030, 0.011), (0.0, -1.0, 0.0), 0.0070))
+        # maçã do rosto
+        brushes.append(((s * R["maca_x"], -0.062, R["maca_z"]),
+                        (0.028, 0.034, 0.024), (0.0, -1.0, 0.0), 0.0055))
+    # dorso do nariz
+    brushes.append(((0.0, R["nariz_y"], R["nariz_z"] + 0.022),
+                    (0.013, 0.030, 0.026), (0.0, -1.0, 0.0), 0.0130))
+    # ponta do nariz
+    brushes.append(((0.0, R["nariz_y"], R["nariz_z"]),
+                    (0.014, 0.026, 0.011), (0.0, -1.0, 0.0), 0.0185))
+    # asas do nariz
+    for s in (1.0, -1.0):
+        brushes.append(((s * 0.016, R["nariz_y"] + 0.006, R["nariz_z"] - 0.006),
+                        (0.010, 0.020, 0.008), (s * 1.0, -0.4, 0.0), 0.0075))
+    # lábio superior e inferior
+    brushes.append(((0.0, R["boca_y"], R["boca_z"] + 0.007),
+                    (0.024, 0.024, 0.007), (0.0, -1.0, 0.0), 0.0075))
+    brushes.append(((0.0, R["boca_y"], R["boca_z"] - 0.008),
+                    (0.022, 0.024, 0.008), (0.0, -1.0, 0.0), 0.0070))
+    # fenda da boca (entra)
+    brushes.append(((0.0, R["boca_y"] - 0.004, R["boca_z"]),
+                    (0.026, 0.020, 0.0030), (0.0, 1.0, 0.0), 0.0055))
+    # queixo e sulco mentolabial
+    brushes.append(((0.0, -0.086, R["queixo_z"]),
+                    (0.024, 0.030, 0.018), (0.0, -1.0, 0.0), 0.0090))
+    brushes.append(((0.0, -0.086, R["queixo_z"] + 0.016),
+                    (0.020, 0.024, 0.007), (0.0, 1.0, 0.0), 0.0040))
+    # orelhas
+    for s in (1.0, -1.0):
+        brushes.append(((s * 0.092, 0.006, 1.572),
+                        (0.014, 0.020, 0.026), (s * 1.0, 0.0, 0.0), 0.0110))
+
+    for v in bm.verts:
+        if v.co.z < 1.455:
+            continue
+        desloc = Vector((0.0, 0.0, 0.0))
+        for centro, raios, direcao, amp in brushes:
+            w = _gauss(v.co, centro, raios)
+            if w > 0.002:
+                d = Vector(direcao)
+                d.normalize()
+                desloc += d * (amp * w)
+        v.co += desloc
+
+    # mandíbula afunilada: rosto de heroína, não de boneco esférico
+    for v in bm.verts:
+        if 1.470 < v.co.z < 1.540:
+            t = (1.540 - v.co.z) / 0.070
+            v.co.x *= 1.0 - 0.13 * t
+            v.co.y *= 1.0 - 0.05 * t
+
+    bm.to_mesh(me)
+    bm.free()
+    me.update()
+    log("rosto esculpido (órbita, nariz, boca, queixo, orelhas)")
+    return obj
+
+
+# -----------------------------------------------------------------------------
 # 5. Normalização de escala e contato com o solo
 # -----------------------------------------------------------------------------
 def normalizar(obj, altura=ALTURA_ALVO, piso=PISO_OFFSET):
@@ -562,6 +684,8 @@ def main():
     retopo(corpo)
     suavizar(corpo)
     loops_de_deformacao(corpo)
+    densificar_cabeca(corpo)
+    esculpir_rosto(corpo)
     juntar(corpo, criar_maos())
     normalizar(corpo)
 
