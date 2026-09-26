@@ -342,7 +342,10 @@ def main():
     TEX_DIR.mkdir(parents=True, exist_ok=True)
     bpy.ops.wm.open_mainfile(filepath=str(BASE_BLEND))
     scene = bpy.context.scene
-    obj = next(o for o in scene.objects if o.type == "MESH")
+    # Só o corpo recebe UV/bake de pele; olhos e cards da Fase 3 preservam os
+    # próprios materiais e são incluídos no export final abaixo.
+    obj = next((o for o in scene.objects if o.type == "MESH" and o.name.startswith("JuliaBase")),
+               next(o for o in scene.objects if o.type == "MESH"))
     log(f"objeto: {obj.name}, {len(obj.data.polygons)} faces")
 
     desdobrar(obj)
@@ -381,7 +384,11 @@ def main():
     obj.data.materials.clear()
     obj.data.materials.append(final)
 
-    ativar(obj)
+    bpy.ops.object.select_all(action="DESELECT")
+    for mesh_obj in scene.objects:
+        if mesh_obj.type == "MESH":
+            mesh_obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
     glb = OUT_DIR / "heroi_julia_pbr.glb"
     bpy.ops.export_scene.gltf(
         filepath=str(glb),

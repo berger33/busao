@@ -22,6 +22,13 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
 
 ## Diário
 
+### 2026-09-26 (Herói 10/10 — Fase 3 cabelo e olhos concluída)
+
+- `build_heroi_julia.py` ganhou a seção 4d: esclera/íris/córnea separadas, normal radial da íris, pálpebras, sobrancelhas, cílios, franja e rabo de cavalo em exatamente 5 mechas.
+- Cabelo mobile-safe com textura 128×256 e glTF `alphaMode=MASK` (cutoff 0,5), sem `BLEND`/ordenação de transparência; 27 peças novas preservadas pelo pipeline de bake/export.
+- Gates anteriores verdes: corpo 35.952 tris, 1,720 m, sola 0,012 m, 0 não-manifold; atlas 61,2%; GLB PBR 1.812,4 KB. Runtime intacto (`HERO OK MESH-ONLY`).
+- Evidências: `15_turnaround_fase3.png`, `16_rosto_fase3.png`; detalhes em `docs/execucao/HEROI_FASE3.md`.
+
 ### 2026-09-26 (Herói 10/10 — reconstrução do GLB Fase 1+2 + turnaround fresco)
 
 - Ambiente bpy 4.5.14 recriado do zero (`make_env.sh`, ~25 s) e pipeline da heroína reexecutado: Fase 1 (7 s) + Fase 2 bake 2K/24 samples (~13 min em 2 núcleos) com **gate verde** (atlas 61,2%, GLB 1.672 KB ≤ 2.048, 0 não-manifold).
