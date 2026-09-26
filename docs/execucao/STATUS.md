@@ -766,6 +766,18 @@ etapas no Linear (WIB-6 In Progress), entregáveis no Drive
   - `python3 lote4/tools/run_lote4_selftest.py`: 0 falhas.
   - `python3 verificar_lotes.py`: 0 problemas.
 
+### 2026-09-26 (branch arena/01a0db52-busao — Etapa 7: Juice da corrida e feedback de impacto — WIB-11)
+
+- **Auditoria e Calibração de Juice e Feedback:**
+  - Partículas de poeira e respingos: `_dust_particles` acionado deterministicamente no deslize (`slide_timer > 0`) e em passadas de alta velocidade (`motion_speed > 8.5`); `_splash_particles` acionado em piso molhado (`wetness > 0.35`).
+  - Squash & Stretch: compressão arcade no deslize (`squash = 0.94`, scale 1.02, 0.94, 1.02) e inclinação lateral sutil (`lane_lean = clampf(lane_change_velocity * 0.06, -0.15, 0.15)`).
+  - Feedback de impacto e câmera: tremida de câmera contida (`camera_shake = 0.38` com decaimento rápido `dt * 6.0`, tempo total < 0.15 s, sem tremidas longas > 2° ou > 0.2 s), flash alfa 0.22, feedback de áudio posicional e háptico (`Haptics.damage()`).
+  - Combo visual e multiplicadores: feedback dinâmico na coleta sequencial de moedas com incremento gradual de pitch, badge `combo15` e exibição destacada no HUD em `GOLD`/`CYAN`.
+  - Latência de resposta de entrada: buffer de input de 0.12 s (<= 2 frames a 60 fps).
+- **Portões e Verificadores:**
+  - `python3 tools/validate_project.py`: PRE-FLIGHT OK.
+  - `python3 tools/qa_full.py`: 133 OK | 0 WARN | 0 FAIL.
+
 **Portões:** `check_gdscript.py tools/captura_visual.gd` — 0 problemas.
 Sem binário Godot/Xvfb neste sandbox: o set de 11 é regenerado no CI
 `screenshots` (~20 min) e re-revisado aqui. A medida de silhueta ≥ 3:1
