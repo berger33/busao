@@ -755,8 +755,13 @@ func _make_box(color: Color, radius: float) -> StyleBoxFlat:
     return box
 
 func _text(pos: Vector2, value: String, font_size: int, color: Color) -> void:
+    if color != INK and color != Color("#553526"):
+        draw_string(ThemeDB.fallback_font, pos + Vector2(1.0, 1.2), value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(0.01, 0.02, 0.05, 0.70))
     draw_string(ThemeDB.fallback_font, pos, value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
 
 func _text_center(pos: Vector2, value: String, font_size: int, color: Color) -> void:
     var width: float = maxf(100.0, float(value.length() * font_size) * 0.72)
-    draw_string(ThemeDB.fallback_font, Vector2(pos.x - width / 2.0, pos.y), value, HORIZONTAL_ALIGNMENT_CENTER, width, font_size, color)
+    var p := Vector2(pos.x - width / 2.0, pos.y)
+    if color != INK and color != Color("#553526"):
+        draw_string(ThemeDB.fallback_font, p + Vector2(1.0, 1.2), value, HORIZONTAL_ALIGNMENT_CENTER, width, font_size, Color(0.01, 0.02, 0.05, 0.70))
+    draw_string(ThemeDB.fallback_font, p, value, HORIZONTAL_ALIGNMENT_CENTER, width, font_size, color)
