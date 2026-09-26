@@ -240,15 +240,6 @@ func _tomadas() -> void:
 	# árvore em vez da faixa branca da zebragem. Único yaw ≥ 3:1 — 3,20:1,
 	# estouro 1,2% (o 2.2 antigo dava 1,25:1). Raio 2.7 m, altura 0.42 = peito.
 	# A tomada canônica (sem sufixo) roda primeiro e sempre — é a prova.
-	# Aquecimento: na 1ª órbita depois da corrida a sombra dos prédios ainda
-	# não está no chão (set 70c1488: calçada acesa atrás da camisa, 1,95:1).
-	# Na varredura a y380 era a 6ª tomada seguida, com a sombra assentada
-	# (3,20:1). Uma passada descartada no mesmo yaw iguala as condições.
-	await _prepara_close()
-	_orbit_on(CLOSE_YAW, -0.05)
-	_game._snap_capture_camera()
-	await _frames(6)
-	await create_timer(1.5).timeout
 	await _prepara_close()
 	await _close_uma(CLOSE_YAW, "09_close_personagem")
 	for yaw in yaws:
