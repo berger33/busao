@@ -1,0 +1,200 @@
+total 876K
+-rw-r--r-- 1 runner runner 421K Sep 25 04:02 ceu_entardecer_v2.png
+-rw-r--r-- 1 runner runner 449K Sep 25 04:02 ceu_tropical_v2.png
+[   0% ] [90m[1mloading_editor_layout[22m | Loading editor layout...[39m[0m
+[  16% ] [90m[1mloading_editor_layout[22m | Loading docks...[39m[0m
+[92m[ DONE ][39m [1mloading_editor_layout[22m
+[0m
+cannot connect to daemon at tcp:5037: Connection refused
+assets/art/icon.svg.import
+assets/audio/bus_doors.wav.import
+assets/audio/count_beep.wav.import
+assets/audio/count_go.wav.import
+assets/audio/defeat.wav.import
+assets/audio/levelup.wav.import
+assets/audio/purchase.wav.import
+assets/audio/rain_loop.wav.import
+assets/audio/victory.wav.import
+assets/collectibles/coin_C8MoedaFrente.png.import
+assets/collectibles/coin_C8MoedaTras.png.import
+assets/collectibles/golden_C8BilheteF.png.import
+assets/collectibles/golden_C8BilheteT.png.import
+assets/collectibles/guarana_C8GuaranaRotulo.png.import
+assets/collectibles/pass_C8ValeF.png.import
+assets/collectibles/pass_C8ValeT.png.import
+assets/collectibles/pix_C8PixTela.png.import
+assets/scene/loja_lote9b_placa.png.import
+assets/scene/terminal_lote9c_placa.png.import
+assets/textures/asfalto_brasil.svg.import
+assets/textures/asfalto_normal.png.import
+assets/textures/asfalto_normal.svg.import
+assets/textures/asfalto_realista.png.import
+assets/textures/asfalto_roughness.png.import
+assets/textures/borracha.svg.import
+assets/textures/borracha_realista.png.import
+assets/textures/borracha_realista_normal.png.import
+assets/textures/borracha_realista_roughness.png.import
+assets/textures/cabelo_realista.png.import
+assets/textures/calcada_normal.png.import
+assets/textures/calcada_normal.svg.import
+assets/textures/calcada_portuguesa.svg.import
+assets/textures/calcada_realista.png.import
+assets/textures/calcada_roughness.png.import
+assets/textures/ceu/nuvens.png.import
+assets/textures/ceu_entardecer.png.import
+assets/textures/ceu_nublado.png.import
+assets/textures/ceu_tropical.png.import
+assets/textures/cobblestone.svg.import
+assets/textures/concreto_realista.png.import
+assets/textures/concreto_realista_normal.png.import
+assets/textures/concreto_realista_roughness.png.import
+assets/textures/fachada_reboco.png.import
+assets/textures/fachada_reboco_normal.png.import
+assets/textures/fachada_reboco_roughness.png.import
+assets/textures/fachada_tijolo.png.import
+assets/textures/fachada_tijolo_normal.png.import
+assets/textures/fachada_tijolo_roughness.png.import
+assets/textures/folhagem_brasil.svg.import
+assets/textures/folhagem_realista.png.import
+assets/textures/folhagem_realista_normal.png.import
+assets/textures/folhagem_realista_roughness.png.import
+assets/textures/jeans_realista.png.import
+assets/textures/jeans_realista_normal.png.import
+assets/textures/jeans_realista_roughness.png.import
+assets/textures/madeira_brasil.svg.import
+assets/textures/madeira_realista.png.import
+assets/textures/madeira_realista_normal.png.import
+assets/textures/madeira_realista_roughness.png.import
+assets/textures/metal_pintado.svg.import
+assets/textures/metal_pintado_realista.png.import
+assets/textures/metal_pintado_realista_normal.png.import
+assets/textures/metal_pintado_realista_roughness.png.import
+assets/textures/parede_tijolo.svg.import
+assets/textures/parede_tijolo_realista.png.import
+assets/textures/parede_tijolo_realista_normal.png.import
+assets/textures/parede_tijolo_realista_roughness.png.import
+assets/textures/pbr/asfalto_albedo.png.import
+assets/textures/pbr/asfalto_height.png.import
+assets/textures/pbr/asfalto_normal.png.import
+assets/textures/pbr/asfalto_orm.png.import
+assets/textures/pbr/calcada_laje_albedo.png.import
+assets/textures/pbr/calcada_laje_height.png.import
+assets/textures/pbr/calcada_laje_normal.png.import
+assets/textures/pbr/calcada_laje_orm.png.import
+assets/textures/pbr/calcada_mosaico_albedo.png.import
+assets/textures/pbr/calcada_mosaico_height.png.import
+assets/textures/pbr/calcada_mosaico_normal.png.import
+assets/textures/pbr/calcada_mosaico_orm.png.import
+assets/textures/pbr/laje_cobertura_albedo.png.import
+assets/textures/pbr/laje_cobertura_height.png.import
+assets/textures/pbr/laje_cobertura_normal.png.import
+assets/textures/pbr/laje_cobertura_orm.png.import
+assets/textures/pbr/madeira_albedo.png.import
+assets/textures/pbr/madeira_height.png.import
+assets/textures/pbr/madeira_normal.png.import
+assets/textures/pbr/madeira_orm.png.import
+assets/textures/pbr/metal_pintado_albedo.png.import
+assets/textures/pbr/metal_pintado_height.png.import
+assets/textures/pbr/metal_pintado_normal.png.import
+assets/textures/pbr/metal_pintado_orm.png.import
+assets/textures/pbr/metal_zincado_albedo.png.import
+assets/textures/pbr/metal_zincado_height.png.import
+assets/textures/pbr/metal_zincado_normal.png.import
+assets/textures/pbr/metal_zincado_orm.png.import
+assets/textures/pbr/reboco_albedo.png.import
+assets/textures/pbr/reboco_height.png.import
+assets/textures/pbr/reboco_normal.png.import
+assets/textures/pbr/reboco_orm.png.import
+assets/textures/pbr/terra_vermelha_albedo.png.import
+assets/textures/pbr/terra_vermelha_height.png.import
+assets/textures/pbr/terra_vermelha_normal.png.import
+assets/textures/pbr/terra_vermelha_orm.png.import
+assets/textures/pbr/tijolo_albedo.png.import
+assets/textures/pbr/tijolo_height.png.import
+assets/textures/pbr/tijolo_normal.png.import
+assets/textures/pbr/tijolo_orm.png.import
+assets/textures/pele_realista.png.import
+assets/textures/pele_realista_normal.png.import
+assets/textures/pele_realista_roughness.png.import
+assets/textures/pele_suave.svg.import
+assets/textures/pelo_realista.png.import
+assets/textures/pelo_realista_normal.png.import
+assets/textures/pelo_realista_roughness.png.import
+assets/textures/pena_realista.png.import
+assets/textures/pena_realista_normal.png.import
+assets/textures/pena_realista_roughness.png.import
+assets/textures/pintura_carro_normal.png.import
+assets/textures/pintura_carro_realista.png.import
+assets/textures/pintura_micro.svg.import
+assets/textures/reboco_colorido.svg.import
+assets/textures/tecido_realista.png.import
+assets/textures/tecido_realista_normal.png.import
+assets/textures/tecido_realista_roughness.png.import
+assets/textures/tecido_urbano.svg.import
+assets/textures/terra_realista.png.import
+assets/textures/terra_realista_normal.png.import
+assets/textures/terra_realista_roughness.png.import
+assets/textures/terra_vermelha.svg.import
+assets/textures/vidro_azul.svg.import
+assets/vehicles/bus_traffic_BusTrafego_hd_letreiro.png.import
+assets/vehicles/onibus_Onibus_hd_letreiro.png.import
+docs/media/caramelo.png.import
+docs/media/humano_F.png.import
+docs/media/humano_M.png.import
+docs/media/vehicle_hd_bicycle.png.import
+docs/media/vehicle_hd_bus_traffic.png.import
+docs/media/vehicle_hd_car.png.import
+docs/media/vehicle_hd_car_azul.png.import
+docs/media/vehicle_hd_car_prata.png.import
+docs/media/vehicle_hd_carro.png.import
+docs/media/vehicle_hd_motorcycle.png.import
+docs/media/vehicle_hd_motorcycle_verde.png.import
+docs/media/vehicle_hd_onibus.png.import
+docs/media/vehicle_hd_truck.png.import
+docs/media/vehicle_hd_truck_vermelho.png.import
+download.jpg.import
+store/feature_graphic_1024x500.png.import
+store/screenshots/01_corre_pro_ponto_1080x1920.png.import
+store/screenshots/02_onibus_amarelo_1080x1920.png.import
+store/screenshots/03_transito_brasileiro_1080x1920.png.import
+store/screenshots/04_calcada_viva_1080x1920.png.import
+store/screenshots/05_dash_invencivel_1080x1920.png.import
+store/screenshots/06_endless_liberado_1080x1920.png.import
+store/screenshots/07_50_fases_1080x1920.png.import
+store/screenshots/08_rubi_bau_diario_1080x1920.png.import
+store/screenshots/09_20_corredores_1080x1920.png.import
+store/screenshots/10_elenco_brasil_1080x1920.png.import
+store/video/clip_01_caramelo_1280x720.png.import
+store/video/clip_02_onibus_1280x720.png.import
+store/video/clip_03_trafego_1280x720.png.import
+store/video/clip_04_calcada_1280x720.png.import
+store/video/clip_05_dash_1280x720.png.import
+store/video/clip_06_endless_1280x720.png.import
+store/video/storyboard_6clips_3840x1440.png.import
+imports textura: ok=284 fixed=4 pending=0
+{"review_count": 21, "lod_named_count": 0}
+--- validate_project:
+PRE-FLIGHT OK: paths, scripts, 50-phase catalog, 27-obstacle 3D contract, balance/economy/save checks, SVG/PNG textures, WAV and feedback audio assets
+--- qa_full:
+    scripts/building_kit.gd: 4
+    scripts/world_animal.gd: 6
+    scripts/world_character.gd: 1
+    scripts/weather_system.gd: 2
+  OK game_3d helper fallback removido L29 (0 BoxMesh) — 100% GLB gameplay
+  runner_character primitives 0 (L29: 0 esperado, shadow via GLB)
+  OK runner_character 0 primitivas L29 — acessórios/shadow via GLB placeholder
+  building_kit BoxMesh 1 (world base 28m spec, HLOD L29 futuro)
+  OK building_kit world base 1 primitivas mantido (spec 28m, não asset) — L29 aceita
+  OK gameplay 0 procedural helpers (100% GLB) — building_kit world base 28m é layout spec, partículas são efeitos, não assets
+
+== Fase 5b — Validators ==
+  OK python3 tools/validate_project.py -> PRE-FLIGHT OK: paths, scripts, 50-phase catalog, 27-obstacle 3D contract, balanc
+  OK python3 tools/audit_balance.py -> BALANCE AUDIT OK
+  OK python3 tools/audit_runner_rig.py -> Auditoria do corredor em /home/runner/work/busao/busao
+
+==================================================
+OK 133 | WARN 0 | FAIL 0
+
+TUDO OK
+--- fix_texture_imports --check:
+imports textura: ok=288 fixed=0 pending=0

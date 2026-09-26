@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "source": "tools/quality_baseline.py",
+  "assets": {
+    "glb_count": 87,
+    "glb_bytes": 44749876,
+    "texture_count": 144,
+    "texture_bytes": 104285900
+  },
+  "renderer": {
+    "method": "mobile",
+    "msaa_3d": "2"
+  },
+  "hero": {
+    "exists": true,
+    "bytes": 67464,
+    "sha256": "f19ebda8206f8d2e4a3cba7e244c3d88b029793845bfff091ae98d9496f60489",
+    "mesh_only": true,
+    "runner_accepts_mesh_only": true
+  },
+  "known_blockers": [
+    "hero rig/animation pending",
+    "no runtime FPS measurement in sandbox",
+    "facade and ground close-up validation pending",
+    "Android device matrix pending"
+  ],
+  "next_step": "Etapa 2 — heroína jogável com rig e animações"
+}

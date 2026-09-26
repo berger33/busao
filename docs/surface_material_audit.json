@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "surfaces": {
+    "asfalto": [
+      {
+        "file": "assets/textures/asfalto_realista.png",
+        "exists": true,
+        "bytes": 846314,
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "file": "assets/textures/asfalto_normal.png",
+        "exists": true,
+        "bytes": 2956228,
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "file": "assets/textures/asfalto_roughness.png",
+        "exists": true,
+        "bytes": 708464,
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "file": "assets/textures/asfalto_brasil.svg",
+        "exists": true,
+        "bytes": 609
+      }
+    ],
+    "calcada": [
+      {
+        "file": "assets/textures/calcada_realista.png",
+        "exists": true,
+        "bytes": 402235,
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "file": "assets/textures/calcada_normal.png",
+        "exists": true,
+        "bytes": 2162623,
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "file": "assets/textures/calcada_roughness.png",
+        "exists": true,
+        "bytes": 362288,
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "file": "assets/textures/calcada_portuguesa.svg",
+        "exists": true,
+        "bytes": 553
+      }
+    ]
+  },
+  "findings": [],
+  "next_step": "Adicionar macro variation e decal de desgaste por quarteirão após validar os mapas existentes"
+}

@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "checks": {
+    "hero": {
+      "exit_code": 0,
+      "stdout": "HERO OK MESH-ONLY: 62316 bytes | partes 9/9 | clips pendentes: Idle_Loop, Walk_Loop, Sprint_Loop, Jump_Loop, Crouch_Fwd_Loop",
+      "stderr": "",
+      "passed": true
+    },
+    "lod": {
+      "exit_code": 0,
+      "stdout": "P0/P1: 35 | com LOD: 0 | pendentes: 35\nPENDING assets/characters/personagens/julia.glb\nPENDING assets/characters/personagens/hero_julia.glb\nPENDING assets/characters/personagens/motoboy.glb\nPENDING assets/characters/personagens/carlos.glb\nPENDING assets/characters/personagens/bia.glb\nPENDING assets/characters/personagens/camila.glb\nPENDING assets/characters/personagens/cida.glb\nPENDING assets/characters/personagens/clara.glb\nPENDING assets/characters/personagens/deise.glb\nPENDING assets/characters/personagens/influencer.glb\nPENDING assets/characters/personagens/maria.glb\nPENDING assets/characters/personagens/marta.glb",
+      "stderr": "",
+      "passed": true
+    },
+    "surface": {
+      "exit_code": 0,
+      "stdout": "surface audit: 0 finding(s)",
+      "stderr": "",
+      "passed": true
+    },
+    "assets": {
+      "exit_code": 0,
+      "stdout": "{\"review_count\": 21, \"lod_named_count\": 0}",
+      "stderr": "",
+      "passed": true
+    }
+  },
+  "all_static_checks_passed": true,
+  "status": "blocked",
+  "blockers": [
+    "LOD P0/P1 ainda não produzido",
+    "hero mesh-only sem rig/clips",
+    "FPS/frame time ainda requerem Godot e aparelho Android real"
+  ],
+  "next_step": "Executar Godot em aparelho-alvo e produzir LODs reais"
+}
