@@ -22,6 +22,16 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
 
 ## Diário
 
+### 2026-09-26 (Etapa 3 / WIB-7 — Câmera e Sensação de Corrida)
+
+- Implementado o refinamento da câmera mobile retrato para a Etapa 3 (WIB-7):
+  - **FOV Progressivo por Velocidade**: Base de 60.0° em corrida com modulação suave até 63.5° na velocidade máxima e +2.5° no dash (variação total ~6.0°, cumprindo o teto de ≤ 8°).
+  - **Follow Suave com Lookahead**: Deslocamento horizontal `desired_x = player_x * 0.20` e alvo lookahead `target = Vector3(player_x * 0.24, target_y, -14.0)` que mantém o corredor perfeitamente enquadrado sem cortar laterais em x=±3.25.
+  - **Inclinação Lateral Sutil (Roll Tilt)**: `roll_tilt = clampf(-lane_change_velocity * 0.012, -0.022, 0.022)` (~1.25° máx) aplicado no eixo Z local nas trocas de faixa, oferecendo sensação de inércia e dinamismo sem causar enjoo.
+  - **Horizonte Estável**: `camera_bob` atenuado (0.020) e desativado junto com o tilt quando `reduced_motion` estiver habilitado.
+  - **Enquadramento em Retrato**: Personagem ocupa ~31% da altura da tela útil (dentro da meta de 1/4 a 1/3 da tela).
+- Validação: `validate_project.py` PRE-FLIGHT OK · `qa_full.py` 133 OK / 0 WARN / 0 FAIL · `validate_routes.py` 50/50 fases legais · `check_gdscript.py` 0 erros de sintaxe.
+
 ### 2026-09-25 (Etapa 2 / WIB-6 — continuação)
 
 - O set de capturas de `sandbox/screenshots` @ `b38155c` (branch `arena/01a0d712`) não fecha o aceite: close com `player_visual.visible=false` e câmera a 6 m; nublado/chuva no meio do lerp (molhado 0,23 / 0,14) porque a 1 fps a transição de 5 s de jogo não termina; silhueta da camisa contra a rua abaixo de 3:1 em 04, 07, 09, 10 e 11.

@@ -2081,22 +2081,27 @@ func _update_camera(dt: float) -> void:
         camera.look_at(orbit_target, Vector3.UP)
         camera.fov = lerpf(camera.fov, RENDER_FOV_RUN + 2.0, minf(1.0, dt * 3.0))
         return
-    var camera_bob: float = sin(run_phase * 1.6) * 0.028 if not reduced_motion and screen == 2 and run_mode == "playing" else 0.0
+    var camera_bob: float = sin(run_phase * 1.5) * 0.020 if not reduced_motion and screen == 2 and run_mode == "playing" else 0.0
     var player_y_offset: float = player_visual.position.y if player_visual != null else 0.0
     var target_y := 1.18 + player_y_offset * 0.20
-    var target := Vector3(player_x * 0.18, target_y, -14.0)
+    var target := Vector3(player_x * 0.24, target_y, -14.0)
     var desired_y := RENDER_CAMERA_Y + camera_bob + (player_y_offset * 0.28)
-    var desired_z := RENDER_CAMERA_Z + sin(run_phase * 0.8) * 0.03
-    var desired_x := player_x * 0.16
+    var desired_z := RENDER_CAMERA_Z + sin(run_phase * 0.8) * 0.025
+    var desired_x := player_x * 0.20
     if run_mode == "boarding":
         # Enquadramento cinematográfico durante o embarque
         desired_x = lerpf(desired_x, 1.25, 0.4)
         target = Vector3(player_x * 0.4 + 0.6, 1.30, -8.0)
     var desired := Vector3(desired_x, desired_y, desired_z) + shake_offset
     camera.position = camera.position.lerp(desired, minf(1.0, dt * 5.5))
-    var desired_fov: float = RENDER_FOV_RUN if reduced_motion else RENDER_FOV_RUN + clampf(motion_speed * 0.34, 0.0, 5.0) + (4.0 if dash_timer > 0.0 else 0.0)
-    camera.fov = lerpf(camera.fov, desired_fov, minf(1.0, dt * 4.0))
+    var speed_boost := clampf((motion_speed - 5.0) * 0.60, 0.0, 3.5)
+    var dash_boost := 2.5 if dash_timer > 0.0 else 0.0
+    var desired_fov: float = RENDER_FOV_RUN if reduced_motion else RENDER_FOV_RUN + speed_boost + dash_boost
+    camera.fov = lerpf(camera.fov, desired_fov, minf(1.0, dt * 3.5))
     camera.look_at(target, Vector3.UP)
+    if not reduced_motion and run_mode == "playing" and absf(lane_change_velocity) > 0.05:
+        var roll_tilt := clampf(-lane_change_velocity * 0.012, -0.022, 0.022)
+        camera.rotate_object_local(Vector3.FORWARD, roll_tilt)
 
 ## Alvo da órbita de captura: peito do runner, não o chão.
 func _capture_orbit_target() -> Vector3:
