@@ -825,3 +825,10 @@ evidência → aprovação do usuário → WIB-7 (câmera).
 - Edições grandes em escrita atômica com contagem assertiva de ocorrências.
 - Nenhuma conclusão normal exige personagem específico; habilidades atuais
   serão normalizadas em M5 (pendência registrada no blueprint).
+
+### 2026-09-26 — Herói 10/10: Fase 3 fechada
+
+- `build_heroi_julia.py` gera olhos (esclera, íris com normal radial e córnea), pálpebras, sobrancelhas/cílios e cabelo em cards alpha-scissor.
+- Cabelo: franja + calota em cards e 5 mechas de rabo de cavalo; máscara binária 128×256, sem alpha blend/ordenação.
+- Gate geométrico preservado: 35.952 tris, 1,720 m, sola 0,012 m, 0 não-manifold; GLB mesh-only 772,3 KB.
+- Evidência: `docs/arte_alvo_final/15_rosto_detalhe_fase3.png`; detalhes em `docs/execucao/HEROI_FASE3.md`.
