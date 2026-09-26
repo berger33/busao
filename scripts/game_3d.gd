@@ -1603,7 +1603,10 @@ func _collect(kind: String, pos: Vector3) -> void:
                 if GameSave.unlock_pet("caramelo"):
                     _show_feedback("SKIN LIBERADA", "Cachorro Caramelo entrou no time", GOLD, "reward")
     GameSave.add_coins(value)
-    _spawn_3d_burst(pos + Vector3(0, 1.0, 0), GOLD, 8)
+    if kind == "coin":
+        _spawn_3d_burst(pos + Vector3(0, 1.0, 0), GOLD, 14)
+    else:
+        _spawn_3d_burst(pos + Vector3(0, 1.0, 0), Color("#ffe066"), 20)
 
 func _hit_player(kind: String) -> void:
     # ETAPA 2 — dash não concede imunidade (blueprint §4): só a
@@ -2541,33 +2544,33 @@ func _update_feedback(dt: float) -> void:
 func _spawn_3d_burst(pos: Vector3, color: Color, amount: int) -> void:
     if bool(GameSave.data.get("reduced_motion", false)):
         return
-    var material := _material(color, 0.0, 0.34)
+    var material := _material(color, 0.0, 0.20)
     material.emission_enabled = true
     material.emission = color
-    material.emission_energy_multiplier = 2.3
+    material.emission_energy_multiplier = 3.6
     var mesh := SphereMesh.new()
-    mesh.radius = 0.07
-    mesh.height = 0.14
+    mesh.radius = 0.08
+    mesh.height = 0.16
     mesh.material = material
     for i in amount:
         var node := MeshInstance3D.new()
         node.mesh = mesh
-        node.position = pos
+        node.position = pos + Vector3(fx_rng.randf_range(-0.15, 0.15), fx_rng.randf_range(-0.1, 0.1), fx_rng.randf_range(-0.15, 0.15))
         fx_root.add_child(node)
         fx_nodes.append({
             "node": node,
-            "velocity": Vector3(fx_rng.randf_range(-2.5, 2.5), fx_rng.randf_range(1.0, 4.2), fx_rng.randf_range(-2.0, 1.0)),
-            "life": fx_rng.randf_range(0.35, 0.75)
+            "velocity": Vector3(fx_rng.randf_range(-3.2, 3.2), fx_rng.randf_range(2.0, 5.5), fx_rng.randf_range(-2.5, 1.8)),
+            "life": fx_rng.randf_range(0.40, 0.85)
         })
 
 func _update_fx(dt: float) -> void:
     for fx in fx_nodes:
         var node: Node3D = fx["node"]
         fx["life"] = float(fx["life"]) - dt
-        fx["velocity"] = Vector3(fx["velocity"]) + Vector3(0.0, -6.0, 0.0) * dt
+        fx["velocity"] = Vector3(fx["velocity"]) + Vector3(0.0, -7.5, 0.0) * dt
         node.position += Vector3(fx["velocity"]) * dt
         var life: float = float(fx["life"])
-        node.scale = Vector3.ONE * clampf(life * 2.0, 0.05, 1.0)
+        node.scale = Vector3.ONE * clampf(life * 2.2, 0.05, 1.2)
     var alive: Array[Dictionary] = []
     for fx in fx_nodes:
         if float(fx["life"]) > 0.0:
