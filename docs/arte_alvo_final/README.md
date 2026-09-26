@@ -22,3 +22,5 @@ Imagens geradas como referência de direção de arte — não são capturas do 
 | 7 | `7_fase1_antes_depois.png` | Turnaround comparativo renderizado em Blender: linha de cima = `Humano_F.glb` que o jogo usa hoje; linha de baixo = corpo base da Fase 1 (`tools/blender/build_heroi_julia.py`). Ver `docs/execucao/HEROI_FASE0_FASE1.md`. |
 | 8 | `8_fase2_pbr.png` | Fase 1 (barro, em cima) × Fase 2 (albedo/normal/ORM bakeados, embaixo). |
 | 9 | `9_fase2_closeup_pele.png` | Close-up da pele bakeada: variação de tom, AO nas dobras e microrrelevo de poro. |
+| 10 | `10_bracos_corrigidos.png` | Três linhas: Fase 1 (barro), PBR com os braços tortos e a versão corrigida (máscara lateral do tronco + cadeia do braço em reta). |
+| 11 | `11_mao_detalhe.png` | Close da mão refeita: palha própria (laje) com dedos nascendo de dentro da palma. |

@@ -75,3 +75,46 @@ Tempo medido no sandbox: bake 2K/24 samples ≈ 7,7 min (Cycles CPU).
 
 Fase 3: rosto detalhado (olho na órbita, pálpebra, lábio) e cabelo em cards com
 alpha. É o que faz o personagem "olhar" para a câmera na tomada de close.
+
+---
+
+## Correção pós-revisão — braços tortos e mãos (26/09)
+
+Revisão do usuário apontou braços tortos no turnaround. Duas causas, ambas no
+`build_heroi_julia.py`:
+
+1. **A moldagem elíptica do tórax pegava também os vértices do braço.** O bloco
+   que alarga o tronco agia em toda a faixa de altura do peito, inclusive onde
+   passam úmero e antebraço — empurrava o cotovelo para fora e criava os
+   caroços. Entrou uma **máscara lateral** (`m_tronco`): peso 1,0 no eixo do
+   corpo, decaindo a zero a partir de 13,5 cm do centro, com feather de 5,5 cm.
+2. **A cadeia do braço serpenteava.** Cada nó do grafo tinha um X escolhido à
+   mão (0,188 → 0,202 → 0,205 → 0,213 → 0,215), então ombro, cotovelo e punho
+   não ficavam alinhados. Agora todos os nós saem de `_braco(t)`, que
+   interpola sobre a **reta ombro→punho** (A-pose de ~6°), com só um arco de
+   12 mm para trás no cotovelo.
+
+### Mãos refeitas de quebra
+
+As mãos eram um blob esférico do modificador Skin com 30 cápsulas soltas ao
+lado — liam como um rastelo. Agora:
+
+- a palma saiu do grafo do Skin e virou **laje própria** (`_laje_palma`): tubo
+  elíptico achatado de 8,2 × 3,0 cm afunilando do punho até a linha dos nós,
+  começando **acima** do nó do punho para penetrar o antebraço (sem isso
+  aparecia a tampa chata flutuando);
+- os quatro dedos nascem 8 mm **dentro** da palma, com 3 falanges cônicas e
+  curl relaxado; o polegar sai da lateral, apontando para frente e para baixo.
+
+### Números depois da correção
+
+| Métrica | Antes | Depois |
+| --- | --- | --- |
+| Triângulos | 28.644 | **32.760** |
+| Cobertura do atlas UV | 61,2% | 61,0% |
+| GLB com texturas | 1.487 KB | **1.589 KB** (teto 2.048) |
+| Arestas não-manifold | 0 | **0** |
+
+Resultado: `docs/arte_alvo_final/10_bracos_corrigidos.png` (linha 1 = corpo da
+Fase 1, linha 2 = PBR com os braços tortos, linha 3 = versão corrigida) e
+`docs/arte_alvo_final/11_mao_detalhe.png` (close da mão).

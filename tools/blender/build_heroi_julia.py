@@ -39,7 +39,7 @@ ALTURA_ALVO = 1.72          # m, heroína adulta (model sheet: 168-172 cm)
 PISO_OFFSET = 0.012         # m, contato da sola (mesmo contrato do runner atual)
 TRIS_ALVO = 32000           # 28k-45k
 TRIS_MIN, TRIS_MAX = 24000, 46000
-QUADRIFLOW_FACES = 9000    # quads -> ~26k tris antes do detalhe das mãos
+QUADRIFLOW_FACES = 7600    # quads -> ~32k tris depois dos loops de junta e das mãos
 
 # --- Proporções (metros, personagem em pé, Z para cima, frente = -Y) ---------
 # 7,5 cabeças: cabeça ~0,229 m. Valores em altura absoluta.
@@ -59,8 +59,8 @@ Z_TORNOZELO = 0.095
 Z_PE = 0.030
 
 X_OMBRO = 0.188
-X_COTOVELO = 0.205
-X_PUNHO = 0.215
+X_COTOVELO = 0.212   # derivado: mantido só para referência de documentação
+X_PUNHO = 0.243
 X_QUADRIL = 0.095
 X_JOELHO = 0.090
 X_TORNOZELO = 0.075
@@ -128,19 +128,31 @@ def esqueleto_corpo():
     ]
 
     for lado, s in (("l", 1.0), ("r", -1.0)):
-        # Braço: clavícula -> ombro -> cotovelo -> punho -> mão
+        # Braço: clavícula -> ombro -> cotovelo -> punho -> mão.
+        # Todos os nós do braço ficam sobre a MESMA reta ombro→punho (A-pose
+        # com ~6° de abertura). Antes cada nó tinha um X escolhido à mão e a
+        # cadeia serpenteava: o cotovelo saía para fora e o antebraço voltava,
+        # o que lia como braço torto/quebrado no turnaround.
+        def _braco(t):
+            """Ponto na reta ombro→punho (t=0 ombro, t=1 punho)."""
+            x = X_OMBRO + (X_PUNHO - X_OMBRO) * t
+            z = (Z_OMBRO - 0.014) + (Z_PUNHO - (Z_OMBRO - 0.014)) * t
+            # leve arco para trás no cotovelo (y positivo = costas)
+            y = -0.004 + 0.012 * math.sin(math.pi * t)
+            return (s * x, y, z)
+
         no(f"clav_{lado}", (s * 0.062, -0.012, Z_OMBRO + 0.014), 0.072)
-        no(f"ombro_{lado}", (s * X_OMBRO, -0.004, Z_OMBRO - 0.014), 0.068)
-        no(f"braco_{lado}", (s * (X_OMBRO + 0.014), 0.000, 1.258), 0.054)
-        no(f"cotovelo_{lado}", (s * X_COTOVELO, 0.004, Z_COTOVELO), 0.047)
-        no(f"antebraco_{lado}", (s * (X_COTOVELO + 0.008), 0.002, 0.995), 0.043)
-        no(f"punho_{lado}", (s * X_PUNHO, 0.000, Z_PUNHO), 0.032)
-        no(f"palma_{lado}", (s * (X_PUNHO + 0.004), -0.006, Z_MAO), 0.040)
+        no(f"ombro_{lado}", _braco(0.00), 0.068)
+        no(f"braco_{lado}", _braco(0.27), 0.054)
+        no(f"cotovelo_{lado}", _braco(0.52), 0.047)
+        no(f"antebraco_{lado}", _braco(0.76), 0.042)
+        no(f"punho_{lado}", _braco(1.00), 0.031)
+        # A palma NÃO é mais um nó do Skin (virava bola solta): agora é uma
+        # laje modelada em criar_maos(), encaixada no punho.
         arestas += [
             ("ombro_c", f"clav_{lado}"), (f"clav_{lado}", f"ombro_{lado}"),
             (f"ombro_{lado}", f"braco_{lado}"), (f"braco_{lado}", f"cotovelo_{lado}"),
             (f"cotovelo_{lado}", f"antebraco_{lado}"), (f"antebraco_{lado}", f"punho_{lado}"),
-            (f"punho_{lado}", f"palma_{lado}"),
         ]
 
         # Perna: quadril -> coxa -> joelho -> panturrilha -> tornozelo -> pé
@@ -213,18 +225,26 @@ def moldar_secoes(obj):
     for v in bm.verts:
         x, y, z = v.co
 
+        # Máscara lateral do tronco: sem ela a elipse do tórax também puxava os
+        # vértices do BRAÇO (mesma faixa de altura), empurrando cotovelo e
+        # antebraço para fora — era a origem dos "braços tortos".
+        # 1.0 no eixo do corpo, 0.0 a partir de onde o braço começa.
+        largura_tronco = 0.135
+        feather = 0.055
+        m_tronco = 1.0 - min(1.0, max(0.0, (abs(x) - largura_tronco) / feather))
+
         # Tronco: elipse (mais largo que profundo) e caixa torácica marcada
-        if Z_VIRILHA < z < Z_OMBRO + 0.02:
+        if Z_VIRILHA < z < Z_OMBRO + 0.02 and m_tronco > 0.0:
             t = (z - Z_VIRILHA) / (Z_OMBRO + 0.02 - Z_VIRILHA)
-            largura = 1.06 + 0.16 * math.sin(math.pi * min(1.0, t * 1.15))
-            profundidade = 0.93 + 0.07 * t
+            largura = 1.0 + (0.06 + 0.16 * math.sin(math.pi * min(1.0, t * 1.15))) * m_tronco
+            profundidade = 1.0 - (0.07 - 0.07 * t) * m_tronco
             v.co.x = x * largura
             v.co.y = y * profundidade
             # Cintura mais estreita (silhueta feminina atlética)
             if Z_CINTURA - 0.10 < z < Z_CINTURA + 0.09:
-                k = 1.0 - 0.13 * math.cos((z - Z_CINTURA) / 0.10 * math.pi * 0.5)
+                k = 1.0 - 0.13 * m_tronco * math.cos((z - Z_CINTURA) / 0.10 * math.pi * 0.5)
                 v.co.x *= k
-                v.co.y *= k * 0.98
+                v.co.y *= k * (1.0 - 0.02 * m_tronco)
 
         # Quadril levemente mais largo que a cintura
         if Z_VIRILHA - 0.02 < z < Z_QUADRIL + 0.05:
@@ -245,9 +265,7 @@ def moldar_secoes(obj):
             if y < -0.03:   # antepé/dedos mais largos que o calcanhar
                 v.co.x *= 1.12
 
-        # Mãos: achatar a palma (prepara os dedos da Fase 1b)
-        if abs(z - Z_MAO) < 0.06 and abs(x) > X_PUNHO - 0.06:
-            v.co.y = y * 0.62
+        # (a palma agora é malha própria em criar_maos(); nada a achatar aqui)
 
     bm.to_mesh(me)
     bm.free()
@@ -335,15 +353,15 @@ def loops_de_deformacao(obj):
 # é uma ilha fechada — o rig da Fase 4 usa thumb/index/middle/ring/pinky_01..03.
 DEDOS = [
     # (nome, offset_x_na_palma, offset_y, comprimento, raio_base)
-    ("index", 0.019, -0.014, 0.066, 0.0104),
-    ("middle", 0.006, -0.016, 0.071, 0.0108),
-    ("ring", -0.007, -0.014, 0.065, 0.0100),
-    ("pinky", -0.019, -0.009, 0.052, 0.0088),
+    ("index", 0.027, -0.004, 0.070, 0.0095),
+    ("middle", 0.009, -0.006, 0.076, 0.0100),
+    ("ring", -0.009, -0.005, 0.069, 0.0093),
+    ("pinky", -0.026, -0.002, 0.055, 0.0081),
 ]
-POLEGAR = ("thumb", 0.026, 0.008, 0.052, 0.0116)
+POLEGAR = ("thumb", 0.036, -0.002, 0.056, 0.0112)
 
 
-def _capsula(nome, p0, p1, r0, r1, seg=8):
+def _capsula(nome, p0, p1, r0, r1, seg=10):
     """Tronco de cone fechado entre dois pontos (falange)."""
     p0, p1 = Vector(p0), Vector(p1)
     eixo = (p1 - p0)
@@ -375,34 +393,90 @@ def _capsula(nome, p0, p1, r0, r1, seg=8):
     return o
 
 
+def _laje_palma(nome, centro, largura, espessura, comprimento, seg=14):
+    """Palma: tubo elíptico achatado e afunilado (punho -> nós dos dedos)."""
+    cx, cy, cz = centro
+    perfis = [
+        (0.00, largura * 0.40, espessura * 0.46),   # encaixe no punho
+        (0.30, largura * 0.50, espessura * 0.50),
+        (0.72, largura * 0.50, espessura * 0.45),
+        (1.00, largura * 0.46, espessura * 0.38),   # linha dos nós
+    ]
+    me = D.meshes.new(nome)
+    verts, faces = [], []
+    for t, rx, ry in perfis:
+        z = cz - comprimento * t
+        for k in range(seg):
+            a = k / seg * TAU
+            verts.append((cx + rx * math.cos(a), cy + ry * math.sin(a), z))
+    for i in range(len(perfis) - 1):
+        v0, v1 = i * seg, (i + 1) * seg
+        for k in range(seg):
+            kn = (k + 1) % seg
+            faces.append((v0 + k, v0 + kn, v1 + kn, v1 + k))
+    topo = len(verts)
+    verts.append((cx, cy, cz))
+    base = len(verts)
+    verts.append((cx, cy, cz - comprimento))
+    ult = (len(perfis) - 1) * seg
+    for k in range(seg):
+        kn = (k + 1) % seg
+        faces.append((topo, kn, k))
+        faces.append((base, ult + k, ult + kn))
+    me.from_pydata(verts, [], faces)
+    me.update()
+    for f in me.polygons:
+        f.use_smooth = True
+    o = D.objects.new(nome, me)
+    bpy.context.scene.collection.objects.link(o)
+    return o
+
+
 def criar_maos():
-    """Gera 10 dedos (3 falanges cada) posicionados nas palmas."""
+    """Palma + 5 dedos por mão, todos partindo da linha dos nós da palma."""
     pecas = []
+    largura = 0.082      # mão de mulher adulta: ~8,2 cm de largura
+    espessura = 0.030
+    comprimento = 0.060  # do punho até os nós
     for lado, s in (("l", 1.0), ("r", -1.0)):
-        palma_x = s * (X_PUNHO + 0.004)
-        for nome, dx, dy, comp, raio in DEDOS + [POLEGAR]:
-            polegar = nome == "thumb"
-            x = palma_x + s * dx
-            y = -0.006 + dy
-            z_top = Z_MAO + (0.010 if polegar else 0.002)
-            # 3 falanges: 45% / 32% / 23% do comprimento
-            fracoes = (0.45, 0.32, 0.23)
-            z = z_top
+        px_ = s * (X_PUNHO + 0.004)
+        py_ = -0.012
+        # começa ACIMA do nó do punho para a laje penetrar o antebraço
+        # (sem isso aparecia a tampa chata da palma flutuando abaixo do braço)
+        z_punho = Z_PUNHO - 0.004
+        pecas.append(_laje_palma(f"palma_{lado}", (px_, py_, z_punho),
+                                 largura, espessura, comprimento))
+        z_nos = z_punho - comprimento
+
+        for nome, dx, dy, comp, raio in DEDOS:
+            x = px_ + s * dx
+            y = py_ + dy
+            # começa 8 mm acima da linha dos nós: o dedo nasce dentro da palma
+            z = z_nos + 0.008
             r = raio
-            for i, f in enumerate(fracoes):
+            for i, f in enumerate((0.45, 0.32, 0.23)):
                 comp_f = comp * f
-                if polegar:
-                    # polegar aponta para frente/baixo, afastado da palma
-                    p0 = (x + s * 0.005 * i, y - 0.012 * i, z)
-                    p1 = (x + s * 0.005 * (i + 1), y - 0.012 * (i + 1), z - comp_f)
-                else:
-                    # leve curl: cada falange avança para frente (mão relaxada)
-                    p0 = (x, y - 0.007 * i, z)
-                    p1 = (x, y - 0.007 * (i + 1), z - comp_f)
-                r_next = r * 0.88
+                p0 = (x, y - 0.006 * i, z)
+                p1 = (x, y - 0.006 * (i + 1), z - comp_f)
+                r_next = r * 0.87
                 pecas.append(_capsula(f"{nome}_{i+1:02d}_{lado}", p0, p1, r, r_next))
                 z -= comp_f
                 r = r_next
+
+        # Polegar: sai da LATERAL da palma, apontando para frente e para baixo
+        nome, dx, dy, comp, raio = POLEGAR
+        x = px_ + s * dx
+        y = py_ + dy
+        z = z_punho - 0.014
+        r = raio
+        for i, f in enumerate((0.42, 0.33, 0.25)):
+            comp_f = comp * f
+            p0 = (x + s * 0.008 * i, y - 0.013 * i, z)
+            p1 = (x + s * 0.008 * (i + 1), y - 0.013 * (i + 1), z - comp_f * 0.82)
+            r_next = r * 0.86
+            pecas.append(_capsula(f"{nome}_{i+1:02d}_{lado}", p0, p1, r, r_next))
+            z -= comp_f * 0.82
+            r = r_next
     return pecas
 
 
