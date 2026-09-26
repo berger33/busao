@@ -62,9 +62,9 @@
       "moldura_largura_m": 0.12
     },
     "tipo_pesos": {
-      "tijolo": 4,
-      "reboco": 3,
-      "loja": 2,
+      "reboco": 5,
+      "loja": 5,
+      "tijolo": 2,
       "obra": 1
     },
     "loja": {
@@ -99,6 +99,10 @@
     },
     "lixeira": {
       "espacamento_m": 18.0,
+      "lado": "calcada"
+    },
+    "orelhao": {
+      "espacamento_m": 28.0,
       "lado": "calcada"
     },
     "hidrante": {

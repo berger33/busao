@@ -696,13 +696,13 @@ static func _build_loja(spec: Dictionary, raiz: Node3D, p: Dictionary, lado: flo
     var prof := float(loja.get("toldo_profundidade_m", 1.1))
     var porta_l := float(loja.get("porta_largura_m", 1.6))
     var porta_a := float(loja.get("porta_altura_m", 2.4))
-    var toldo := _malha(_box(Vector3(prof, 0.12, largura * 0.8)),
-            material(spec, "estrutura_metalica"),
+    var toldo := _malha(_box(Vector3(prof, 0.14, largura * 0.85)),
+            material(spec, "linha_amarela"),
             Vector3(lado * (x_frente - prof * 0.5), altura_toldo, -(z + largura * 0.5)), raiz,
             "Toldo%s%d" % [("D" if lado > 0.0 else "E"), indice], false)
     _marca(toldo, "toldo")
     var porta := _malha(_box(Vector3(0.08, porta_a, porta_l)),
-            material(spec, "madeira"),
+            material(spec, "zincado"),
             Vector3(lado * (x_frente - 0.04), porta_a * 0.5, -(z + largura * 0.5)), raiz,
             "Porta%s%d" % [("D" if lado > 0.0 else "E"), indice], false)
     _marca(porta, "porta")
@@ -736,8 +736,13 @@ static func _build_arvores(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
     while z < comprimento:
         var x := x_dir if lado > 0.0 else x_esq
         var base := Vector3(x, 0.15, -z)
-        # ETAPA 5 — o nome do GLB da arvore vem do spec (piloto: ipe_amarelo).
-        var arvore_glb := _scene_glb(str(cfg.get("glb", "arvore")))
+        # Seleciona entre ipê amarelo florido, árvore urbana e palmeira
+        var arvore_nome: String = "ipe_amarelo" if (int(z * 7) % 3 == 0) else ("arvore" if (int(z * 7) % 3 == 1) else "palmeira")
+        if cfg.has("glb"):
+            arvore_nome = str(cfg["glb"])
+        var arvore_glb := _scene_glb(arvore_nome)
+        if arvore_glb == null:
+            arvore_glb = _scene_glb("arvore")
         if arvore_glb != null:
             arvore_glb.position = base
             var s_var := rng.randf_range(0.92, 1.14)
@@ -805,6 +810,7 @@ static func _build_mobiliario(spec: Dictionary, raiz: Node3D, rng: RandomNumberG
         _build_banco(spec, raiz, Vector3(x_faixa, 0.155, -zb), visibilidade)
         zb += passo_banco * rng.randf_range(0.9, 1.2)
     _build_prop_linear(spec, raiz, rng, comprimento, props, "lixeira", "zincado", 0.50, visibilidade)
+    _build_prop_linear(spec, raiz, rng, comprimento, props, "orelhao", "estrutura_metalica", 1.80, visibilidade)
 
     # Postes de iluminacao publica de ferro fundido junto ao meio-fio
     var cfg_poste: Dictionary = props.get("poste", {})
