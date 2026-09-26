@@ -20,3 +20,5 @@ Imagens geradas como referência de direção de arte — não são capturas do 
 | --- | --- | --- |
 | 6 | `6_model_sheet_heroi.png` | Model sheet da heroína Júlia (frente/lado/costas + insets de rosto, mão, sola, mechas de cabelo e topologia). Referência de produção para `tools/blender/build_heroi_julia.py`, descrito em `docs/PLANO_HEROI_10_10.md`. Sem marcas registradas. |
 | 7 | `7_fase1_antes_depois.png` | Turnaround comparativo renderizado em Blender: linha de cima = `Humano_F.glb` que o jogo usa hoje; linha de baixo = corpo base da Fase 1 (`tools/blender/build_heroi_julia.py`). Ver `docs/execucao/HEROI_FASE0_FASE1.md`. |
+| 8 | `8_fase2_pbr.png` | Fase 1 (barro, em cima) × Fase 2 (albedo/normal/ORM bakeados, embaixo). |
+| 9 | `9_fase2_closeup_pele.png` | Close-up da pele bakeada: variação de tom, AO nas dobras e microrrelevo de poro. |

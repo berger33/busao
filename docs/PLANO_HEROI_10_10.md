@@ -1,6 +1,6 @@
 # Plano do Herói 10/10 — do boneco atual ao personagem da arte-alvo
 
-> Execução das fases 0 e 1: `docs/execucao/HEROI_FASE0_FASE1.md`
+> Execução: fases 0 e 1 em `docs/execucao/HEROI_FASE0_FASE1.md`; fase 2 em `docs/execucao/HEROI_FASE2.md`
 >
 > Base: comparação entre o print real do build (26/09) e `docs/arte_alvo_final/1_gameplay_avenida.png`.
 > Substitui operacionalmente o `docs/PLANO_HEROI_REALISTA.md` (que ficou em Marco 1 sem execução).
@@ -88,7 +88,7 @@ com stubs X11/GL — hoje o sandbox está **sem** esse ambiente), `tools/blender
 **Gate 1:** `tools/audit_personagens.py` aprova tris/altura/manifold; render de turnaround
 (frente/lado/costas) comparado com `docs/arte_alvo_final/6_model_sheet_heroi.png`.
 
-### Fase 2 — UV + bake PBR (1,5 dia)
+### Fase 2 — UV + bake PBR (1,5 dia) — ✅ CONCLUÍDA 26/09 (gate verde: 3 texturas, atlas 57,3%, GLB 1,49 MB)
 - Smart UV project + costuras manuais; ilhas: rosto, corpo, cabelo, roupa, calçado.
 - Bake em Cycles CPU (já usado no `render_ceu_nishita.py`): **albedo, normal, AO,
   roughness, metallic** → empacotar AO/Rough/Metal em um **ORM**.
