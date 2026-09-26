@@ -19,6 +19,7 @@ Uso:
 import argparse
 import json
 import math
+import struct
 import sys
 from pathlib import Path
 
@@ -292,6 +293,24 @@ def empacotar_orm(ao, rough, res, destino: Path):
 # -----------------------------------------------------------------------------
 # 4. Material final (texturas bakeadas) + export
 # -----------------------------------------------------------------------------
+
+
+def glb_image_names(path: Path):
+    data = path.read_bytes()
+    if data[:4] != b"glTF":
+        return []
+    offset = 12
+    while offset + 8 <= len(data):
+        chunk_len, chunk_type = struct.unpack_from("<I4s", data, offset)
+        offset += 8
+        chunk = data[offset:offset + chunk_len]
+        offset += chunk_len
+        if chunk_type == b"JSON":
+            doc = json.loads(chunk.rstrip(b"\0 ").decode("utf-8"))
+            return [img.get("name", "") for img in doc.get("images", [])]
+    return []
+
+
 def material_final(albedo, normal, orm):
     mat = bpy.data.materials.new("PeleJulia")
     mat.use_nodes = True
@@ -402,19 +421,22 @@ def main():
     )
     bpy.ops.wm.save_as_mainfile(filepath=str(OUT_DIR / "heroi_julia_pbr.blend"))
 
+    imagens_embutidas = glb_image_names(glb)
     m = {
         "res": res,
         "samples": args.samples,
         "faces": len(obj.data.polygons),
         "cobertura_uv": cobertura,
         "res_normal_orm": args.res_normal,
-        "texturas": [p_alb.name, p_nrm.name, p_orm.name],
+        "texturas_corpo": [p_alb.name, p_nrm.name, p_orm.name],
+        "texturas_embutidas": imagens_embutidas,
+        "embedded_images": len(imagens_embutidas),
         "kb_albedo": round(p_alb.stat().st_size / 1024, 1),
         "kb_normal": round(p_nrm.stat().st_size / 1024, 1),
         "kb_orm": round(p_orm.stat().st_size / 1024, 1),
         "glb_kb": round(glb.stat().st_size / 1024, 1),
     }
-    m["gate_texturas"] = len(m["texturas"]) >= 3
+    m["gate_texturas"] = len(m["texturas_embutidas"]) >= 3
     m["gate_cobertura"] = cobertura >= 0.45
     m["gate_glb"] = m["glb_kb"] <= 2048
     m["gate"] = all(m[k] for k in ("gate_texturas", "gate_cobertura", "gate_glb"))

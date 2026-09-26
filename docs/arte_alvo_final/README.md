@@ -27,3 +27,5 @@ Imagens geradas como referência de direção de arte — não são capturas do 
 | 12 | `12_turnaround_fase2.png` | Turnaround 4 vistas (frente/3-4/lado/costas) do GLB da Fase 2 reconstruído do zero em 26/09/2026 — `assets/characters/source/heroi_julia/heroi_julia_pbr.glb` (1.672 KB, PBR + rosto esculpido). Ver `docs/execucao/HEROI_REBUILD_2026-09-26.md`. |
 | 13 | `13_mao_detalhe_fase2.png` | Close da mão no GLB reconstruído (`tools/blender/render_detalhe.py --alvo mao`): palma em laje, 4 dedos nascendo dentro da palma, polegar lateral. |
 | 14 | `14_rosto_detalhe.png` | Close do rosto no GLB reconstruído (`render_detalhe.py --alvo rosto`): órbitas, nariz, boca, queixo e orelhas esculpidos (Fase 3 parcial — ainda sem cabelo). |
+| 15 | `15_turnaround_fase3.png` | Turnaround 4 vistas da Fase 3: rosto completo, olhos separados, franja/calota e rabo de cavalo em 5 mechas alpha-scissor. |
+| 16 | `16_rosto_fase3.png` | Close do rosto completo da Fase 3: esclera/córnea/íris radial, pálpebras, sobrancelhas, cílios, narinas e lábios. |
