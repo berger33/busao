@@ -425,7 +425,10 @@ def main():
     m = {
         "res": res,
         "samples": args.samples,
-        "faces": len(obj.data.polygons),
+        "faces_corpo": len(obj.data.polygons),
+        "faces_extras": faces_extras,
+        "tris_extras": tris_extras,
+        "extras": sorted(e.name for e in extras),
         "cobertura_uv": cobertura,
         "res_normal_orm": args.res_normal,
         "texturas_corpo": [p_alb.name, p_nrm.name, p_orm.name],
