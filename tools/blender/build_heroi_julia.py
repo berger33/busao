@@ -36,6 +36,8 @@ import bmesh
 import numpy as np
 from mathutils import Vector
 
+from julia_head_v2 import build_corrected_head
+
 TAU = math.tau
 D = bpy.data
 REPO = Path(__file__).resolve().parents[2]
@@ -47,8 +49,8 @@ TEX_DIR.mkdir(parents=True, exist_ok=True)
 # --- Alvos do gate da Fase 1 -------------------------------------------------
 ALTURA_ALVO = 1.72          # m, heroína adulta (model sheet: 168-172 cm)
 PISO_OFFSET = 0.012         # m, contato da sola (mesmo contrato do runner atual)
-TRIS_ALVO = 32000           # 28k-45k
-TRIS_MIN, TRIS_MAX = 24000, 46000
+TRIS_ALVO = 56000           # corpo + rosto/olhos/cabelo geométricos V2
+TRIS_MIN, TRIS_MAX = 40000, 72000
 QUADRIFLOW_FACES = 7600    # quads -> ~32k tris depois dos loops de junta e das mãos
 
 # --- Proporções (metros, personagem em pé, Z para cima, frente = -Y) ---------
@@ -1774,7 +1776,7 @@ def exportar(corpo, extras=(), nome="heroi_julia_base"):
         obj.select_set(True)
     bpy.context.view_layer.objects.active = corpo
 
-    # Fase 3 mantém olhos/cards como objetos separados para materiais próprios.
+    # Rosto e cabelo V2 ficam separados para preservar materiais próprios.
     bpy.ops.object.select_all(action="DESELECT")
     for o in bpy.context.scene.objects:
         if o.type == "MESH":
@@ -1803,19 +1805,29 @@ def main():
     suavizar(corpo)
     loops_de_deformacao(corpo)
     densificar_cabeca(corpo)
-    esculpir_rosto(corpo)
+    # A cabeça V1 era uma extensão do modificador Skin: formato bulboso,
+    # feições desenhadas como cards e cabelo em placas. Mantemos apenas o
+    # volume interno para continuidade do pescoço e construímos a cabeça V2
+    # com anatomia e geometria próprias após normalizar o corpo.
     juntar(corpo, criar_maos())
     normalizar(corpo)
-    criar_olhos_e_cards()
+    build_corrected_head(corpo)
 
     m = metricas(corpo)
     extras = [o for o in bpy.context.scene.objects if o.type == "MESH" and o != corpo]
-    m["fase3_objetos"] = len(extras)
-    m["rabo_mechas"] = len([o for o in extras if o.name.startswith("rabo_mecha_")])
-    m["tris_fase3_extras"] = sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in extras)
-    m["tris_glb_total"] = m["tris"] + m["tris_fase3_extras"]
-    m["texturas_procedurais_fase3"] = ["julia_cabelo_alpha.png", "julia_iris_color.png", "julia_iris_normal_radial.png"]
-    m["alpha_mode"] = "MASK (alpha cutoff 0.5)"
+    m["face_hair_objects"] = len(extras)
+    m["ponytail_curls"] = len([o for o in extras if o.name.startswith("RaboCacho_")])
+    m["tris_face_hair_extras"] = sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in extras)
+    m["tris_glb_total"] = m["tris"] + m["tris_face_hair_extras"]
+    m["face_v2"] = {
+        "ears": 2,
+        "separate_eyelids": 4,
+        "separate_eyes": True,
+        "eyelashes": 8,
+        "volumetric_curly_hair": True,
+        "mouth_geometry": True,
+    }
+    m["alpha_mode"] = "OPAQUE (cabelo geométrico; sem cards)"
     glb, blend = exportar(corpo)
     m["glb_kb"] = round(glb.stat().st_size / 1024, 1)
     m["gate_tris"] = TRIS_MIN <= m["tris_glb_total"] <= TRIS_MAX

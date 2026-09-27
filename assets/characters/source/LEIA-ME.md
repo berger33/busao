@@ -50,10 +50,10 @@ Pipeline *Herói 10/10* (`docs/PLANO_HEROI_10_10.md`), reconstruído do zero em
 
 | Item | Estado |
 | --- | --- |
-| `heroi_julia_base.glb` / `.blend` | Fase 1: corpo esculpido (Skin+QuadriFlow, 35.952 tris, 92,1% quads, 1,72 m, 0 não-manifold) **+ rosto esculpido** (órbita, nariz, boca, queixo, orelhas — Fase 3 parcial, sem cabelo) |
-| `heroi_julia_pbr.glb` / `.blend` | Fase 2: UV (atlas 61,2%) + bake albedo 2K / normal 1K / ORM 1K embutidos — **1.672 KB** (teto do plano: 2.048 KB), gate verde |
-| `*_metrics.json` | Métricas dos gates das Fases 1 e 2 |
-| Contrato de runtime | **não cumprido** — sem rig (Fase 4), sem clipes (Fase 5), sem roupa (Fase 6); 1,67 MB > 500 KB |
+| `heroi_julia_base.glb` / `.blend` | Corpo Skin+QuadriFlow (35.952 tris, 92,1% quads, 1,72 m, 0 não-manifold) + **rosto V2 reconstruído** em malhas próprias. |
+| `heroi_julia_fase3.glb` / `heroi_julia_pbr.glb` | Snapshot visual V2: cabeça/mandíbula, orelhas com hélice/concha, olhos proporcionais, pálpebras/cílios, boca volumétrica e cabelo cacheado geométrico com rabo de cavalo. 68.096 tris total / 1,40 MB. |
+| `*_metrics.json` | Métricas atualizadas do gate geométrico V2. |
+| Contrato de runtime | **visual promovido** a `personagens/hero_julia.glb`; rig e clipes continuam pendentes (Fases 4–5), portanto o runtime usa o fallback de movimento mesh-only. |
 
 Reproduzir (o `tools/blender/out/` é regenerável e gitignored; estas cópias
 existem para não perder o estado entre sessões):
