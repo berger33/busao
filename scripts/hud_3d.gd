@@ -277,10 +277,22 @@ func _draw_run() -> void:
         _text(Vector2(535, 138), "DASH %0.1f" % float(state.get("dash_cooldown", 0.0)), 12, MUTED)
     # Controles ficam ocultos durante a corrida normal: o cenário permanece
     # limpo e o jogador só recebe uma instrução quando realmente precisa.
-    if str(state.get("tutorial_hint", "")) != "" and float(state.get("distance", 0.0)) < float(state.get("first_session_hint_distance", 70.0)):
-        _panel(Rect2(55, 180, 610, 58), Color(0.05, 0.16, 0.25, 0.93), 15)
-        _text_center(Vector2(360, 216), str(state.get("tutorial_hint", "")), 15, CYAN)
-        _text_center(Vector2(360, 236), "gesto para agir • toque curto para dash", 10, Color("#a9dce5"))
+    if str(state.get("tutorial_hint", "")) != "":
+        _panel(Rect2(45, 174, 630, 92), Color(0.05, 0.16, 0.25, 0.93), 15)
+        _text_center(Vector2(360, 210), str(state.get("tutorial_hint", "")), 15, CYAN)
+        var tutorial_progress: Dictionary = state.get("tutorial_progress", {})
+        var chips := [
+            {"key": "lane", "label": "FAIXA"},
+            {"key": "jump", "label": "PULO"},
+            {"key": "slide", "label": "DESLIZE"},
+            {"key": "dash", "label": "DASH"}
+        ]
+        for i in chips.size():
+            var chip: Dictionary = chips[i]
+            var done: bool = bool(tutorial_progress.get(str(chip.get("key", "")), false))
+            var chip_rect := Rect2(75 + i * 145, 226, 120, 26)
+            _panel(chip_rect, Color(0.18, 0.48, 0.36, 0.70) if done else Color("#263958"), 8)
+            _text_center(chip_rect.get_center() + Vector2(0, 5), ("✓ " if done else "□ ") + str(chip.get("label", "")), 9, GREEN if done else MUTED)
     var _mode_run: String = str(state.get("run_mode", "playing"))
     if _mode_run == "countdown":
         draw_rect(Rect2(0, 0, 720, 1280), Color(0.02, 0.04, 0.08, 0.42))

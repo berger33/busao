@@ -233,6 +233,7 @@ var _double_used: bool = false
 var _rewarded_pending_placement: String = ""
 var tutorial_hint := ""
 var tutorial_stage := -1
+var tutorial_actions_done: Dictionary = {"lane": false, "jump": false, "slide": false, "dash": false}
 var result: Dictionary = {}
 # Retenção D0–D30: ids de conquistas/badges desbloqueados nesta corrida
 # (para exibir na tela de resultado sem brigar com o toast de impacto).
@@ -662,6 +663,7 @@ func _start_run(index: int) -> void:
     wall_run_count = 0
     dog_chase_timer = 0.0
     tutorial_stage = -1
+    _reset_tutorial_validation()
     _run_awards = []
     performance_sample_timer = 0.0
     step_timer = 0.0
@@ -1274,34 +1276,68 @@ func _harmonize_traffic(dt: float) -> void:
             # aproximação: desacelera suavemente antes de colar (sem "freada" seca)
             me["traffic_speed"] = maxf(ahead_speed, my_speed - (my_speed - ahead_speed) * minf(1.0, dt * 2.5))
 
+func _is_first_run_tutorial_active() -> bool:
+    return phase_index == 0 and not bool(GameSave.data.get("tutorial_seen", false))
+
+func _reset_tutorial_validation() -> void:
+    tutorial_actions_done = {"lane": false, "jump": false, "slide": false, "dash": false}
+    tutorial_stage = -1
+    tutorial_hint = ""
+
+func _tutorial_completion_count() -> int:
+    var done := 0
+    for key in ["lane", "jump", "slide", "dash"]:
+        if bool(tutorial_actions_done.get(key, false)):
+            done += 1
+    return done
+
+func _complete_tutorial_validation() -> void:
+    if bool(GameSave.data.get("tutorial_seen", false)):
+        return
+    GameSave.data["tutorial_seen"] = true
+    GameSave.record_event("tutorial_complete")
+    GameSave.flush()
+    tutorial_hint = ""
+    _show_feedback("TUTORIAL COMPLETO!", "Você validou faixa, pulo, deslize e dash", GREEN, "reward")
+    Haptics.milestone()
+
+func _mark_tutorial_action(action: String) -> void:
+    if not _is_first_run_tutorial_active():
+        return
+    var safe_action := action.strip_edges().to_lower()
+    if not tutorial_actions_done.has(safe_action) or bool(tutorial_actions_done.get(safe_action, false)):
+        return
+    tutorial_actions_done[safe_action] = true
+    GameSave.record_event("tutorial_validated_" + safe_action)
+    if _tutorial_completion_count() >= 4:
+        _complete_tutorial_validation()
+    else:
+        _update_tutorial_hint()
+
 func _update_tutorial_hint() -> void:
-    if phase_index != 0 or bool(GameSave.data.get("tutorial_seen", false)):
+    if not _is_first_run_tutorial_active():
         tutorial_hint = ""
         return
     var next_stage := 0
-    var next_hint := "DESLIZE ← → para trocar de faixa"
-    if distance >= 18.0 and distance < 36.0:
+    var next_hint := "DESLIZE ←/→ para validar troca de faixa"
+    if bool(tutorial_actions_done.get("lane", false)):
         next_stage = 1
-        next_hint = "DESLIZE ↑ para pular o obstáculo"
-    elif distance >= 36.0 and distance < 54.0:
+        next_hint = "OK! DESLIZE ↑ para validar o pulo"
+    if bool(tutorial_actions_done.get("jump", false)):
         next_stage = 2
-        next_hint = "DESLIZE ↓ para passar sob a barra"
-    elif distance >= 54.0 and distance < BALANCE.first_session_hint_distance:
+        next_hint = "Agora DESLIZE ↓ para validar o deslize"
+    if bool(tutorial_actions_done.get("slide", false)):
         next_stage = 3
-        next_hint = "TOQUE para dar DASH e ganhar impulso"
-    elif distance >= BALANCE.first_session_hint_distance:
-        next_stage = 4
-        next_hint = "Boa leitura! Agora corra do seu jeito."
+        next_hint = "Por fim, TOQUE para validar o dash"
+    if bool(tutorial_actions_done.get("dash", false)):
+        _complete_tutorial_validation()
+        return
     if next_stage != tutorial_stage:
         tutorial_stage = next_stage
         GameSave.record_event("tutorial_step")
     tutorial_hint = next_hint
-    if tutorial_stage >= 4 or distance >= BALANCE.first_session_hint_distance:
-        GameSave.data["tutorial_seen"] = true
-        GameSave.flush()
-        tutorial_hint = ""
-    # A faixa é legível pelo próprio personagem e pela geometria da rua;
-    # não adicionamos uma seta sobre o corredor, evitando poluição visual.
+    # Tutorial D0 validado por ação real, não por distância. Mantém a dica até
+    # o jogador executar cada gesto ou concluir a primeira fase.
 
 func _update_run(dt: float) -> void:
     if run_mode == "paused":
@@ -1664,6 +1700,7 @@ func _change_lane(direction: int) -> void:
         if player_visual != null and player_visual.has_method("on_lane_change"):
             player_visual.call("on_lane_change", direction)
         _show_feedback("FAIXA %s" % ["RUA", "CALÇADA", "CALÇADA"][player_lane], "Leitura perfeita", BLUE, "whoosh")
+        _mark_tutorial_action("lane")
 
 func _jump() -> void:
     if screen != 2 or run_mode != "playing":
@@ -1689,6 +1726,7 @@ func _jump() -> void:
     GameSave.record_event("jump")
     _show_feedback("PULO!", "Rota aérea", CYAN, "jump")
     _spawn_3d_burst(player_root.position + Vector3(0, 0.1, 0), CYAN, 7)
+    _mark_tutorial_action("jump")
 
 func _slide() -> void:
     if screen != 2 or run_mode != "playing":
@@ -1712,6 +1750,7 @@ func _slide() -> void:
     slide_timer = 0.72
     GameSave.record_event("slide")
     _show_feedback("DESLIZE!", "Passou por baixo", VIOLET, "slide")
+    _mark_tutorial_action("slide")
 
 func _dash() -> void:
     if screen != 2 or run_mode != "playing" or dash_cooldown > 0.0:
@@ -1726,6 +1765,7 @@ func _dash() -> void:
     camera_shake = 0.18
     _show_feedback("ARRANCADA!", "Explosão curta de velocidade", YELLOW, "whoosh")
     _spawn_3d_burst(player_root.position + Vector3(0, 1.0, 0), YELLOW, 18)
+    _mark_tutorial_action("dash")
 
 
 func _celebrate_levelup(levelup: Dictionary) -> void:
@@ -4639,6 +4679,7 @@ func _sync_hud() -> void:
         "feedback_detail": feedback_detail,
         "feedback_color": feedback_color,
         "tutorial_hint": tutorial_hint,
+        "tutorial_progress": tutorial_actions_done,
         "first_session_hint_distance": BALANCE.first_session_hint_distance,
         "scenario_label": str(scenario.get("label", "Brasil")),
         "scenario_chapter": str(scenario.get("chapter", "Rua brasileira")),
