@@ -13,7 +13,7 @@ const SAVE_SCHEMA_VERSION := 4
 # aparelho + sal do app. Dificulta edicao casual do JSON (nao e DRM: sem
 # servidor nao ha segredo real — ver docs/PLUGINS_NATIVOS.md M7).
 const SAVE_HMAC_SALT := "corre-pro-ponto.v4.hmac" 
-const CLOUD_SNAPSHOT_KEYS: Array = ["schema_version","coins","hard_currency","remove_ads","phase_stars","best_times","achievements","inventory","owned_items","pet_skins","equipped_character","xp","daily_streak","max_streak","daily_chest_date","daily_chest_rewarded_date","daily_chest_streak","gate_passes","metrics","endless_best","endless_unlocked"]
+const CLOUD_SNAPSHOT_KEYS: Array = ["schema_version","coins","hard_currency","remove_ads","phase_stars","best_times","achievements","inventory","owned_items","pet_skins","equipped_character","xp","daily_streak","max_streak","daily_chest_date","daily_chest_rewarded_date","daily_chest_streak","gate_passes","starter_offer_seen","starter_offer_dismissed","metrics","endless_best","endless_unlocked"]
 # Retenção D0–D30: conquistas e badges pagam moedas ao desbloquear (fonte
 # única de nomes/recompensas — game_3d.gd monta o catálogo daqui).
 const ACHIEVEMENT_META: Dictionary = {
@@ -80,6 +80,8 @@ func _set_defaults() -> void:
         "hard_currency": 0,
         "remove_ads": false,
         "billing_ledger": {},
+        "starter_offer_seen": false,
+        "starter_offer_dismissed": false,
         "ads_consent_granted": false,
         "analytics_enabled": true,
         "locale": "pt_BR",
@@ -283,6 +285,8 @@ func _sanitize_data() -> void:
     if not (data.get("billing_ledger", {}) is Dictionary):
         # Chave garantida pelos defaults; aqui so repara save corrompido.
         data["billing_ledger"] = {}
+    data["starter_offer_seen"] = bool(data.get("starter_offer_seen", false))
+    data["starter_offer_dismissed"] = bool(data.get("starter_offer_dismissed", false))
     data["play_signed_in"] = bool(data.get("play_signed_in", false))
     data["last_review_ts"] = maxi(0, int(data.get("last_review_ts", 0)))
     data["review_requests"] = maxi(0, int(data.get("review_requests", 0)))
@@ -391,7 +395,7 @@ func _sanitize_data() -> void:
     data["daily_completed"] = normalized_daily_completed
     if not (data.get("metrics", {}) is Dictionary):
         data["metrics"] = {}
-    for key in ["sessions", "phase_attempts", "phase_completions", "phase_failures", "endless_completions", "endless_failures", "first_clears", "daily_claims", "shop_purchases", "coins_earned", "coins_spent", "distance_total", "hard_earned", "hard_spent", "sink_rerolls", "sink_skins", "chest_claims", "weekly_claims", "rewarded_daily_claims", "rewarded_gate_passes"]:
+    for key in ["sessions", "phase_attempts", "phase_completions", "phase_failures", "endless_completions", "endless_failures", "first_clears", "daily_claims", "shop_purchases", "coins_earned", "coins_spent", "distance_total", "hard_earned", "hard_spent", "sink_rerolls", "sink_skins", "chest_claims", "weekly_claims", "rewarded_daily_claims", "rewarded_gate_passes", "starter_offer_shown", "starter_offer_dismissed"]:
         data["metrics"][key] = maxi(0, int(data["metrics"].get(key, 0)))
     data["metrics"]["phase_time_total"] = maxf(0.0, float(data["metrics"].get("phase_time_total", 0.0)))
     data["metrics"]["longest_run_seconds"] = maxf(0.0, float(data["metrics"].get("longest_run_seconds", 0.0)))

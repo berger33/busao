@@ -1813,6 +1813,67 @@ func _award_note_for_run() -> String:
     return " • ".join(parts)
 
 
+func _starter_pack_owned() -> bool:
+    if GameSave.owns("motoboy"):
+        return true
+    var billing := get_node_or_null("/root/BillingManager")
+    if billing and billing.has_method("is_owned"):
+        return bool(billing.call("is_owned", "starter_pack"))
+    return false
+
+func _starter_offer_price_label() -> String:
+    var billing := get_node_or_null("/root/BillingManager")
+    if billing and billing.has_method("price_label_for"):
+        return str(billing.call("price_label_for", "starter_pack"))
+    return "R$ 3,90"
+
+func _should_show_starter_pack_offer(first_clear: bool) -> bool:
+    # P1 monetização contextual: primeira oferta só depois do jogador provar
+    # valor (fase 3–5), sem interromper tutorial/D0 inicial nem repetir spam.
+    if not first_clear or endless_mode:
+        return false
+    if phase_index < 2 or phase_index > 4:
+        return false
+    if bool(GameSave.data.get("starter_offer_seen", false)) or bool(GameSave.data.get("starter_offer_dismissed", false)):
+        return false
+    return not _starter_pack_owned()
+
+func _mark_starter_offer_shown() -> void:
+    if bool(GameSave.data.get("starter_offer_seen", false)):
+        return
+    GameSave.data["starter_offer_seen"] = true
+    GameSave.data["metrics"]["starter_offer_shown"] = int(GameSave.data["metrics"].get("starter_offer_shown", 0)) + 1
+    GameSave.record_event("starter_offer_shown")
+
+func _starter_offer_visible() -> bool:
+    return screen == 3 and bool(result.get("starter_offer", false)) and not _starter_pack_owned() and not bool(GameSave.data.get("starter_offer_dismissed", false))
+
+func _purchase_starter_pack_offer() -> void:
+    if not _starter_offer_visible():
+        return
+    var billing := get_node_or_null("/root/BillingManager")
+    if billing == null or not billing.has_method("purchase"):
+        _show_feedback("LOJA INDISPONÍVEL", "Billing não inicializado", RED, "ui_back")
+        return
+    var ok: bool = bool(billing.call("purchase", "starter_pack"))
+    if ok:
+        GameSave.record_event("starter_offer_tap")
+        _show_feedback("PACK MOTOBOY", "Processando %s" % _starter_offer_price_label(), GOLD, "ui_confirm")
+    else:
+        _show_feedback("PACK INDISPONÍVEL", "Tente novamente pela loja", RED, "ui_back")
+
+func _dismiss_starter_pack_offer() -> void:
+    if not _starter_offer_visible():
+        return
+    GameSave.data["starter_offer_dismissed"] = true
+    GameSave.data["metrics"]["starter_offer_dismissed"] = int(GameSave.data["metrics"].get("starter_offer_dismissed", 0)) + 1
+    GameSave.record_event("starter_offer_dismissed")
+    GameSave.flush()
+    result["starter_offer"] = false
+    _show_feedback("SEM PROBLEMA", "O pack continua na loja", MUTED, "ui_back")
+    _sync_hud()
+
+
 func _finish_run(success: bool, game_over := false) -> void:
     # P2 EconomyHandler disponível para reward/XP (cálculo espelhado)
     if screen != 2:
@@ -1945,6 +2006,9 @@ func _finish_run(success: bool, game_over := false) -> void:
             if GameSave.award_badge("maratonista"):
                 _run_awards.append("maratonista")
             GameSave.data["endless_unlocked"] = true
+        var starter_offer: bool = _should_show_starter_pack_offer(first_clear)
+        if starter_offer:
+            _mark_starter_offer_shown()
         result = {
             "success": true,
             "stars": stars,
@@ -1964,7 +2028,8 @@ func _finish_run(success: bool, game_over := false) -> void:
             "record": record,
             "xp": xp_reward,
             "levelup": levelup,
-            "award_note": _award_note_for_run()
+            "award_note": _award_note_for_run(),
+            "starter_offer": starter_offer
         }
         _show_feedback("PEGUEI O BUSÃO!", "%d estrelas • +R$ %d de bônus" % [stars, reward], YELLOW, "victory")
         Haptics.milestone()
@@ -4704,6 +4769,9 @@ func _sync_hud() -> void:
         "revive_available": (not _revive_used and not bool(result.get("success", true)) and screen == 3),
         "double_available": (not _double_used and bool(result.get("success", false)) and screen == 3 and int(result.get("reward", 0)) > 0),
         "billing_packs": (get_node_or_null("/root/BillingManager").get_products() if get_node_or_null("/root/BillingManager") and get_node_or_null("/root/BillingManager").has_method("get_products") else SHOP_DATA.BILLING_PACKS),
+        "starter_offer_visible": _starter_offer_visible(),
+        "starter_offer_price": _starter_offer_price_label(),
+        "starter_offer_owned": _starter_pack_owned(),
         "rubi": (get_node_or_null("/root/EconomyManager").get_rubi() if get_node_or_null("/root/EconomyManager") and get_node_or_null("/root/EconomyManager").has_method("get_rubi") else int(GameSave.data.get("hard_currency", 0))),
         "skin_extra_cost": (get_node_or_null("/root/EconomyManager").skin_extra_cost() if get_node_or_null("/root/EconomyManager") and get_node_or_null("/root/EconomyManager").has_method("skin_extra_cost") else 15),
         "daily_chest": (get_node_or_null("/root/EconomyManager").get_daily_chest_status() if get_node_or_null("/root/EconomyManager") and get_node_or_null("/root/EconomyManager").has_method("get_daily_chest_status") else {}),
@@ -4933,7 +5001,14 @@ func _handle_tap(pos: Vector2) -> void:
                     _show_feedback("ANÚNCIO...", "Assista para reviver", CYAN, "ui_confirm")
             return
         var is_success: bool = bool(result.get("success", false))
-        if is_success and not _double_used and int(result.get("reward",0))>0 and Rect2(55, 760, 610, 72).has_point(pos):
+        if is_success and _starter_offer_visible():
+            if Rect2(355, 785, 160, 48).has_point(pos):
+                _purchase_starter_pack_offer()
+                return
+            if Rect2(525, 785, 105, 48).has_point(pos):
+                _dismiss_starter_pack_offer()
+                return
+        if is_success and not _starter_offer_visible() and not _double_used and int(result.get("reward",0))>0 and Rect2(55, 760, 610, 72).has_point(pos):
             if not rewarded_ready:
                 _show_feedback("CARREGANDO ANÚNCIO", "Tente em segundos", MUTED, "ui_back")
             else:
@@ -5665,7 +5740,8 @@ func _on_billing_success(product_id: String) -> void:
     elif product_id.begins_with("coin_pack"):
         _show_feedback("PACOTE CREDITADO!", "+ moedas na carteira", GOLD, "reward")
     elif product_id == "starter_pack":
-        _show_feedback("PACK MOTOBOY!", "Rafa liberado + 120 R$", RED, "reward")
+        result["starter_offer"] = false
+        _show_feedback("PACK MOTOBOY!", "Rafa liberado + 300 R$", RED, "reward")
         _rebuild_player_visual("motoboy")
     else:
         _show_feedback("COMPRA OK!", product_id, GREEN, "reward")

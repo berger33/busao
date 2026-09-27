@@ -407,6 +407,13 @@ func _draw_results() -> void:
         var revive_label: String = "▶ REVIVER COM ANÚNCIO (1×)" if rewarded_ready else "REVIVER • CARREGANDO..."
         _button(Rect2(55, 600, 610, 72), revive_label, revive_color, 16)
         _text_center(Vector2(360, 685), "assista e continue de onde parou • 5 s invencível", 12, MUTED)
+    elif success and bool(state.get("starter_offer_visible", false)):
+        _panel(Rect2(55, 742, 610, 104), Color("#3a2634"), 18)
+        _text(Vector2(82, 780), "OFERTA INICIAL", 13, Color("#ffbf8b"))
+        _text(Vector2(82, 806), "Rafa Motoboy + 300 R$", 19, WHITE)
+        _text(Vector2(82, 830), "aparece uma vez após provar o jogo", 11, MUTED)
+        _button(Rect2(355, 785, 160, 48), str(state.get("starter_offer_price", "R$ 3,90")), GOLD, 13)
+        _button(Rect2(525, 785, 105, 48), "AGORA NÃO", Color("#314563"), 9)
     elif success and double_available:
         var reward_val: int = int(result_data.get("reward", 0))
         var dbl_color: Color = GOLD if rewarded_ready else Color("#314563")
