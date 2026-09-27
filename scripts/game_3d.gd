@@ -45,8 +45,14 @@ const TEXTURE_SKY_CLOUDY = preload("res://assets/textures/ceu_nublado.png")
 const TEXTURE_HAIR_REAL = preload("res://assets/textures/cabelo_realista.png")
 const TEXTURE_DENIM_REAL = preload("res://assets/textures/jeans_realista.png")
 const TEXTURE_CAR_PAINT_REAL = preload("res://assets/textures/pintura_carro_realista.png")
-const TEXTURE_GLASS = preload("res://assets/textures/vidro_azul.svg")
-const TEXTURE_PAINT = preload("res://assets/textures/pintura_micro.svg")
+const TEXTURE_GLASS = preload("res://assets/textures/vidro_realista.png")
+const TEXTURE_GLASS_N = preload("res://assets/textures/vidro_realista_normal.png")
+const TEXTURE_PAINT = preload("res://assets/textures/pintura_realista.png")
+const TEXTURE_PAINT_N = preload("res://assets/textures/pintura_realista_normal.png")
+const TEXTURE_PAINT_R = preload("res://assets/textures/pintura_realista_roughness.png")
+const TEXTURE_COBBLE_REAL = preload("res://assets/textures/paralelepipedo_realista.png")
+const TEXTURE_COBBLE_REAL_N = preload("res://assets/textures/paralelepipedo_realista_normal.png")
+const TEXTURE_COBBLE_REAL_R = preload("res://assets/textures/paralelepipedo_realista_roughness.png")
 const TEXTURE_DIRT_REAL = preload("res://assets/textures/terra_realista.png")
 const TEXTURE_DIRT_REAL_N = preload("res://assets/textures/terra_realista_normal.png")
 const TEXTURE_DIRT_REAL_R = preload("res://assets/textures/terra_realista_roughness.png")
@@ -4214,6 +4220,12 @@ func _ellipse_mesh(parent: Node3D, pos: Vector3, object_scale: Vector3, material
     node.scale = object_scale
     return node
 
+# Superficies que a camera de corrida ve quase sempre em angulo rasante.
+const GRAZING_SURFACES: Array[String] = [
+    "asphalt", "sidewalk", "cobble", "dirt", "concrete", "stucco",
+    "facade_plaster", "facade_brick", "brick_wall", "brick",
+]
+
 func _material(color: Color, metallic: float, roughness: float, surface: String = "paint") -> StandardMaterial3D:
     var material := StandardMaterial3D.new()
     var base_color: Color = color
@@ -4228,7 +4240,13 @@ func _material(color: Color, metallic: float, roughness: float, surface: String 
     material.albedo_color = Color(base_color, 0.78) if surface == "glass" else base_color
     material.metallic = maxf(metallic, 0.42) if surface == "metal" else (maxf(metallic, 0.85) if surface == "chrome" else metallic)
     material.roughness = roughness
-    material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+    # Chao e fachada sao vistos em angulo rasante: so com filtro anisotropico
+    # a mipmap correta deixa de borrar de perto e de serrilhar de longe. As
+    # demais superficies ficam no trilinear simples para poupar banda.
+    if surface in GRAZING_SURFACES:
+        material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+    else:
+        material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
     if surface == "glass":
         material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
         material.refraction_enabled = true
@@ -4310,9 +4328,16 @@ func _texture_for_surface(surface: String) -> Texture2D:
         "concrete":
             return TEXTURE_CONCRETE_REAL
         "cobble":
-            return TEXTURE_SIDEWALK_REAL
-        "brick":
+            return TEXTURE_COBBLE_REAL
+        "brick", "brick_wall":
             return TEXTURE_BRICK_WALL
+        # Estas tres caiam no `_` e recebiam a tinta chapada de 256 px, mesmo
+        # carregando normal/roughness de reboco e tijolo: era o motivo de as
+        # fachadas parecerem sem textura ao lado do personagem e das arvores.
+        "facade_plaster":
+            return TEXTURE_FACADE_PLASTER
+        "facade_brick":
+            return TEXTURE_FACADE_BRICK
         "stucco":
             return TEXTURE_CONCRETE_REAL
         "metal":
@@ -4344,13 +4369,15 @@ func _normal_for_surface(surface: String) -> Texture2D:
     match surface:
         "asphalt":
             return TEXTURE_ASPHALT_NORMAL
-        "sidewalk", "cobble":
+        "sidewalk":
             return TEXTURE_SIDEWALK_NORMAL
+        "cobble":
+            return TEXTURE_COBBLE_REAL_N
         "facade_plaster":
             return TEXTURE_FACADE_PLASTER_N
         "facade_brick":
             return TEXTURE_FACADE_BRICK_N
-        "brick_wall":
+        "brick_wall", "brick":
             return TEXTURE_BRICK_WALL_N
         "vehicle_paint":
             return TEXTURE_CAR_PAINT_NORMAL
@@ -4372,6 +4399,10 @@ func _normal_for_surface(surface: String) -> Texture2D:
             return TEXTURE_RUBBER_REAL_N
         "skin":
             return TEXTURE_SKIN_REAL_N
+        "paint":
+            return TEXTURE_PAINT_N
+        "glass":
+            return TEXTURE_GLASS_N
         _:
             return null
 
@@ -4379,13 +4410,15 @@ func _roughness_for_surface(surface: String) -> Texture2D:
     match surface:
         "asphalt":
             return TEXTURE_ASPHALT_ROUGH
-        "sidewalk", "cobble":
+        "sidewalk":
             return TEXTURE_SIDEWALK_ROUGH
+        "cobble":
+            return TEXTURE_COBBLE_REAL_R
         "facade_plaster":
             return TEXTURE_FACADE_PLASTER_R
         "facade_brick":
             return TEXTURE_FACADE_BRICK_R
-        "brick_wall":
+        "brick_wall", "brick":
             return TEXTURE_BRICK_WALL_R
         "leaves":
             return TEXTURE_LEAVES_REAL_R
@@ -4403,6 +4436,8 @@ func _roughness_for_surface(surface: String) -> Texture2D:
             return TEXTURE_RUBBER_REAL_R
         "skin":
             return TEXTURE_SKIN_REAL_R
+        "paint":
+            return TEXTURE_PAINT_R
         _:
             return null
 
