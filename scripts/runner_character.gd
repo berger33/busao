@@ -55,8 +55,10 @@ const GINGER_ASSET_PATH := PERSONAGENS_ROOT + "/ginger+woman.glb"
 const CORRE_PRO_PONTO_SCENE := "res://assets/characters/corre_pro_ponto/personagem_corre_pro_ponto.tscn"
 ## Ids de personagem que usam o runner "Corre pro Ponto" v2 como visual.
 ## Vazio = nenhum personagem é sobreposto (comportamento anterior intacto).
-## Ex.: ["julia"] usa o runner v2 para a heroína padrão.
-const CORRE_PRO_PONTO_FOR_IDS: Array = []
+## Lote 29: a heroína padrão "julia" agora É o runner v2 melhorado (rig próprio,
+## clipes lane/pulo/agacho e cabelo em tempo real); o asset antigo hero_julia foi
+## removido por ter sido substituído por esta versão.
+const CORRE_PRO_PONTO_FOR_IDS: Array = ["julia"]
 ## Nomes semânticos do controlador -> clipes do rig Corre pro Ponto v2. Só é
 ## consultado quando o clipe direto/da biblioteca não existe, ou seja, apenas
 ## quando este rig está carregado; os demais rigs resolvem direto e ignoram.
