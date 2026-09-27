@@ -39,10 +39,25 @@ const ORIGINAL_BODY_PATHS: Dictionary = {
     "F": ORIGINAL_ROOT + "/Humano_F.glb",
 }
 const PERSONAGENS_ROOT := "res://assets/characters/personagens" # Lote 28: 20 GLBs dedicados
-# Primeiro marco do novo pipeline: a heroína terá um asset dedicado, sem
-# compartilhar a malha simplificada do elenco. O fallback mantém o jogo jogável
-# enquanto o GLB passa pela validação visual.
-const HERO_ASSET_PATH := PERSONAGENS_ROOT + "/hero_julia.glb"
+# Personagem principal (revisão 2 — "boneco v2"): asset rigged/skinned dedicado
+# com 15 clipes (idle/run_loop/jump_*/crouch_*/lane_*) e rabo de cavalo com
+# física de mola (cabelo_fisico.gd + SpringBoneSimulator3D). É o único
+# corredor jogável do jogo — os demais personagens do catálogo ficam
+# indisponíveis na loja e não têm asset dedicado.
+const HERO_ASSET_PATH := PERSONAGENS_ROOT + "/personagem_v2.glb"
+const CABELO_FISICO_SCRIPT = preload("res://scripts/cabelo_fisico.gd")
+## Nomes semânticos que o controlador (set_motion) pede -> clipes reais do
+## boneco v2. Sem isso o v2 congelaria (o rig dele não tem os clipes
+## Sprint_Loop/Jump_Loop da Universal Animation Library).
+const V2_CLIP_ALIASES: Dictionary = {
+    "Sprint_Loop": "run_loop",
+    "Walk_Loop": "run_loop",
+    "Idle_Loop": "idle",
+    "Jump_Loop": "jump_air",
+    "Crouch_Fwd_Loop": "crouch_run_loop",
+    "Crouch_Idle_Loop": "crouch_loop",
+}
+const V2_LOOP_CLIPS: Array = ["idle", "run_loop", "jump_air", "crouch_loop", "crouch_run_loop"]
 # Ginger (WIP): o GLB rigged fica em res://assets/characters/source/ ate ser
 # re-bakeado dentro do teto de 500 KB dos personagens; enquanto nao volta para
 # PERSONAGENS_ROOT, exists() e falso e o corredor usa o modelo padrao.
@@ -137,6 +152,10 @@ var _outline_reported := false
 var current_clip := ""
 var world_mode := false
 var using_external_animation := false
+## Verdadeiro quando o modelo carregado é o boneco v2 (personagem_v2.glb):
+## troca a resolução de clipes para os nomes do rig v2 e liga o rabo de
+## cavalo com física de mola.
+var _is_v2 := false
 static var _biblioteca_cache: AnimationLibrary = null
 var primary_asset_loaded := false
 var use_animation_library := true
@@ -183,8 +202,12 @@ func set_character(next_id: String) -> void:
     _clear_character()
     _build_shadow()
     _build_light_rig()
+    # Boneco v2: o único personagem jogável (julia) usa o asset dedicado
+    # personagem_v2.glb. Os demais ids só aparecem como NPC de calçada e caem
+    # no corpo humano base (Humano_M/F) — seus GLBs dedicados foram removidos.
+    var wants_v2 := character_id == "julia" and ResourceLoader.exists(HERO_ASSET_PATH)
     # Lote 28: tenta GLB dedicado por personagem (assets/characters/personagens/<id>.glb) — bakeado Blender com paleta + props.
-    var personalized_path := HERO_ASSET_PATH if character_id == "julia" and ResourceLoader.exists(HERO_ASSET_PATH) else (GINGER_ASSET_PATH if character_id == "ginger" and ResourceLoader.exists(GINGER_ASSET_PATH) else PERSONAGENS_ROOT + "/" + character_id + ".glb")
+    var personalized_path := HERO_ASSET_PATH if wants_v2 else (GINGER_ASSET_PATH if character_id == "ginger" and ResourceLoader.exists(GINGER_ASSET_PATH) else PERSONAGENS_ROOT + "/" + character_id + ".glb")
     var is_personalized := false
     var body_scene: PackedScene = null
     var body_path: String = personalized_path
@@ -216,9 +239,12 @@ func set_character(next_id: String) -> void:
     model_pivot = Node3D.new()
     model_pivot.name = "ModelPivot"
     add_child(model_pivot)
-    model_root.name = "HumanoOriginal" if is_original else "QuaterniusHuman"
+    _is_v2 = wants_v2 and is_personalized
+    model_root.name = "PersonagemV2" if _is_v2 else ("HumanoOriginal" if is_original else "QuaterniusHuman")
     model_root.rotation.y = MODEL_FACING_YAW
-    var selected_scale := 0.72 if character_id == "ginger" else MODEL_SCALE
+    # O boneco v2 foi calibrado em escala 1,1,1 (a simulação de mola do rabo de
+    # cavalo trabalha em metros); manter 1.03 quebraria o cabelo.
+    var selected_scale := 1.0 if _is_v2 else (0.72 if character_id == "ginger" else MODEL_SCALE)
     model_root.scale = Vector3.ONE * selected_scale
     model_root.position.y = MODEL_FLOOR_OFFSET
     model_pivot.add_child(model_root)
@@ -232,6 +258,15 @@ func set_character(next_id: String) -> void:
         primary_asset_loaded = true
         return
     _cache_skeleton()
+    if _is_v2:
+        # O boneco v2 já vem com materiais/texturas próprios e animações
+        # bakeadas: não recolorir (preserva o visual "como estava") nem
+        # pendurar props do pipeline antigo. Liga clipes + física do cabelo.
+        _setup_v2_animation()
+        _setup_v2_hair()
+        _configure_mesh_shadows(model_root)
+        primary_asset_loaded = true
+        return
     if is_original:
         _apply_skin_tint(profile.get("skin", Color.WHITE))
         _apply_profile_palette(profile)
@@ -265,6 +300,7 @@ func _clear_character() -> void:
     current_clip = ""
     using_external_animation = false
     primary_asset_loaded = false
+    _is_v2 = false
     bone_indices.clear()
     rest_rotations.clear()
     mesh_parts.clear()
@@ -958,9 +994,59 @@ func _setup_original_animation() -> void:
     else:
         _apply_neutral_pose()
 
+func _setup_v2_animation() -> void:
+    # O GLB do boneco v2 traz AnimationPlayer + Skeleton3D no mesmo arquivo,
+    # com os 15 clipes já nomeados (idle/run_loop/jump_*/crouch_*/lane_*).
+    var embedded: AnimationPlayer = _find_animation_player(model_root)
+    if embedded == null:
+        using_external_animation = false
+        _apply_neutral_pose()
+        return
+    animation_player = embedded
+    # Só os ciclos entram em loop; poses de transição (jump_start/land, lane_*)
+    # tocam uma vez.
+    for anim_name in animation_player.get_animation_list():
+        var anim: Animation = animation_player.get_animation(anim_name)
+        if anim == null:
+            continue
+        var bare := anim_name
+        var slash := anim_name.rfind("/")
+        if slash >= 0:
+            bare = anim_name.substr(slash + 1)
+        anim.loop_mode = Animation.LOOP_LINEAR if V2_LOOP_CLIPS.has(bare) else Animation.LOOP_NONE
+    using_external_animation = _resolve_clip_name("Sprint_Loop") != "" or _resolve_clip_name("Idle_Loop") != ""
+    if using_external_animation:
+        _play_clip("Idle_Loop" if world_mode else "Sprint_Loop")
+    else:
+        _apply_neutral_pose()
+
+func _setup_v2_hair() -> void:
+    # Rabo de cavalo com física de mola (SpringBoneSimulator3D). O script se
+    # auto-configura em _ready/deferred varrendo o get_parent(): por isso ele
+    # entra como filho do model_root (que contém Skeleton3D e AnimationPlayer).
+    if skeleton == null or model_root == null:
+        return
+    if skeleton.find_bone("hair.01") < 0:
+        return # modelo sem os ossos do cabelo: sem física, sem erro
+    var hair := Node.new()
+    hair.name = "CabeloFisico"
+    hair.set_script(CABELO_FISICO_SCRIPT)
+    model_root.add_child(hair)
+
 func _resolve_clip_name(clip: String) -> String:
     if animation_player == null:
         return ""
+    # Boneco v2: traduz o nome semântico do controlador para o clipe do rig v2.
+    if _is_v2 and V2_CLIP_ALIASES.has(clip):
+        var aliased: String = str(V2_CLIP_ALIASES[clip])
+        if animation_player.has_animation(aliased):
+            return aliased
+        if animation_player.has_animation("body/" + aliased):
+            return "body/" + aliased
+        for lib_name2 in animation_player.get_animation_library_list():
+            var prefixed2 := (lib_name2 + "/" + aliased) if lib_name2 != "" else aliased
+            if animation_player.has_animation(prefixed2):
+                return prefixed2
     if animation_player.has_animation(clip):
         return clip
     if animation_player.has_animation("body/" + clip):
@@ -1065,7 +1151,10 @@ func _play_clip(clip: String) -> void:
     var animation_name := _resolve_clip_name(clip)
     if animation_name == "":
         return
-    if current_clip == clip:
+    # Também re-dispara quando o clipe pedido é o mesmo mas a reprodução parou
+    # (ex.: o cabelo_fisico do v2 troca as AnimationLibraries em runtime e o
+    # Godot interrompe o clipe atual). Sem isso o boneco congelaria.
+    if current_clip == clip and animation_player.is_playing() and animation_player.current_animation == animation_name:
         return
     current_clip = clip
     animation_player.play(animation_name, 0.12)

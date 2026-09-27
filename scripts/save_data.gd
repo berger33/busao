@@ -5,6 +5,7 @@ extends Node
 
 const BALANCE = preload("res://resources/game_balance.tres")
 const SHOP_DATA = preload("res://scripts/shop_data.gd")
+const CHARACTER_DATA = preload("res://scripts/character_data.gd")
 const SAVE_PATH := "user://corre_pro_ponto.json"
 const BACKUP_PATH := "user://corre_pro_ponto.bak.json"
 const TEMP_PATH := "user://corre_pro_ponto.tmp.json"
@@ -700,6 +701,10 @@ func owns_pet(id: String) -> bool:
 func equip_character(character: String) -> void:
     var aliases: Dictionary = {"chefe": "carlos", "caramelo": "julia", "nina": "influencer"}
     var canonical := str(aliases.get(character, character))
+    # Só o personagem ativo (boneco v2) pode ser equipado enquanto os demais
+    # estiverem indisponíveis.
+    if not CHARACTER_DATA.is_available(canonical):
+        return
     if owns(canonical):
         data["equipped_character"] = canonical
         flush()

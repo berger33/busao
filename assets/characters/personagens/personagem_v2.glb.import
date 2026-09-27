@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://cejodni5biere"
-path="res://.godot/imported/ze.glb-57e50c7dbca7a16bf13db4231435c957.scn"
+uid="uid://ka2noy8lrtxk"
+path="res://.godot/imported/personagem_v2.glb-0a1b2c3d4e5f60718293a4b5c6d7e8f9.scn"
 
 [deps]
 
-source_file="res://assets/characters/personagens/ze.glb"
-dest_files=["res://.godot/imported/ze.glb-57e50c7dbca7a16bf13db4231435c957.scn"]
+source_file="res://assets/characters/personagens/personagem_v2.glb"
+dest_files=["res://.godot/imported/personagem_v2.glb-0a1b2c3d4e5f60718293a4b5c6d7e8f9.scn"]
 
 [params]
 

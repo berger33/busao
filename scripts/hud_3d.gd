@@ -521,18 +521,30 @@ func _character_card(rect: Rect2, character: Dictionary) -> void:
     var accent: Color = character.get("accent", BLUE)
     var owned: bool = bool(character.get("owned", false))
     var equipped: bool = bool(character.get("equipped", false))
+    var available: bool = bool(character.get("available", true))
     var selected := equipped
-    _panel(rect, Color("#315879") if selected else (Color("#254161") if owned else Color("#182b47")), 15)
+    # Personagens indisponíveis (só há 1 jogável por enquanto) ficam apagados,
+    # sem botão de compra ativo.
+    var panel_color: Color = Color("#315879") if selected else (Color("#254161") if owned else Color("#182b47"))
+    if not available:
+        panel_color = Color("#141f30")
+    _panel(rect, panel_color, 15)
     if selected:
         draw_style_box(_make_outline(accent, 2.0), rect)
-    draw_circle(rect.position + Vector2(42, 43), 25, Color(accent, 0.24))
-    _text_center(rect.position + Vector2(42, 51), str(character.get("gender", "")), 17, accent)
-    _text(rect.position + Vector2(78, 30), str(character.get("name", "Corredor")), 16, WHITE)
-    _text(rect.position + Vector2(78, 53), str(character.get("role", "brasileiro")), 12, accent)
+    var dim: Color = MUTED if not available else accent
+    draw_circle(rect.position + Vector2(42, 43), 25, Color(dim, 0.18 if not available else 0.24))
+    _text_center(rect.position + Vector2(42, 51), str(character.get("gender", "")), 17, dim)
+    _text(rect.position + Vector2(78, 30), str(character.get("name", "Corredor")), 16, WHITE if available else MUTED)
+    _text(rect.position + Vector2(78, 53), str(character.get("role", "brasileiro")), 12, dim)
     _text(rect.position + Vector2(16, 91), str(character.get("description", "")), 11, MUTED)
-    _text(rect.position + Vector2(16, 111), "efeito: " + str(character.get("effect", "equilíbrio")), 10, CYAN)
+    _text(rect.position + Vector2(16, 111), "efeito: " + str(character.get("effect", "equilíbrio")), 10, CYAN if available else Color("#5b6d82"))
     var price: int = int(character.get("price", 0))
     var unlocked: bool = bool(character.get("unlocked", true))
+    if not available:
+        # Botão desativado: sem compra e sem seleção enquanto não houver asset.
+        _button(Rect2(rect.end.x - 112, rect.position.y + 78, 96, 34), "INDISPONÍVEL", Color("#3a4a60"), 9)
+        _text(rect.position + Vector2(rect.size.x - 110, 70), "EM BREVE", 9, Color("#6c7f96"))
+        return
     var action: String = "EQUIPADO" if equipped else ("USAR" if owned else ("BLOQUEADO" if not unlocked else "R$ %d" % price))
     var action_color: Color = GREEN if equipped else (BLUE if owned else (Color("#53647a") if not unlocked else accent))
     _button(Rect2(rect.end.x - 112, rect.position.y + 78, 96, 34), action, action_color, 11)
