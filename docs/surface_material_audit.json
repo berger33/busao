@@ -5,7 +5,7 @@
       {
         "file": "assets/textures/asfalto_realista.png",
         "exists": true,
-        "bytes": 846314,
+        "bytes": 2392186,
         "size": [
           1024,
           1024
@@ -14,7 +14,7 @@
       {
         "file": "assets/textures/asfalto_normal.png",
         "exists": true,
-        "bytes": 2956228,
+        "bytes": 2969082,
         "size": [
           1024,
           1024
@@ -23,7 +23,7 @@
       {
         "file": "assets/textures/asfalto_roughness.png",
         "exists": true,
-        "bytes": 708464,
+        "bytes": 1095200,
         "size": [
           1024,
           1024
@@ -39,7 +39,7 @@
       {
         "file": "assets/textures/calcada_realista.png",
         "exists": true,
-        "bytes": 402235,
+        "bytes": 2514210,
         "size": [
           1024,
           1024
@@ -48,7 +48,7 @@
       {
         "file": "assets/textures/calcada_normal.png",
         "exists": true,
-        "bytes": 2162623,
+        "bytes": 3027867,
         "size": [
           1024,
           1024
@@ -57,7 +57,7 @@
       {
         "file": "assets/textures/calcada_roughness.png",
         "exists": true,
-        "bytes": 362288,
+        "bytes": 1152836,
         "size": [
           1024,
           1024

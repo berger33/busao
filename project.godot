@@ -50,6 +50,13 @@ lights_and_shadows/directional_shadow/size=2048
 lights_and_shadows/directional_shadow/bias=0.035
 environment/defaults/default_clear_color=Color(0.72, 0.78, 0.85, 1)
 textures/default_filters/use_nearest_mipmap_filter=false
+; Sem filtro anisotropico o asfalto/calcada perdem nitidez no angulo rasante
+; e voltam a cintilar mesmo com mipmap. 4x e o melhor custo/beneficio movel.
+textures/default_filters/anisotropic_filtering_level=2
+; Os mipmaps agora existem (todas as texturas foram reimportadas com
+; mipmaps/generate=true); o bias levemente negativo devolve o micro detalhe
+; do granulado sem trazer o aliasing de volta.
+textures/default_filters/texture_mipmap_bias=-0.35
 textures/canvas_textures/default_texture_filter=2
 textures/canvas_textures/default_texture_repeat=0
 
