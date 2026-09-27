@@ -13,7 +13,7 @@ const SAVE_SCHEMA_VERSION := 4
 # aparelho + sal do app. Dificulta edicao casual do JSON (nao e DRM: sem
 # servidor nao ha segredo real — ver docs/PLUGINS_NATIVOS.md M7).
 const SAVE_HMAC_SALT := "corre-pro-ponto.v4.hmac" 
-const CLOUD_SNAPSHOT_KEYS: Array = ["schema_version","coins","hard_currency","remove_ads","phase_stars","best_times","achievements","inventory","owned_items","pet_skins","equipped_character","xp","daily_streak","max_streak","daily_chest_date","daily_chest_rewarded_date","daily_chest_streak","metrics","endless_best","endless_unlocked"]
+const CLOUD_SNAPSHOT_KEYS: Array = ["schema_version","coins","hard_currency","remove_ads","phase_stars","best_times","achievements","inventory","owned_items","pet_skins","equipped_character","xp","daily_streak","max_streak","daily_chest_date","daily_chest_rewarded_date","daily_chest_streak","gate_passes","metrics","endless_best","endless_unlocked"]
 # Retenção D0–D30: conquistas e badges pagam moedas ao desbloquear (fonte
 # única de nomes/recompensas — game_3d.gd monta o catálogo daqui).
 const ACHIEVEMENT_META: Dictionary = {
@@ -98,6 +98,7 @@ func _set_defaults() -> void:
         "weekly_key": "",
         "weekly_progress": {"meters": 0, "coins": 0, "clean_runs": 0, "runs": 0},
         "weekly_claimed": false,
+        "gate_passes": [],
         "dog_hits": 0,
         "point_idle_seconds": 0.0,
         "endless_unlocked": false,
@@ -257,6 +258,13 @@ func _sanitize_data() -> void:
     data["daily_chest_date"] = str(data.get("daily_chest_date", ""))
     data["daily_chest_rewarded_date"] = str(data.get("daily_chest_rewarded_date", ""))
     data["daily_chest_streak"] = maxi(0, int(data.get("daily_chest_streak", 0)))
+    var normalized_gate_passes: Array = []
+    if data.get("gate_passes", []) is Array:
+        for raw_gate in data.get("gate_passes", []):
+            var gate_index := int(raw_gate)
+            if gate_index >= 0 and gate_index < int(BALANCE.phase_count) and gate_index not in normalized_gate_passes:
+                normalized_gate_passes.append(gate_index)
+    data["gate_passes"] = normalized_gate_passes
     data["remove_ads"] = bool(data.get("remove_ads", false))
     data["ads_consent_granted"] = bool(data.get("ads_consent_granted", false))
     data["analytics_enabled"] = bool(data.get("analytics_enabled", true))
@@ -383,7 +391,7 @@ func _sanitize_data() -> void:
     data["daily_completed"] = normalized_daily_completed
     if not (data.get("metrics", {}) is Dictionary):
         data["metrics"] = {}
-    for key in ["sessions", "phase_attempts", "phase_completions", "phase_failures", "endless_completions", "endless_failures", "first_clears", "daily_claims", "shop_purchases", "coins_earned", "coins_spent", "distance_total", "hard_earned", "hard_spent", "sink_rerolls", "sink_skins", "chest_claims", "weekly_claims", "rewarded_daily_claims"]:
+    for key in ["sessions", "phase_attempts", "phase_completions", "phase_failures", "endless_completions", "endless_failures", "first_clears", "daily_claims", "shop_purchases", "coins_earned", "coins_spent", "distance_total", "hard_earned", "hard_spent", "sink_rerolls", "sink_skins", "chest_claims", "weekly_claims", "rewarded_daily_claims", "rewarded_gate_passes"]:
         data["metrics"][key] = maxi(0, int(data["metrics"].get(key, 0)))
     data["metrics"]["phase_time_total"] = maxf(0.0, float(data["metrics"].get("phase_time_total", 0.0)))
     data["metrics"]["longest_run_seconds"] = maxf(0.0, float(data["metrics"].get("longest_run_seconds", 0.0)))
@@ -485,13 +493,39 @@ func phase_stars(index: int) -> int:
         return 0
     return int(data["phase_stars"][index])
 
+func has_gate_pass(index: int) -> bool:
+    return int(index) in (data.get("gate_passes", []) as Array)
+
+func can_use_gate_pass_offer(index: int) -> bool:
+    # Alternativa anti-frustração para o primeiro star gate: o jogador precisa
+    # ter chegado ao marco anterior; o rewarded só substitui grind de estrelas,
+    # não pula progressão de campanha.
+    if index != int(BALANCE.chapter_unlock_phase):
+        return false
+    if has_gate_pass(index):
+        return false
+    if phase_stars(int(BALANCE.chapter_unlock_phase) - 1) < 1:
+        return false
+    return total_stars() < int(BALANCE.unlock_chapter_stars)
+
+func grant_gate_pass(index: int) -> bool:
+    if has_gate_pass(index):
+        return true
+    if not can_use_gate_pass_offer(index):
+        return false
+    (data["gate_passes"] as Array).append(int(index))
+    data["metrics"]["rewarded_gate_passes"] = int(data["metrics"].get("rewarded_gate_passes", 0)) + 1
+    record_event("rewarded_gate_pass")
+    flush()
+    return true
+
 func is_phase_unlocked(index: int) -> bool:
     if index <= 0:
         return true
     if index >= int(BALANCE.phase_count):
         return false
     if index == BALANCE.chapter_unlock_phase:
-        return total_stars() >= BALANCE.unlock_chapter_stars and phase_stars(BALANCE.chapter_unlock_phase - 1) >= 1
+        return (has_gate_pass(index) or total_stars() >= BALANCE.unlock_chapter_stars) and phase_stars(BALANCE.chapter_unlock_phase - 1) >= 1
     if index == BALANCE.endless_unlock_phase:
         return total_stars() >= BALANCE.unlock_endless_stars and phase_stars(BALANCE.endless_unlock_phase - 1) >= 1
     return phase_stars(index - 1) >= 1
@@ -635,6 +669,12 @@ func apply_cloud_snapshot(snap: Dictionary) -> bool:
             var s := str(id)
             if s != "" and s not in (data[k] as Array):
                 (data[k] as Array).append(s)
+    # Gate passes: union por índice de fase, preserva passe obtido via rewarded.
+    if snap.has("gate_passes") and snap["gate_passes"] is Array:
+        for raw_gate in (snap["gate_passes"] as Array):
+            var gate_index := int(raw_gate)
+            if gate_index >= 0 and gate_index < int(BALANCE.phase_count) and gate_index not in (data["gate_passes"] as Array):
+                (data["gate_passes"] as Array).append(gate_index)
     # Equipped: só se inventory contém
     if snap.has("equipped_character") and str(snap["equipped_character"]) in (data["inventory"] as Array):
         data["equipped_character"] = str(snap["equipped_character"])

@@ -231,6 +231,7 @@ var _revive_pending: bool = false
 var _tutorial_arrow: Node3D = null
 var _double_used: bool = false
 var _rewarded_pending_placement: String = ""
+var _gate_pass_pending_phase: int = -1
 var tutorial_hint := ""
 var tutorial_stage := -1
 var tutorial_actions_done: Dictionary = {"lane": false, "jump": false, "slide": false, "dash": false}
@@ -602,7 +603,10 @@ func _rebuild_player_visual(character_id: String) -> void:
 func _start_run(index: int) -> void:
     var clamped_index: int = clampi(index, 0, BALANCE.phase_count - 1)
     if not GameSave.is_phase_unlocked(clamped_index):
-        _show_feedback("TELA BLOQUEADA", "Junte estrelas para liberar", RED, "ui_back")
+        if GameSave.can_use_gate_pass_offer(clamped_index):
+            _request_gate_pass_rewarded(clamped_index)
+        else:
+            _show_feedback("TELA BLOQUEADA", "Junte estrelas para liberar", RED, "ui_back")
         return
     selected_phase = clamped_index
     phase_index = clamped_index
@@ -734,6 +738,7 @@ func _start_run(index: int) -> void:
     _revive_used = false
     _double_used = false
     _rewarded_pending_placement = ""
+    _gate_pass_pending_phase = -1
     _update_banner_visibility()
     tutorial_hint = ""
     AudioManager.play_music(int(phase["music_group"]))
@@ -4563,6 +4568,11 @@ func _texture_scale(surface: String) -> Vector3:
         _:
             return Vector3(2.5, 2.5, 2.5)
 
+func _gate_pass_offer_phase() -> int:
+    if GameSave.can_use_gate_pass_offer(int(BALANCE.chapter_unlock_phase)):
+        return int(BALANCE.chapter_unlock_phase)
+    return -1
+
 func _sync_hud() -> void:
     if hud == null:
         return
@@ -4582,7 +4592,8 @@ func _sync_hud() -> void:
                 "accent": phase_data["accent"],
                 "difficulty": int(phase_data["difficulty"]),
                 "stars": GameSave.phase_stars(absolute_index),
-                "unlocked": GameSave.is_phase_unlocked(absolute_index)
+                "unlocked": GameSave.is_phase_unlocked(absolute_index),
+                "gate_pass_offer": GameSave.can_use_gate_pass_offer(absolute_index)
             })
     var characters: Array[Dictionary] = []
     var equipped_character: String = CHARACTER_DATA.canonical_id(GameSave.equipped_character())
@@ -4673,6 +4684,7 @@ func _sync_hud() -> void:
         "weekly_key": week_key,
         "weekly_target": BALANCE.weekly_distance_target,
         "next_unlock_stars": next_unlock_stars,
+        "gate_pass_offer_phase": _gate_pass_offer_phase(),
         "achievement_catalog": achievement_catalog,
         "items": items,
         "feedback_title": feedback_title,
@@ -5535,6 +5547,41 @@ func _on_ads_interstitial_closed() -> void:
     _show_feedback("VOLTAMOS!", "Próxima corrida liberada", CYAN, "ui_confirm")
     _sync_hud()
 
+func _request_gate_pass_rewarded(phase_to_unlock: int) -> void:
+    if not GameSave.can_use_gate_pass_offer(phase_to_unlock):
+        _show_feedback("TELA BLOQUEADA", "Complete a fase anterior ou junte estrelas", RED, "ui_back")
+        return
+    var ads := get_node_or_null("/root/AdsManager")
+    if ads == null or not ads.has_method("is_rewarded_ready") or not ads.has_method("show_rewarded"):
+        _show_feedback("PASSE INDISPONÍVEL", "Rewarded não inicializado", RED, "ui_back")
+        return
+    if not bool(ads.call("is_rewarded_ready")):
+        _show_feedback("CARREGANDO PASSE", "Tente em segundos", MUTED, "ui_back")
+        return
+    _gate_pass_pending_phase = phase_to_unlock
+    _rewarded_pending_placement = "rewarded_gate_pass"
+    var ok: bool = bool(ads.call("show_rewarded", "rewarded_gate_pass"))
+    if ok:
+        _show_feedback("PASSE DO BUSÃO", "Assista para liberar a Tela %02d" % (phase_to_unlock + 1), CYAN, "ui_confirm")
+    else:
+        _gate_pass_pending_phase = -1
+        _rewarded_pending_placement = ""
+        _show_feedback("ANÚNCIO INDISPONÍVEL", "Tente novamente", RED, "ui_back")
+
+func _do_gate_pass_from_ad() -> void:
+    var target: int = _gate_pass_pending_phase
+    _gate_pass_pending_phase = -1
+    if target < 0:
+        target = int(BALANCE.chapter_unlock_phase)
+    if not GameSave.grant_gate_pass(target):
+        _show_feedback("PASSE NÃO APLICADO", "A fase já abriu ou falta concluir a anterior", MUTED, "ui_back")
+        return
+    GameSave.record_ad_counter("rewarded")
+    _sync_hud()
+    _start_run(target)
+    _show_feedback("PASSE LIBERADO!", "Tela %02d aberta sem grind extra" % (target + 1), GREEN, "reward")
+    Haptics.milestone()
+
 func _request_daily_chest_rewarded_bonus() -> void:
     var economy := get_node_or_null("/root/EconomyManager")
     if economy == null or not economy.has_method("can_claim_daily_chest_rewarded"):
@@ -5574,6 +5621,7 @@ func _do_daily_chest_bonus_from_ad() -> void:
 func _on_ads_rewarded_failed(reason: String) -> void:
     _show_feedback("ANÚNCIO INDISPONÍVEL", reason, RED, "ui_back")
     _rewarded_pending_placement = ""
+    _gate_pass_pending_phase = -1
     # Lote 16: se revive pendente, mantém tela para DESISTIR
     if _revive_pending and _revive_screen != null and _revive_screen.visible:
         if has_node("/root/AnalyticsManager"):
@@ -5589,12 +5637,15 @@ func _on_ads_rewarded_completed(placement: String) -> void:
     var is_revive: bool = placement == "rewarded_revive" or (ads != null and placement == ads.PLACEMENT_REWARDED_REVIVE)
     var is_double: bool = placement == "rewarded_double" or (ads != null and placement == ads.PLACEMENT_REWARDED_DOUBLE)
     var is_daily_chest: bool = placement == "rewarded_daily_chest" or (ads != null and placement == ads.PLACEMENT_REWARDED_DAILY_CHEST)
+    var is_gate_pass: bool = placement == "rewarded_gate_pass" or (ads != null and placement == ads.PLACEMENT_REWARDED_GATE_PASS)
     if is_revive:
         _do_revive_from_ad()
     elif is_double:
         _do_double_reward_from_ad()
     elif is_daily_chest:
         _do_daily_chest_bonus_from_ad()
+    elif is_gate_pass:
+        _do_gate_pass_from_ad()
     else:
         # fallback: decide pelo contexto atual
         if not bool(result.get("success", false)) and not _revive_used:

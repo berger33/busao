@@ -182,7 +182,11 @@ func _draw_map() -> void:
         _text(Vector2(442, 135), _we_desc, 9, MUTED)
     var next_unlock: int = int(state.get("next_unlock_stars", 0))
     if next_unlock > 0:
-        _text(Vector2(430, 126), "próximo marco: ★ %d" % next_unlock, 14, GOLD)
+        var gate_offer_phase: int = int(state.get("gate_pass_offer_phase", -1))
+        var unlock_line := "próximo marco: ★ %d" % next_unlock
+        if gate_offer_phase >= 0:
+            unlock_line = "★ %d ou ▶ passe do busão" % next_unlock
+        _text(Vector2(430, 126), unlock_line, 14, GOLD)
     else:
         _text(Vector2(430, 126), "todos os marcos liberados", 14, GREEN)
     var cards: Array = state.get("cards", [])
@@ -192,19 +196,20 @@ func _draw_map() -> void:
         var row: int = int(float(local_index) / 2.0)
         var rect := Rect2(25.0 + col * 340.0, 160.0 + row * 170.0, 330.0, 140.0)
         var unlocked: bool = bool(card.get("unlocked", false))
+        var gate_pass_offer: bool = bool(card.get("gate_pass_offer", false))
         var accent: Color = card.get("accent", BLUE)
-        _panel(rect, Color("#1d3658") if unlocked else Color("#111d34"), 16)
-        if unlocked:
-            draw_rect(Rect2(rect.position, Vector2(5, rect.size.y)), accent)
-        _panel(Rect2(rect.position + Vector2(10, 12), Vector2(52, 52)), accent if unlocked else Color("#303d53"), 13)
-        _text_center(rect.position + Vector2(36, 47), "%02d" % (int(card.get("index", 0)) + 1) if unlocked else "LOCK", 13, INK if unlocked else MUTED)
+        _panel(rect, Color("#1d3658") if unlocked else (Color("#2f2948") if gate_pass_offer else Color("#111d34")), 16)
+        if unlocked or gate_pass_offer:
+            draw_rect(Rect2(rect.position, Vector2(5, rect.size.y)), accent if unlocked else CYAN)
+        _panel(Rect2(rect.position + Vector2(10, 12), Vector2(52, 52)), accent if unlocked else (CYAN if gate_pass_offer else Color("#303d53")), 13)
+        _text_center(rect.position + Vector2(36, 47), "%02d" % (int(card.get("index", 0)) + 1) if unlocked else ("PASSE" if gate_pass_offer else "LOCK"), 11 if gate_pass_offer else 13, INK if unlocked or gate_pass_offer else MUTED)
         _text(rect.position + Vector2(76, 34), str(card.get("name", "Tela")), 18, WHITE if unlocked else MUTED)
         _text(rect.position + Vector2(76, 61), str(card.get("location", "Brasil")), 13, Color("#90a6bb"))
         _text(rect.position + Vector2(76, 80), str(card.get("scenario", "Brasil")), 11, accent)
         var stars: int = int(card.get("stars", 0))
         _text(rect.position + Vector2(18, 101), "★".repeat(stars) + "☆".repeat(3 - stars), 18, YELLOW)
         _text(rect.position + Vector2(172, 101), "DIF " + "★".repeat(int(card.get("difficulty", 1))), 13, accent)
-        _text(rect.position + Vector2(18, 125), "RUA + CALÇADAS", 12, MUTED)
+        _text(rect.position + Vector2(18, 125), "▶ PASSE COM ANÚNCIO" if gate_pass_offer else "RUA + CALÇADAS", 12, CYAN if gate_pass_offer else MUTED)
     _button(Rect2(25, 1080, 155, 72), "MENU", Color("#293955"), 18)
     _button(Rect2(190, 1080, 155, 72), "‹ ANTERIOR" if int(state.get("map_page", 0)) > 0 else "•", Color("#293955"), 16)
     _button(Rect2(355, 1080, 155, 72), "PRÓXIMO ›" if int(state.get("map_page", 0)) < 4 else "•", Color("#293955"), 16)
