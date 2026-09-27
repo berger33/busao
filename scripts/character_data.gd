@@ -329,11 +329,22 @@ const CATALOG: Array[Dictionary] = [
     }
 ]
 
+## Único corredor jogável por enquanto: a heroína (boneco v2). Os demais
+## personagens continuam listados na loja, mas indisponíveis para compra/uso
+## até ganharem asset próprio de novo.
+const ACTIVE_IDS: Array[String] = ["julia"]
+
 static func all() -> Array[Dictionary]:
     var output: Array[Dictionary] = []
     for item in CATALOG:
-        output.append(item.duplicate(true))
+        var entry: Dictionary = item.duplicate(true)
+        entry["available"] = is_available(str(entry.get("id", "")))
+        output.append(entry)
     return output
+
+## Verdadeiro só para os personagens que podem ser equipados/comprados agora.
+static func is_available(id: String) -> bool:
+    return canonical_id(id) in ACTIVE_IDS
 
 static func canonical_id(id: String) -> String:
     var aliases: Dictionary = {

@@ -311,7 +311,9 @@ def check_character_assets() -> None:
     # Lote 28 — 20 personagens dedicados Draco (<300KB cada, 4.03 MB total)
     p_root = ROOT / "assets/characters/personagens"
     if p_root.is_dir():
-        required_p = ["PROVENANCE.md"] + [f"{pid}.glb" for pid in ("ze","motoboy","luan","joao","carlos","maria","bia","camila","julia","influencer","chico","tiao","beto","nilo","professor","marta","zilda","clara","deise","cida")]
+        # Elenco reduzido a 1 personagem jogavel (boneco v2). Os demais ids do
+        # catalogo continuam listados na loja como INDISPONIVEL, sem GLB proprio.
+        required_p = ["PROVENANCE.md", "personagem_v2.glb"]
         for rel in required_p:
             if not (p_root / rel).is_file():
                 fail(f"missing personagens asset: assets/characters/personagens/{rel}")
@@ -321,10 +323,10 @@ def check_character_assets() -> None:
             fail(f"cannot read personagens SHA-256 manifest: {exc}")
         for glb in sorted(p_root.glob("*.glb")):
             sz = glb.stat().st_size
-            # Excecao documentada: julia.glb (mascote, build Fase 1 via
-            # build_corredora_fase1.py) ficou 19 KB acima do teto Draco de
-            # 500 KB; teto proprio de 550 KB ate o rebuild unificado.
-            budget = 550 * 1024 if glb.name == "julia.glb" else 500 * 1024
+            # Excecao documentada: personagem_v2.glb (boneco v2, unico corredor
+            # jogavel) tem malha rigged + 15 clipes + texturas 512; teto proprio
+            # de 2 MB por ser um unico hero, nao 20 personagens de calcada.
+            budget = 2 * 1024 * 1024 if glb.name == "personagem_v2.glb" else 500 * 1024
             if sz > budget:
                 fail(f"personagens GLB acima do orcamento ({budget//1024}KB): {glb.name} {sz}")
             try:

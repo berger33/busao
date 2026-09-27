@@ -4918,6 +4918,9 @@ func _shop_tap(pos: Vector2) -> void:
             if rect.has_point(local_pos):
                 var id: String = str(chars[i].get("id", "ze"))
                 var price: int = int(chars[i].get("price", 0))
+                if not CHARACTER_DATA.is_available(id):
+                    _show_feedback("EM BREVE", "Personagem indisponível", MUTED, "ui_back")
+                    return
                 if GameSave.owns(id):
                     GameSave.equip_character(id)
                     _rebuild_player_visual(id)
