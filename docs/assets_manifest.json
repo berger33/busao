@@ -120,6 +120,16 @@
       "status": "ok"
     },
     {
+      "path": "assets/characters/corre_pro_ponto/personagem_runner.glb",
+      "bytes": 1815112,
+      "meshes": 3,
+      "vertices": 10813,
+      "triangles": 18688,
+      "materials": 3,
+      "has_lod": false,
+      "status": "ok"
+    },
+    {
       "path": "assets/characters/humanos_originais/Humano_F.glb",
       "bytes": 359544,
       "meshes": 1,
@@ -218,16 +228,6 @@
       "materials": 7,
       "has_lod": false,
       "status": "ok"
-    },
-    {
-      "path": "assets/characters/personagens/hero_julia.glb",
-      "bytes": 62316,
-      "meshes": 23,
-      "vertices": 3804,
-      "triangles": 7504,
-      "materials": 23,
-      "has_lod": false,
-      "status": "review"
     },
     {
       "path": "assets/characters/personagens/influencer.glb",
@@ -901,7 +901,7 @@
     }
   ],
   "summary": {
-    "review_count": 21,
+    "review_count": 20,
     "lod_named_count": 0
   },
   "next_step": "Otimizar assets review e criar LODs reais para personagens e veículos"

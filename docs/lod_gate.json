@@ -3,8 +3,8 @@
   "status": "blocked",
   "priority_assets": 35,
   "missing_lod": [
+    "assets/characters/corre_pro_ponto/personagem_runner.glb",
     "assets/characters/personagens/julia.glb",
-    "assets/characters/personagens/hero_julia.glb",
     "assets/characters/personagens/motoboy.glb",
     "assets/characters/personagens/carlos.glb",
     "assets/characters/personagens/bia.glb",

@@ -7,7 +7,7 @@ manifest=json.loads((ROOT/'docs/assets_manifest.json').read_text())
 
 def priority(path):
     p=path.lower()
-    if 'hero_julia' in p or '/personagens/' in p: return 'P0_HERO'
+    if 'hero_julia' in p or 'corre_pro_ponto/personagem_runner.glb' in p or '/personagens/' in p: return 'P0_HERO'
     if 'bus' in p or 'vehicle' in p or 'car' in p or 'moto' in p: return 'P1_VEHICLES'
     if 'building' in p or 'predio' in p or 'facade' in p: return 'P2_ARCHITECTURE'
     if 'tree' in p or 'arvore' in p or 'veget' in p: return 'P3_VEGETATION'
