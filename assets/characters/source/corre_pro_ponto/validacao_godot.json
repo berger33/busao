@@ -1,0 +1,43 @@
+{
+  "android_tested": false,
+  "animations": [
+    "crouch_enter",
+    "crouch_exit",
+    "crouch_loop",
+    "crouch_run_loop",
+    "idle",
+    "jump_air",
+    "jump_fall",
+    "jump_full_motion",
+    "jump_land",
+    "jump_start",
+    "lane_left",
+    "lane_left_motion",
+    "lane_right",
+    "lane_right_motion",
+    "run_loop"
+  ],
+  "body_colliders": 3,
+  "bones": 25,
+  "engine": "4.7.2-stable (official)",
+  "errors": [],
+  "hair_rotation_component_change": 0.391114830970764,
+  "passed": true,
+  "physics_samples": 528,
+  "played_clips": [
+    "run_loop",
+    "jump_start",
+    "jump_air",
+    "jump_fall",
+    "jump_land",
+    "crouch_enter",
+    "crouch_loop",
+    "crouch_run_loop",
+    "crouch_exit",
+    "lane_left",
+    "lane_right"
+  ],
+  "project_integration_tested": false,
+  "removed_baked_hair_tracks": 45,
+  "tested_glb_sha256": "4b24b0ba432d612b93284af50e70b6a4fff702e3d476e8996a3423e8e7d89430"
+}

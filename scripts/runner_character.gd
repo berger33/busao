@@ -47,6 +47,29 @@ const HERO_ASSET_PATH := PERSONAGENS_ROOT + "/hero_julia.glb"
 # re-bakeado dentro do teto de 500 KB dos personagens; enquanto nao volta para
 # PERSONAGENS_ROOT, exists() e falso e o corredor usa o modelo padrao.
 const GINGER_ASSET_PATH := PERSONAGENS_ROOT + "/ginger+woman.glb"
+# Lote 29 — personagem "Corre pro Ponto" revisão 2. Rig próprio (pelvis/spine/
+# hair.01..03) com AnimationPlayer embutido e 15 clipes, incluindo troca de
+# pista correndo (lane_left/right), salto (jump_start/air/fall/land) e
+# agachamento (crouch_enter/loop/run_loop/exit). A cena runtime carrega também o
+# cabelo em tempo real (SpringBoneSimulator3D via cabelo_fisico.gd).
+const CORRE_PRO_PONTO_SCENE := "res://assets/characters/corre_pro_ponto/personagem_corre_pro_ponto.tscn"
+## Ids de personagem que usam o runner "Corre pro Ponto" v2 como visual.
+## Vazio = nenhum personagem é sobreposto (comportamento anterior intacto).
+## Ex.: ["julia"] usa o runner v2 para a heroína padrão.
+const CORRE_PRO_PONTO_FOR_IDS: Array = []
+## Nomes semânticos do controlador -> clipes do rig Corre pro Ponto v2. Só é
+## consultado quando o clipe direto/da biblioteca não existe, ou seja, apenas
+## quando este rig está carregado; os demais rigs resolvem direto e ignoram.
+const CORRE_PRO_PONTO_CLIP_ALIASES: Dictionary = {
+    "Sprint_Loop": "run_loop",
+    "Walk_Loop": "run_loop",
+    "Idle_Loop": "idle",
+    "Jump_Loop": "jump_air",
+    "Crouch_Fwd_Loop": "crouch_run_loop",
+    "Crouch_Idle_Loop": "crouch_loop",
+    "Lane_Left": "lane_left",
+    "Lane_Right": "lane_right",
+}
 const MODEL_SCALE := 1.03  # 1.77*1.03=1.82 realista (era 1.18->2.09)
 # Camada de visibilidade 3 (1 << 2) das malhas do runner: alvo do rig de luz
 # de legibilidade (RunnerFill/RunnerRim) sem acender a rua duas vezes.
@@ -183,8 +206,12 @@ func set_character(next_id: String) -> void:
     _clear_character()
     _build_shadow()
     _build_light_rig()
+    # Lote 29: runner "Corre pro Ponto" v2 tem prioridade quando o id está
+    # listado em CORRE_PRO_PONTO_FOR_IDS (cena com rig próprio + cabelo em tempo
+    # real). Fora dessa lista, mantém o pipeline por personagem do Lote 28.
+    var corre_pro_ponto_override := character_id in CORRE_PRO_PONTO_FOR_IDS and ResourceLoader.exists(CORRE_PRO_PONTO_SCENE)
     # Lote 28: tenta GLB dedicado por personagem (assets/characters/personagens/<id>.glb) — bakeado Blender com paleta + props.
-    var personalized_path := HERO_ASSET_PATH if character_id == "julia" and ResourceLoader.exists(HERO_ASSET_PATH) else (GINGER_ASSET_PATH if character_id == "ginger" and ResourceLoader.exists(GINGER_ASSET_PATH) else PERSONAGENS_ROOT + "/" + character_id + ".glb")
+    var personalized_path := CORRE_PRO_PONTO_SCENE if corre_pro_ponto_override else (HERO_ASSET_PATH if character_id == "julia" and ResourceLoader.exists(HERO_ASSET_PATH) else (GINGER_ASSET_PATH if character_id == "ginger" and ResourceLoader.exists(GINGER_ASSET_PATH) else PERSONAGENS_ROOT + "/" + character_id + ".glb"))
     var is_personalized := false
     var body_scene: PackedScene = null
     var body_path: String = personalized_path
@@ -969,6 +996,19 @@ func _resolve_clip_name(clip: String) -> String:
         var prefixed := (lib_name + "/" + clip) if lib_name != "" else clip
         if animation_player.has_animation(prefixed):
             return prefixed
+    # Lote 29: nomes semânticos -> clipes do rig Corre pro Ponto v2 (run_loop,
+    # jump_air, crouch_loop...). Só chega aqui se o nome direto não existir, logo
+    # não afeta os rigs que já trazem Sprint_Loop/Jump_Loop/Crouch_*.
+    if CORRE_PRO_PONTO_CLIP_ALIASES.has(clip):
+        var alias: String = str(CORRE_PRO_PONTO_CLIP_ALIASES[clip])
+        if animation_player.has_animation(alias):
+            return alias
+        if animation_player.has_animation("body/" + alias):
+            return "body/" + alias
+        for lib_name2 in animation_player.get_animation_library_list():
+            var prefixed_alias := (lib_name2 + "/" + alias) if lib_name2 != "" else alias
+            if animation_player.has_animation(prefixed_alias):
+                return prefixed_alias
     return ""
 
 func _setup_animation_library() -> void:
