@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3 uid="uid://v432fk16mvpl"]
+
+[ext_resource type="PackedScene" path="res://assets/characters/corre_pro_ponto/personagem_runner.glb" id="1_model"]
+[ext_resource type="Script" path="res://assets/characters/corre_pro_ponto/cabelo_fisico.gd" id="2_hair"]
+
+[node name="PersonagemCorreProPonto" type="Node3D"]
+
+[node name="Visual" parent="." instance=ExtResource("1_model")]
+
+[node name="CabeloFisico" type="Node" parent="."]
+script = ExtResource("2_hair")

@@ -1,0 +1,87 @@
+{
+  "project": "Corre pro Ponto",
+  "target_godot": "4.7.2",
+  "run_speed_m_s": 2.058823529411765,
+  "lane_width_m": 0.65,
+  "lane_seconds": 0.8,
+  "gravity_m_s2": 9.81,
+  "hair_solver": "PBD 120 Hz: gravity, inertia, drag, body collision proxies",
+  "runtime_hair": "Godot SpringBoneSimulator3D; disable baked hair tracks",
+  "clips": {
+    "idle": {
+      "seconds": 2.0,
+      "loop": true,
+      "root_motion": "none"
+    },
+    "run_loop": {
+      "seconds": 0.8,
+      "loop": true,
+      "root_motion": "none"
+    },
+    "jump_start": {
+      "seconds": 0.2,
+      "loop": false,
+      "root_motion": "none"
+    },
+    "jump_air": {
+      "seconds": 0.6,
+      "loop": true,
+      "root_motion": "none"
+    },
+    "jump_fall": {
+      "seconds": 0.2,
+      "loop": false,
+      "root_motion": "none"
+    },
+    "jump_land": {
+      "seconds": 0.3,
+      "loop": false,
+      "root_motion": "none"
+    },
+    "jump_full_motion": {
+      "seconds": 1.2,
+      "loop": false,
+      "root_motion": "vertical_preview"
+    },
+    "crouch_enter": {
+      "seconds": 0.3,
+      "loop": false,
+      "root_motion": "none"
+    },
+    "crouch_loop": {
+      "seconds": 1.2,
+      "loop": true,
+      "root_motion": "none"
+    },
+    "crouch_run_loop": {
+      "seconds": 0.8,
+      "loop": true,
+      "root_motion": "none"
+    },
+    "crouch_exit": {
+      "seconds": 0.3,
+      "loop": false,
+      "root_motion": "none"
+    },
+    "lane_left": {
+      "seconds": 0.8,
+      "loop": false,
+      "root_motion": "none"
+    },
+    "lane_right": {
+      "seconds": 0.8,
+      "loop": false,
+      "root_motion": "none"
+    },
+    "lane_left_motion": {
+      "seconds": 0.8,
+      "loop": false,
+      "root_motion": "lateral_preview"
+    },
+    "lane_right_motion": {
+      "seconds": 0.8,
+      "loop": false,
+      "root_motion": "lateral_preview"
+    }
+  }
+}
