@@ -87,12 +87,21 @@ jobs:
               echo "FAIL $nome (exit $code)" | tee -a "$resumo"
               echo "---- últimas 25 linhas de $nome ----"
               tail -25 "/tmp/suite-logs/$nome.log"
+              # Anotação legível pela API (os logs/artefatos ficam em blob storage,
+              # que pode estar bloqueado em alguns ambientes): expõe o rabo do log
+              # de cada suíte que falhou como um ::error:: recuperável via
+              # /repos/OWNER/REPO/check-runs/ID/annotations.
+              enc=$(tail -40 "/tmp/suite-logs/$nome.log" | python3 -c 'import sys; print(sys.stdin.read().replace("%","%25").replace("\r","%0D").replace("\n","%0A"))')
+              echo "::error title=SUITE FAIL ${nome} (exit ${code})::${enc}"
             fi
           done
           echo
           echo "==== RESUMO ===="
           cat "$resumo"
           echo "suítes com falha: $falhas"
+          # Resumo PASS/FAIL também como anotação, para leitura via API.
+          enc_resumo=$(python3 -c 'import sys; print(open("'"$resumo"'").read().replace("%","%25").replace("\r","%0D").replace("\n","%0A"))')
+          echo "::error title=RESUMO SUITES (falhas=${falhas})::${enc_resumo}"
           if [ -n "${{ github.event.pull_request.number }}" ]; then
             {
               echo "### QA headless — suítes de etapa (Godot ${GODOT_VERSION:-?})"
