@@ -672,57 +672,6 @@
       "action": "create_lod_chain"
     },
     {
-      "path": "assets/characters/source/heroi_julia_bracos_maos_wip.glb",
-      "bytes": 1778212,
-      "meshes": 1,
-      "vertices": 23354,
-      "triangles": 39104,
-      "materials": 1,
-      "has_lod": false,
-      "status": "ok",
-      "priority": "P4_PROPS",
-      "lod_targets": {
-        "lod0": "100%",
-        "lod1": "55%",
-        "lod2": "22%"
-      },
-      "action": "create_lod_chain"
-    },
-    {
-      "path": "tools/blender/out/heroi_julia_base.glb",
-      "bytes": 706004,
-      "meshes": 1,
-      "vertices": 19594,
-      "triangles": 39104,
-      "materials": 1,
-      "has_lod": false,
-      "status": "ok",
-      "priority": "P4_PROPS",
-      "lod_targets": {
-        "lod0": "100%",
-        "lod1": "55%",
-        "lod2": "22%"
-      },
-      "action": "create_lod_chain"
-    },
-    {
-      "path": "tools/blender/out/heroi_julia_pbr.glb",
-      "bytes": 1778212,
-      "meshes": 1,
-      "vertices": 23354,
-      "triangles": 39104,
-      "materials": 1,
-      "has_lod": false,
-      "status": "ok",
-      "priority": "P4_PROPS",
-      "lod_targets": {
-        "lod0": "100%",
-        "lod1": "55%",
-        "lod2": "22%"
-      },
-      "action": "create_lod_chain"
-    },
-    {
       "path": "assets/characters/animais/pombo.glb",
       "bytes": 1871528,
       "meshes": 1,
