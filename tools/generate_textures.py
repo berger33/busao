@@ -1259,6 +1259,11 @@ def main() -> None:
     if PBR_SIZE != _old_SIZE:
         SIZE = _old_SIZE
         print(f"  [Lote22] SIZE restaurado para {SIZE}")
+    # Passo final: substitui as texturas de rua/calçada por uma versão mais
+    # realista (menos procedural/nublada), mantendo determinismo e os mesmos
+    # nomes de arquivo usados pelo runtime.
+    import runpy
+    runpy.run_path(str(ROOT / "tools" / "generate_street_textures.py"), run_name="__main__")
     print("OK: texturas regeneradas (inclui PBR pbr/ + height 16-bit Lote22).")
 
 

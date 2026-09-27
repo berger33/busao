@@ -140,56 +140,56 @@
       "uv_escala": 0.42,
       "triplanar": true,
       "cor": [
-        0.82,
-        0.80,
-        0.76
+        0.94,
+        0.92,
+        0.88
       ],
       "height_map": "calcada_laje_height.png",
-      "height_scale": 0.0,
-      "normal_scale": 0.20,
-      "triplanar_sharpness": 8.0
+      "height_scale": 0.004,
+      "normal_scale": 0.36,
+      "triplanar_sharpness": 4.0
     },
     "calcada_lateral": {
       "pbr": "calcada_mosaico",
       "uv_escala": 0.85,
       "triplanar": true,
       "cor": [
-        0.78,
-        0.76,
-        0.72
+        0.92,
+        0.9,
+        0.86
       ],
       "height_map": "calcada_mosaico_height.png",
-      "height_scale": 0.0,
-      "normal_scale": 0.20,
-      "triplanar_sharpness": 8.0
+      "height_scale": 0.004,
+      "normal_scale": 0.38,
+      "triplanar_sharpness": 4.0
     },
     "guia": {
       "pbr": "calcada_laje",
       "uv_escala": 1.4,
       "triplanar": true,
       "cor": [
-        0.75,
-        0.75,
-        0.74
+        0.88,
+        0.87,
+        0.84
       ],
       "height_map": "calcada_laje_height.png",
-      "height_scale": 0.0,
-      "normal_scale": 0.20,
-      "triplanar_sharpness": 8.0
+      "height_scale": 0.003,
+      "normal_scale": 0.32,
+      "triplanar_sharpness": 4.0
     },
     "pista": {
       "pbr": "asfalto",
       "uv_escala": 0.08,
       "triplanar": true,
       "cor": [
-        0.24,
-        0.25,
-        0.27
+        0.74,
+        0.77,
+        0.8
       ],
       "height_map": "asfalto_height.png",
-      "height_scale": 0.0,
-      "normal_scale": 0.25,
-      "triplanar_sharpness": 8.0
+      "height_scale": 0.006,
+      "normal_scale": 0.48,
+      "triplanar_sharpness": 3.0
     },
     "linha_amarela": {
       "pbr": "metal_pintado",
@@ -427,7 +427,7 @@
       "sol_energia": 1.35,
       "energia_ambiente": 1.05,
       "nevoa_densidade": 0.003,
-      "exposicao": 0.50,
+      "exposicao": 0.5,
       "nuvens": 0.22
     },
     {
