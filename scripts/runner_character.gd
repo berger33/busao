@@ -43,6 +43,7 @@ const PERSONAGENS_ROOT := "res://assets/characters/personagens" # Lote 28: 20 GL
 # compartilhar a malha simplificada do elenco. O fallback mantém o jogo jogável
 # enquanto o GLB passa pela validação visual.
 const HERO_ASSET_PATH := PERSONAGENS_ROOT + "/hero_julia.glb"
+const RENATA_ASSET_PATH := PERSONAGENS_ROOT + "/renata.glb"
 # Ginger (WIP): o GLB rigged fica em res://assets/characters/source/ ate ser
 # re-bakeado dentro do teto de 500 KB dos personagens; enquanto nao volta para
 # PERSONAGENS_ROOT, exists() e falso e o corredor usa o modelo padrao.
@@ -184,7 +185,7 @@ func set_character(next_id: String) -> void:
     _build_shadow()
     _build_light_rig()
     # Lote 28: tenta GLB dedicado por personagem (assets/characters/personagens/<id>.glb) — bakeado Blender com paleta + props.
-    var personalized_path := HERO_ASSET_PATH if character_id == "julia" and ResourceLoader.exists(HERO_ASSET_PATH) else (GINGER_ASSET_PATH if character_id == "ginger" and ResourceLoader.exists(GINGER_ASSET_PATH) else PERSONAGENS_ROOT + "/" + character_id + ".glb")
+    var personalized_path := RENATA_ASSET_PATH if character_id == "renata" and ResourceLoader.exists(RENATA_ASSET_PATH) else (HERO_ASSET_PATH if character_id == "julia" and ResourceLoader.exists(HERO_ASSET_PATH) else (GINGER_ASSET_PATH if character_id == "ginger" and ResourceLoader.exists(GINGER_ASSET_PATH) else PERSONAGENS_ROOT + "/" + character_id + ".glb"))
     var is_personalized := false
     var body_scene: PackedScene = null
     var body_path: String = personalized_path
@@ -963,6 +964,12 @@ func _resolve_clip_name(clip: String) -> String:
         return ""
     if animation_player.has_animation(clip):
         return clip
+    # Renata's package uses concise Blender clip names. Keep the gameplay
+    # state machine semantic (Sprint/Idle) while accepting those clips.
+    var aliases: Dictionary = {"Sprint_Loop": "run_loop", "Walk_Loop": "run_loop", "Idle_Loop": "idle"}
+    var alias: String = str(aliases.get(clip, ""))
+    if alias != "" and animation_player.has_animation(alias):
+        return alias
     if animation_player.has_animation("body/" + clip):
         return "body/" + clip
     for lib_name in animation_player.get_animation_library_list():
