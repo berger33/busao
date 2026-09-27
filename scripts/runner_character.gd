@@ -159,6 +159,10 @@ var rig_gain_override := -1.0
 var _outline_material: StandardMaterial3D
 var _outline_shells := 0
 var _outline_reported := false
+## Lote 29: runner Corre pro Ponto v2 ativo. Quando verdadeiro, o corpo usa a cor
+## de vértice do GLB como albedo (sem whitewash de pele/paleta) e não recebe o
+## filete escuro (SilhouetteShell), que ficava feio sobre o modelo texturizado.
+var _is_corre_pro_ponto := false
 var current_clip := ""
 var world_mode := false
 var using_external_animation := false
@@ -212,6 +216,7 @@ func set_character(next_id: String) -> void:
     # listado em CORRE_PRO_PONTO_FOR_IDS (cena com rig próprio + cabelo em tempo
     # real). Fora dessa lista, mantém o pipeline por personagem do Lote 28.
     var corre_pro_ponto_override := character_id in CORRE_PRO_PONTO_FOR_IDS and ResourceLoader.exists(CORRE_PRO_PONTO_SCENE)
+    _is_corre_pro_ponto = corre_pro_ponto_override
     # Lote 28: tenta GLB dedicado por personagem (assets/characters/personagens/<id>.glb) — bakeado Blender com paleta + props.
     var personalized_path := CORRE_PRO_PONTO_SCENE if corre_pro_ponto_override else (HERO_ASSET_PATH if character_id == "julia" and ResourceLoader.exists(HERO_ASSET_PATH) else (GINGER_ASSET_PATH if character_id == "ginger" and ResourceLoader.exists(GINGER_ASSET_PATH) else PERSONAGENS_ROOT + "/" + character_id + ".glb"))
     var is_personalized := false
@@ -262,8 +267,14 @@ func set_character(next_id: String) -> void:
         return
     _cache_skeleton()
     if is_original:
-        _apply_skin_tint(profile.get("skin", Color.WHITE))
-        _apply_profile_palette(profile)
+        if _is_corre_pro_ponto:
+            # Corre pro Ponto v2 já traz materiais/texturas próprios: só liga a
+            # cor de vértice como albedo (senão o corpo fica branco) e evita o
+            # whitewash de pele/paleta feito para o rig humano antigo.
+            _apply_corre_pro_ponto_materials()
+        else:
+            _apply_skin_tint(profile.get("skin", Color.WHITE))
+            _apply_profile_palette(profile)
         # Lote 28: GLB dedicado já vem bakeado — evita duplicar props (duplo celular/mochila).
         if not is_personalized:
             _attach_creator_details(profile)
@@ -294,6 +305,7 @@ func _clear_character() -> void:
     current_clip = ""
     using_external_animation = false
     primary_asset_loaded = false
+    _is_corre_pro_ponto = false
     bone_indices.clear()
     rest_rotations.clear()
     mesh_parts.clear()
@@ -677,6 +689,30 @@ func _apply_profile_palette(profile: Dictionary) -> void:
                 material.clearcoat_roughness = 0.30
             mesh.set_surface_override_material(surface_index, material)
 
+## Runner Corre pro Ponto v2: o corpo é pintado pela cor de vértice (COLOR_0)
+## multiplicada por texturas de detalhe claras. Sem `vertex_color_use_as_albedo`
+## o modelo aparece todo branco. Duplicamos os materiais por instância, ligamos a
+## cor de vértice e preservamos a textura de detalhe original do GLB.
+func _apply_corre_pro_ponto_materials() -> void:
+    if model_root == null:
+        return
+    for node in model_root.find_children("*", "MeshInstance3D", true, false):
+        var mesh := node as MeshInstance3D
+        if mesh == null or mesh.mesh == null:
+            continue
+        for surface_index in mesh.mesh.get_surface_count():
+            var source_material := mesh.get_surface_override_material(surface_index)
+            if source_material == null:
+                source_material = mesh.mesh.surface_get_material(surface_index)
+            if not source_material is BaseMaterial3D:
+                continue
+            var material := (source_material as BaseMaterial3D).duplicate() as BaseMaterial3D
+            material.vertex_color_use_as_albedo = true
+            material.albedo_color = Color.WHITE
+            material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+            mesh.set_surface_override_material(surface_index, material)
+
+
 func _attach_creator_details(profile: Dictionary) -> void:
     if character_id != "influencer" or skeleton == null:
         return
@@ -983,7 +1019,9 @@ func _setup_original_animation() -> void:
             anim.loop_mode = Animation.LOOP_LINEAR
     using_external_animation = _resolve_clip_name("Sprint_Loop") != "" or _resolve_clip_name("Idle_Loop") != "" or _resolve_clip_name("Walk_Loop") != ""
     if using_external_animation:
-        _play_clip("Sprint_Loop" if not world_mode else "Walk_Loop")
+        # Começa parada (dois pés no chão). O jogo troca para corrida via
+        # set_motion assim que a personagem passa a avançar.
+        _play_clip("Idle_Loop" if not world_mode else "Walk_Loop")
     else:
         _apply_neutral_pose()
 
@@ -1176,7 +1214,9 @@ func set_motion(run_phase: float, is_running: bool, is_crouching: bool, jump_hei
     elif is_running:
         clip = "Sprint_Loop"
     else:
-        clip = "Sprint_Loop" if not world_mode else "Idle_Loop"
+        # Sem avançar (contagem regressiva, menu, resultado, carregamento): fica
+        # parada com os dois pés no chão em vez de correr no lugar.
+        clip = "Idle_Loop"
 
     if using_external_animation and _resolve_clip_name(clip) != "":
         _play_clip(clip)
@@ -1348,7 +1388,9 @@ func _apply_runner_light_layer() -> void:
         if mi == null or mi.name == "RunnerShadow" or str(mi.name).begins_with("SilhouetteShell"):
             continue
         mi.layers = RUNNER_VISIBILITY_LAYER
-        _attach_silhouette_shell(mi)
+        # O runner v2 já é texturizado; o filete escuro só serve ao rig antigo.
+        if not _is_corre_pro_ponto:
+            _attach_silhouette_shell(mi)
     if _outline_shells > 0 and not _outline_reported:
         _outline_reported = true
         print("SILHOUETTE cascos=", _outline_shells)
