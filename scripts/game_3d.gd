@@ -1655,6 +1655,10 @@ func _change_lane(direction: int) -> void:
     if old_lane != player_lane:
         lane_change_velocity = float(direction) * 1.0
         GameSave.record_event("lane_change")
+        # Aciona a passada lateral (andar pro lado correndo) no visual, se o rig
+        # tiver os clipes de troca de pista (runner v2).
+        if player_visual != null and player_visual.has_method("on_lane_change"):
+            player_visual.call("on_lane_change", direction)
         _show_feedback("FAIXA %s" % ["RUA", "CALÇADA", "CALÇADA"][player_lane], "Leitura perfeita", BLUE, "whoosh")
 
 func _jump() -> void:
