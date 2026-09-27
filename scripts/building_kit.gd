@@ -356,6 +356,32 @@ static func _rng(spec: Dictionary, indice: int) -> RandomNumberGenerator:
     return rng
 
 
+## Material de cor chapada (cacheado): para adereços do coroamento (caixa
+## d'água, ar-condicionado, grime) que não têm entrada no spec.
+static func _mat_cor(chave: String, cor: Color, rugosidade: float, metalico: float = 0.0) -> StandardMaterial3D:
+    var ck := "cor|%s" % chave
+    if _material_cache.has(ck):
+        return _material_cache[ck]
+    var m := StandardMaterial3D.new()
+    m.albedo_color = cor
+    m.roughness = rugosidade
+    m.metallic = metalico
+    _material_cache[ck] = m
+    return m
+
+
+## Degrau de qualidade atual (0 = melhor, 3 = mais leve), lido do autoload
+## RenderQuality de forma defensiva: adereços pesados (escada de incêndio,
+## grime) só entram nos degraus altos. Sem o autoload (ou headless), assume 0.
+static func _tier_atual() -> int:
+    var loop := Engine.get_main_loop()
+    if loop is SceneTree:
+        var rq: Node = (loop as SceneTree).root.get_node_or_null("RenderQuality")
+        if rq != null and rq.has_method("get_tier_index"):
+            return int(rq.get_tier_index())
+    return 0
+
+
 static func _x_guia_esq(faixas: Dictionary) -> float:
     return -float(faixas.get("piso_borda_esq_m", 1.35)) - float(faixas.get("guia_largura_m", 0.35))
 
@@ -387,6 +413,7 @@ static func build_chunk(spec: Dictionary, index: int, base_z: float = 0.0) -> No
     _build_piso(spec, raiz, comprimento, visibilidade)
     _build_pistas(spec, raiz, comprimento, faixas)
     _build_linhas(spec, raiz, comprimento, faixas)
+    _build_decalques_chao(spec, raiz, comprimento, faixas)
     _build_lajes(spec, raiz, rng, comprimento, faixas)
     _build_mosaicos(spec, raiz, rng, comprimento, faixas)
     _build_predios(spec, raiz, rng, comprimento)
@@ -531,6 +558,64 @@ static func _build_linhas(spec: Dictionary, raiz: Node3D, comprimento: float, fa
         var dashes_mesh := _multimesh(_box(Vector3.ONE), material(spec, "faixa_branca"), xforms_dashes, raiz, "LinhaTracejada", false, 0.0)
         _marca(dashes_mesh, "linha_tracejada", "nenhum")
 
+## Decalques do asfalto (sobre a PistaE): tracejado divisor das faixas, setas
+## de direção, tampas de esgoto e remendos. Tudo em multimesh (1 draw call por
+## tipo). rng LOCAL (não toca a stream do quarteirão, senão mudaria as árvores).
+static func _build_decalques_chao(spec: Dictionary, raiz: Node3D, comprimento: float,
+        faixas: Dictionary) -> void:
+    var index: int = int(raiz.get_meta("spec_index", 0))
+    var rng2 := RandomNumberGenerator.new()
+    rng2.seed = int(spec.get("seed", 1)) * 2657 + index * 40499 + 13
+    var x_centro := _x_rua_centro(faixas)
+    var pista := float(faixas.get("pista_m", 6.6))
+    var lane := pista * 0.25
+    var y := 0.009
+    var mat_branco := material(spec, "faixa_branca")
+    # (o tracejado divisor central já é feito em _build_linhas -> LinhaTracejada)
+    # setas de direção (uma por faixa a cada ~16 m), apontando o fluxo (-z)
+    var hastes: Array = []
+    var cabecas: Array = []
+    var za := 10.0
+    while za < comprimento - 3.0:
+        for lx in [x_centro - lane, x_centro + lane]:
+            hastes.append(_xform(Vector3(lx, y, -za), Vector3(0.16, 0.01, 1.3)))
+            for sgn in [-1.0, 1.0]:
+                cabecas.append(_xform(
+                    Vector3(lx + sgn * 0.20, y, -(za + 0.5)),
+                    Vector3(0.16, 0.01, 0.55), sgn * 0.7))
+        za += 16.0
+    if not hastes.is_empty():
+        _multimesh(_box(Vector3.ONE), mat_branco, hastes, raiz, "SetaHaste", false, 0.0)
+    if not cabecas.is_empty():
+        _multimesh(_box(Vector3.ONE), mat_branco, cabecas, raiz, "SetaCabeca", false, 0.0)
+    # 3 - tampas de esgoto redondas de ferro fundido na pista
+    var tampas: Array = []
+    var aros: Array = []
+    var n_tampas := 1 + int(comprimento / 20.0)
+    for i in range(n_tampas):
+        var zt := rng2.randf_range(4.0, comprimento - 4.0)
+        var xt := x_centro + rng2.randf_range(-lane, lane)
+        tampas.append(_xform(Vector3(xt, 0.006, -zt)))
+        aros.append(_xform(Vector3(xt, 0.004, -zt)))
+    if not tampas.is_empty():
+        _multimesh(_cyl(0.40, 0.015, 14), _mat_cor("aro_esgoto", Color(0.22, 0.22, 0.23), 0.8, 0.2),
+                aros, raiz, "AroEsgoto", false, 0.0)
+        _multimesh(_cyl(0.33, 0.022, 14), _mat_cor("tampa_esgoto", Color(0.15, 0.16, 0.17), 0.7, 0.3),
+                tampas, raiz, "TampaEsgoto", false, 0.0)
+    # 4 - remendos de asfalto irregulares (mancha mais escura e fosca)
+    var remendos: Array = []
+    var n_rem := 1 + int(comprimento / 15.0)
+    for i in range(n_rem):
+        var zr := rng2.randf_range(3.0, comprimento - 3.0)
+        var xr := x_centro + rng2.randf_range(-pista * 0.4, pista * 0.4)
+        remendos.append(_xform(Vector3(xr, 0.004, -zr),
+                Vector3(rng2.randf_range(0.8, 1.6), 0.008, rng2.randf_range(1.0, 2.2)),
+                rng2.randf_range(-0.3, 0.3)))
+    if not remendos.is_empty():
+        _multimesh(_box(Vector3.ONE), _mat_cor("remendo_asfalto", Color(0.10, 0.105, 0.11), 0.96),
+                remendos, raiz, "RemendoAsfalto", false, 0.0)
+
+
 static func _build_lajes(spec: Dictionary, raiz: Node3D, rng: RandomNumberGenerator,
         comprimento: float, faixas: Dictionary) -> void:
     var lajes: Dictionary = spec.get("lajes", {})
@@ -614,6 +699,15 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
     # fator de "cara de placeholder" nas capturas). Continua controlável por
     # orçamento: "sombras_mundo": false no world_spec desliga.
     var sombras_mundo: bool = bool(spec.get("orcamento", {}).get("sombras_mundo", true))
+    # Coroamento (massa do topo) e saliências: coletados por quarteirão e
+    # emitidos em multimesh no fim — 1 draw call por tipo, não por prédio, para
+    # não estourar o orçamento móvel (Moto G84) com dezenas de caixinhas.
+    var xf_platibanda: Array = []
+    var xf_ac: Array = []
+    var xf_caixa: Array = []
+    var xf_casa: Array = []
+    var xf_recuo: Array = []
+    var predios_escada: Array = []
     for lado in [-1.0, 1.0]:
         # frente do lote: na borda externa da calcada (direita) ou no fim da
         # rua (esquerda). x_frente/x_centro sao magnitudes a partir do centro.
@@ -647,12 +741,127 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
                 Vector3(lado * x_centro, altura + telhado * 0.5, -(z + largura * 0.5)), raiz,
                 "Telhado%s%d" % [("D" if lado > 0.0 else "E"), lote], sombras_mundo)
             _marca(teto, "telhado")
+            # --- Coroamento e saliências (só coleta; emite depois em multimesh).
+            # Nada de rng aqui: a espécie/posição das árvores é sorteada depois
+            # com o MESMO rng, então consumir a stream mudaria o cenário.
+            if tipo != "obra":
+                var cz := -(z + largura * 0.5)
+                var topo := altura + telhado
+                # platibanda: mureta na testeira (quebra o topo chapado da caixa)
+                xf_platibanda.append(_xform(
+                    Vector3(lado * (x_frente + 0.05), topo + 0.22, cz),
+                    Vector3(0.16, 0.46, largura * 0.98)))
+                # ar-condicionado saliente na fachada (1-2 conforme o prédio)
+                var n_ac := 1 + (andares % 2)
+                for a in range(n_ac):
+                    var ay := pe * (1.25 + 0.9 * float(a))
+                    if ay < altura - 0.5:
+                        xf_ac.append(_xform(
+                            Vector3(lado * (x_frente + 0.24), ay,
+                                cz + largura * (0.22 - 0.4 * float(a))),
+                            Vector3(0.5, 0.42, 0.62)))
+                # caixa d'água nos prédios de 3+ pavimentos
+                if andares >= 3:
+                    xf_caixa.append(_xform(Vector3(
+                        lado * (x_centro - lado * profundidade * 0.16),
+                        topo + 0.52, cz + largura * 0.12)))
+                # topo alto: recuo (ático) OU casa de máquinas — nunca os dois
+                # (evita interpenetração no telhado).
+                if andares >= 5:
+                    xf_recuo.append(_xform(
+                        Vector3(lado * x_centro, topo + pe * 0.5, cz),
+                        Vector3(profundidade * 0.72, pe, largura * 0.66)))
+                elif andares >= 3:
+                    xf_casa.append(_xform(
+                        Vector3(lado * (x_centro + lado * profundidade * 0.12),
+                            topo + 0.45, cz - largura * 0.12),
+                        Vector3(profundidade * 0.34, 0.9, largura * 0.3)))
+                # escada de incêndio nos prédios altos (alternados)
+                if andares >= 4 and lote % 2 == 0:
+                    predios_escada.append({
+                        "lado": lado, "xf": x_frente, "cz": cz,
+                        "larg": largura, "and": andares, "pe": pe})
             if tipo != "obra":
                 _build_janelas(spec, raiz, rng, janela, lado, x_frente, z, largura, andares, pe, tipo, lote)
             if tipo == "loja":
                 _build_loja(spec, raiz, p, lado, x_frente, z, largura, lote)
             z += largura
             lote += 1
+    # --- Emite o coroamento coletado (poucos draw calls por quarteirão).
+    var mat_reboco := material(spec, "fachada_reboco")
+    if not xf_platibanda.is_empty():
+        _multimesh(_box(Vector3.ONE), mat_reboco, xf_platibanda, raiz, "Platibanda", sombras_mundo)
+    if not xf_recuo.is_empty():
+        _multimesh(_box(Vector3.ONE), mat_reboco, xf_recuo, raiz, "RecuoTopo", sombras_mundo)
+    if not xf_casa.is_empty():
+        _multimesh(_box(Vector3.ONE), mat_reboco, xf_casa, raiz, "CasaMaquinas", sombras_mundo)
+    if not xf_caixa.is_empty():
+        _multimesh(_cyl(0.46, 1.0, 12), _mat_cor("caixa_dagua", Color(0.24, 0.36, 0.52), 0.55),
+                xf_caixa, raiz, "CaixaDagua", sombras_mundo)
+    if not xf_ac.is_empty():
+        _multimesh(_box(Vector3.ONE), _mat_cor("ar_cond", Color(0.82, 0.82, 0.80), 0.5, 0.1),
+                xf_ac, raiz, "ArCondicionado", false)
+    # Escada de incêndio: adereço pesado, só nos degraus de qualidade alto/médio.
+    if not predios_escada.is_empty() and _tier_atual() <= 1:
+        _build_escadas_incendio(spec, raiz, predios_escada)
+
+
+## Escada de incêndio de ferro na fachada: montante + patamar por andar +
+## lance diagonal. Tudo coletado em 3 multimesh (montantes, patamares, lances)
+## para o quarteirão inteiro — barato mesmo com vários prédios.
+static func _build_escadas_incendio(spec: Dictionary, raiz: Node3D, lista: Array) -> void:
+    var montantes: Array = []
+    var patamares: Array = []
+    var lances: Array = []
+    for e in lista:
+        var lado: float = float(e["lado"])
+        var x_frente: float = float(e["xf"])
+        var cz: float = float(e["cz"])
+        var larg: float = float(e["larg"])
+        var andares: int = int(e["and"])
+        var pe: float = float(e["pe"])
+        var x_face := lado * (x_frente + 0.22)   # afastada da fachada
+        var z_esq := cz + larg * 0.30            # encostada num terço do lote
+        # dois montantes verticais
+        var altura_total := float(andares) * pe
+        for dz in [-0.5, 0.5]:
+            montantes.append(_xform(
+                Vector3(x_face, altura_total * 0.5, z_esq + dz),
+                Vector3(0.06, altura_total, 0.06)))
+        # um patamar por andar e um lance diagonal ligando os andares
+        for andar in range(andares):
+            var y := pe * float(andar + 1) - 0.1
+            patamares.append(_xform(
+                Vector3(x_face, y, z_esq),
+                Vector3(0.44, 0.06, 1.05)))
+            if andar < andares - 1:
+                lances.append(_xform(
+                    Vector3(x_face, y + pe * 0.5, z_esq + 0.28),
+                    Vector3(0.40, 0.05, pe * 1.1),
+                    0.0))
+    var mat_metal := material(spec, "estrutura_metalica")
+    if not montantes.is_empty():
+        _multimesh(_box(Vector3.ONE), mat_metal, montantes, raiz, "EscadaMontante", false)
+    if not patamares.is_empty():
+        _multimesh(_box(Vector3.ONE), mat_metal, patamares, raiz, "EscadaPatamar", false)
+    if not lances.is_empty():
+        var lance_mesh := _box(Vector3.ONE)
+        var mm := MultiMesh.new()
+        mm.transform_format = MultiMesh.TRANSFORM_3D
+        mm.mesh = lance_mesh
+        mm.instance_count = lances.size()
+        for i in lances.size():
+            # inclina o lance ~35° no plano vertical (eixo x local)
+            var t: Transform3D = lances[i]
+            t.basis = Basis.from_euler(Vector3(0.6, 0.0, 0.0)) * t.basis
+            mm.set_instance_transform(i, t)
+        var no := MultiMeshInstance3D.new()
+        no.name = "EscadaLance"
+        no.multimesh = mm
+        no.material_override = mat_metal
+        no.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+        raiz.add_child(no)
+
 
 static func _tipo_predio(p: Dictionary, rng: RandomNumberGenerator) -> String:
     var pesos: Dictionary = p.get("tipo_pesos", {"tijolo": 1})

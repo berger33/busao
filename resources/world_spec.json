@@ -386,9 +386,9 @@
         160.0,
         0.0
       ],
-      "sol_energia": 1.45,
-      "energia_ambiente": 1.15,
-      "nevoa_densidade": 0.002,
+      "sol_energia": 1.2,
+      "energia_ambiente": 0.72,
+      "nevoa_densidade": 0.42,
       "exposicao": 0.52,
       "nuvens": 0.18
     },
@@ -424,8 +424,8 @@
         190.0,
         0.0
       ],
-      "sol_energia": 1.35,
-      "energia_ambiente": 1.05,
+      "sol_energia": 1.2,
+      "energia_ambiente": 0.68,
       "nevoa_densidade": 0.58,
       "exposicao": 0.48,
       "nuvens": 0.22
