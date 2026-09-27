@@ -34,6 +34,8 @@ Evidências visuais:
 
 - `docs/arte_alvo_final/15_turnaround_fase3.png` — corpo completo com cabelo/rosto.
 - `docs/arte_alvo_final/16_rosto_fase3.png` — close do rosto completo a distância de validação.
+- `docs/arte_alvo_final/18_rosto_fase3_final_1_perfil_esq.png` a `18_rosto_fase3_final_5_perfil_dir.png` — **5 fotos finais** do rosto em ângulos diferentes para aprovação antes da Fase 4/cabelo final.
+- `docs/arte_alvo_final/18_rosto_fase3_final_contato_5_angulos.png` — contato horizontal com as 5 vistas.
 
 Artefatos WIP persistidos:
 
@@ -49,6 +51,7 @@ sh tools/blender/run_bpy.sh tools/blender/build_heroi_julia.py
 sh tools/blender/run_bpy.sh tools/blender/bake_heroi_julia.py --res 2048 --samples 24
 sh tools/blender/run_bpy.sh tools/blender/render_turnaround.py tools/blender/out/heroi_julia_pbr.glb docs/arte_alvo_final/15_turnaround_fase3.png
 sh tools/blender/run_bpy.sh tools/blender/render_detalhe.py tools/blender/out/heroi_julia_pbr.glb docs/arte_alvo_final/16_rosto_fase3.png --alvo rosto
+sh tools/blender/run_bpy.sh tools/blender/render_rosto_5_angulos.py tools/blender/out/heroi_julia_pbr.glb docs/arte_alvo_final --prefix 18_rosto_fase3_final --res-x 720 --res-y 900 --samples 24
 ```
 
 ## Observações para a Fase 4

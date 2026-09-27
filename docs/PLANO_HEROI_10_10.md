@@ -106,7 +106,7 @@ com stubs X11/GL — hoje o sandbox está **sem** esse ambiente), `tools/blender
 - Olho: esclera + córnea separada com `refraction` barata, íris com normal radial.
 - Sobrancelha e cílios como cards finos.
 
-**Gate 3:** close a 2 m com rosto legível; sem shimmer de alpha em movimento a 60 FPS. Evidências: `docs/arte_alvo_final/15_turnaround_fase3.png` e `16_rosto_fase3.png`.
+**Gate 3:** close a 2 m com rosto legível; sem shimmer de alpha em movimento a 60 FPS. Evidências: `docs/arte_alvo_final/15_turnaround_fase3.png`, `16_rosto_fase3.png` e as 5 vistas finais `18_rosto_fase3_final_*`.
 
 ### Fase 4 — Rig e skinning (1,5 dia)
 - Armature de **60 ossos**: contrato atual (`pelvis`, `spine_01..03`, `neck_01`, `Head`,
