@@ -18,12 +18,13 @@
     "guia_largura_m": 0.35,
     "guia_altura_m": 0.15,
     "pista_m": 6.6,
-    "calcada_lateral_m": 2.5,
+    "calcada_lateral_m": 3.0,
     "linha_amarela_modo": "junto_guia",
     "linha_amarela_largura_m": 0.12,
     "linha_amarela_afastamento_m": 0.3,
     "linha_amarela_entre_m": 0.2,
-    "limite_lateral_m": 14.2
+    "limite_lateral_m": 22.6,
+    "calcada_oposta_m": 2.6
   },
   "lajes": {
     "tamanho_m": [
@@ -48,7 +49,7 @@
       7.0,
       12.0
     ],
-    "recuo_calcada_m": 0.35,
+    "recuo_calcada_m": 1.6,
     "profundidade_m": 9.0,
     "telhado_altura_m": 0.35,
     "janela": {

@@ -346,7 +346,8 @@ static func _multimesh(mesh: Mesh, mat: Material, xforms: Array, pai: Node3D, no
 
 
 ## Geometria da secao transversal (layout "rua_esquerda"):
-##   x < 0: pista de rolamento | guia | x > 0: calcada (deck de corrida +
+##   lado esquerdo externo: calcada oposta + arvores/predios recuados;
+##   x < 0: pista de rolamento; x > 0: calcada principal (deck de corrida +
 ##   faixa lateral de props). Todas as bordas saem do spec — nada fixo aqui.
 
 
@@ -408,6 +409,29 @@ static func _x_calcada(faixas: Dictionary) -> float:
     return -float(faixas.get("piso_borda_esq_m", 1.35)) + float(faixas.get("piso_central_m", 6.0)) + float(faixas.get("calcada_lateral_m", 2.5))
 
 
+## Largura da calcada do lado oposto da pista. O spec antigo nao tinha essa
+## faixa; usar a mesma largura da lateral como fallback evita predios/arvores
+## grudarem na rua quando algum override de fase ainda omitir o campo.
+static func _calcada_oposta_m(faixas: Dictionary) -> float:
+    return float(faixas.get("calcada_oposta_m", faixas.get("calcada_lateral_m", 2.5)))
+
+
+## Borda externa da calcada do lado esquerdo da pista (fora da rua).
+static func _x_calcada_oposta(faixas: Dictionary) -> float:
+    return _x_rua_esq(faixas) - float(faixas.get("guia_largura_m", 0.35)) - _calcada_oposta_m(faixas)
+
+
+static func _x_arvore_dir(faixas: Dictionary) -> float:
+    var calcada := float(faixas.get("calcada_lateral_m", 2.5))
+    return _x_calcada(faixas) - clampf(calcada * 0.62, 1.25, 1.75)
+
+
+static func _x_arvore_esq(faixas: Dictionary) -> float:
+    var guia_l := float(faixas.get("guia_largura_m", 0.35))
+    var calcada := _calcada_oposta_m(faixas)
+    return _x_rua_esq(faixas) - guia_l - calcada * 0.5
+
+
 static func build_chunk(spec: Dictionary, index: int, base_z: float = 0.0) -> Node3D:
     var raiz := Node3D.new()
     raiz.name = "Quarteirao%03d" % index
@@ -451,13 +475,14 @@ static func _contar(no: Node, contagem: Dictionary) -> void:
 
 static func _build_piso(spec: Dictionary, raiz: Node3D, comprimento: float, _visibilidade: float) -> void:
     # Layout "rua_esquerda": deck de calcada no centro-direita (o corredor
-    # passa por ele), faixa de props alem do deck e guia unica junto da pista.
+    # passa por ele), faixa de props alem do deck e calçada oposta junto da pista.
     var f: Dictionary = spec.get("faixas", {})
     var piso := float(f.get("piso_central_m", 6.0))
     var borda_esq := float(f.get("piso_borda_esq_m", 1.35))
     var guia_l := float(f.get("guia_largura_m", 0.35))
     var guia_h := float(f.get("guia_altura_m", 0.15))
     var calcada := float(f.get("calcada_lateral_m", 2.5))
+    var calcada_oposta := _calcada_oposta_m(f)
     var x_deck := -borda_esq + piso * 0.5
     # deck da calcada (as faixas central e direita do jogo caem aqui)
     var deck := _malha(_box(Vector3(piso, 0.40, comprimento)),
@@ -472,13 +497,30 @@ static func _build_piso(spec: Dictionary, raiz: Node3D, comprimento: float, _vis
             Vector3(x_lat, 0.15 - 0.20, -comprimento * 0.5), raiz,
             "CalcadaFaixa", false, 0.0)
         _marca(faixa_lat, "calcada_lateral")
-    # guia unica entre a rua e a calcada (o topo fica guia_h acima do asfalto)
+    # calçada do lado oposto da rua: antes os prédios ficavam praticamente
+    # colados no asfalto e as árvores alternadas caíam dentro dos prédios.
+    if calcada_oposta > 0.01:
+        var x_lat_esq := _x_rua_esq(f) - guia_l - calcada_oposta * 0.5
+        var faixa_esq := _malha(_box(Vector3(calcada_oposta, 0.40, comprimento)),
+            material(spec, "calcada_lateral"),
+            Vector3(x_lat_esq, 0.15 - 0.20, -comprimento * 0.5), raiz,
+            "CalcadaOposta", false, 0.0)
+        _marca(faixa_esq, "calcada_lateral")
+    # guia entre a rua e a calcada principal (o topo fica guia_h acima do asfalto)
     var x_guia := -borda_esq - guia_l * 0.5
     var guia := _malha(_box(Vector3(guia_l, 0.40, comprimento)),
         material(spec, "guia"),
         Vector3(x_guia, guia_h - 0.20, -comprimento * 0.5), raiz,
         "Guia", true, 0.0)
     _marca(guia, "guia")
+    # guia da calçada oposta, protegendo o lado externo da pista.
+    if calcada_oposta > 0.01:
+        var x_guia_esq := _x_rua_esq(f) - guia_l * 0.5
+        var guia_esq := _malha(_box(Vector3(guia_l, 0.40, comprimento)),
+            material(spec, "guia"),
+            Vector3(x_guia_esq, guia_h - 0.20, -comprimento * 0.5), raiz,
+            "GuiaOposta", true, 0.0)
+        _marca(guia_esq, "guia")
     # Grelhas de sarjeta / bueiro de ferro fundido junto ao meio-fio
     var n_bueiros := int(comprimento / 14.0)
     for b in range(n_bueiros):
@@ -616,6 +658,7 @@ static func _build_mosaicos(spec: Dictionary, raiz: Node3D, rng: RandomNumberGen
     var borda_esq := float(faixas.get("piso_borda_esq_m", 1.35))
     var piso := float(faixas.get("piso_central_m", 6.0))
     var calcada := float(faixas.get("calcada_lateral_m", 2.5))
+    var calcada_oposta := _calcada_oposta_m(faixas)
     var inicio := -borda_esq + piso
     var fim := inicio + calcada
     var xforms: Array = []
@@ -630,6 +673,21 @@ static func _build_mosaicos(spec: Dictionary, raiz: Node3D, rng: RandomNumberGen
                 Vector3(x_lado - 0.005, altura, z_lado - 0.005)))
             x += x_lado + 0.005
         z += z_lado + 0.005
+    if calcada_oposta > 0.01:
+        var guia_l := float(faixas.get("guia_largura_m", 0.35))
+        var inicio_esq := _x_rua_esq(faixas) - guia_l - calcada_oposta
+        var fim_esq := _x_rua_esq(faixas) - guia_l
+        z = 0.0
+        while z < comprimento - 0.05:
+            var z_lado_esq := minf(lado_m + rng.randf_range(-variacao, variacao), comprimento - z)
+            var x_esq := inicio_esq
+            while x_esq < fim_esq - 0.05:
+                var x_lado_esq := minf(lado_m + rng.randf_range(-variacao, variacao), fim_esq - x_esq)
+                xforms.append(_xform(
+                    Vector3(x_esq + x_lado_esq * 0.5, 0.15 + altura * 0.5, -(z + z_lado_esq * 0.5)),
+                    Vector3(x_lado_esq - 0.005, altura, z_lado_esq - 0.005)))
+                x_esq += x_lado_esq + 0.005
+            z += z_lado_esq + 0.005
     _multimesh(_box(Vector3.ONE), material(spec, "calcada_lateral"), xforms, raiz, "Mosaicos", false, 0.0)
 
 static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGenerator,
@@ -639,7 +697,7 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
     var pe := float(p.get("pe_direito_m", 3.0))
     var variacao := float(p.get("variacao_altura_m", 0.35))
     var largura_lote: Array = p.get("largura_lote_m", [7.0, 12.0])
-    var recuo := float(p.get("recuo_calcada_m", 0.35))
+    var recuo := maxf(float(p.get("recuo_calcada_m", 1.5)), 1.25)
     var profundidade := float(p.get("profundidade_m", 9.0))
     var telhado := float(p.get("telhado_altura_m", 0.35))
     var janela: Dictionary = p.get("janela", {})
@@ -650,9 +708,9 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
     # orçamento: "sombras_mundo": false no world_spec desliga.
     var sombras_mundo: bool = bool(spec.get("orcamento", {}).get("sombras_mundo", true))
     for lado in [-1.0, 1.0]:
-        # frente do lote: na borda externa da calcada (direita) ou no fim da
-        # rua (esquerda). x_frente/x_centro sao magnitudes a partir do centro.
-        var borda_mag := _x_calcada(faixas) if lado > 0.0 else absf(_x_rua_esq(faixas))
+        # frente do lote: depois da calçada de cada lado. Antes, o lado
+        # oposto usava a borda da rua e fazia prédio/árvore invadirem o asfalto.
+        var borda_mag := _x_calcada(faixas) if lado > 0.0 else absf(_x_calcada_oposta(faixas))
         var x_frente := borda_mag + recuo
         var x_centro := borda_mag + recuo + profundidade * 0.5
         var z := 0.0
@@ -868,12 +926,10 @@ static func _build_arvores(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
     var tronco_r := float(cfg.get("tronco_raio_m", 0.14))
     var copa_r := float(cfg.get("copa_raio_m", 1.7))
     var faixas: Dictionary = spec.get("faixas", {})
-    var borda_esq := float(faixas.get("piso_borda_esq_m", 1.35))
-    var piso := float(faixas.get("piso_central_m", 6.0))
-    var calcada := float(faixas.get("calcada_lateral_m", 2.5))
-    # direita: no meio da faixa de props; esquerda: alem do fim da rua
-    var x_dir := -borda_esq + piso + calcada * 0.5
-    var x_esq := _x_rua_esq(faixas) - 1.2
+    # direita: faixa de árvores da calçada principal; esquerda: centro da
+    # nova calçada oposta, fora da pista e antes do recuo dos prédios.
+    var x_dir := _x_arvore_dir(faixas)
+    var x_esq := _x_arvore_esq(faixas)
     var z := rng.randf_range(1.0, passo)
     var lado := 1.0
     while z < comprimento:
@@ -942,9 +998,7 @@ static func _build_mobiliario(spec: Dictionary, raiz: Node3D, rng: RandomNumberG
         comprimento: float, faixas: Dictionary, visibilidade: float) -> void:
     var props: Dictionary = spec.get("props", {})
     var borda_esq := float(faixas.get("piso_borda_esq_m", 1.35))
-    var piso := float(faixas.get("piso_central_m", 6.0))
-    var calcada := float(faixas.get("calcada_lateral_m", 2.5))
-    var x_faixa := -borda_esq + piso + calcada * 0.5
+    var x_faixa := _x_arvore_dir(faixas)
     # bancos de praca: assento de frente para a rua
     var cfg_banco: Dictionary = props.get("banco", {})
     var passo_banco := float(cfg_banco.get("espacamento_m", 14.0))
@@ -1036,11 +1090,8 @@ static func _build_prop_linear(spec: Dictionary, raiz: Node3D, rng: RandomNumber
         return
     var passo := float(cfg.get("espacamento_m", 999.0))
     var faixas: Dictionary = spec.get("faixas", {})
-    var borda_esq := float(faixas.get("piso_borda_esq_m", 1.35))
-    var piso := float(faixas.get("piso_central_m", 6.0))
-    var calcada := float(faixas.get("calcada_lateral_m", 2.5))
-    var x_dir := borda_esq + piso + calcada * 0.5
-    var x_esq := _x_rua_esq(faixas) - 1.0
+    var x_dir := _x_arvore_dir(faixas)
+    var x_esq := _x_arvore_esq(faixas)
     var z := rng.randf_range(2.0, passo)
     while z < comprimento - 1.0:
         var lado := 1.0 if rng.randf() < 0.5 else -1.0
