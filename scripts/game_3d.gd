@@ -45,7 +45,8 @@ const TEXTURE_SKY_CLOUDY = preload("res://assets/textures/ceu_nublado.png")
 const TEXTURE_HAIR_REAL = preload("res://assets/textures/cabelo_realista.png")
 const TEXTURE_DENIM_REAL = preload("res://assets/textures/jeans_realista.png")
 const TEXTURE_CAR_PAINT_REAL = preload("res://assets/textures/pintura_carro_realista.png")
-const TEXTURE_GLASS = preload("res://assets/textures/vidro_azul.svg")
+const TEXTURE_GLASS = preload("res://assets/textures/vidro_realista.png")
+const TEXTURE_GLASS_N = preload("res://assets/textures/vidro_realista_normal.png")
 const TEXTURE_PAINT = preload("res://assets/textures/pintura_realista.png")
 const TEXTURE_PAINT_N = preload("res://assets/textures/pintura_realista_normal.png")
 const TEXTURE_PAINT_R = preload("res://assets/textures/pintura_realista_roughness.png")
@@ -4400,6 +4401,8 @@ func _normal_for_surface(surface: String) -> Texture2D:
             return TEXTURE_SKIN_REAL_N
         "paint":
             return TEXTURE_PAINT_N
+        "glass":
+            return TEXTURE_GLASS_N
         _:
             return null
 

@@ -12,6 +12,7 @@ cd "$(dirname "$0")/.."
 python3 tools/texture_forge.py      # asfalto, calcada, concreto, tijolo, ...
 python3 tools/sky_forge.py          # panoramas equiretangulares 360
 python3 tools/facade_forge.py       # atlas de fachada 4x4
-python3 tools/fix_texture_imports.py  # mipmaps + compressao VRAM
+python3 tools/make_texture_imports.py  # .import das texturas novas
+python3 tools/fix_texture_imports.py   # mipmaps + compressao VRAM
 
 echo "Texturas reconstruidas. Abra o projeto no Godot para reimportar."

@@ -205,6 +205,20 @@ RECIPES = {
                            n_strength=2.8, n_detail=1.5, r_base=0.80,
                            r_spread=0.18, r_invert=True,
                            saturation=0.95, brightness=1.02),
+    # Pintura de veiculo: o flake fica quase branco porque o jogo multiplica
+    # pela cor do carro; o normal e minimo (so a cintilancia do metalico),
+    # senao a lataria parece amassada. Sem roughness: quem manda e o
+    # clearcoat configurado no material.
+    "pintura_carro": dict(albedo="pintura_carro_realista.png",
+                          deshade=0.95, deshade_r=80, feather=0.20,
+                          n_strength=0.22, n_detail=0.6, r_skip=True,
+                          saturation=0.25, brightness=1.30),
+    # Vidro: overlay quase branco (poeira, marca de agua, micro risco) que
+    # multiplica o tingimento de cada vidraca sem escurecer.
+    "vidro": dict(albedo="vidro_realista.png",
+                  deshade=0.95, deshade_r=80, feather=0.20,
+                  n_strength=0.3, n_detail=0.6, r_skip=True,
+                  saturation=0.5, brightness=1.0),
     "pintura": dict(albedo="pintura_realista.png",
                     deshade=0.95, deshade_r=90, feather=0.20,
                     n_strength=0.5, n_detail=0.7, r_base=0.46, r_spread=0.10,
@@ -226,6 +240,8 @@ DERIVED = {
     "paralelepipedo": ("paralelepipedo_realista_normal.png",
                        "paralelepipedo_realista_roughness.png"),
     "pintura": ("pintura_realista_normal.png", "pintura_realista_roughness.png"),
+    "pintura_carro": ("pintura_carro_normal.png", None),
+    "vidro": ("vidro_realista_normal.png", None),
 }
 
 # a parede de tijolo aparente reusa o mesmo scan da fachada
@@ -264,8 +280,10 @@ def main():
 
         save(img, rec["albedo"])
         n_name, r_name = DERIVED[key]
-        save(nrm, n_name)
-        save(rgh3, r_name)
+        if n_name is not None:
+            save(nrm, n_name)
+        if r_name is not None and not rec.get("r_skip", False):
+            save(rgh3, r_name)
         for a_alb, a_nrm, a_rgh in ALIASES.get(key, []):
             save(img, a_alb)
             save(nrm, a_nrm)
