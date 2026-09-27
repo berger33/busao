@@ -32,6 +32,7 @@ const SFX := {
     "shout": "res://assets/audio/shout.wav",
     "slide": "res://assets/audio/slide.wav",
     "whoosh": "res://assets/audio/whoosh.wav",
+    "dash": "res://assets/audio/dash.wav",
     "wall": "res://assets/audio/wall.wav",
     "count_beep": "res://assets/audio/count_beep.wav",
     "count_go": "res://assets/audio/count_go.wav",
@@ -50,7 +51,7 @@ const MUSIC := [
     "res://assets/audio/music_terminal.wav",
 ]
 # Alertas de gameplay: voz dedicada, nunca preemptada pelo pool.
-const ALERTS := ["horn", "count_go", "victory", "defeat", "trovao", "levelup"]
+const ALERTS := ["horn", "count_go", "victory", "defeat", "trovao", "levelup", "bus_doors"]
 const SFX_POOL_SIZE := 8
 const MUSIC_VOLUME_DB := -14.0
 const DUCK_VOLUME_DB := -22.0

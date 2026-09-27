@@ -1768,7 +1768,7 @@ func _dash() -> void:
         _player_velocity_y = maxf(_player_velocity_y, 0.0)
     GameSave.record_event("dash")
     camera_shake = 0.18
-    _show_feedback("ARRANCADA!", "Explosão curta de velocidade", YELLOW, "whoosh")
+    _show_feedback("ARRANCADA!", "Explosão curta de velocidade", YELLOW, "dash")
     _spawn_3d_burst(player_root.position + Vector3(0, 1.0, 0), YELLOW, 18)
     _mark_tutorial_action("dash")
 
