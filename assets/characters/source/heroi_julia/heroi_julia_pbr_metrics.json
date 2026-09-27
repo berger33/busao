@@ -1,17 +1,9 @@
 {
   "res": 2048,
   "samples": 24,
-  "faces": 18065,
-  "cobertura_uv": 0.612,
+  "faces": 19189,
+  "cobertura_uv": 0.645,
   "res_normal_orm": 1024,
-  "kb_albedo": 385.9,
-  "kb_normal": 164.3,
-  "kb_orm": 246.7,
-  "glb_kb": 1971.9,
-  "gate_texturas": true,
-  "gate_cobertura": true,
-  "gate_glb": true,
-  "gate": true,
   "texturas_corpo": [
     "julia_albedo.jpg",
     "julia_normal.jpg",
@@ -25,5 +17,13 @@
     "julia_iris_color",
     "julia_cabelo_alpha"
   ],
-  "embedded_images": 6
+  "embedded_images": 6,
+  "kb_albedo": 429.1,
+  "kb_normal": 182.5,
+  "kb_orm": 267.4,
+  "glb_kb": 2037.8,
+  "gate_texturas": true,
+  "gate_cobertura": true,
+  "gate_glb": true,
+  "gate": true
 }
