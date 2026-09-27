@@ -236,6 +236,8 @@ func set_character(next_id: String) -> void:
     if is_original:
         _apply_skin_tint(profile.get("skin", Color.WHITE))
         _apply_profile_palette(profile)
+        if is_personalized and character_id == "renata":
+            _apply_renata_palette()
         # Lote 28: GLB dedicado já vem bakeado — evita duplicar props (duplo celular/mochila).
         if not is_personalized:
             _attach_creator_details(profile)
@@ -550,6 +552,29 @@ func _apply_skin_tint(skin_color: Color) -> void:
                 material.rim_enabled = true
                 material.rim = 0.06
                 material.rim_tint = 0.72
+                mesh.set_surface_override_material(surface_index, material)
+
+func _apply_renata_palette() -> void:
+    # O GLB da Renata possui materiais sem nomes semânticos (Runner_*).
+    # Colore cada conjunto explicitamente, sem substituir as texturas embutidas.
+    var colors := {
+        "Runner_Pele": Color("#b9785b"),
+        "Runner_Roupa_Tenis": Color("#d95d7c"),
+        "Runner_Trancas": Color("#24181a")
+    }
+    for mesh in _skinned_meshes(model_root):
+        var color: Color = colors.get(str(mesh.name), Color.TRANSPARENT)
+        if color == Color.TRANSPARENT or mesh.mesh == null:
+            continue
+        for surface_index in mesh.mesh.get_surface_count():
+            var source := mesh.get_surface_override_material(surface_index)
+            if source == null:
+                source = mesh.mesh.surface_get_material(surface_index)
+            if source is BaseMaterial3D:
+                var material := source.duplicate() as BaseMaterial3D
+                material.albedo_color = color
+                material.metallic = 0.0
+                material.roughness = 0.72
                 mesh.set_surface_override_material(surface_index, material)
 
 func _apply_profile_palette(profile: Dictionary) -> void:
@@ -966,7 +991,7 @@ func _resolve_clip_name(clip: String) -> String:
         return clip
     # Renata's package uses concise Blender clip names. Keep the gameplay
     # state machine semantic (Sprint/Idle) while accepting those clips.
-    var aliases: Dictionary = {"Sprint_Loop": "run_loop", "Walk_Loop": "run_loop", "Idle_Loop": "idle"}
+    var aliases: Dictionary = {"Sprint_Loop": "run_loop", "Walk_Loop": "run_loop", "Idle_Loop": "idle", "Jump_Loop": "run_loop", "Crouch_Fwd_Loop": "run_loop", "Crouch_Idle_Loop": "idle"}
     var alias: String = str(aliases.get(clip, ""))
     if alias != "" and animation_player.has_animation(alias):
         return alias
