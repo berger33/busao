@@ -63,7 +63,7 @@
     },
     "tipo_pesos": {
       "reboco": 5,
-      "loja": 5,
+      "loja": 2,
       "tijolo": 2,
       "obra": 1
     },
@@ -426,8 +426,8 @@
       ],
       "sol_energia": 1.35,
       "energia_ambiente": 1.05,
-      "nevoa_densidade": 0.003,
-      "exposicao": 0.50,
+      "nevoa_densidade": 0.58,
+      "exposicao": 0.48,
       "nuvens": 0.22
     },
     {
