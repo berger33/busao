@@ -973,6 +973,10 @@ func _setup_original_animation() -> void:
         _apply_neutral_pose()
         return
     animation_player = embedded
+    # GLTFs importados podem trazer o AnimationPlayer com root_node vazio ou
+    # apontando para o nó errado. Sem este alvo os clips aparecem na lista,
+    # mas nenhum osso recebe os keyframes (personagem fica em T-pose).
+    animation_player.root_node = animation_player.get_path_to(model_root)
     # Garante que as animações rodem em loop suave
     for anim_name in animation_player.get_animation_list():
         var anim: Animation = animation_player.get_animation(anim_name)
