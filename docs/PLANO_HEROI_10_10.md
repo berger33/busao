@@ -176,7 +176,7 @@ com stubs X11/GL — hoje o sandbox está **sem** esse ambiente), `tools/blender
 | 0 Ambiente/baseline | 0,5 | 0,5 |
 | 1 Corpo | 2,0 | 2,5 |
 | 2 UV + bake PBR | 1,5 | 4,0 |
-| 3 Cabelo/olhos | 1,0 | 5,0 |
+| 3A Rosto · 3B Cabelo | 1,0 + validação | 5,0 + validação |
 | 4 Rig/skin | 1,5 | 6,5 |
 | 5 Animações | 2,0 | 8,5 |
 | 6 Integração/luz/LOD | 1,0 | 9,5 |
