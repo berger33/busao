@@ -53,6 +53,10 @@ const GINGER_ASSET_PATH := PERSONAGENS_ROOT + "/ginger+woman.glb"
 # agachamento (crouch_enter/loop/run_loop/exit). A cena runtime carrega também o
 # cabelo em tempo real (SpringBoneSimulator3D via cabelo_fisico.gd).
 const CORRE_PRO_PONTO_SCENE := "res://assets/characters/corre_pro_ponto/personagem_corre_pro_ponto.tscn"
+## Corrida da v2 calibrada a ~2,06 m/s (animacoes.json). Teto de reprodução um
+## pouco maior que o rig antigo para acompanhar o chão sem congelar a passada.
+const CORRE_PRO_PONTO_RUN_SPEED := 2.0588235294117645
+const CORRE_PRO_PONTO_MAX_PLAYBACK := 2.6
 ## Ids de personagem que usam o runner "Corre pro Ponto" v2 como visual.
 ## Vazio = nenhum personagem é sobreposto (comportamento anterior intacto).
 ## Lote 29: a heroína padrão "julia" agora É o runner v2 melhorado (rig próprio,
@@ -163,6 +167,16 @@ var _outline_reported := false
 ## de vértice do GLB como albedo (sem whitewash de pele/paleta) e não recebe o
 ## filete escuro (SilhouetteShell), que ficava feio sobre o modelo texturizado.
 var _is_corre_pro_ponto := false
+## Passada lateral (troca de pista): enquanto > 0 prioriza o clipe Lane_Left/Right
+## sobre o run_loop; o clipe roda a 1x para durar o tempo autoral (~0,8 s).
+var _lane_anim_timer := 0.0
+var _lane_anim_clip := ""
+## Velocidade (m/s) coberta pelo clipe de corrida a 1x e teto de aceleração da
+## reprodução — ajustados por personagem. O runner v2 corre a ~2,06 m/s (bem
+## menos que os 4 m/s do rig antigo), então precisa de referência própria para
+## sincronizar a cadência com o chão e reduzir o deslizamento dos pés.
+var run_reference_speed := LOCOMOTION_CLIP_SPEED
+var run_max_playback := LOCOMOTION_MAX_PLAYBACK
 var current_clip := ""
 var world_mode := false
 var using_external_animation := false
@@ -217,6 +231,12 @@ func set_character(next_id: String) -> void:
     # real). Fora dessa lista, mantém o pipeline por personagem do Lote 28.
     var corre_pro_ponto_override := character_id in CORRE_PRO_PONTO_FOR_IDS and ResourceLoader.exists(CORRE_PRO_PONTO_SCENE)
     _is_corre_pro_ponto = corre_pro_ponto_override
+    if corre_pro_ponto_override:
+        run_reference_speed = CORRE_PRO_PONTO_RUN_SPEED
+        run_max_playback = CORRE_PRO_PONTO_MAX_PLAYBACK
+    else:
+        run_reference_speed = LOCOMOTION_CLIP_SPEED
+        run_max_playback = LOCOMOTION_MAX_PLAYBACK
     # Lote 28: tenta GLB dedicado por personagem (assets/characters/personagens/<id>.glb) — bakeado Blender com paleta + props.
     var personalized_path := CORRE_PRO_PONTO_SCENE if corre_pro_ponto_override else (HERO_ASSET_PATH if character_id == "julia" and ResourceLoader.exists(HERO_ASSET_PATH) else (GINGER_ASSET_PATH if character_id == "ginger" and ResourceLoader.exists(GINGER_ASSET_PATH) else PERSONAGENS_ROOT + "/" + character_id + ".glb"))
     var is_personalized := false
@@ -306,6 +326,10 @@ func _clear_character() -> void:
     using_external_animation = false
     primary_asset_loaded = false
     _is_corre_pro_ponto = false
+    _lane_anim_timer = 0.0
+    _lane_anim_clip = ""
+    run_reference_speed = LOCOMOTION_CLIP_SPEED
+    run_max_playback = LOCOMOTION_MAX_PLAYBACK
     bone_indices.clear()
     rest_rotations.clear()
     mesh_parts.clear()
@@ -1139,6 +1163,22 @@ func _find_animation_player(node: Node) -> AnimationPlayer:
             pending.append(child)
     return null
 
+## Aciona a passada lateral (troca de pista). Chamado por game_3d._change_lane.
+## Só faz efeito em rigs com os clipes Lane_Left/Lane_Right (runner v2); nos
+## demais o clipe não resolve e a personagem mantém run_loop + inclinação.
+func on_lane_change(direction: int) -> void:
+    if not using_external_animation or animation_player == null:
+        return
+    var clip := "Lane_Left" if direction < 0 else "Lane_Right"
+    var anim_name := _resolve_clip_name(clip)
+    if anim_name == "":
+        return
+    _lane_anim_clip = clip
+    var anim := animation_player.get_animation(anim_name)
+    _lane_anim_timer = anim.length if anim != null else 0.5
+    current_clip = ""  # força o replay mesmo repetindo a mesma direção
+
+
 func _play_clip(clip: String) -> void:
     if not using_external_animation or animation_player == null:
         return
@@ -1206,11 +1246,17 @@ func _apply_procedural_fallback_pose(stride: float, crouching: bool, jumping: bo
 func set_motion(run_phase: float, is_running: bool, is_crouching: bool, jump_height: float, lane_velocity: float, speed: float = 0.0, dt: float = 0.016) -> void:
     motion_clock = run_phase
     var jumping := jump_height > 0.05
+    _lane_anim_timer = maxf(0.0, _lane_anim_timer - dt)
     var clip := "Sprint_Loop"
     if jumping:
         clip = "Jump_Loop"
+        _lane_anim_timer = 0.0  # pulo cancela a passada lateral
     elif is_crouching:
         clip = "Crouch_Fwd_Loop" if is_running else "Crouch_Idle_Loop"
+        _lane_anim_timer = 0.0
+    elif is_running and _lane_anim_timer > 0.0 and _lane_anim_clip != "":
+        # Passada lateral (troca de pista) enquanto corre.
+        clip = _lane_anim_clip
     elif is_running:
         clip = "Sprint_Loop"
     else:
@@ -1367,8 +1413,12 @@ func _match_playback_to_speed(speed: float, is_running: bool, is_crouching: bool
     if animation_player == null:
         return
     var playback := 1.0
-    if using_external_animation and is_running and not is_crouching and not jumping and speed > LOCOMOTION_CLIP_SPEED:
-        playback = clampf(speed / LOCOMOTION_CLIP_SPEED, 1.0, LOCOMOTION_MAX_PLAYBACK)
+    if _lane_anim_timer > 0.0:
+        # A passada lateral tem duração própria (~0,8 s): mantém 1x para não
+        # acelerar/congelar o clipe antes de voltar ao run_loop.
+        playback = 1.0
+    elif using_external_animation and is_running and not is_crouching and not jumping and speed > run_reference_speed:
+        playback = clampf(speed / run_reference_speed, 1.0, run_max_playback)
     animation_player.speed_scale = playback
 
 func _configure_mesh_shadows(node: Node) -> void:
