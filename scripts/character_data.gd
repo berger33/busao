@@ -8,6 +8,22 @@ extends RefCounted
 
 const CATALOG: Array[Dictionary] = [
     {
+        "id": "renata",
+        "name": "Renata",
+        "gender": "F",
+        "role": "corredora",
+        "description": "personagem principal do pacote Runner, com corrida e idle próprios",
+        "effect": "equilíbrio padrão",
+        "price": 0,
+        "skin": Color("#b87655"),
+        "hair": Color("#24181a"),
+        "shirt": Color("#d95d7c"),
+        "pants": Color("#252638"),
+        "shoes": Color("#f1eef0"),
+        "accent": Color("#f2a2b7"),
+        "style": "runner"
+    },
+    {
         "id": "ze",
         "name": "Zé Atrasado",
         "gender": "M",

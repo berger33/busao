@@ -43,6 +43,7 @@ const PERSONAGENS_ROOT := "res://assets/characters/personagens" # Lote 28: 20 GL
 # compartilhar a malha simplificada do elenco. O fallback mantém o jogo jogável
 # enquanto o GLB passa pela validação visual.
 const HERO_ASSET_PATH := PERSONAGENS_ROOT + "/hero_julia.glb"
+const RENATA_ASSET_PATH := PERSONAGENS_ROOT + "/renata.glb"
 # Ginger (WIP): o GLB rigged fica em res://assets/characters/source/ ate ser
 # re-bakeado dentro do teto de 500 KB dos personagens; enquanto nao volta para
 # PERSONAGENS_ROOT, exists() e falso e o corredor usa o modelo padrao.
@@ -616,6 +617,29 @@ func _apply_skin_tint(skin_color: Color) -> void:
                 material.rim_tint = 0.72
                 mesh.set_surface_override_material(surface_index, material)
 
+func _apply_renata_palette() -> void:
+    # O GLB da Renata possui materiais sem nomes semânticos (Runner_*).
+    # Colore cada conjunto explicitamente, sem substituir as texturas embutidas.
+    var colors := {
+        "Runner_Pele": Color("#b9785b"),
+        "Runner_Roupa_Tenis": Color("#d95d7c"),
+        "Runner_Trancas": Color("#24181a")
+    }
+    for mesh in _skinned_meshes(model_root):
+        var color: Color = colors.get(str(mesh.name), Color.TRANSPARENT)
+        if color == Color.TRANSPARENT or mesh.mesh == null:
+            continue
+        for surface_index in mesh.mesh.get_surface_count():
+            var source := mesh.get_surface_override_material(surface_index)
+            if source == null:
+                source = mesh.mesh.surface_get_material(surface_index)
+            if source is BaseMaterial3D:
+                var material := source.duplicate() as BaseMaterial3D
+                material.albedo_color = color
+                material.metallic = 0.0
+                material.roughness = 0.72
+                mesh.set_surface_override_material(surface_index, material)
+
 func _apply_profile_palette(profile: Dictionary) -> void:
     if model_root == null:
         return
@@ -1036,6 +1060,10 @@ func _setup_original_animation() -> void:
         _apply_neutral_pose()
         return
     animation_player = embedded
+    # GLTFs importados podem trazer o AnimationPlayer com root_node vazio ou
+    # apontando para o nó errado. Sem este alvo os clips aparecem na lista,
+    # mas nenhum osso recebe os keyframes (personagem fica em T-pose).
+    animation_player.root_node = animation_player.get_path_to(model_root)
     # Garante que as animações rodem em loop suave
     for anim_name in animation_player.get_animation_list():
         var anim: Animation = animation_player.get_animation(anim_name)
@@ -1054,6 +1082,12 @@ func _resolve_clip_name(clip: String) -> String:
         return ""
     if animation_player.has_animation(clip):
         return clip
+    # Renata's package uses concise Blender clip names. Keep the gameplay
+    # state machine semantic (Sprint/Idle) while accepting those clips.
+    var aliases: Dictionary = {"Sprint_Loop": "run_loop", "Walk_Loop": "run_loop", "Idle_Loop": "idle", "Jump_Loop": "run_loop", "Crouch_Fwd_Loop": "run_loop", "Crouch_Idle_Loop": "idle"}
+    var alias: String = str(aliases.get(clip, ""))
+    if alias != "" and animation_player.has_animation(alias):
+        return alias
     if animation_player.has_animation("body/" + clip):
         return "body/" + clip
     for lib_name in animation_player.get_animation_library_list():

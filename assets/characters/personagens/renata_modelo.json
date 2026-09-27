@@ -1,0 +1,19 @@
+{
+  "blender_version": "5.2.2 LTS",
+  "triangles": 18576,
+  "vertices": 9560,
+  "materials": 3,
+  "bones": 25,
+  "animations": [
+    "run_loop",
+    "idle"
+  ],
+  "texture_size": 512,
+  "style": "base procedural semi-realista, sem escultura manual",
+  "forward_blender": "-Y",
+  "forward_godot": "+Z",
+  "godot_tested": false,
+  "android_tested": false,
+  "root_motion": false,
+  "run_reference_speed_m_s": 2.06
+}
