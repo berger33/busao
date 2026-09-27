@@ -19,6 +19,7 @@ Uso:
 import argparse
 import json
 import math
+import struct
 import sys
 from pathlib import Path
 
@@ -327,6 +328,25 @@ def material_final(albedo, normal, orm):
     return mat
 
 
+def glb_summary(glb_path: Path):
+    """Resumo leve do JSON glTF embutido no GLB final."""
+    data = glb_path.read_bytes()
+    if len(data) < 20 or data[:4] != b"glTF":
+        return {"embedded_images": 0, "materials": [], "alpha_modes": {}}
+    json_len, chunk_type = struct.unpack_from("<II", data, 12)
+    if chunk_type != 0x4E4F534A:  # JSON
+        return {"embedded_images": 0, "materials": [], "alpha_modes": {}}
+    doc = json.loads(data[20:20 + json_len].decode("utf-8"))
+    mats = doc.get("materials", [])
+    alpha_modes = {m.get("name", f"mat_{i}"): m.get("alphaMode", "OPAQUE") for i, m in enumerate(mats)}
+    return {
+        "embedded_images": len(doc.get("images", [])),
+        "images": [im.get("name", f"image_{i}") for i, im in enumerate(doc.get("images", []))],
+        "materials": [m.get("name", f"mat_{i}") for i, m in enumerate(mats)],
+        "alpha_modes": alpha_modes,
+    }
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--res", type=int, default=2048)
@@ -402,6 +422,7 @@ def main():
     )
     bpy.ops.wm.save_as_mainfile(filepath=str(OUT_DIR / "heroi_julia_pbr.blend"))
 
+    resumo_glb = glb_summary(glb)
     m = {
         "res": res,
         "samples": args.samples,
@@ -413,11 +434,19 @@ def main():
         "kb_normal": round(p_nrm.stat().st_size / 1024, 1),
         "kb_orm": round(p_orm.stat().st_size / 1024, 1),
         "glb_kb": round(glb.stat().st_size / 1024, 1),
+        "embedded_images": resumo_glb["embedded_images"],
+        "materials": resumo_glb["materials"],
+        "images": resumo_glb.get("images", []),
+        "alpha_modes": resumo_glb["alpha_modes"],
+        "hair_alpha_mode": resumo_glb["alpha_modes"].get("CabeloJulia_alpha_scissor"),
+        "cornea_alpha_mode": resumo_glb["alpha_modes"].get("Olho_Cornea_RefractionBarata"),
     }
     m["gate_texturas"] = len(m["texturas"]) >= 3
+    m["gate_embedded_images"] = m["embedded_images"] >= 4
     m["gate_cobertura"] = cobertura >= 0.45
     m["gate_glb"] = m["glb_kb"] <= 2048
-    m["gate"] = all(m[k] for k in ("gate_texturas", "gate_cobertura", "gate_glb"))
+    m["gate_alpha_scissor"] = m["hair_alpha_mode"] == "MASK"
+    m["gate"] = all(m[k] for k in ("gate_texturas", "gate_embedded_images", "gate_cobertura", "gate_glb", "gate_alpha_scissor"))
     (OUT_DIR / "heroi_julia_pbr_metrics.json").write_text(json.dumps(m, indent=2))
     log(json.dumps(m, indent=2))
     return 0 if m["gate"] else 1

@@ -22,12 +22,12 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
 
 ## Diário
 
-### 2026-09-26 (Herói 10/10 — Fase 3 cabelo e olhos concluída)
+### 2026-09-26 (Herói 10/10 — Fase 3 rosto final/cabelo/olhos concluída)
 
-- `build_heroi_julia.py` ganhou a seção 4d: esclera/íris/córnea separadas, normal radial da íris, pálpebras, sobrancelhas, cílios, franja e rabo de cavalo em exatamente 5 mechas.
-- Cabelo mobile-safe com textura 128×256 e glTF `alphaMode=MASK` (cutoff 0,5), sem `BLEND`/ordenação de transparência; 27 peças novas preservadas pelo pipeline de bake/export.
-- Gates anteriores verdes: corpo 35.952 tris, 1,720 m, sola 0,012 m, 0 não-manifold; atlas 61,2%; GLB PBR 1.812,4 KB. Runtime intacto (`HERO OK MESH-ONLY`).
-- Evidências: `15_turnaround_fase3.png`, `16_rosto_fase3.png`; detalhes em `docs/execucao/HEROI_FASE3.md`.
+- `build_heroi_julia.py` fechou a Fase 3: esclera, íris com textura/normal radial, pupila, córnea separada com refração barata, pálpebras orgânicas, sobrancelhas/cílios, lábios/narinas e cabelo em cards.
+- Cabelo mobile-safe com textura 192×384 e glTF `alphaMode=MASK` (cutoff 0,5), sem ordenação de transparência; rabo de cavalo mantém exatamente 5 mechas com offset em profundidade para reduzir shimmer.
+- Gates verdes: corpo 35.952 tris, extras Fase 3 3.398 tris, total GLB 39.350 tris, 1,720 m, sola 0,012 m, 0 não-manifold no corpo; atlas 61,2%; 6 imagens embutidas; GLB PBR 1.801,0 KB. Runtime intacto (`HERO OK MESH-ONLY`).
+- Evidências finais para aprovação: `18_rosto_fase3_final_1_perfil_esq.png` a `18_rosto_fase3_final_5_perfil_dir.png` e contato `18_rosto_fase3_final_contato_5_angulos.png`; detalhes em `docs/execucao/HEROI_FASE3.md`.
 
 ### 2026-09-26 (Herói 10/10 — reconstrução do GLB Fase 1+2 + turnaround fresco)
 

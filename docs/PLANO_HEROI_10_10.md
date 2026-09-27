@@ -100,13 +100,14 @@ com stubs X11/GL — hoje o sandbox está **sem** esse ambiente), `tools/blender
 
 **Gate 2:** GLB com `images >= 4`, sem esticamento de UV no checker, ≤ 1,8 MB com texturas.
 
-### Fase 3 — Cabelo e olhos (1 dia)
+### Fase 3 — Cabelo e olhos (1 dia) — ✅ CONCLUÍDA 26/09 (gate verde: 39.350 tris totais, GLB PBR 1.801 KB, cabelo MASK)
 - Cabelo em **cards com alpha** (rabo de cavalo em 5 mechas + franja), material
   `alpha_scissor` (mobile-safe, sem ordenação por transparência).
 - Olho: esclera + córnea separada com `refraction` barata, íris com normal radial.
 - Sobrancelha e cílios como cards finos.
 
 **Gate 3:** close a 2 m com rosto legível; sem shimmer de alpha em movimento a 60 FPS.
+Evidência: `docs/arte_alvo_final/18_rosto_fase3_final_*` e `docs/execucao/HEROI_FASE3.md`.
 
 ### Fase 4 — Rig e skinning (1,5 dia)
 - Armature de **60 ossos**: contrato atual (`pelvis`, `spine_01..03`, `neck_01`, `Head`,

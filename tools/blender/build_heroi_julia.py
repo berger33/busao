@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Herói 10/10 — Fase 1: corpo base esculpido da heroína Júlia.
+"""Herói 10/10 — corpo base + rosto/cabelo/olhos da heroína Júlia.
 
-Plano: docs/PLANO_HEROI_10_10.md (Fase 1 — Corpo base esculpido).
+Plano: docs/PLANO_HEROI_10_10.md (Fases 1 e 3).
 Referência visual: docs/arte_alvo_final/6_model_sheet_heroi.png
 
 Por que um script novo em vez de corrigir `build_humanos.py`: aquele pipeline
@@ -613,22 +613,38 @@ def esculpir_rosto(obj):
 
 
 # -----------------------------------------------------------------------------
-# 4d. Fase 3 — olhos e cabelo em cards alpha-scissor (mobile-safe)
+# 4d. Fase 3 — rosto final: olhos, pálpebras, sobrancelhas/cílios e cabelo
 # -----------------------------------------------------------------------------
-def _mat_principled(nome, cor, rough=0.5, transmission=0.0):
-    m = D.materials.new(nome)
+def _mat_principled(nome, cor, rough=0.5, transmission=0.0, alpha=1.0):
+    """Material PBR simples usado nas peças pequenas do rosto.
+
+    Mantém o nome estável para a auditoria do GLB e para leitura humana no
+    Blender.  A córnea usa transmissão/IOR barata; cabelo continua em alpha
+    scissor (ver material_cabelo_alpha()).
+    """
+    m = D.materials.get(nome) or D.materials.new(nome)
     m.use_nodes = True
-    b = m.node_tree.nodes.get("Principled BSDF")
-    b.inputs["Base Color"].default_value = (*cor, 1.0)
-    b.inputs["Roughness"].default_value = rough
-    if transmission and "Transmission Weight" in b.inputs:
-        b.inputs["Transmission Weight"].default_value = transmission
-        b.inputs["IOR"].default_value = 1.38
+    nt = m.node_tree
+    b = nt.nodes.get("Principled BSDF")
+    if b:
+        b.inputs["Base Color"].default_value = (*cor, alpha)
+        b.inputs["Roughness"].default_value = rough
+        b.inputs["Alpha"].default_value = alpha
+        if transmission and "Transmission Weight" in b.inputs:
+            b.inputs["Transmission Weight"].default_value = transmission
+            b.inputs["IOR"].default_value = 1.38
+        if "Alpha" in b.inputs and alpha < 1.0:
+            if hasattr(m, "blend_method"):
+                m.blend_method = "BLEND"
+            if hasattr(m, "surface_render_method"):
+                m.surface_render_method = "BLENDED"
+    m.diffuse_color = (*cor, alpha)
+    m.use_backface_culling = False
     return m
 
 
 def _card(nome, pontos, mat, uvs=((0, 0), (1, 0), (1, 1), (0, 1))):
-    """Quad frente-e-verso. Cards não se cruzam quase coplanares: evita shimmer."""
+    """Quad frente-e-verso. Cards espaçados em profundidade para evitar shimmer."""
     me = D.meshes.new(nome)
     me.from_pydata(pontos, [], [(0, 1, 2, 3)])
     me.update()
@@ -641,108 +657,319 @@ def _card(nome, pontos, mat, uvs=((0, 0), (1, 0), (1, 1), (0, 1))):
     return o
 
 
-def material_cabelo_alpha():
-    """Máscara binária embutida; glTF exporta MASK, nunca BLEND/alpha sorting."""
-    img = D.images.new("julia_cabelo_alpha", width=128, height=256, alpha=True)
-    px = []
-    for y in range(256):
-        v = y / 255.0
-        for x in range(128):
-            u = x / 127.0
-            # cinco fios largos + borda que afunila na ponta, sem semitransparência
-            largura = 0.46 * (0.28 + 0.72 * v)
-            dentro = abs(u - 0.5) < largura
-            fio = (math.sin(u * 34.0 + v * 8.0) > -0.78)
-            a = 1.0 if dentro and fio else 0.0
-            # castanho com variação longitudinal já na textura
-            c = 0.055 + 0.035 * math.sin(u * 31.0) ** 2
-            px.extend((c * 1.35, c * 0.62, c * 0.32, a))
-    img.pixels.foreach_set(px)
-    # Fonte versionada e cópia packed no GLB; 128x256 mantém o custo mobile baixo.
-    tex_dir = REPO / "assets" / "textures" / "heroi"
-    tex_dir.mkdir(parents=True, exist_ok=True)
-    img.filepath_raw = str(tex_dir / "julia_cabelo_alpha.png")
+def _strip_xz(nome, pontos, largura, mat, uv_repeat=1.0):
+    """Fita orgânica no plano XZ (normal voltada para a câmera/frente -Y).
+
+    Usada em pálpebras, sobrancelhas e lábios. Diferente dos antigos quads
+    retangulares, segue uma curva com largura pequena, então não corta o olho
+    como uma barra preta no close.
+    """
+    pts = [Vector(p) for p in pontos]
+    verts, faces = [], []
+    npts = len(pts)
+    for i, p in enumerate(pts):
+        if i == 0:
+            t = pts[1] - p
+        elif i == npts - 1:
+            t = p - pts[i - 1]
+        else:
+            t = pts[i + 1] - pts[i - 1]
+        perp = Vector((-t.z, 0.0, t.x))
+        if perp.length < 1e-6:
+            perp = Vector((0.0, 0.0, 1.0))
+        perp.normalize()
+        verts.append(tuple(p + perp * (largura * 0.5)))
+        verts.append(tuple(p - perp * (largura * 0.5)))
+    for i in range(npts - 1):
+        faces.append((2 * i, 2 * i + 1, 2 * i + 3, 2 * i + 2))
+    me = D.meshes.new(nome)
+    me.from_pydata(verts, [], faces)
+    me.update()
+    uv = me.uv_layers.new(name="UVMap")
+    for f in me.polygons:
+        for li in f.loop_indices:
+            vi = me.loops[li].vertex_index
+            step = vi // 2
+            side = vi % 2
+            uv.data[li].uv = (step / max(1, npts - 1) * uv_repeat, float(side))
+        f.use_smooth = True
+    o = D.objects.new(nome, me)
+    bpy.context.scene.collection.objects.link(o)
+    o.data.materials.append(mat)
+    return o
+
+
+def _taper_card(nome, top, bottom, largura_top, largura_bottom, mat, eixo_largura=(1, 0, 0)):
+    """Card de cabelo afunilado entre topo e ponta."""
+    top = Vector(top); bottom = Vector(bottom)
+    w = Vector(eixo_largura)
+    if w.length < 1e-6:
+        w = Vector((1, 0, 0))
+    w.normalize()
+    pts = [
+        tuple(top - w * largura_top * 0.5),
+        tuple(top + w * largura_top * 0.5),
+        tuple(bottom + w * largura_bottom * 0.5),
+        tuple(bottom - w * largura_bottom * 0.5),
+    ]
+    return _card(nome, pts, mat)
+
+
+def _save_pack_image(img, caminho: Path, *, srgb=True):
+    caminho.parent.mkdir(parents=True, exist_ok=True)
+    img.filepath_raw = str(caminho)
     img.file_format = "PNG"
+    img.colorspace_settings.name = "sRGB" if srgb else "Non-Color"
     img.save()
     img.pack()
-    m = D.materials.new("CabeloJulia_alpha_scissor")
+    return img
+
+
+def material_cabelo_alpha():
+    """Máscara binária embutida; glTF exporta MASK, nunca BLEND/alpha sorting."""
+    img = D.images.new("julia_cabelo_alpha", width=192, height=384, alpha=True)
+    px = []
+    for y in range(384):
+        v = y / 383.0
+        for x in range(192):
+            u = x / 191.0
+            # Taper: largo na raiz, fino nas pontas. Alpha sempre 0/1 para
+            # alpha-scissor estável em mobile e sem shimmer por sorting.
+            largura = 0.045 + 0.28 * (1.0 - v) ** 0.70
+            centro = 0.5 + 0.020 * math.sin(v * 8.0)
+            dentro = abs(u - centro) < largura
+            fio = (math.sin(u * 86.0 + v * 37.0) > -0.84) or (math.sin(u * 39.0 - v * 19.0) > 0.52)
+            a = 1.0 if dentro and fio else 0.0
+            # Castanho escuro com fios quentes, já no mesmo mapa da máscara.
+            brilho = 0.55 + 0.45 * math.sin(u * 29.0 + v * 9.0) ** 2
+            r = 0.052 + 0.050 * brilho
+            g = 0.022 + 0.022 * brilho
+            b = 0.010 + 0.012 * brilho
+            px.extend((r, g, b, a))
+    img.pixels.foreach_set(px)
+    _save_pack_image(img, REPO / "assets" / "textures" / "heroi" / "julia_cabelo_alpha.png")
+
+    m = D.materials.get("CabeloJulia_alpha_scissor") or D.materials.new("CabeloJulia_alpha_scissor")
     m.use_nodes = True
     nt = m.node_tree
-    b = nt.nodes.get("Principled BSDF")
+    nt.nodes.clear()
+    out = nt.nodes.new("ShaderNodeOutputMaterial")
+    b = nt.nodes.new("ShaderNodeBsdfPrincipled")
     tex = nt.nodes.new("ShaderNodeTexImage")
     tex.image = img
     nt.links.new(tex.outputs["Color"], b.inputs["Base Color"])
-    # O exporter 4.5 infere MASK do nó de comparação (alpha >= 0.5). Ligar o
-    # alpha direto gera BLEND e reintroduz ordenação/shimmer em mobile.
+    # O exporter glTF só mantém alphaMode=MASK de forma confiável quando o
+    # alpha passa por comparação explícita; alpha direto vira BLEND e reabre
+    # o problema de ordenação/shimmer nos cards em mobile.
     clip = nt.nodes.new("ShaderNodeMath")
     clip.operation = "GREATER_THAN"
     clip.inputs[1].default_value = 0.5
     nt.links.new(tex.outputs["Alpha"], clip.inputs[0])
     nt.links.new(clip.outputs[0], b.inputs["Alpha"])
-    b.inputs["Roughness"].default_value = 0.68
+    nt.links.new(b.outputs["BSDF"], out.inputs["Surface"])
+    b.inputs["Roughness"].default_value = 0.72
+    if hasattr(m, "blend_method"):
+        m.blend_method = "CLIP"
     if hasattr(m, "surface_render_method"):
         m.surface_render_method = "DITHERED"
     m.alpha_threshold = 0.5
     m.use_transparency_overlap = False
-    m.diffuse_color = (0.07, 0.025, 0.012, 1.0)
+    m.use_backface_culling = False
+    m.diffuse_color = (0.07, 0.028, 0.014, 1.0)
     return m
+
+
+def material_iris_radial():
+    """Íris verde-castanha com mapa normal radial real (exportável no glTF)."""
+    tex_dir = REPO / "assets" / "textures" / "heroi"
+    color = D.images.new("julia_iris_color", width=128, height=128, alpha=True)
+    normal = D.images.new("julia_iris_normal", width=128, height=128, alpha=False)
+    cp, npix = [], []
+    for y in range(128):
+        yy = (y + 0.5) / 128.0 * 2.0 - 1.0
+        for x in range(128):
+            xx = (x + 0.5) / 128.0 * 2.0 - 1.0
+            r = math.sqrt(xx * xx + yy * yy)
+            ang = math.atan2(yy, xx)
+            dentro = r <= 1.0
+            anel = 0.5 + 0.5 * math.sin(42.0 * r + 10.0 * math.sin(ang * 5.0))
+            raios = 0.5 + 0.5 * math.sin(22.0 * ang + 18.0 * r)
+            ring_dark = 1.0 - 0.60 * max(0.0, min(1.0, (r - 0.78) / 0.18))
+            pupil = 1.0 if r < 0.28 else 0.0
+            if dentro:
+                base_r = 0.030 + 0.020 * anel
+                base_g = 0.110 + 0.085 * raios
+                base_b = 0.065 + 0.035 * anel
+                base_r *= ring_dark; base_g *= ring_dark; base_b *= ring_dark
+                if pupil:
+                    base_r *= 0.08; base_g *= 0.08; base_b *= 0.08
+                cp.extend((base_r, base_g, base_b, 1.0))
+                # Normal tangencial radial sutil, em tangent space.
+                amp = 0.18 * (1.0 - min(1.0, r)) * (0.35 + 0.65 * anel)
+                nx = math.cos(ang) * amp
+                ny = math.sin(ang) * amp
+                nz = max(0.0, math.sqrt(max(0.0, 1.0 - nx * nx - ny * ny)))
+                npix.extend((0.5 + nx * 0.5, 0.5 + ny * 0.5, nz, 1.0))
+            else:
+                cp.extend((0.0, 0.0, 0.0, 0.0))
+                npix.extend((0.5, 0.5, 1.0, 1.0))
+    color.pixels.foreach_set(cp)
+    normal.pixels.foreach_set(npix)
+    _save_pack_image(color, tex_dir / "julia_iris_color.png", srgb=True)
+    _save_pack_image(normal, tex_dir / "julia_iris_normal.png", srgb=False)
+
+    m = D.materials.get("Olho_Iris_NormalRadial") or D.materials.new("Olho_Iris_NormalRadial")
+    m.use_nodes = True
+    nt = m.node_tree
+    nt.nodes.clear()
+    out = nt.nodes.new("ShaderNodeOutputMaterial")
+    bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")
+    tex_c = nt.nodes.new("ShaderNodeTexImage")
+    tex_c.image = color
+    nt.links.new(tex_c.outputs["Color"], bsdf.inputs["Base Color"])
+    tex_n = nt.nodes.new("ShaderNodeTexImage")
+    tex_n.image = normal
+    tex_n.image.colorspace_settings.name = "Non-Color"
+    nrm = nt.nodes.new("ShaderNodeNormalMap")
+    nrm.inputs["Strength"].default_value = 0.38
+    nt.links.new(tex_n.outputs["Color"], nrm.inputs["Color"])
+    nt.links.new(nrm.outputs["Normal"], bsdf.inputs["Normal"])
+    bsdf.inputs["Roughness"].default_value = 0.34
+    nt.links.new(bsdf.outputs["BSDF"], out.inputs["Surface"])
+    m.use_backface_culling = False
+    return m
+
+
+def _olho(nome, loc, escala, mat, seg=24):
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=seg, ring_count=max(8, seg // 2), location=loc)
+    o = bpy.context.object
+    o.name = nome
+    o.scale = escala
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    for p in o.data.polygons:
+        p.use_smooth = True
+    o.data.materials.append(mat)
+    return o
+
+
+def _cilios(nome, s, mat):
+    """Leque curto de cílios superiores; geometria opaca, sem alpha sorting."""
+    pts_base = []
+    for t in (0.12, 0.32, 0.54, 0.76, 0.92):
+        x = s * (0.016 + 0.040 * t)
+        z = 1.594 + 0.0035 * math.sin(math.pi * t)
+        pts_base.append((x, -0.1165, z))
+    verts, faces = [], []
+    for i, p in enumerate(pts_base):
+        t = i / max(1, len(pts_base) - 1)
+        p = Vector(p)
+        tip = p + Vector((s * (0.0012 + 0.0018 * t), -0.0010, 0.0018 + 0.0012 * t))
+        base_w = 0.00075 * (1.0 - 0.35 * t)
+        verts.extend([tuple(p + Vector((base_w, 0, 0))), tuple(p - Vector((base_w, 0, 0))), tuple(tip)])
+        j = i * 3
+        faces.append((j, j + 1, j + 2))
+    me = D.meshes.new(nome)
+    me.from_pydata(verts, [], faces)
+    me.update()
+    o = D.objects.new(nome, me)
+    bpy.context.scene.collection.objects.link(o)
+    o.data.materials.append(mat)
+    return o
 
 
 def criar_olhos_e_cards():
     pecas = []
-    esclera = _mat_principled("Olho_Esclera", (0.82, 0.86, 0.82), 0.28)
-    iris = _mat_principled("Olho_Iris_NormalRadial", (0.055, 0.16, 0.10), 0.34)
-    # Normal radial procedural: anéis concêntricos finos convertidos em bump.
-    int_ = iris.node_tree
-    ib = int_.nodes.get("Principled BSDF")
-    icoord = int_.nodes.new("ShaderNodeTexCoord")
-    ivor = int_.nodes.new("ShaderNodeTexVoronoi")
-    ivor.distance = "EUCLIDEAN"; ivor.feature = "DISTANCE_TO_EDGE"
-    ivor.inputs["Scale"].default_value = 38.0
-    ibump = int_.nodes.new("ShaderNodeBump")
-    ibump.inputs["Strength"].default_value = 0.28
-    ibump.inputs["Distance"].default_value = 0.001
-    int_.links.new(icoord.outputs["Generated"], ivor.inputs["Vector"])
-    int_.links.new(ivor.outputs["Distance"], ibump.inputs["Height"])
-    int_.links.new(ibump.outputs["Normal"], ib.inputs["Normal"])
-    cornea = _mat_principled("Olho_Cornea_RefractionBarata", (0.92, 0.98, 1.0), 0.06, 0.78)
-    escuro = _mat_principled("Sobrancelha_Cilios", (0.035, 0.012, 0.007), 0.72)
+    pele_det = _mat_principled("PeleJulia_Detalhe", (0.48, 0.255, 0.175), 0.56)
+    esclera = _mat_principled("Olho_Esclera", (0.86, 0.88, 0.84), 0.30)
+    iris = material_iris_radial()
+    pupila = _mat_principled("Olho_Pupila", (0.004, 0.003, 0.002), 0.18)
+    cornea = _mat_principled("Olho_Cornea_RefractionBarata", (0.92, 0.98, 1.0), 0.025, 0.72, alpha=0.18)
+    escuro = _mat_principled("Sobrancelha_Cilios", (0.035, 0.014, 0.006), 0.74)
+    labios = _mat_principled("LabiosJulia", (0.34, 0.135, 0.115), 0.58)
+    boca = _mat_principled("SulcoBoca_Narinas", (0.050, 0.018, 0.014), 0.82)
 
     for lado, s in (("l", 1.0), ("r", -1.0)):
-        # Esfera achatada encaixada na órbita, olhando para -Y.
-        for nome, loc, escala, mat, seg in (
-            (f"esclera_{lado}", (s * 0.034, -0.074, 1.588), (0.025, 0.010, 0.015), esclera, 20),
-            (f"iris_{lado}", (s * 0.034, -0.0842, 1.588), (0.0095, 0.0012, 0.0095), iris, 16),
-            (f"cornea_{lado}", (s * 0.034, -0.0855, 1.588), (0.0115, 0.0017, 0.0115), cornea, 16),
-        ):
-            bpy.ops.mesh.primitive_uv_sphere_add(segments=seg, ring_count=max(8, seg // 2), location=loc)
-            o = bpy.context.object; o.name = nome; o.scale = escala
-            bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-            o.data.materials.append(mat); pecas.append(o)
-        # Pálpebras, sobrancelhas e cílios: cards curvos em planos separados.
-        x0, x1 = s * 0.061, s * 0.008
-        pecas.append(_card(f"sobrancelha_{lado}", [(x0,-0.098,1.609),(x1,-0.099,1.611),(x1,-0.098,1.616),(x0,-0.097,1.617)], escuro))
-        pecas.append(_card(f"cilios_{lado}", [(x0,-0.096,1.589),(x1,-0.097,1.590),(x1,-0.097,1.593),(x0,-0.096,1.592)], escuro))
-        pele = D.materials.get("PeleJulia") or material("PeleJulia", (0.74, 0.52, 0.40))
-        pecas.append(_card(f"palpebra_sup_{lado}", [(x0,-0.094,1.593),(x1,-0.095,1.594),(x1,-0.094,1.598),(x0,-0.093,1.597)], pele))
+        # O olho foi trazido ~3 cm para frente contra a versão anterior; agora
+        # a córnea fica na frente da face e não escondida atrás da malha da bochecha.
+        cx, cy, cz = s * 0.032, -0.106, 1.590
+        pecas.append(_olho(f"esclera_{lado}", (cx, cy, cz), (0.0148, 0.0060, 0.0068), esclera, 24))
+        pecas.append(_olho(f"iris_{lado}", (cx, -0.1130, cz), (0.0048, 0.00055, 0.0048), iris, 20))
+        pecas.append(_olho(f"pupila_{lado}", (cx, -0.11355, cz), (0.00205, 0.00034, 0.00205), pupila, 16))
+        pecas.append(_olho(f"cornea_{lado}", (cx, -0.11405, cz), (0.0054, 0.00080, 0.0054), cornea, 20))
+
+        # Pálpebras em arcos finos (não quads retangulares).
+        pecas.append(_strip_xz(f"palpebra_sup_{lado}", [
+            (s * 0.016, -0.1155, 1.592), (s * 0.026, -0.1160, 1.598),
+            (s * 0.040, -0.1160, 1.598), (s * 0.052, -0.1155, 1.593),
+        ], 0.0030, pele_det))
+        pecas.append(_strip_xz(f"palpebra_inf_{lado}", [
+            (s * 0.017, -0.1150, 1.586), (s * 0.032, -0.1154, 1.582),
+            (s * 0.047, -0.1154, 1.584), (s * 0.053, -0.1150, 1.588),
+        ], 0.0022, pele_det))
+        pecas.append(_strip_xz(f"sobrancelha_{lado}", [
+            (s * 0.013, -0.118, 1.610), (s * 0.030, -0.119, 1.618),
+            (s * 0.050, -0.119, 1.616), (s * 0.063, -0.118, 1.611),
+        ], 0.0036, escuro))
+        pecas.append(_cilios(f"cilios_{lado}", s, escuro))
+
+    # Lábios e fenda: dão leitura de boca a 2 m sem depender só do relevo do bake.
+    pecas.append(_strip_xz("labio_superior", [
+        (-0.030, -0.109, 1.528), (-0.014, -0.111, 1.533), (0.0, -0.112, 1.531),
+        (0.014, -0.111, 1.533), (0.030, -0.109, 1.528),
+    ], 0.0062, labios))
+    pecas.append(_strip_xz("labio_inferior", [
+        (-0.027, -0.108, 1.519), (-0.012, -0.110, 1.514), (0.0, -0.111, 1.513),
+        (0.012, -0.110, 1.514), (0.027, -0.108, 1.519),
+    ], 0.0068, labios))
+    pecas.append(_strip_xz("sulco_boca", [
+        (-0.028, -0.113, 1.524), (-0.010, -0.114, 1.523), (0.0, -0.1145, 1.523),
+        (0.010, -0.114, 1.523), (0.028, -0.113, 1.524),
+    ], 0.0018, boca))
+
+    # Narinas discretas (micro elipses escuras) em vez de só sulcos do normal map.
+    for lado, s in (("l", 1.0), ("r", -1.0)):
+        pecas.append(_olho(f"narina_{lado}", (s * 0.0095, -0.115, 1.548), (0.0021, 0.00032, 0.00115), boca, 12))
 
     cabelo = material_cabelo_alpha()
-    # Franja: quatro cards escalonados, afastados 2 mm entre si.
-    for i in range(4):
-        x0 = -0.074 + i * 0.037
-        x1 = x0 + 0.041
-        y = -0.086 - i * 0.0007
-        pecas.append(_card(f"franja_{i+1}", [(x0,y,1.690),(x1,y,1.688),(x1,y-0.004,1.612),(x0,y-0.003,1.620)], cabelo))
-    # Calota em 6 cards e rabo de cavalo exatamente em 5 mechas.
-    for i in range(6):
-        a0 = -1.05 + i * 0.42; a1 = a0 + 0.52
-        pecas.append(_card(f"calota_{i+1}", [(0.085*math.sin(a0),0.020,1.705),(0.085*math.sin(a1),0.020,1.705),
-                    (0.091*math.sin(a1),0.055,1.585),(0.091*math.sin(a0),0.055,1.585)], cabelo))
+    # Franja curta, acima dos olhos; mantém leitura facial no close.
+    franjas = [
+        ("franja_1", (-0.066, -0.112, 1.700), (-0.058, -0.118, 1.650), 0.014, 0.004),
+        ("franja_2", (-0.041, -0.116, 1.708), (-0.034, -0.121, 1.638), 0.016, 0.004),
+        ("franja_3", (-0.014, -0.118, 1.711), (-0.010, -0.123, 1.648), 0.014, 0.003),
+        ("franja_4", (0.020, -0.116, 1.706), (0.030, -0.121, 1.642), 0.016, 0.004),
+        ("franja_5", (0.052, -0.112, 1.697), (0.061, -0.117, 1.655), 0.014, 0.004),
+    ]
+    for nome, top, bottom, wt, wb in franjas:
+        pecas.append(_taper_card(nome, top, bottom, wt, wb, cabelo, eixo_largura=(1, 0, 0)))
+
+    # Calota em cards longos sobre topo/laterais; sem esfera sólida de cabelo.
+    for i, x in enumerate((-0.070, -0.047, -0.024, 0.000, 0.024, 0.047, 0.070), start=1):
+        pecas.append(_card(f"calota_top_{i}", [
+            (x - 0.014, -0.040, 1.710), (x + 0.014, -0.040, 1.710),
+            (x + 0.016, 0.060, 1.620), (x - 0.016, 0.060, 1.620),
+        ], cabelo))
+    for lado, s in (("l", 1.0), ("r", -1.0)):
+        pecas.append(_taper_card(f"mecha_lateral_{lado}_1", (s * 0.078, -0.070, 1.680),
+                                 (s * 0.090, -0.034, 1.550), 0.026, 0.010, cabelo, eixo_largura=(0, 0, 1)))
+        pecas.append(_taper_card(f"mecha_lateral_{lado}_2", (s * 0.088, -0.020, 1.650),
+                                 (s * 0.098, 0.010, 1.520), 0.024, 0.010, cabelo, eixo_largura=(0, 0, 1)))
+
+    # Rabo de cavalo: exatamente 5 mechas, com afastamento de 4 mm em Y para não
+    # haver coplanaridade/shimmer quando a personagem corre a 60 FPS.
     for i in range(5):
-        off = (i - 2) * 0.018
-        pecas.append(_card(f"rabo_mecha_{i+1}", [(off-0.023,0.080,1.635),(off+0.023,0.080,1.635),
-                    (off+0.014,0.105+0.006*i,1.455),(off-0.014,0.105+0.006*i,1.455)], cabelo))
-    log("Fase 3: 2 olhos (esclera/íris/córnea), pálpebras, sobrancelhas/cílios e cabelo alpha-scissor")
+        off = (i - 2) * 0.014
+        pecas.append(_taper_card(f"rabo_mecha_{i+1}",
+                                 (off, 0.083 + i * 0.004, 1.625),
+                                 (off * 0.55, 0.145 + i * 0.009, 1.430 - 0.012 * (i % 2)),
+                                 0.042, 0.016, cabelo, eixo_largura=(1, 0, 0)))
+
+    # Elástico discreto do rabo — geometria opaca, custo mínimo.
+    elastico = _mat_principled("ElasticoRabo", (0.015, 0.010, 0.009), 0.66)
+    pecas.append(_strip_xz("elastico_rabo", [
+        (-0.034, 0.079, 1.626), (-0.012, 0.078, 1.620), (0.012, 0.078, 1.620), (0.034, 0.079, 1.626),
+    ], 0.006, elastico))
+
+    log("Fase 3: rosto final com olhos separados, íris normal radial, pálpebras/arcos, cílios/sobrancelhas e cabelo alpha-scissor (rabo=5 mechas)")
     return pecas
 
 
@@ -832,11 +1059,15 @@ def main():
     m = metricas(corpo)
     extras = [o for o in bpy.context.scene.objects if o.type == "MESH" and o != corpo]
     m["fase3_objetos"] = len(extras)
+    m["fase3_tris"] = sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in extras)
+    m["tris_total_glb"] = m["tris"] + m["fase3_tris"]
     m["rabo_mechas"] = len([o for o in extras if o.name.startswith("rabo_mecha_")])
     m["alpha_mode"] = "MASK (alpha cutoff 0.5)"
     glb, blend = exportar(corpo)
     m["glb_kb"] = round(glb.stat().st_size / 1024, 1)
-    m["gate_tris"] = TRIS_MIN <= m["tris"] <= TRIS_MAX
+    # O teto de triângulos vale para o GLB inteiro; as arestas não-manifold são
+    # auditadas no corpo, porque os cards de cabelo/cílios são planos por design.
+    m["gate_tris"] = TRIS_MIN <= m["tris_total_glb"] <= TRIS_MAX
     m["gate_altura"] = 1.70 <= m["altura_m"] <= 1.75
     m["gate_piso"] = abs(m["piso_z_m"] - PISO_OFFSET) < 0.005
     m["gate_manifold"] = m["arestas_nao_manifold"] == 0
