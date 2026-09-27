@@ -87,10 +87,12 @@ MESH-ONLY`).
 
 ## Próximo passo
 
-Fechar a **Fase 3**: globos oculares na órbita + pálpebras, cabelo em cards com
-alpha (o rosto esculpido já está na malha e no bake). Depois Fase 4 (armature
-60 ossos + skinning — os nomes `thumb/index/middle/ring/pinky_01..03_l|r` já
-existem nas mãos à espera do rig).
+> Atualização da sessão seguinte (26/09): a **Fase 3 foi fechada** em
+> `docs/execucao/HEROI_FASE3.md` com rosto completo, olhos, pálpebras,
+> sobrancelhas/cílios e cabelo em cards alpha-scissor.
+>
+> Próximo passo real: Fase 4 (armature 60 ossos + skinning — os nomes
+> `thumb/index/middle/ring/pinky_01..03_l|r` já existem nas mãos à espera do rig).
 
 ## Reproduzir
 

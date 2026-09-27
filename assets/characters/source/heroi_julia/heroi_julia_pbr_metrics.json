@@ -4,56 +4,26 @@
   "faces": 18065,
   "cobertura_uv": 0.612,
   "res_normal_orm": 1024,
-  "texturas": [
+  "kb_albedo": 385.9,
+  "kb_normal": 164.3,
+  "kb_orm": 246.7,
+  "glb_kb": 1971.9,
+  "gate_texturas": true,
+  "gate_cobertura": true,
+  "gate_glb": true,
+  "gate": true,
+  "texturas_corpo": [
     "julia_albedo.jpg",
     "julia_normal.jpg",
     "julia_orm.jpg"
   ],
-  "kb_albedo": 385.9,
-  "kb_normal": 164.3,
-  "kb_orm": 246.2,
-  "glb_kb": 1801.0,
-  "embedded_images": 6,
-  "materials": [
-    "PeleJulia.001",
-    "Olho_Esclera",
-    "Olho_Iris_NormalRadial",
-    "Olho_Pupila",
-    "Olho_Cornea_RefractionBarata",
-    "PeleJulia_Detalhe",
-    "Sobrancelha_Cilios",
-    "LabiosJulia",
-    "SulcoBoca_Narinas",
-    "CabeloJulia_alpha_scissor",
-    "ElasticoRabo"
-  ],
-  "alpha_modes": {
-    "PeleJulia.001": "OPAQUE",
-    "Olho_Esclera": "OPAQUE",
-    "Olho_Iris_NormalRadial": "OPAQUE",
-    "Olho_Pupila": "OPAQUE",
-    "Olho_Cornea_RefractionBarata": "BLEND",
-    "PeleJulia_Detalhe": "OPAQUE",
-    "Sobrancelha_Cilios": "OPAQUE",
-    "LabiosJulia": "OPAQUE",
-    "SulcoBoca_Narinas": "OPAQUE",
-    "CabeloJulia_alpha_scissor": "MASK",
-    "ElasticoRabo": "OPAQUE"
-  },
-  "hair_alpha_mode": "MASK",
-  "gate_texturas": true,
-  "gate_embedded_images": true,
-  "gate_cobertura": true,
-  "gate_glb": true,
-  "gate_alpha_scissor": true,
-  "gate": true,
-  "images": [
+  "texturas_embutidas": [
     "julia_normal",
     "julia_albedo",
     "julia_orm",
-    "julia_iris_normal",
+    "julia_iris_normal_radial",
     "julia_iris_color",
     "julia_cabelo_alpha"
   ],
-  "cornea_alpha_mode": "BLEND"
+  "embedded_images": 6
 }

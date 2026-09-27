@@ -43,26 +43,27 @@ def alvo_mao(objs):
 
 
 def alvo_rosto(objs):
-    """Rosto: metade frontal (-Y) do topo da cabeça (acima de 88% da altura)."""
-    (_, _), (_, _), (z0, z1) = rt.bbox(objs)
+    """Rosto completo: enquadra testa/olhos/nariz/boca, não só topo da cabeça."""
+    (x0, x1), (y0, y1), (z0, z1) = rt.bbox(objs)
     h = z1 - z0
-    pts = [
-        (o.matrix_world @ v.co)
-        for o in objs
-        for v in o.data.vertices
-        if (o.matrix_world @ v.co).z > z0 + 0.88 * h and (o.matrix_world @ v.co).y < 0.0
-    ]
+    pts = []
+    for o in objs:
+        for v in o.data.vertices:
+            w = o.matrix_world @ v.co
+            if z0 + 0.84 * h < w.z < z0 + 0.985 * h and w.y < 0.015 and abs(w.x) < 0.16:
+                pts.append(w)
     if not pts:
         raise SystemExit("regiao do rosto vazia (frente deveria ser -Y)")
+    # X/Y vêm da malha frontal; Z fixo em ~centro facial para incluir boca no quadro.
     cx = sum(p.x for p in pts) / len(pts)
     cy = sum(p.y for p in pts) / len(pts)
-    cz = sum(p.z for p in pts) / len(pts)
+    cz = z0 + 0.913 * h
     return cx, cy, cz
 
 
 ALVOS = {
     "mao": (alvo_mao, (0.30, -0.26, 0.06), 70.0, 0.44),
-    "rosto": (alvo_rosto, (0.12, -0.40, 0.02), 85.0, 0.46),
+    "rosto": (alvo_rosto, (0.08, -0.56, 0.01), 72.0, 0.56),
 }
 
 
