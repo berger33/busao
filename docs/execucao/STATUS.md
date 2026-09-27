@@ -22,6 +22,14 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
 
 ## Diário
 
+### 2026-09-27 (Herói 10/10 — Fase 3 v2: rosto RECONSTRUÍDO após reprovação das fotos)
+
+- Fotos v1 reprovadas ("tudo errado"). Diagnóstico numérico (`tools/blender/diag_rosto.py`) confirmou: nariz 2,4 cm ATRÁS da sobrancelha (tabela do dorso em ordem invertida), queixo engolido pelo trapézio (cabeça esculpida dentro do corpo), crânio 17% fundo demais, olhos a 39% da altura da cabeça, boca/lábios/narinas/cílios/sobrancelhas flutuando até 5,1 cm da pele (coordenadas fixas em vez de raycast), sem orelhas, coroa careca, franja enterrada, rabo de cavalo no tronco (Catmull-Rom com termo constante errado) e cabelo com normais para dentro.
+- REBUILD completo do `build_heroi_julia.py`: corpo termina no pescoço; cabeça loft paramétrico própria (nariz/lábios/queixo/órbitas por campo escalar); TODO móvel do rosto pendurado por raycast BVHTree na malha final; orelhas reais (48,5 mm, saliência 12,1 mm); calota por varredura esférica da linha do cabelo; franja da borda exata da calota; rabo na nuca + elástico; orientação de cascas garantida por `refs` no `_mesh`.
+- 18 gates anatômicos verdes (`gate_rosto`): nariz +1,4 cm à frente da sobrancelha, olhos na linha média (Δ1,2 mm), mandíbula 0,125 m, aderência ≤1,7 mm com 0 raios perdidos, calota 120/120, pálpebras 6/6 no globo, cílios a 0,35 mm da borda.
+- Orçamento: 41.912 tris (24k–46k), 0 não-manifold, 1,720 m; GLB base 904,6 KB; GLB PBR 2.037,8 KB ≤ 2.048 KB (6 imagens embutidas, atlas 64,5%).
+- 5 fotos re-renderizadas a 780×960@40spp (`18_rosto_fase3_final_1..5` + contato); artefatos e texturas recopiados para `assets/characters/source/heroi_julia/` e `assets/textures/heroi/`. Runtime intacto. Fase 4 (rig) aguarda aprovação. Detalhes: `docs/execucao/HEROI_FASE3.md` (seção 2026-09-27).
+
 ### 2026-09-26 (Herói 10/10 — Fase 3 rosto completo concluída)
 
 - `build_heroi_julia.py` consolidou a seção 4d: lábios/narinas, esclera/íris/pupila/córnea separadas, normal radial da íris, pálpebras superiores/inferiores, sobrancelhas, cílios, franja e rabo de cavalo em exatamente 5 mechas.
