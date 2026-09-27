@@ -146,7 +146,7 @@ def esqueleto_corpo():
         no(f"braco_{lado}", _braco(0.27), 0.054)
         no(f"cotovelo_{lado}", _braco(0.52), 0.047)
         no(f"antebraco_{lado}", _braco(0.76), 0.042)
-        no(f"punho_{lado}", _braco(1.00), 0.031)
+        no(f"punho_{lado}", _braco(1.00), 0.024)
         # A palma NÃO é mais um nó do Skin (virava bola solta): agora é uma
         # laje modelada em criar_maos(), encaixada no punho.
         arestas += [
@@ -423,11 +423,11 @@ def _tubo_organico(nome, centros, raios, seg=14, fechar_inicio=True, fechar_fim=
             faces.append((cf, base + k, base + (k + 1) % seg))
     me.from_pydata(verts, [], faces)
     me.update()
-    for p in me.polygons:
-        p.use_smooth = True
-    o = D.objects.new(nome, me)
-    bpy.context.scene.collection.objects.link(o)
-    return o
+    for f in me.polygons:
+        f.use_smooth = True
+    obj = D.objects.new(nome, me)
+    bpy.context.scene.collection.objects.link(obj)
+    return obj
 
 
 def _laje_palma(nome, centro, largura, espessura, comprimento, seg=18):
@@ -447,11 +447,12 @@ def _laje_palma(nome, centro, largura, espessura, comprimento, seg=18):
         ( 0.86, largura * 0.48, espessura * 0.44, -0.003),
         ( 1.00, largura * 0.40, espessura * 0.32, -0.004),  # linha dos nós
     ]
-    me = D.meshes.new(nome)
     verts, faces = [], []
     exp = 0.62  # seção retângulo-arredondado, não cilindro
     for t, rx, ry, yoff in perfis:
         z = cz - comprimento * t
+        y_c = cy - 0.0035 * math.sin(math.pi * min(1.0, t))
+        # Superellipse suave: palma mais cheia no dorso e menos cilíndrica.
         for k in range(seg):
             a = k / seg * TAU
             ca, sa = math.cos(a), math.sin(a)
