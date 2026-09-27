@@ -1,29 +1,30 @@
 {
-  "res": 2048,
-  "samples": 24,
+  "verts": 18042,
   "faces": 18065,
-  "cobertura_uv": 0.612,
-  "res_normal_orm": 1024,
-  "kb_albedo": 385.9,
-  "kb_normal": 164.3,
-  "kb_orm": 246.7,
-  "glb_kb": 1971.9,
-  "gate_texturas": true,
-  "gate_cobertura": true,
-  "gate_glb": true,
-  "gate": true,
-  "texturas_corpo": [
-    "julia_albedo.jpg",
-    "julia_normal.jpg",
-    "julia_orm.jpg"
-  ],
-  "texturas_embutidas": [
-    "julia_normal",
-    "julia_albedo",
-    "julia_orm",
-    "julia_iris_normal_radial",
-    "julia_iris_color",
-    "julia_cabelo_alpha"
-  ],
-  "embedded_images": 6
+  "tris": 35952,
+  "quads_pct": 92.1,
+  "altura_m": 1.72,
+  "piso_z_m": 0.012,
+  "largura_m": 0.6556,
+  "profundidade_m": 0.2426,
+  "arestas_nao_manifold": 0,
+  "face_hair_objects": 75,
+  "ponytail_curls": 14,
+  "tris_face_hair_extras": 32144,
+  "tris_glb_total": 68096,
+  "face_v2": {
+    "ears": 2,
+    "separate_eyelids": 4,
+    "separate_eyes": true,
+    "eyelashes": 8,
+    "volumetric_curly_hair": true,
+    "mouth_geometry": true
+  },
+  "alpha_mode": "OPAQUE (cabelo geom\u00e9trico; sem cards)",
+  "glb_kb": 1401.4,
+  "gate_tris": true,
+  "gate_altura": true,
+  "gate_piso": true,
+  "gate_manifold": true,
+  "gate": true
 }

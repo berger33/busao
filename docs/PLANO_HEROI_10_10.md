@@ -100,13 +100,20 @@ com stubs X11/GL — hoje o sandbox está **sem** esse ambiente), `tools/blender
 
 **Gate 2:** GLB com `images >= 4`, sem esticamento de UV no checker, ≤ 1,8 MB com texturas.
 
-### Fase 3 — Cabelo e olhos (1 dia) — ✅ CONCLUÍDA 26/09 (gate verde: 40.110 tris total, GLB PBR 1.971,9 KB, 6 imagens embutidas)
-- Cabelo em **cards com alpha** (rabo de cavalo em 5 mechas + franja), material
-  `alpha_scissor` (mobile-safe, sem ordenação por transparência).
-- Olho: esclera + córnea separada com `refraction` barata, íris com normal radial.
-- Sobrancelha e cílios como cards finos.
+### Fase 3 — Cabelo e olhos (1 dia) — ✅ REFEITA 27/09 (rosto V2: 68.096 tris total, GLB 1,40 MB)
+- A primeira entrega foi **reprovada visualmente**: crânio bulboso e feições/cabelo
+  em cards flutuantes. O diagnóstico e a correção estão em
+  `docs/execucao/HEROI_CORRECAO_ROSTO_V2_2026-09-27.md`.
+- Cabelo cacheado em geometria opaca volumétrica: cachos frontais/laterais e rabo
+  de cavalo com 14 mechas; sem alpha sorting ou placas planas.
+- Cabeça ovoide e mandíbula próprias; orelhas com hélice/concha; nariz com ponte,
+  ponta, asas e narinas.
+- Olhos proporcionais separados, íris/pupila, quatro pálpebras, sobrancelhas,
+  cílios curtos e boca com volume.
 
-**Gate 3:** close a 2 m com rosto legível; sem shimmer de alpha em movimento a 60 FPS. Evidências: `docs/arte_alvo_final/15_turnaround_fase3.png`, `16_rosto_fase3.png` e as 5 vistas finais `18_rosto_fase3_final_*`.
+**Gate 3 V2:** 1,72 m, zero não-manifold no corpo-base, sem Draco e rosto legível
+em cinco ângulos. Evidências: `19_turnaround_rosto_v2.png`,
+`20_rosto_v2_5_angulos.png` e `21_rosto_v2_frente.png`.
 
 ### Fase 4 — Rig e skinning (1,5 dia)
 - Armature de **60 ossos**: contrato atual (`pelvis`, `spine_01..03`, `neck_01`, `Head`,

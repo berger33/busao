@@ -7,6 +7,12 @@ ROOT = Path(__file__).resolve().parents[1]
 PATH = ROOT / "assets/characters/personagens/hero_julia.glb"
 REQUIRED = [b"Idle_Loop", b"Walk_Loop", b"Sprint_Loop", b"Jump_Loop", b"Crouch_Fwd_Loop"]
 PARTS = {"LeftThigh", "RightThigh", "LeftCalf", "RightCalf", "UpperArmL", "UpperArmR", "ForearmL", "ForearmR", "Torso"}
+FACE_V2 = {
+    "CabecaJuliaV2", "Orelha_-1", "Orelha_1", "PonteNarizJuliaV2",
+    "Esclera_-1", "Esclera_1", "PalpebraSuperior_-1",
+    "PalpebraSuperior_1", "LabioInferiorJuliaV2", "CabeloBaseV2",
+    "RaboCacho_13",
+}
 
 def glb_json(raw):
     chunk_len, chunk_type = struct.unpack_from("<II", raw, 12)
@@ -30,11 +36,15 @@ def main() -> int:
     names = {n.get("name", "") for n in doc.get("nodes", [])}
     found = PARTS & names
     missing_parts = sorted(PARTS - found)
+    missing_face = sorted(FACE_V2 - names)
     missing_clips = [x.decode() for x in REQUIRED if x not in raw]
+    if missing_face:
+        print("HERO FAIL FACE V2: " + ", ".join(missing_face))
+        return 1
     if missing_parts:
         print("HERO WARN PARTS: " + ", ".join(missing_parts))
     if missing_clips:
-        print("HERO OK MESH-ONLY: %d bytes | partes %d/%d | clips pendentes: %s" % (len(raw), len(found), len(PARTS), ", ".join(missing_clips)))
+        print("HERO OK MESH-ONLY FACE-V2: %d bytes | rosto %d/%d | clips pendentes: %s" % (len(raw), len(FACE_V2), len(FACE_V2), ", ".join(missing_clips)))
     else:
         print("HERO OK RIGGED: %d bytes | clips e partes validos" % len(raw))
     return 0
