@@ -38,18 +38,32 @@ Instancie `personagem_corre_pro_ponto.tscn` como visual do seu
 
 ## Integração já feita no runner (Lote 29)
 
-`scripts/runner_character.gd` já sabe usar esta cena:
+`scripts/runner_character.gd` já usa esta cena como visual ativo da heroína:
 
-- **Ativar:** edite a constante `CORRE_PRO_PONTO_FOR_IDS` e liste os ids de
-  personagem que devem virar o runner v2 — ex.: `["julia"]`. Vazio (padrão) =
-  nada muda, o pipeline por personagem continua igual.
+- **Personagem ativa:** `CORRE_PRO_PONTO_FOR_IDS = ["julia"]`. A antiga
+  `hero_julia.glb` foi removida porque esta v2 é a versão melhorada.
+- **Textura/cor:** o runtime liga `vertex_color_use_as_albedo`; sem isso o GLB
+  fica branco, pois pele/roupa/cabelo vêm de `COLOR_0` multiplicado por texturas
+  claras de detalhe.
+- **Sem contorno preto:** o filete `SilhouetteShell` dos personagens antigos é
+  pulado para esta v2.
+- **Idle no início/carregamento:** o runner começa em `idle` e só entra em
+  `run_loop` quando o jogo está em `playing`.
 - **Animações:** o controlador usa nomes semânticos (`Sprint_Loop`, `Jump_Loop`,
   `Crouch_Fwd_Loop`, `Crouch_Idle_Loop`...) mapeados para os clipes deste rig via
   `CORRE_PRO_PONTO_CLIP_ALIASES` (`run_loop`, `jump_air`, `crouch_run_loop`,
   `crouch_loop`...). O mapa só é consultado quando o clipe direto não existe, ou
   seja, não afeta os outros rigs.
+- **Troca de pista:** `game_3d._change_lane()` chama
+  `runner_character.on_lane_change(direction)`, que toca `lane_left` ou
+  `lane_right` durante a corrida e depois volta ao `run_loop`.
+- **Cadência da corrida:** a v2 usa referência própria
+  `CORRE_PRO_PONTO_RUN_SPEED = 2.0588235294117645` e teto
+  `CORRE_PRO_PONTO_MAX_PLAYBACK = 2.6`, reduzindo o deslizamento dos pés em
+  relação ao valor antigo global de 4 m/s.
 - **Rotação/cabelo:** a rotação de 180° (`MODEL_FACING_YAW`) e o cabelo em tempo
   real já são aplicados pelo fluxo existente.
 
-> O sandbox não tem Godot instalado, então esta parte não foi testada em runtime.
-> Abra no editor Godot 4.7.2, defina `CORRE_PRO_PONTO_FOR_IDS` e valide a cena.
+> O sandbox não tem Godot instalado, então a validação aqui é estática/offline.
+> Abra no editor Godot 4.7.2 e valide visualmente troca de pista, velocidade,
+> pulo, agachamento e cabelo.
