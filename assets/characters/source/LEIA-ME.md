@@ -36,12 +36,17 @@ contrato de 20 personagens, derrubava a loja/elenco para 1 opção e sobrescrevi
 o save do jogador. O encadeamento dos hooks (`runner_character.gd`,
 `tools/validate_ginger.py`) foi preservado para o trabalho continuar.
 
-## Herói 10/10 (`heroi_julia/`)
+## Herói 10/10 (`heroi_julia/`) — REMOVIDO (Lote 29)
+
+> **Descontinuado.** A heroína `julia` passou a usar o runner **Corre pro Ponto
+> v2** (`assets/characters/corre_pro_ponto/`), que é a versão melhorada deste
+> herói (rig próprio, clipes de troca de pista/pulo/agachamento e cabelo em tempo
+> real). Os arquivos `heroi_julia/*` e `personagens/hero_julia.glb` foram
+> removidos; o histórico continua disponível no Git. Os scripts de build abaixo
+> ficam como referência, mas geram um asset que não é mais usado no jogo.
 
 Pipeline *Herói 10/10* (`docs/PLANO_HEROI_10_10.md`), reconstruído do zero em
-26/09/2026 (ver `docs/execucao/HEROI_REBUILD_2026-09-26.md`). Não é asset de
-runtime: o jogo segue usando `personagens/hero_julia.glb` (placeholder) até a
-Fase 6.
+26/09/2026 (ver `docs/execucao/HEROI_REBUILD_2026-09-26.md`).
 
 | Item | Estado |
 | --- | --- |
