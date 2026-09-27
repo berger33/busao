@@ -139,10 +139,15 @@ func _draw_menu() -> void:
     draw_rect(Rect2(90, 574, 540, 4), Color(1, 1, 1, 0.35))
     _text_center(Vector2(360, 614), _T("MENU_PLAY_NOW"), 30, INK)
     _text_center(Vector2(360, 648), "rua à esquerda • calçadas à direita", 16, Color("#553526"))
+    var _menu_stage: String = str(state.get("menu_stage", "expanded"))
+    var _d0_locked: bool = _menu_stage != "expanded"
+    if _d0_locked:
+        _panel(Rect2(70, 510, 580, 38), Color(1.0, 0.72, 0.22, 0.16), 14)
+        _text_center(Vector2(360, 535), "FOCO D0: complete a Tela 1; loja e desafios abrem depois", 12, YELLOW)
     _button(Rect2(70, 700, 275, 82), _T("MENU_MAP"), Color("#2c9dc1"), 25)
-    _button(Rect2(375, 700, 275, 82), _T("MENU_SHOP"), Color("#d65b75"), 25)
-    _button(Rect2(70, 808, 275, 82), "CONQUISTAS", Color("#805ec7"), 21)
-    _button(Rect2(375, 808, 275, 82), "DESAFIOS", Color("#4bad73"), 22)
+    _button(Rect2(375, 700, 275, 82), "LOJA APÓS 1ª" if _d0_locked else _T("MENU_SHOP"), Color("#3a4658") if _d0_locked else Color("#d65b75"), 16 if _d0_locked else 25)
+    _button(Rect2(70, 808, 275, 82), "APÓS 1ª FASE" if _d0_locked else "CONQUISTAS", Color("#3a4658") if _d0_locked else Color("#805ec7"), 15 if _d0_locked else 21)
+    _button(Rect2(375, 808, 275, 82), "APÓS 1ª FASE" if _d0_locked else "DESAFIOS", Color("#3a4658") if _d0_locked else Color("#4bad73"), 15 if _d0_locked else 22)
         # Lote 16: toggle idioma pt_BR/en_US
     var _cur_lang: String = "pt_BR"
     if has_node("/root/LocaleManager"):
@@ -205,6 +210,8 @@ func _draw_map() -> void:
     _button(Rect2(355, 1080, 155, 72), "PRÓXIMO ›" if int(state.get("map_page", 0)) < 4 else "•", Color("#293955"), 16)
     if GameSave.data.get("endless_unlocked", false):
         _button(Rect2(520, 1080, 175, 72), "ENDLESS", VIOLET, 18)
+        var _rank: Dictionary = state.get("endless_rank", {})
+        _text_center(Vector2(607, 1164), "%s • %dm" % [str(_rank.get("name", "Bairro")), int(state.get("endless_best", 0))], 10, CYAN)
     else:
         _text_center(Vector2(607, 1125), "TERMINE TELA 20", 13, MUTED)
     _text_center(Vector2(360, 1205), "ESQUERDA = RUA   •   CENTRO/DIREITA = CALÇADA", 14, Color("#f9c8ae"))
@@ -307,6 +314,12 @@ func _draw_results() -> void:
         if bool(result_data.get("endless", false)):
             _text_center(Vector2(360, 355), "%dm" % int(result_data.get("distance", 0)), 48, VIOLET)
             _text_center(Vector2(360, 404), "DISTÂNCIA NO ENDLESS", 14, MUTED)
+            var _erank: Dictionary = state.get("endless_rank", {})
+            var _remaining: int = int(_erank.get("remaining", 0))
+            var _rank_line: String = "RANKING LOCAL: %s • recorde %dm" % [str(_erank.get("name", "Bairro")), int(state.get("endless_best", 0))]
+            if _remaining > 0:
+                _rank_line += " • faltam %dm" % _remaining
+            _text_center(Vector2(360, 432), _rank_line, 12, CYAN)
         else:
             _text_center(Vector2(360, 355), "★".repeat(int(result_data.get("stars", 0))) + "☆".repeat(3 - int(result_data.get("stars", 0))), 58, YELLOW)
         _text_center(Vector2(360, 465), "%0.1f s" % float(result_data.get("time", 0.0)), 42, WHITE)
@@ -616,15 +629,32 @@ func _draw_daily() -> void:
     _text(Vector2(65, 862), "%dm / %dm • objetivo acumulado" % [mini(weekly_meters, weekly_target), weekly_target], 15, MUTED)
     _text(Vector2(65, 900), "sem pressão: o progresso fica até a virada da semana", 13, Color("#c6c5df"))
     _button(Rect2(505, 832, 145, 58), "RESGATADO" if weekly_claimed else ("RESGATAR" if weekly_ready else "EM ANDAMENTO"), GREEN if weekly_claimed else (YELLOW if weekly_ready else Color("#314563")), 12)
-    # Lote 17: Baú diário (soft+ Rubi, 1/dia)
+    # Lote 17/P1: Baú diário com calendário D1–D7 visível + bônus rewarded opt-in.
     var _chest: Dictionary = state.get("daily_chest", {})
     var _chest_claimed: bool = bool(_chest.get("claimed", false))
     var _chest_soft: int = int(_chest.get("soft", 0))
     var _chest_hard: int = int(_chest.get("hard", 0))
-    _panel(Rect2(35, 970, 650, 110), Color("#3a2d1f") if _chest_claimed else Color("#2f3a1f"), 14)
-    _text(Vector2(55, 1005), _T("CHEST_TITLE"), 20, YELLOW if not _chest_claimed else MUTED)
-    _text(Vector2(55, 1030), (_T("CHEST_CLAIMED") if _chest_claimed else _T("CHEST_REWARD") % [_chest_soft, _chest_hard]) if "%d" in _T("CHEST_REWARD") else "+%d R$ +%d Rubi" % [_chest_soft, _chest_hard], 13, WHITE)
-    _button(Rect2(505, 995, 145, 58), _T("CHEST_CLAIMED") if _chest_claimed else _T("CHEST_CLAIM"), GREEN if _chest_claimed else YELLOW, 12)
+    var _bonus_available: bool = bool(_chest.get("rewarded_available", false))
+    var _bonus_claimed: bool = bool(_chest.get("rewarded_claimed", false))
+    var _rw_ready: bool = bool(state.get("rewarded_ready", false))
+    _panel(Rect2(35, 950, 650, 145), Color("#3a2d1f") if _chest_claimed else Color("#2f3a1f"), 14)
+    _text(Vector2(55, 982), "CALENDÁRIO D1–D7", 17, YELLOW if not _chest_claimed else MUTED)
+    _text(Vector2(55, 1006), (_T("CHEST_CLAIMED") if _chest_claimed else _T("CHEST_REWARD") % [_chest_soft, _chest_hard]) if "%d" in _T("CHEST_REWARD") else "+%d R$ +%d Rubi" % [_chest_soft, _chest_hard], 12, WHITE)
+    var _calendar: Array = _chest.get("calendar", [])
+    for i in mini(7, _calendar.size()):
+        var _day: Dictionary = _calendar[i]
+        var _r := Rect2(55 + i * 63, 1030, 56, 48)
+        var _today: bool = bool(_day.get("today", false))
+        var _claimed: bool = bool(_day.get("claimed", false))
+        var _chip_color: Color = GREEN if _claimed else (YELLOW if _today else Color("#314563"))
+        _panel(_r, Color(_chip_color, 0.28), 9)
+        _text_center(_r.position + Vector2(28, 17), "D%d" % int(_day.get("day", i + 1)), 10, _chip_color)
+        _text_center(_r.position + Vector2(28, 35), "+%d/%d" % [int(_day.get("soft", 0)), int(_day.get("hard", 0))], 8, WHITE if _claimed or _today else MUTED)
+    _button(Rect2(505, 966, 145, 46), "OK HOJE" if _chest_claimed else _T("CHEST_CLAIM"), GREEN if _chest_claimed else YELLOW, 11)
+    if _chest_claimed:
+        var _bonus_label := "BÔNUS OK" if _bonus_claimed else ("▶ +%d/+%d" % [int(_chest.get("rewarded_soft", 30)), int(_chest.get("rewarded_hard", 1))] if _rw_ready else "BÔNUS...")
+        var _bonus_color: Color = GREEN if _bonus_claimed else (CYAN if _bonus_available and _rw_ready else Color("#314563"))
+        _button(Rect2(505, 1020, 145, 46), _bonus_label, _bonus_color, 10)
     _button(Rect2(45, 1110, 630, 70), "VOLTAR", Color("#293955"), 22)
 
 func _draw_how_to() -> void:

@@ -13,7 +13,7 @@ const SAVE_SCHEMA_VERSION := 4
 # aparelho + sal do app. Dificulta edicao casual do JSON (nao e DRM: sem
 # servidor nao ha segredo real — ver docs/PLUGINS_NATIVOS.md M7).
 const SAVE_HMAC_SALT := "corre-pro-ponto.v4.hmac" 
-const CLOUD_SNAPSHOT_KEYS: Array = ["schema_version","coins","hard_currency","remove_ads","phase_stars","best_times","achievements","inventory","owned_items","pet_skins","equipped_character","xp","daily_streak","max_streak","metrics","endless_best","endless_unlocked"]
+const CLOUD_SNAPSHOT_KEYS: Array = ["schema_version","coins","hard_currency","remove_ads","phase_stars","best_times","achievements","inventory","owned_items","pet_skins","equipped_character","xp","daily_streak","max_streak","daily_chest_date","daily_chest_rewarded_date","daily_chest_streak","metrics","endless_best","endless_unlocked"]
 # Retenção D0–D30: conquistas e badges pagam moedas ao desbloquear (fonte
 # única de nomes/recompensas — game_3d.gd monta o catálogo daqui).
 const ACHIEVEMENT_META: Dictionary = {
@@ -84,6 +84,7 @@ func _set_defaults() -> void:
         "analytics_enabled": true,
         "locale": "pt_BR",
         "daily_chest_date": "",
+        "daily_chest_rewarded_date": "",
         "daily_chest_streak": 0,
         "owned_extra_skins": [],
         "last_reroll_color": "",
@@ -253,6 +254,9 @@ func _sanitize_data() -> void:
     data["reduced_motion"] = bool(data.get("reduced_motion", false))
     data["high_contrast"] = bool(data.get("high_contrast", false))
     data["hard_currency"] = maxi(0, int(data.get("hard_currency", 0)))
+    data["daily_chest_date"] = str(data.get("daily_chest_date", ""))
+    data["daily_chest_rewarded_date"] = str(data.get("daily_chest_rewarded_date", ""))
+    data["daily_chest_streak"] = maxi(0, int(data.get("daily_chest_streak", 0)))
     data["remove_ads"] = bool(data.get("remove_ads", false))
     data["ads_consent_granted"] = bool(data.get("ads_consent_granted", false))
     data["analytics_enabled"] = bool(data.get("analytics_enabled", true))
@@ -379,7 +383,7 @@ func _sanitize_data() -> void:
     data["daily_completed"] = normalized_daily_completed
     if not (data.get("metrics", {}) is Dictionary):
         data["metrics"] = {}
-    for key in ["sessions", "phase_attempts", "phase_completions", "phase_failures", "endless_completions", "endless_failures", "first_clears", "daily_claims", "shop_purchases", "coins_earned", "coins_spent", "distance_total", "hard_earned", "hard_spent", "sink_rerolls", "sink_skins", "chest_claims", "weekly_claims"]:
+    for key in ["sessions", "phase_attempts", "phase_completions", "phase_failures", "endless_completions", "endless_failures", "first_clears", "daily_claims", "shop_purchases", "coins_earned", "coins_spent", "distance_total", "hard_earned", "hard_spent", "sink_rerolls", "sink_skins", "chest_claims", "weekly_claims", "rewarded_daily_claims"]:
         data["metrics"][key] = maxi(0, int(data["metrics"].get(key, 0)))
     data["metrics"]["phase_time_total"] = maxf(0.0, float(data["metrics"].get("phase_time_total", 0.0)))
     data["metrics"]["longest_run_seconds"] = maxf(0.0, float(data["metrics"].get("longest_run_seconds", 0.0)))

@@ -1735,6 +1735,30 @@ func _celebrate_levelup(levelup: Dictionary) -> void:
     Haptics.milestone()
 
 
+func _endless_rank_info(best_distance: int) -> Dictionary:
+    var best: int = maxi(0, best_distance)
+    var rank_name := "Bairro"
+    var next_goal := 400
+    if best >= 1500:
+        rank_name = "Lenda do Busão"
+        next_goal = 0
+    elif best >= 1000:
+        rank_name = "Expresso"
+        next_goal = 1500
+    elif best >= 700:
+        rank_name = "Terminal"
+        next_goal = 1000
+    elif best >= 400:
+        rank_name = "Linha Cheia"
+        next_goal = 700
+    return {
+        "name": rank_name,
+        "best": best,
+        "next": next_goal,
+        "remaining": maxi(0, next_goal - best) if next_goal > 0 else 0
+    }
+
+
 func _award_note_for_run() -> String:
     # Linha da tela de resultado com o que desbloqueou nesta corrida.
     var parts: Array[String] = []
@@ -4548,6 +4572,13 @@ func _sync_hud() -> void:
     var week_key := GameSave.weekly_key()
     var daily_progress: Dictionary = GameSave.daily_progress(date_key)
     var weekly_progress: Dictionary = GameSave.weekly_progress(week_key)
+    var metrics: Dictionary = GameSave.data.get("metrics", {})
+    var stars_total: int = GameSave.total_stars()
+    var menu_stage := "expanded"
+    if stars_total <= 0:
+        menu_stage = "first_run" if int(metrics.get("phase_attempts", 0)) <= 0 else "first_clear"
+    var endless_best: int = int(GameSave.data.get("endless_best", 0))
+    var endless_rank: Dictionary = _endless_rank_info(endless_best)
     var next_unlock_stars := 0
     if not GameSave.is_phase_unlocked(BALANCE.chapter_unlock_phase):
         next_unlock_stars = BALANCE.unlock_chapter_stars
@@ -4560,7 +4591,8 @@ func _sync_hud() -> void:
         "xp_level": GameSave.xp_level(),
         "xp_into_level": GameSave.xp_into_level(),
         "xp_to_next_level": GameSave.xp_to_next_level(),
-        "stars": GameSave.total_stars(),
+        "stars": stars_total,
+        "menu_stage": menu_stage,
         "streak": int(GameSave.data.get("daily_streak", 0)),
         "retention_flags": GameSave.retention_flags(),
         "reduced_motion": bool(GameSave.data.get("reduced_motion", false)),
@@ -4585,6 +4617,8 @@ func _sync_hud() -> void:
         "in_approach": run_director.state >= RUN_DIRECTOR.State.APROXIMACAO,
         "boarding": run_mode == "boarding",
         "endless": endless_mode,
+        "endless_best": endless_best,
+        "endless_rank": endless_rank,
         "map_page": map_page,
         "cards": cards,
         "result": result,
@@ -4773,14 +4807,23 @@ func _handle_tap(pos: Vector2) -> void:
             screen = 1
             _show_feedback("MAPA ABERTO", "Escolha seu próximo corre", BLUE, "ui_confirm")
         elif Rect2(375, 700, 275, 82).has_point(pos):
-            screen = 4
-            _show_feedback("LOJA DO PONTO", "Seu estilo, suas regras", RED, "ui_confirm")
+            if GameSave.total_stars() <= 0:
+                _show_feedback("FOCO NA 1ª FASE", "A loja abre após pegar o primeiro busão", YELLOW, "ui_back")
+            else:
+                screen = 4
+                _show_feedback("LOJA DO PONTO", "Seu estilo, suas regras", RED, "ui_confirm")
         elif Rect2(70, 808, 275, 82).has_point(pos):
-            screen = 5
-            _show_feedback("CONQUISTAS", "Cada corre deixa uma história", VIOLET, "ui_confirm")
+            if GameSave.total_stars() <= 0:
+                _show_feedback("CONQUISTAS EM BREVE", "Complete a Tela 1 para abrir seu perfil", YELLOW, "ui_back")
+            else:
+                screen = 5
+                _show_feedback("CONQUISTAS", "Cada corre deixa uma história", VIOLET, "ui_confirm")
         elif Rect2(375, 808, 275, 82).has_point(pos):
-            screen = 6
-            _show_feedback("DESAFIOS", "Recompensas esperando", GREEN, "ui_confirm")
+            if GameSave.total_stars() <= 0:
+                _show_feedback("DESAFIOS EM BREVE", "Primeiro aprenda o corre principal", YELLOW, "ui_back")
+            else:
+                screen = 6
+                _show_feedback("DESAFIOS", "Recompensas esperando", GREEN, "ui_confirm")
         elif Rect2(470, 885, 110, 34).has_point(pos):
             if has_node("/root/LocaleManager"):
                 var _lm_lang = get_node_or_null("/root/LocaleManager")
@@ -4900,17 +4943,29 @@ func _handle_tap(pos: Vector2) -> void:
             _shop_tap(pos)
         _sync_hud()
     elif screen == 6:
-        # Lote 17: baú diário (EconomyManager) tem prioridade sobre missões
-        if Rect2(505, 995, 145, 58).has_point(pos) or Rect2(35, 970, 650, 110).has_point(pos):
+        # P1: baú diário tem ação direta e bônus opt-in via rewarded depois do claim.
+        var chest_action_rect := Rect2(505, 966, 145, 46)
+        var chest_bonus_rect := Rect2(505, 1020, 145, 46)
+        var chest_panel_rect := Rect2(35, 950, 650, 145)
+        if chest_action_rect.has_point(pos) or chest_panel_rect.has_point(pos):
             var _em_daily2 = get_node_or_null("/root/EconomyManager") if has_node("/root/EconomyManager") else null
-            if _em_daily2 and _em_daily2.has_method("claim_daily_chest"):
-                var _rew2: Dictionary = _em_daily2.call("claim_daily_chest")
-                if not _rew2.is_empty():
-                    _show_feedback("BAÚ ABERTO!", "+%d R$ +%d Rubi" % [int(_rew2.get("soft",0)), int(_rew2.get("hard",0))], GOLD, "chest")
-                    Haptics.milestone()
-                    _sync_hud()
+            if _em_daily2 and _em_daily2.has_method("get_daily_chest_status"):
+                var _st2: Dictionary = _em_daily2.call("get_daily_chest_status")
+                if not bool(_st2.get("claimed", false)) and _em_daily2.has_method("claim_daily_chest"):
+                    var _rew2: Dictionary = _em_daily2.call("claim_daily_chest")
+                    if not _rew2.is_empty():
+                        _show_feedback("BAÚ ABERTO!", "+%d R$ +%d Rubi" % [int(_rew2.get("soft",0)), int(_rew2.get("hard",0))], GOLD, "chest")
+                        Haptics.milestone()
+                        _sync_hud()
+                    else:
+                        _show_feedback("BAÚ INDISPONÍVEL", "Tente novamente", RED, "ui_back")
+                elif chest_bonus_rect.has_point(pos):
+                    _request_daily_chest_rewarded_bonus()
                 else:
-                    _show_feedback("BAÚ JÁ ABERTO", "Volte amanhã", MUTED, "ui_back")
+                    _show_feedback("BAÚ JÁ ABERTO", "Bônus opcional no botão ▶", MUTED, "ui_back")
+            return
+        if chest_bonus_rect.has_point(pos):
+            _request_daily_chest_rewarded_bonus()
             return
         if Rect2(45, 1110, 630, 70).has_point(pos):
             screen = 0
@@ -5439,6 +5494,42 @@ func _on_ads_interstitial_closed() -> void:
     _show_feedback("VOLTAMOS!", "Próxima corrida liberada", CYAN, "ui_confirm")
     _sync_hud()
 
+func _request_daily_chest_rewarded_bonus() -> void:
+    var economy := get_node_or_null("/root/EconomyManager")
+    if economy == null or not economy.has_method("can_claim_daily_chest_rewarded"):
+        _show_feedback("BÔNUS INDISPONÍVEL", "Abra o baú diário primeiro", MUTED, "ui_back")
+        return
+    if not bool(economy.call("can_claim_daily_chest_rewarded")):
+        _show_feedback("BÔNUS JÁ USADO", "Volte amanhã para novo baú", MUTED, "ui_back")
+        return
+    var ads := get_node_or_null("/root/AdsManager")
+    if ads == null or not ads.has_method("is_rewarded_ready") or not ads.has_method("show_rewarded"):
+        _show_feedback("ANÚNCIO INDISPONÍVEL", "Rewarded não inicializado", RED, "ui_back")
+        return
+    if not bool(ads.call("is_rewarded_ready")):
+        _show_feedback("CARREGANDO ANÚNCIO", "Tente em segundos", MUTED, "ui_back")
+        return
+    _rewarded_pending_placement = "rewarded_daily_chest"
+    var ok: bool = bool(ads.call("show_rewarded", "rewarded_daily_chest"))
+    if ok:
+        _show_feedback("ANÚNCIO...", "Bônus do calendário", CYAN, "ui_confirm")
+    else:
+        _rewarded_pending_placement = ""
+        _show_feedback("ANÚNCIO INDISPONÍVEL", "Tente novamente", RED, "ui_back")
+
+func _do_daily_chest_bonus_from_ad() -> void:
+    var economy := get_node_or_null("/root/EconomyManager")
+    if economy == null or not economy.has_method("claim_daily_chest_rewarded"):
+        _show_feedback("BÔNUS INDISPONÍVEL", "Baú diário não encontrado", RED, "ui_back")
+        return
+    var reward: Dictionary = economy.call("claim_daily_chest_rewarded")
+    if reward.is_empty():
+        _show_feedback("BÔNUS JÁ USADO", "Volte amanhã", MUTED, "ui_back")
+        return
+    GameSave.record_ad_counter("rewarded")
+    _show_feedback("BÔNUS DO BAÚ!", "+%d R$ +%d Rubi" % [int(reward.get("soft", 0)), int(reward.get("hard", 0))], CYAN, "reward")
+    Haptics.milestone()
+
 func _on_ads_rewarded_failed(reason: String) -> void:
     _show_feedback("ANÚNCIO INDISPONÍVEL", reason, RED, "ui_back")
     _rewarded_pending_placement = ""
@@ -5456,10 +5547,13 @@ func _on_ads_rewarded_completed(placement: String) -> void:
     var ads := get_node_or_null("/root/AdsManager")
     var is_revive: bool = placement == "rewarded_revive" or (ads != null and placement == ads.PLACEMENT_REWARDED_REVIVE)
     var is_double: bool = placement == "rewarded_double" or (ads != null and placement == ads.PLACEMENT_REWARDED_DOUBLE)
+    var is_daily_chest: bool = placement == "rewarded_daily_chest" or (ads != null and placement == ads.PLACEMENT_REWARDED_DAILY_CHEST)
     if is_revive:
         _do_revive_from_ad()
     elif is_double:
         _do_double_reward_from_ad()
+    elif is_daily_chest:
+        _do_daily_chest_bonus_from_ad()
     else:
         # fallback: decide pelo contexto atual
         if not bool(result.get("success", false)) and not _revive_used:

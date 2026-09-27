@@ -15,6 +15,10 @@ const REROLL_COST_COINS := 40
 # Retenção D0–D30: era 80 (27–80 dias de baú por skin — inalcançável);
 # 15 ≈ 1–2 semanas de baú + níveis, preço de cosmético premium justo.
 const SKIN_EXTRA_COST_RUBI := 15
+const DAILY_CHEST_SOFT_REWARDS := [0, 25, 35, 50, 75, 100, 140, 250]
+const DAILY_CHEST_HARD_REWARDS := [0, 1, 2, 2, 3, 4, 5, 10]
+const DAILY_CHEST_REWARDED_SOFT := 30
+const DAILY_CHEST_REWARDED_HARD := 1
 
 # Eventos semanais (LiveOps) — rodízio determinístico por weekly_key % 3
 const WEEKLY_EVENTS: Array[Dictionary] = [
@@ -38,6 +42,8 @@ func _ensure_save_fields() -> void:
     var d: Dictionary = GameSave.data
     if not d.has("daily_chest_date"):
         d["daily_chest_date"] = ""
+    if not d.has("daily_chest_rewarded_date"):
+        d["daily_chest_rewarded_date"] = ""
     if not d.has("daily_chest_streak"):
         d["daily_chest_streak"] = 0
     if not d.has("weekly_event_seen"):
@@ -46,7 +52,7 @@ func _ensure_save_fields() -> void:
     if not d.has("metrics"):
         d["metrics"] = {}
     var m: Dictionary = d["metrics"]
-    for k in ["hard_earned", "hard_spent", "sink_rerolls", "sink_skins", "chest_claims", "weekly_claims"]:
+    for k in ["hard_earned", "hard_spent", "sink_rerolls", "sink_skins", "chest_claims", "weekly_claims", "rewarded_daily_claims"]:
         if not m.has(k):
             m[k] = 0
     # owned_extra_skins
@@ -92,21 +98,64 @@ func spend_rubi(amount: int, reason: String = "") -> bool:
     return true
 
 # ---- Daily Chest (soft + Rubi, 1/dia, progressivo D1-D7, sem aleatoriedade paga) ----
+func _daily_chest_weekly_hard_bonus() -> int:
+    var weekly := get_weekly_event()
+    return 1 if weekly.get("id", "") == "semana_motoboy" else 0
+
+func _daily_chest_reward_for_day(day_in_cycle: int, include_weekly_bonus: bool = true) -> Dictionary:
+    var day: int = clampi(day_in_cycle, 1, 7)
+    var hard_bonus: int = _daily_chest_weekly_hard_bonus() if include_weekly_bonus else 0
+    return {
+        "soft": int(DAILY_CHEST_SOFT_REWARDS[day]),
+        "hard": int(DAILY_CHEST_HARD_REWARDS[day]) + hard_bonus
+    }
+
+func _daily_chest_cycle_day(current_streak: int, claimed_today: bool) -> int:
+    var reward_index: int = maxi(0, current_streak - (1 if claimed_today else 0))
+    return (reward_index % 7) + 1
+
+func get_daily_chest_calendar(date_key: String = "") -> Array:
+    var key: String = date_key if date_key != "" else Time.get_date_string_from_system()
+    var claimed_today: bool = str(GameSave.data.get("daily_chest_date", "")) == key
+    var current_streak: int = maxi(0, int(GameSave.data.get("daily_chest_streak", 0)))
+    var current_day: int = _daily_chest_cycle_day(current_streak, claimed_today)
+    var claimed_in_cycle: int = current_day if claimed_today else current_streak % 7
+    var rows: Array = []
+    for day in range(1, 8):
+        var reward := _daily_chest_reward_for_day(day)
+        rows.append({
+            "day": day,
+            "soft": int(reward.get("soft", 0)),
+            "hard": int(reward.get("hard", 0)),
+            "claimed": day <= claimed_in_cycle,
+            "today": day == current_day,
+            "next": (not claimed_today) and day == current_day
+        })
+    return rows
+
 func get_daily_chest_status(date_key: String = "") -> Dictionary:
     var key: String = date_key if date_key != "" else Time.get_date_string_from_system()
     var claimed: bool = str(GameSave.data.get("daily_chest_date", "")) == key
-    # Calendário D1–D7 progressivo por streak de baú (1 a 7 dias)
-    var current_streak: int = int(GameSave.data.get("daily_chest_streak", 0))
-    var day_in_cycle: int = (current_streak % 7) + 1
-    var soft_table := [0, 25, 35, 50, 75, 100, 140, 250]
-    var hard_table := [0, 1, 2, 2, 3, 4, 5, 10]
-    var soft: int = soft_table[clampi(day_in_cycle, 1, 7)]
-    var hard: int = hard_table[clampi(day_in_cycle, 1, 7)]
-    # Bonus semanal: se evento motoboy, +2 Rubi no chest
-    var weekly := get_weekly_event()
-    if weekly.get("id", "") == "semana_motoboy":
-        hard += 1
-    return {"date": key, "claimed": claimed, "soft": soft, "hard": hard, "streak": current_streak, "day_in_cycle": day_in_cycle}
+    # Calendário D1–D7 progressivo por streak de baú (1 a 7 dias). Se o baú
+    # de hoje já foi aberto, a HUD continua mostrando o prêmio que acabou de
+    # ser resgatado, não o prêmio de amanhã.
+    var current_streak: int = maxi(0, int(GameSave.data.get("daily_chest_streak", 0)))
+    var day_in_cycle: int = _daily_chest_cycle_day(current_streak, claimed)
+    var reward := _daily_chest_reward_for_day(day_in_cycle)
+    var rewarded_claimed: bool = str(GameSave.data.get("daily_chest_rewarded_date", "")) == key
+    return {
+        "date": key,
+        "claimed": claimed,
+        "soft": int(reward.get("soft", 0)),
+        "hard": int(reward.get("hard", 0)),
+        "streak": current_streak,
+        "day_in_cycle": day_in_cycle,
+        "calendar": get_daily_chest_calendar(key),
+        "rewarded_available": claimed and not rewarded_claimed,
+        "rewarded_claimed": rewarded_claimed,
+        "rewarded_soft": DAILY_CHEST_REWARDED_SOFT,
+        "rewarded_hard": DAILY_CHEST_REWARDED_HARD
+    }
 
 func can_claim_daily_chest(date_key: String = "") -> bool:
     var st := get_daily_chest_status(date_key)
@@ -134,6 +183,29 @@ func claim_daily_chest(date_key: String = "") -> Dictionary:
     var reward := {"soft": soft, "hard": hard, "date": key}
     chest_claimed.emit(reward)
     print("[economy] daily_chest %s +%d soft +%d Rubi" % [key, soft, hard])
+    return reward
+
+func can_claim_daily_chest_rewarded(date_key: String = "") -> bool:
+    var key: String = date_key if date_key != "" else Time.get_date_string_from_system()
+    return str(GameSave.data.get("daily_chest_date", "")) == key and str(GameSave.data.get("daily_chest_rewarded_date", "")) != key
+
+func claim_daily_chest_rewarded(date_key: String = "") -> Dictionary:
+    var key: String = date_key if date_key != "" else Time.get_date_string_from_system()
+    if not can_claim_daily_chest_rewarded(key):
+        chest_claim_failed.emit("rewarded_unavailable")
+        return {}
+    GameSave.add_coins(DAILY_CHEST_REWARDED_SOFT)
+    add_rubi(DAILY_CHEST_REWARDED_HARD, "daily_chest_rewarded")
+    GameSave.data["daily_chest_rewarded_date"] = key
+    GameSave.data["metrics"]["rewarded_daily_claims"] = int(GameSave.data["metrics"].get("rewarded_daily_claims", 0)) + 1
+    GameSave.flush()
+    if has_node("/root/AnalyticsManager"):
+        var an = get_node_or_null("/root/AnalyticsManager")
+        if an and an.has_method("log_event"):
+            an.call("log_event", "daily_chest_rewarded", {"soft": DAILY_CHEST_REWARDED_SOFT, "hard": DAILY_CHEST_REWARDED_HARD})
+    var reward := {"soft": DAILY_CHEST_REWARDED_SOFT, "hard": DAILY_CHEST_REWARDED_HARD, "date": key, "rewarded": true}
+    chest_claimed.emit(reward)
+    print("[economy] daily_chest_rewarded %s +%d soft +%d Rubi" % [key, DAILY_CHEST_REWARDED_SOFT, DAILY_CHEST_REWARDED_HARD])
     return reward
 
 # ---- Weekly Event ----

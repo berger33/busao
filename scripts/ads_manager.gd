@@ -1,7 +1,7 @@
 extends Node
 ## AdsManager — Lote 11 (Ads MVP)
 ## Wrapper AdMob com fallback mock para editor/teste.
-## Contrato: banner no menu/mapa/loja, interstitial pós-derrota (cooldown 90 s, 1 a cada 2), rewarded revive 1× e 2× moedas.
+## Contrato: banner no menu/mapa/loja, interstitial pós-derrota (cooldown 90 s, 1 a cada 2), rewarded revive 1×, 2× moedas e bônus de baú diário.
 ## Sem SDK nativo o manager simula carregamento e recompensa com timers (editor não quebra).
 ## Auditoria (2026-09-21): UMP-ready sem autoconcessao — default NPA
 ## (nao personalizado) ate decisao; flags PG/idade declaradas.
@@ -21,6 +21,7 @@ const PLACEMENT_BANNER_MENU := "banner_menu"
 const PLACEMENT_INTERSTITIAL_RESULT := "interstitial_result"
 const PLACEMENT_REWARDED_REVIVE := "rewarded_revive"
 const PLACEMENT_REWARDED_DOUBLE := "rewarded_double"
+const PLACEMENT_REWARDED_DAILY_CHEST := "rewarded_daily_chest"
 
 # Mock delays (s) — simulam rede em editor
 const MOCK_LOAD_BANNER := 0.8
