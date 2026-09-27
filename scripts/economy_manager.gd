@@ -60,6 +60,9 @@ func get_rubi() -> int:
 func can_spend_rubi(amount: int) -> bool:
     return amount >= 0 and get_rubi() >= amount
 
+func skin_extra_cost() -> int:
+    return SKIN_EXTRA_COST_RUBI
+
 func add_rubi(amount: int, reason: String = "") -> void:
     if amount <= 0:
         return

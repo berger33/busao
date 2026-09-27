@@ -206,7 +206,7 @@ func _draw_map() -> void:
     if GameSave.data.get("endless_unlocked", false):
         _button(Rect2(520, 1080, 175, 72), "ENDLESS", VIOLET, 18)
     else:
-        _text_center(Vector2(607, 1125), "★ 120 = TELA 50", 13, MUTED)
+        _text_center(Vector2(607, 1125), "TERMINE TELA 20", 13, MUTED)
     _text_center(Vector2(360, 1205), "ESQUERDA = RUA   •   CENTRO/DIREITA = CALÇADA", 14, Color("#f9c8ae"))
     _draw_banner_if_needed(1215)
 
@@ -407,12 +407,13 @@ func _draw_shop() -> void:
             var _feat: Dictionary = state.get("featured_item", {})
             if str(_feat.get("id","")) == str(characters[i].get("id","")):
                 _text(rect.position + Vector2(rect.size.x - 62, 18), _T("FEATURED_DISCOUNT"), 10, YELLOW)
-        # Sinks L17: reroll cor 40 R$ + skin extra 80 Rubi (aba personagens)
+        # Sinks L17: reroll cor 40 R$ + skin extra em Rubi (aba personagens)
         _panel(Rect2(30, 240, 640, 34), Color(0.08,0.12,0.18,0.6), 8)
         _text(Vector2(42, 262), "Rubi: %d" % int(state.get("rubi", 0)), 12, Color("#ff7ab8"))
         _text(Vector2(140, 262), "Destaque: %s 15%% OFF" % str(state.get("featured_item", {}).get("id","—")) if state.has("featured_item") else "Destaque: —", 10, MUTED)
+        var _skin_cost: int = int(state.get("skin_extra_cost", 15))
         _button(Rect2(500, 240, 140, 28), _T("REROLL"), Color("#63e6d2") if int(state.get("coins",0))>=40 else Color("#314563"), 10)
-        _button(Rect2(500, 274, 140, 28), _T("SKIN_EXTRA"), Color("#ff7ab8") if int(state.get("rubi",0))>=80 else Color("#314563"), 9)
+        _button(Rect2(500, 274, 140, 28), _T("SKIN_EXTRA"), Color("#ff7ab8") if int(state.get("rubi",0))>=_skin_cost else Color("#314563"), 9)
         _mask_band(126.0, 280.0)
         _mask_band(1125.0, 1280.0)
     elif int(state.get("shop_tab", 0)) == 1:
@@ -638,7 +639,7 @@ func _draw_how_to() -> void:
     _text(Vector2(75, 380), "DIREITA →", 24, GREEN)
     _text(Vector2(310, 380), "calçada, atalhos e ponto", 18, WHITE)
     _text(Vector2(75, 460), "TOQUE", 24, GOLD)
-    _text(Vector2(310, 460), "dash + invencibilidade", 18, WHITE)
+    _text(Vector2(310, 460), "dash = impulso curto de velocidade", 18, WHITE)
     _panel(Rect2(35, 620, 650, 330), Color("#1a2a45"), 20)
     _text(Vector2(68, 675), "LEITURA PROFISSIONAL", 24, CYAN)
     _text(Vector2(68, 730), "A rua tem mais obstáculos, mas também", 18, WHITE)

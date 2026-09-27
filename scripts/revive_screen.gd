@@ -48,10 +48,10 @@ func _gui_input(event: InputEvent) -> void:
         _handle_tap(event.position)
 
 func _handle_tap(pos: Vector2) -> void:
-    # Botões: ASSISTIR (55, 600, 610, 72) e DESISTIR (55, 690, 610, 72) em coordenadas 720x1280
+    # Botões: ASSISTIR (55, 600, 610, 72) e DESISTIR (55, 720, 610, 72) em coordenadas 720x1280
     # Ajusta para safe area? Aqui usa coordenadas locais já com transform do HUD, mas revive é tela cheia, então usa direto
     var r_watch := Rect2(55, 600, 610, 72)
-    var r_give := Rect2(55, 690, 610, 72)
+    var r_give := Rect2(55, 720, 610, 72)
     if r_watch.has_point(pos):
         if not rewarded_ready:
             return

@@ -238,18 +238,6 @@ func _read_dictionary(path: String) -> Dictionary:
 func _sanitize_data() -> void:
     data["schema_version"] = SAVE_SCHEMA_VERSION
     data["coins"] = maxi(0, int(data.get("coins", 0)))
-    # TESTE 100k: garante saldo para comprar todos os personagens ao abrir o jogo
-    # Soma total catálogo = 9300, então 100k cobre com folga. Em produção remover este bloco e voltar starting_coins=40.
-    if int(data.get("coins", 0)) < 100000 and int(data.get("coins", 0)) < 90000:
-        # Só injeta se ainda não tem 100k e não é save já farmado (>90k)
-        # Marca com flag para não repetir após o jogador gastar
-        if not bool(data.get("debug_100k_granted", false)):
-            data["coins"] = 100000
-            data["debug_100k_granted"] = true
-            print("[save] TESTE 100k moedas injetadas para compra de personagens")
-    elif not bool(data.get("debug_100k_granted", false)) and int(data.get("coins", 0)) >= 90000:
-        # já tem saldo alto (100k inicial ou farm legítimo) — marca para não re-injetar após gastar abaixo de 90k
-        data["debug_100k_granted"] = true
     data["xp"] = maxi(0, int(data.get("xp", 0)))
     data["daily_streak"] = maxi(0, int(data.get("daily_streak", 0)))
     data["max_streak"] = maxi(0, int(data.get("max_streak", 0)))
@@ -302,6 +290,12 @@ func _sanitize_data() -> void:
     if normalized_stars.size() > int(BALANCE.phase_count):
         normalized_stars.resize(int(BALANCE.phase_count))
     data["phase_stars"] = normalized_stars
+    # Retenção D7+: Endless é modo paralelo de hábito e deve abrir após o
+    # primeiro grande marco (fase 20), não só no fim da campanha.
+    var chapter_gate_index := int(BALANCE.chapter_unlock_phase)
+    var cleared_chapter_gate := chapter_gate_index < normalized_stars.size() and int(normalized_stars[chapter_gate_index]) >= 1
+    if cleared_chapter_gate and total_stars() >= int(BALANCE.unlock_chapter_stars):
+        data["endless_unlocked"] = true
     var normalized_goals: Array = []
     var raw_goals = data.get("phase_goals", [])
     for i in int(BALANCE.phase_count):
@@ -911,19 +905,37 @@ func record_endless_result(success: bool, elapsed_seconds: float, distance: int)
     data["metrics"]["longest_run_seconds"] = maxf(float(data["metrics"].get("longest_run_seconds", 0.0)), maxf(0.0, elapsed_seconds))
     _request_save()
 
-func add_xp(amount: int) -> void:
+func add_xp(amount: int) -> Dictionary:
+    var info := {"levels": 0, "coins": 0, "rubi": 0, "level": xp_level()}
     if amount <= 0:
-        return
+        return info
     var old_level := xp_level()
     data["xp"] = int(data.get("xp", 0)) + amount
     var new_level := xp_level()
+    info["level"] = new_level
     if new_level > old_level:
-        var level_diff := new_level - old_level
-        # Recompensa por subir de nível (payoff de progressão): 30 moedas + 1 Rubi por nível
-        add_coins(level_diff * 30)
-        add_hard_currency(level_diff * 1)
-        record_event("level_up", level_diff)
+        var coins := 0
+        for level in range(old_level + 1, new_level + 1):
+            coins += BALANCE.xp_levelup_coins_base + (level - 1) * BALANCE.xp_levelup_coins_step
+        if coins > 0:
+            add_coins(coins)
+        var rubi := 0
+        var each: int = maxi(1, BALANCE.xp_levelup_rubi_each)
+        for level in range(old_level + 1, new_level + 1):
+            if level % each == 0:
+                rubi += BALANCE.xp_levelup_rubi
+        if rubi > 0:
+            var economy := get_node_or_null("/root/EconomyManager")
+            if economy != null and economy.has_method("add_rubi"):
+                economy.call("add_rubi", rubi, "levelup")
+            else:
+                add_hard_currency(rubi)
+        info["levels"] = new_level - old_level
+        info["coins"] = coins
+        info["rubi"] = rubi
+        record_event("level_up", new_level - old_level)
     _request_save()
+    return info
 
 func xp() -> int:
     return int(data.get("xp", 0))

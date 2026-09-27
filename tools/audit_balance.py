@@ -27,6 +27,8 @@ def read_balance() -> dict[str, float]:
         "final_speed",
         "first_wait_seconds",
         "final_wait_seconds",
+        "unlock_chapter_stars",
+        "unlock_endless_stars",
         "starting_coins",
         "first_clear_reward",
         "replay_reward",
@@ -70,7 +72,7 @@ def main() -> int:
     assert b["first_wait_seconds"] >= b["final_wait_seconds"] > 0
     assert b["first_clear_reward"] > b["replay_reward"] > 0
     assert '"coin_target": 4 + int(round(float(i) * 0.85))' in phase_text
-    assert "_start_run(BALANCE.endless_unlock_phase)" in game_text
+    assert "_start_run(template_phase)" in game_text and "BALANCE.chapter_unlock_phase" in game_text
     assert "water_gun" not in game_text, "active 3D course references an uncatalogued obstacle"
 
     rows: list[dict[str, float | int]] = []
@@ -161,7 +163,7 @@ def main() -> int:
         )
     print(f"first-clear bonus floor across catalog: R$ {total_first_clear}")
     print(f"nominal track coins across catalog: {total_nominal_coins}")
-    print(f"star gates: {int(b['chapter_unlock_phase']) + 1}=45 and {int(b['endless_unlock_phase']) + 1}=120; max={max_stars}")
+    print(f"star gates: {int(b['chapter_unlock_phase']) + 1}={int(b['unlock_chapter_stars'])} and {int(b['endless_unlock_phase']) + 1}={int(b['unlock_endless_stars'])}; max={max_stars}")
     # Lote 17: 2ª moeda Rubi + sinks + LiveOps (hard_sink/hard_source ~1.15, soft +30% com sinks)
     # Simula 14 dias de LiveOps sem paywall F1-F5
     # Soft source: total_first_clear + coins de pista + daily/weekly
@@ -176,7 +178,7 @@ def main() -> int:
     print(f"[L17] soft source~{soft_source} sink_base={soft_sink_base} sink_l17={soft_sink_l17} ratio {soft_ratio_base:.2f}->{soft_ratio_l17:.2f} (+{soft_plus:.0f}%)")
     # Rubi: source = first_clear 2 Rubi + daily_chest 2.5/dia + weekly 5 + hard sem compra
     hard_source = 50 * 2 + 14 * 2 + 2 * 5
-    hard_sink = 110  # 1 skin 80 + 30 reroll Rubi (conversão) -> ajustado para ratio ~0.80 (saudável, <1 sem paywall)
+    hard_sink = 110  # 3 skins extra 15 + orçamento de Rubi para rotações/eventos -> ratio ~0.80 (saudável, <1 sem paywall)
     hard_ratio = hard_sink / max(1, hard_source)
     print(f"[L17] hard source={hard_source} sink={hard_sink} ratio {hard_ratio:.2f} (alvo ~0.85-1.15 -> {'OK' if 0.6 <= hard_ratio <= 1.25 else 'AJUSTAR'})")
     f1_f5_cost = sum(int(b["first_clear_reward"] + i * b["phase_reward_per_level"] + b["star_reward"]) for i in range(5))

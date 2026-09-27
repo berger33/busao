@@ -105,12 +105,12 @@ def main():
         return 1
     print("\nAUDIT OK: 20 GLBs dedicados, <1.2MB, skins/animations OK, loader personalizado ativo, fallback preservado")
     print("Teste Godot headless equivalente: ResourceLoader.exists('res://assets/characters/personagens/<id>.glb') = true para todos os 20")
-    # também verifica balance 100k ainda
+    # também verifica que o balance voltou ao valor de produção.
     bal = (ROOT/"resources/game_balance.tres").read_text(encoding="utf-8")
-    if "starting_coins = 100000" not in bal:
-        print("WARN: starting_coins não é 100000 (teste 100k)")
+    if "starting_coins = 40" not in bal:
+        print("WARN: starting_coins não está no valor de produção (40)")
     else:
-        print("OK balance 100k")
+        print("OK balance produção: starting_coins=40")
     return 0
 
 if __name__=="__main__":

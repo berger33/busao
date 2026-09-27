@@ -739,9 +739,13 @@ func _start_run(index: int) -> void:
 
 func _start_endless() -> void:
     if not GameSave.data.get("endless_unlocked", false):
-        _show_feedback("ENDLESS BLOQUEADO", "Termine a Tela 50", RED, "ui_back")
+        _show_feedback("ENDLESS BLOQUEADO", "Termine a Tela 20", RED, "ui_back")
         return
-    _start_run(BALANCE.endless_unlock_phase)
+    var template_phase: int = clampi(BALANCE.chapter_unlock_phase, 0, BALANCE.phase_count - 1)
+    if not GameSave.is_phase_unlocked(template_phase):
+        _show_feedback("ENDLESS BLOQUEADO", "Termine a Tela 20", RED, "ui_back")
+        return
+    _start_run(template_phase)
     endless_mode = true
     run_total = 1000.0
     phase["name"] = "ENDLESS"
@@ -1723,34 +1727,12 @@ func _dash() -> void:
     _show_feedback("ARRANCADA!", "Explosão curta de velocidade", YELLOW, "whoosh")
     _spawn_3d_burst(player_root.position + Vector3(0, 1.0, 0), YELLOW, 18)
 
-func _apply_levelup_rewards(level_before: int) -> Dictionary:
-    # Retenção D0–D30: subir de nível paga moedas (+ Rubi a cada N níveis).
-    # Retorna o resumo para a tela de resultado; sem toast (não briga com o
-    # feedback de conclusão — a fanfarra é só sonora).
-    var level_after: int = GameSave.xp_level()
-    var info := {"levels": 0, "coins": 0, "rubi": 0, "level": level_after}
-    if level_after <= level_before:
-        return info
-    var coins := 0
-    for level in range(level_before + 1, level_after + 1):
-        coins += BALANCE.xp_levelup_coins_base + (level - 1) * BALANCE.xp_levelup_coins_step
-    GameSave.add_coins(coins)
-    var rubi := 0
-    var each: int = maxi(1, BALANCE.xp_levelup_rubi_each)
-    for level in range(level_before + 1, level_after + 1):
-        if level % each == 0:
-            rubi += BALANCE.xp_levelup_rubi
-    if rubi > 0 and has_node("/root/EconomyManager"):
-        var em = get_node_or_null("/root/EconomyManager")
-        if em and em.has_method("add_rubi"):
-            em.call("add_rubi", rubi, "levelup")
-    GameSave.record_event("level_up", level_after - level_before)
+
+func _celebrate_levelup(levelup: Dictionary) -> void:
+    if int(levelup.get("levels", 0)) <= 0:
+        return
     AudioManager.play_sfx("levelup")
     Haptics.milestone()
-    info["levels"] = level_after - level_before
-    info["coins"] = coins
-    info["rubi"] = rubi
-    return info
 
 
 func _award_note_for_run() -> String:
@@ -1795,8 +1777,8 @@ func _finish_run(success: bool, game_over := false) -> void:
                         GameSave.add_coins(_wb2)
                         reward += _wb2
             var xp_reward := 40 + int(distance / 12.0) if is_record else BALANCE.xp_replay
-            var endless_level_before: int = GameSave.xp_level()
-            GameSave.add_xp(xp_reward)
+            var endless_levelup: Dictionary = GameSave.add_xp(xp_reward)
+            _celebrate_levelup(endless_levelup)
             result = {
                 "success": true,
                 "endless": true,
@@ -1806,7 +1788,7 @@ func _finish_run(success: bool, game_over := false) -> void:
                 "record": is_record,
                 "distance": int(distance),
                 "xp": xp_reward,
-                "levelup": _apply_levelup_rewards(endless_level_before),
+                "levelup": endless_levelup,
                 "award_note": _award_note_for_run()
             }
             _show_feedback("ENDLESS CONCLUÍDO!", "%dm • +R$ %d de bônus" % [int(distance), reward], VIOLET, "streak")
@@ -1872,9 +1854,8 @@ func _finish_run(success: bool, game_over := false) -> void:
                 if _wb3 > 0:
                     GameSave.add_coins(_wb3)
                     reward += _wb3
-        var level_before: int = GameSave.xp_level()
-        GameSave.add_xp(xp_reward)
-        var levelup: Dictionary = _apply_levelup_rewards(level_before)
+        var levelup: Dictionary = GameSave.add_xp(xp_reward)
+        _celebrate_levelup(levelup)
         if phase_index == 8 and no_damage:
             if GameSave.award_achievement("enchente"):
                 _run_awards.append("enchente")
@@ -1886,6 +1867,9 @@ func _finish_run(success: bool, game_over := false) -> void:
                 _run_awards.append("busao")
             if GameSave.award_badge("capitulo1"):
                 _run_awards.append("capitulo1")
+            if not bool(GameSave.data.get("endless_unlocked", false)):
+                GameSave.data["endless_unlocked"] = true
+                GameSave.record_event("endless_unlocked")
         if phase_index == BALANCE.phase_count - 1:
             if GameSave.award_achievement("busao50"):
                 _run_awards.append("busao50")
@@ -4634,6 +4618,7 @@ func _sync_hud() -> void:
         "double_available": (not _double_used and bool(result.get("success", false)) and screen == 3 and int(result.get("reward", 0)) > 0),
         "billing_packs": (get_node_or_null("/root/BillingManager").get_products() if get_node_or_null("/root/BillingManager") and get_node_or_null("/root/BillingManager").has_method("get_products") else SHOP_DATA.BILLING_PACKS),
         "rubi": (get_node_or_null("/root/EconomyManager").get_rubi() if get_node_or_null("/root/EconomyManager") and get_node_or_null("/root/EconomyManager").has_method("get_rubi") else int(GameSave.data.get("hard_currency", 0))),
+        "skin_extra_cost": (get_node_or_null("/root/EconomyManager").skin_extra_cost() if get_node_or_null("/root/EconomyManager") and get_node_or_null("/root/EconomyManager").has_method("skin_extra_cost") else 15),
         "daily_chest": (get_node_or_null("/root/EconomyManager").get_daily_chest_status() if get_node_or_null("/root/EconomyManager") and get_node_or_null("/root/EconomyManager").has_method("get_daily_chest_status") else {}),
         "weekly_event": (get_node_or_null("/root/EconomyManager").get_weekly_event() if get_node_or_null("/root/EconomyManager") and get_node_or_null("/root/EconomyManager").has_method("get_weekly_event") else {}),
         "featured_item": (get_node_or_null("/root/EconomyManager").get_featured_item() if get_node_or_null("/root/EconomyManager") and get_node_or_null("/root/EconomyManager").has_method("get_featured_item") else {})
@@ -4959,7 +4944,7 @@ func _daily_at_position(pos: Vector2) -> int:
 func _shop_tap(pos: Vector2) -> void:
     var chars: Array[Dictionary] = CHARACTER_DATA.all()
     var items: Array[Dictionary] = SHOP_DATA.item_catalog()
-    # Lote 17: sinks no topo da loja personagens (reroll 40 R$ e skin 80 Rubi) — áreas fixas
+    # Lote 17: sinks no topo da loja personagens (reroll 40 R$ e skin extra em Rubi) — áreas fixas
     if shop_tab == 0 and Rect2(500, 240, 140, 28).has_point(pos):
         var _em_r = get_node_or_null("/root/EconomyManager") if has_node("/root/EconomyManager") else null
         if _em_r and _em_r.has_method("reroll_moto_color"):
@@ -4972,6 +4957,7 @@ func _shop_tap(pos: Vector2) -> void:
         return
     if shop_tab == 0 and Rect2(500, 272, 140, 28).has_point(pos):
         var _em_s = get_node_or_null("/root/EconomyManager") if has_node("/root/EconomyManager") else null
+        var _skin_cost: int = int(_em_s.call("skin_extra_cost")) if _em_s and _em_s.has_method("skin_extra_cost") else 15
         if _em_s and _em_s.has_method("buy_extra_skin"):
             var _skins: Array[String] = ["vermelha", "dourada", "neon"]
             var _handled: bool = false
@@ -4979,10 +4965,10 @@ func _shop_tap(pos: Vector2) -> void:
                 if not _em_s.call("owns_extra_skin", _sk):
                     var _ok2: bool = _em_s.call("buy_extra_skin", _sk)
                     if _ok2:
-                        _show_feedback("SKIN EXTRA!", "+%s • -80 Rubi" % _sk.to_upper(), Color("#ff7ab8"), "reward")
+                        _show_feedback("SKIN EXTRA!", "+%s • -%d Rubi" % [_sk.to_upper(), _skin_cost], Color("#ff7ab8"), "reward")
                         _sync_hud()
                     else:
-                        _show_feedback("SEM RUBI", "Precisa 80 Rubi", RED, "ui_back")
+                        _show_feedback("SEM RUBI", "Precisa %d Rubi" % _skin_cost, RED, "ui_back")
                     _handled = true
                     break
             if not _handled:
