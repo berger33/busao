@@ -100,9 +100,14 @@ jobs:
           echo "==== RESUMO ===="
           cat "$resumo"
           echo "suítes com falha: $falhas"
-          # Resumo PASS/FAIL também como anotação, para leitura via API.
+          # Resumo PASS/FAIL também como anotação, para leitura via API. Em
+          # verde vira ::notice:: (não suja o run); só é ::error:: quando falha.
           enc_resumo=$(python3 -c 'import sys; print(open("'"$resumo"'").read().replace("%","%25").replace("\r","%0D").replace("\n","%0A"))')
-          echo "::error title=RESUMO SUITES (falhas=${falhas})::${enc_resumo}"
+          if [ "$falhas" -gt 0 ]; then
+            echo "::error title=RESUMO SUITES (falhas=${falhas})::${enc_resumo}"
+          else
+            echo "::notice title=RESUMO SUITES (todas passaram)::${enc_resumo}"
+          fi
           if [ -n "${{ github.event.pull_request.number }}" ]; then
             {
               echo "### QA headless — suítes de etapa (Godot ${GODOT_VERSION:-?})"
