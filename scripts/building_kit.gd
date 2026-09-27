@@ -212,6 +212,41 @@ static func material(spec: Dictionary, chave: String) -> Material:
     return mat
 
 
+static func _material_variante(spec: Dictionary, chave: String, fator: float = 1.0,
+        uv_offset: float = 0.0) -> Material:
+    # Duplicata barata por predio: preserva PBR/normal/ORM, mas quebra a
+    # repeticao perfeita de cor/UV que deixava a rua com cara de maquete.
+    var base := material(spec, chave)
+    var mat := base.duplicate() as Material
+    if mat is BaseMaterial3D:
+        var bm := mat as BaseMaterial3D
+        var c := bm.albedo_color
+        bm.albedo_color = Color(
+            clampf(c.r * fator, 0.0, 1.0),
+            clampf(c.g * fator, 0.0, 1.0),
+            clampf(c.b * fator, 0.0, 1.0),
+            c.a)
+        if absf(uv_offset) > 0.0001:
+            bm.uv1_offset = Vector3(uv_offset, uv_offset * 0.37, uv_offset * 0.11)
+        bm.roughness = clampf(bm.roughness + (1.0 - fator) * 0.18, 0.18, 1.0)
+    return mat
+
+
+static func _vidro_aceso(cor: Color = Color(1.0, 0.84, 0.59, 1.0)) -> StandardMaterial3D:
+    var mat := StandardMaterial3D.new()
+    mat.albedo_color = Color(cor.r, cor.g, cor.b, 0.82)
+    mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    mat.roughness = 0.22
+    mat.metallic = 0.0
+    mat.clearcoat_enabled = true
+    mat.clearcoat = 0.55
+    mat.clearcoat_roughness = 0.16
+    mat.emission_enabled = true
+    mat.emission = cor
+    mat.emission_energy_multiplier = 0.22
+    return mat
+
+
 static func _tem_textura(nome: String) -> bool:
     return ResourceLoader.exists("%s%s_albedo.png" % [PBR_DIR, nome])
 
@@ -638,7 +673,7 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
             elif tipo == "obra":
                 chave = "fachada_reboco"
             var frente := _malha(_box(Vector3(profundidade, altura, largura)),
-                material(spec, chave),
+                _material_variante(spec, chave, rng.randf_range(0.88, 1.08), rng.randf()),
                 Vector3(lado * x_centro, altura * 0.5, -(z + largura * 0.5)), raiz,
                 "Predio%s%d" % [("D" if lado > 0.0 else "E"), lote], sombras_mundo)
             _marca(frente, "fachada")
@@ -651,6 +686,7 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
                 _build_janelas(spec, raiz, rng, janela, lado, x_frente, z, largura, andares, pe, tipo, lote)
             if tipo == "loja":
                 _build_loja(spec, raiz, p, lado, x_frente, z, largura, lote)
+            _build_fachada_realista(spec, raiz, rng, lado, x_frente, z, largura, altura, andares, pe, tipo, lote, sombras_mundo)
             z += largura
             lote += 1
 
@@ -675,7 +711,11 @@ static func _build_janelas(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
     var ja := float(janela.get("altura_m", 1.5))
     var peitoril := float(janela.get("peitoril_m", 0.9))
     var colunas: Array = janela.get("colunas_por_lote", [2, 4])
-    var xforms: Array = []
+    var vidros_escuros: Array = []
+    var vidros_acesos: Array = []
+    var molduras_h: Array = []
+    var molduras_v: Array = []
+    var peitoris: Array = []
     for andar in range(andares):
         if tipo == "loja" and andar == 0:
             continue  # loja: o pavimento de baixo e vitrine, nao janela
@@ -683,11 +723,113 @@ static func _build_janelas(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
         var passo := largura / float(colis + 1)
         for c in range(colis):
             var zc := z + passo * float(c + 1)
-            xforms.append(_xform(
-                Vector3(lado * (x_frente - 0.03), peitoril + ja * 0.5 + float(andar) * pe, -zc),
-                Vector3(0.06, ja, jl)))
-    _multimesh(_box(Vector3.ONE), material(spec, "vidro"), xforms, raiz,
-            "Janelas%s%d" % [("D" if lado > 0.0 else "E"), indice], false)
+            var yc := peitoril + ja * 0.5 + float(andar) * pe
+            var janela_t := _xform(Vector3(lado * (x_frente - 0.055), yc, -zc), Vector3(0.045, ja, jl))
+            # Nem toda janela acesa: a variação quebra o grid artificial sem
+            # virar letreiro. Determinístico porque usa o rng do quarteirão.
+            if rng.randf() < 0.14:
+                vidros_acesos.append(janela_t)
+            else:
+                vidros_escuros.append(janela_t)
+            molduras_h.append(_xform(
+                Vector3(lado * (x_frente - 0.085), yc + ja * 0.5 + 0.045, -zc),
+                Vector3(0.07, 0.06, jl + 0.18)))
+            molduras_h.append(_xform(
+                Vector3(lado * (x_frente - 0.085), yc - ja * 0.5 - 0.045, -zc),
+                Vector3(0.07, 0.06, jl + 0.18)))
+            molduras_v.append(_xform(
+                Vector3(lado * (x_frente - 0.085), yc, -(zc - jl * 0.5 - 0.055)),
+                Vector3(0.07, ja + 0.12, 0.055)))
+            molduras_v.append(_xform(
+                Vector3(lado * (x_frente - 0.085), yc, -(zc + jl * 0.5 + 0.055)),
+                Vector3(0.07, ja + 0.12, 0.055)))
+            peitoris.append(_xform(
+                Vector3(lado * (x_frente - 0.11), yc - ja * 0.5 - 0.12, -zc),
+                Vector3(0.16, 0.075, jl + 0.30)))
+    if not vidros_escuros.is_empty():
+        _multimesh(_box(Vector3.ONE), material(spec, "vidro"), vidros_escuros, raiz,
+                "Janelas%s%d" % [("D" if lado > 0.0 else "E"), indice], false)
+    if not vidros_acesos.is_empty():
+        _multimesh(_box(Vector3.ONE), _vidro_aceso(), vidros_acesos, raiz,
+                "JanelasAcesas%s%d" % [("D" if lado > 0.0 else "E"), indice], false)
+    var moldura_mat := _material_variante(spec, "guia", 0.92, float(indice) * 0.013)
+    if not molduras_h.is_empty():
+        _multimesh(_box(Vector3.ONE), moldura_mat, molduras_h, raiz,
+                "MoldurasJanelaH%s%d" % [("D" if lado > 0.0 else "E"), indice], false)
+    if not molduras_v.is_empty():
+        _multimesh(_box(Vector3.ONE), moldura_mat, molduras_v, raiz,
+                "MoldurasJanelaV%s%d" % [("D" if lado > 0.0 else "E"), indice], false)
+    if not peitoris.is_empty():
+        _multimesh(_box(Vector3.ONE), _material_variante(spec, "telhado", 0.78, float(indice) * 0.019),
+                peitoris, raiz, "Peitoris%s%d" % [("D" if lado > 0.0 else "E"), indice], false)
+
+
+static func _build_fachada_realista(spec: Dictionary, raiz: Node3D, rng: RandomNumberGenerator,
+        lado: float, x_frente: float, z: float, largura: float, altura: float,
+        andares: int, pe: float, tipo: String, indice: int, sombras: bool) -> void:
+    # Detalhes baratos, mas com profundidade real: rodape, frisos entre
+    # pavimentos, manchas de uso, ar-condicionado e pequenos volumes no topo.
+    # A silhueta deixa de ser um cubo perfeito e a textura PBR ganha escala.
+    var face_x := lado * (x_frente - 0.105)
+    var centro_z := z + largura * 0.5
+    var concreto := _material_variante(spec, "guia", rng.randf_range(0.78, 0.96), rng.randf())
+    var metal := _material_variante(spec, "zincado", rng.randf_range(0.88, 1.06), rng.randf())
+    var parede_chave := "fachada_tijolo" if tipo == "tijolo" else "fachada_reboco"
+
+    var rodape := _malha(_box(Vector3(0.13, 0.30, maxf(0.8, largura * 0.94))), concreto,
+            Vector3(face_x, 0.29, -centro_z), raiz,
+            "RodapePredio%s%d" % [("D" if lado > 0.0 else "E"), indice], sombras)
+    _marca(rodape, "fachada")
+
+    for borda in [-1.0, 1.0]:
+        var pilastra := _malha(_box(Vector3(0.12, maxf(0.4, altura - 0.34), 0.11)), concreto,
+                Vector3(face_x, altura * 0.5, -(centro_z + borda * (largura * 0.5 - 0.08))), raiz,
+                "PilastraPredio%s%d" % [("D" if lado > 0.0 else "E"), indice], sombras)
+        _marca(pilastra, "fachada")
+
+    for andar in range(1, andares):
+        var y := clampf(float(andar) * pe, 0.55, altura - 0.18)
+        var friso := _malha(_box(Vector3(0.10, 0.07, maxf(0.7, largura * 0.92))), concreto,
+                Vector3(face_x, y, -centro_z), raiz,
+                "FrisoPredio%s%d" % [("D" if lado > 0.0 else "E"), indice], sombras)
+        _marca(friso, "fachada")
+
+    var manchas := rng.randi_range(1, 3)
+    for i in range(manchas):
+        var mancha_mat := _material_variante(spec, parede_chave, rng.randf_range(0.50, 0.70), rng.randf())
+        var mw := rng.randf_range(0.18, 0.42)
+        var mh := rng.randf_range(0.38, 0.95)
+        var mz := z + rng.randf_range(0.38, maxf(0.42, largura - 0.38))
+        var my := rng.randf_range(0.72, maxf(0.76, altura - 0.85))
+        var mancha := _malha(_box(Vector3(0.024, mh, mw)), mancha_mat,
+                Vector3(lado * (x_frente - 0.135), my, -mz), raiz,
+                "ManchaUso%s%d" % [("D" if lado > 0.0 else "E"), indice], false)
+        _marca(mancha, "fachada")
+
+    if tipo != "obra" and largura > 3.5 and altura > 3.7:
+        var ac_count := 1 if rng.randf() < 0.72 else 2
+        for ac_i in range(ac_count):
+            var ac_y := clampf(1.75 + float((indice + ac_i) % maxi(1, andares)) * pe,
+                    1.45, altura - 0.65)
+            var ac_z := z + largura * (0.30 + 0.34 * float(ac_i)) + rng.randf_range(-0.22, 0.22)
+            var ac := _malha(_box(Vector3(0.30, 0.30, 0.54)), metal,
+                    Vector3(lado * (x_frente - 0.22), ac_y, -ac_z), raiz,
+                    "ArCondicionado%s%d" % [("D" if lado > 0.0 else "E"), indice], false)
+            _marca(ac, "fachada")
+            var grelha := _malha(_box(Vector3(0.025, 0.19, 0.44)), _material_variante(spec, "estrutura_metalica", 0.55, 0.0),
+                    Vector3(lado * (x_frente - 0.38), ac_y, -ac_z), raiz,
+                    "GrelhaAr%s%d" % [("D" if lado > 0.0 else "E"), indice], false)
+            _marca(grelha, "fachada")
+
+    if altura > 5.0 and indice % 2 == 0:
+        var tanque := _malha(_cyl(0.24, 0.48, 12), metal,
+                Vector3(lado * (x_frente + 0.95), altura + 0.42, -(centro_z - largura * 0.18)), raiz,
+                "CaixaDaguaPredio%s%d" % [("D" if lado > 0.0 else "E"), indice], sombras)
+        _marca(tanque, "telhado")
+        var antena := _malha(_cyl(0.018, 0.85, 6), _material_variante(spec, "estrutura_metalica", 0.62, 0.0),
+                Vector3(lado * (x_frente + 1.22), altura + 0.82, -(centro_z + largura * 0.18)), raiz,
+                "AntenaPredio%s%d" % [("D" if lado > 0.0 else "E"), indice], sombras)
+        _marca(antena, "telhado")
 
 
 static func _build_loja(spec: Dictionary, raiz: Node3D, p: Dictionary, lado: float,

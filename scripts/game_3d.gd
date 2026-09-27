@@ -4048,7 +4048,7 @@ func _build_collectible(parent: Node3D, kind: String) -> void:
         # Escalas estilizadas mobile: moedas e colecionáveis bem visíveis e brilhantes
         var _collect_scale := 0.48
         match kind:
-            "coin": _collect_scale = 0.55
+            "coin": _collect_scale = 0.50
             "golden": _collect_scale = 0.50
             "pass": _collect_scale = 0.48
             "bread": _collect_scale = 0.48
@@ -4061,18 +4061,22 @@ func _build_collectible(parent: Node3D, kind: String) -> void:
             "umbrella": _collect_scale = 0.70
             _: _collect_scale = 0.48
         coletavel_glb.scale = Vector3.ONE * _collect_scale
+        _polish_collectible_glb(coletavel_glb, kind)
         parent.add_child(coletavel_glb)
-        var glow_glb := _material(Color(color, 0.18), 0.0, 0.8, "glass")
-        glow_glb.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-        glow_glb.emission_enabled = true
-        glow_glb.emission = color
-        glow_glb.emission_energy_multiplier = 0.85
-        _sphere(parent, 0.35, Vector3.ZERO, glow_glb, "Glow")
+        if kind == "coin":
+            _build_coin_realism(parent, color, 0.31)
+        else:
+            var glow_glb := _material(Color(color, 0.12), 0.0, 0.8, "glass")
+            glow_glb.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+            glow_glb.emission_enabled = true
+            glow_glb.emission = color
+            glow_glb.emission_energy_multiplier = 0.45
+            _sphere(parent, 0.30, Vector3.ZERO, glow_glb, "Glow")
         return
     var mat := _material(color, 0.12 if kind in ["coin", "golden"] else 0.0, 0.28, "metal" if kind in ["coin", "golden"] else "paint")
     mat.emission_enabled = true
     mat.emission = color
-    mat.emission_energy_multiplier = 1.8
+    mat.emission_energy_multiplier = 0.65 if kind in ["coin", "golden"] else 1.8
     match kind:
         "coin", "golden":
             # moeda em pe: disco cunhado com aro em relevo, girando no eixo
@@ -4084,6 +4088,7 @@ func _build_collectible(parent: Node3D, kind: String) -> void:
             var relevo := _torus(parent, raio * 0.62 - 0.02, raio * 0.62 + 0.02, Vector3(0.0, 0.0, 0.0), _material(Color("#ffe08a"), 0.35, 0.22, "metal"), "CoinRelevo")
             relevo.rotation.x = PI / 2.0
             _cylinder(parent, raio * 0.34, raio * 0.34, 0.075, Vector3.ZERO, _material(Color("#fff0b8"), 0.3, 0.20, "metal"), "CoinNucleo")
+            _build_coin_realism(parent, color, raio)
         "coffee":
             _cylinder(parent, 0.18, 0.15, 0.30, Vector3(0.0, 0.0, 0.0), mat, "CoffeeCup")
             _cylinder(parent, 0.14, 0.14, 0.018, Vector3(0.0, 0.16, 0.0), _material(Color("#33231f"), 0.0, 0.72, "paint"), "CoffeeSurface")
@@ -4121,9 +4126,73 @@ func _build_collectible(parent: Node3D, kind: String) -> void:
             canopy.scale = Vector3(1.28, 0.38, 1.28)
         _:
             _sphere(parent, 0.22, Vector3.ZERO, mat, "Bonus")
-    var glow_material := _material(Color(color, 0.10), 0.0, 0.8, "glass")
-    glow_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-    _sphere(parent, 0.14, Vector3.ZERO, glow_material, "Glow") # 0.14 proporcional
+    if kind not in ["coin", "golden"]:
+        var glow_material := _material(Color(color, 0.10), 0.0, 0.8, "glass")
+        glow_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+        _sphere(parent, 0.14, Vector3.ZERO, glow_material, "Glow") # 0.14 proporcional
+
+func _polish_collectible_glb(root: Node3D, kind: String) -> void:
+    if root == null or kind not in ["coin", "golden"]:
+        return
+    for child in root.find_children("*", "MeshInstance3D", true, false):
+        var mesh_node := child as MeshInstance3D
+        if mesh_node == null or mesh_node.mesh == null:
+            continue
+        for surface in mesh_node.mesh.get_surface_count():
+            var source_material := mesh_node.get_surface_override_material(surface)
+            if source_material == null:
+                source_material = mesh_node.mesh.surface_get_material(surface)
+            if not source_material is BaseMaterial3D:
+                continue
+            var material := (source_material as BaseMaterial3D).duplicate() as BaseMaterial3D
+            var mat_name := str(source_material.resource_name).to_lower()
+            # Mantém as texturas desenhadas no GLB, mas troca o shader de
+            # "plástico amarelo" para metal cunhado com brilho largo e gasto.
+            if mat_name.contains("ouro") or kind == "coin":
+                material.metallic = maxf(material.metallic, 0.86)
+                material.roughness = clampf(material.roughness, 0.24, 0.42)
+                material.clearcoat_enabled = true
+                material.clearcoat = 0.36
+                material.clearcoat_roughness = 0.18
+                material.rim_enabled = true
+                material.rim = 0.12
+                material.rim_tint = 0.38
+            if mat_name.contains("frente") or mat_name.contains("tras"):
+                material.albedo_color = material.albedo_color.lerp(Color("#fff1b8"), 0.18)
+            else:
+                material.albedo_color = material.albedo_color.lerp(Color("#d79a2b"), 0.24)
+            material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+            mesh_node.set_surface_override_material(surface, material)
+
+
+func _build_coin_realism(parent: Node3D, color: Color, radius: float) -> void:
+    # Leitura de pickup sem esfera neon: aro e relevo metálicos, mais uma aura
+    # bem pequena. A moeda continua visível, mas parece cunhada em vez de brinquedo.
+    var aged_gold := _material(Color("#c48b24"), 0.92, 0.30, "metal")
+    aged_gold.clearcoat_enabled = true
+    aged_gold.clearcoat = 0.28
+    aged_gold.clearcoat_roughness = 0.22
+    var bright_gold := _material(Color("#ffe18a"), 0.84, 0.22, "metal")
+    bright_gold.clearcoat_enabled = true
+    bright_gold.clearcoat = 0.34
+    bright_gold.clearcoat_roughness = 0.16
+    var outer := _torus(parent, radius * 0.83, radius * 0.97, Vector3.ZERO, aged_gold, "CoinAroCunhado")
+    outer.rotation.x = PI / 2.0
+    var inner := _torus(parent, radius * 0.42, radius * 0.50, Vector3(0.0, 0.0, -0.006), bright_gold, "CoinAnelInterno")
+    inner.rotation.x = PI / 2.0
+    var symbol_z := -0.050
+    _box(parent, Vector3(0.034, radius * 0.72, 0.016), Vector3(-radius * 0.18, 0.0, symbol_z), bright_gold, "CoinSimboloHaste")
+    _box(parent, Vector3(radius * 0.42, 0.032, 0.016), Vector3(-radius * 0.03, radius * 0.18, symbol_z), bright_gold, "CoinSimboloTopo")
+    _box(parent, Vector3(radius * 0.36, 0.030, 0.016), Vector3(-radius * 0.01, 0.0, symbol_z), bright_gold, "CoinSimboloMeio")
+    _box(parent, Vector3(0.030, radius * 0.48, 0.016), Vector3(radius * 0.20, 0.0, symbol_z), bright_gold, "CoinSimboloCifrao")
+    var halo := _material(Color(color, 0.10), 0.0, 0.72, "glass")
+    halo.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    halo.emission_enabled = true
+    halo.emission = color
+    halo.emission_energy_multiplier = 0.24
+    var aura := _torus(parent, radius * 1.04, radius * 1.12, Vector3.ZERO, halo, "CoinAuraSuave")
+    aura.rotation.x = PI / 2.0
+
 
 func _wheels(parent: Node3D, material: Material, x_offset: float, z_offset: float) -> void:
     for x in [-x_offset, x_offset]:
@@ -4315,7 +4384,13 @@ func _texture_for_surface(surface: String) -> Texture2D:
             return TEXTURE_CONCRETE_REAL
         "cobble":
             return TEXTURE_SIDEWALK_REAL
+        "facade_plaster":
+            return TEXTURE_FACADE_PLASTER
+        "facade_brick":
+            return TEXTURE_FACADE_BRICK
         "brick":
+            return TEXTURE_BRICK_WALL
+        "brick_wall":
             return TEXTURE_BRICK_WALL
         "stucco":
             return TEXTURE_CONCRETE_REAL
