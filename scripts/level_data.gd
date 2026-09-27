@@ -256,8 +256,8 @@ const CENARIO_SOL: Dictionary = {
 }
 
 ## Fase 1 — "Saiu atrasada" (PLANO_50_FASES): aprender troca de corredor e
-## pulo; cones baixos isolados; moedas guiam uma rota ampla. Clímax: dois
-## cones em estações separadas, sempre com desvio disponível.
+## pulo; cones/um buraco baixo isolados; moedas guiam uma rota ampla.
+## Clímax: estação dupla com desvio disponível, sem bloquear os três corredores.
 const FASE_1: Dictionary = {
     "id": "bairro_01",
     "version": 1,
@@ -266,16 +266,22 @@ const FASE_1: Dictionary = {
     "distance_m": 224.0,
     "chunk_length_m": 28.0,
     "chunks": 8,
-    "base_speed_mps": 5.5,
-    "deadline_seconds": 55.0,
+    "base_speed_mps": 5.8,
+    "deadline_seconds": 48.0,
     "layout_seed": 101,
     "scenery": CENARIO_BAIRRO,
     "patterns": [
-        {"kind": "cone", "lane": 1, "at_m": 40.0},
-        {"kind": "cone", "lane": 0, "at_m": 68.0},
-        {"kind": "cone", "lane": 2, "at_m": 96.0},
-        {"kind": "cone", "lane": 1, "at_m": 146.0},
-        {"kind": "cone", "lane": 2, "at_m": 162.0},
+        {"kind": "cone", "lane": 1, "at_m": 36.0},
+        {"kind": "cone", "lane": 0, "at_m": 64.0},
+        {"kind": "cone", "lane": 2, "at_m": 92.0},
+        # Miolo mais vivo: obstáculo lateral antes das moedas e estação dupla
+        # sem travar os três corredores. Continua tutorial, mas deixa de ser
+        # uma reta longa sem decisão.
+        {"kind": "pothole", "lane": 0, "at_m": 118.0},
+        {"kind": "cone", "lane": 1, "at_m": 144.0},
+        {"kind": "cone", "lane": 0, "at_m": 144.0},
+        {"kind": "cone", "lane": 2, "at_m": 166.0},
+        {"kind": "cone", "lane": 1, "at_m": 192.0},
     ],
     "coins": [
         {"kind": "coin", "lane": 1, "at_m": 8.0},
@@ -300,19 +306,25 @@ const FASE_2: Dictionary = {
     "distance_m": 280.0,
     "chunk_length_m": 28.0,
     "chunks": 10,
-    "base_speed_mps": 5.8,
-    "deadline_seconds": 61.0,
+    "base_speed_mps": 6.2,
+    "deadline_seconds": 54.0,
     "layout_seed": 102,
     "scenery": CENARIO_BAIRRO,
     "patterns": [
-        {"kind": "cone", "lane": 1, "at_m": 40.0},
-        {"kind": "car", "lane": 0, "at_m": 68.0},
-        {"kind": "cone", "lane": 2, "at_m": 96.0},
-        {"kind": "bench", "lane": 1, "at_m": 124.0},
-        {"kind": "cone", "lane": 0, "at_m": 150.0},
-        {"kind": "bench", "lane": 2, "at_m": 152.0},
-        {"kind": "bench", "lane": 1, "at_m": 210.0},
-        {"kind": "cone", "lane": 2, "at_m": 210.0},
+        {"kind": "cone", "lane": 1, "at_m": 38.0},
+        {"kind": "car", "lane": 0, "at_m": 66.0},
+        {"kind": "cone", "lane": 2, "at_m": 94.0},
+        {"kind": "bench", "lane": 1, "at_m": 122.0},
+        {"kind": "cone", "lane": 0, "at_m": 148.0},
+        {"kind": "bench", "lane": 2, "at_m": 150.0},
+        # Mantém a rota central legível, mas transforma a coleta do miolo em
+        # decisão ativa em vez de respiro longo.
+        {"kind": "cone", "lane": 0, "at_m": 176.0},
+        {"kind": "bench", "lane": 2, "at_m": 176.0},
+        {"kind": "cone", "lane": 1, "at_m": 196.0},
+        {"kind": "bench", "lane": 1, "at_m": 218.0},
+        {"kind": "cone", "lane": 2, "at_m": 218.0},
+        {"kind": "bench", "lane": 0, "at_m": 244.0},
     ],
     "coins": [
         {"kind": "coin", "lane": 1, "at_m": 8.0},
@@ -327,7 +339,7 @@ const FASE_2: Dictionary = {
     ],
 }
 
-## Fase 4 — "Remendo na calçada": introduz o buraco curto (pulo), com
+## Fase 4 — "Remendo na calçada": reforça o buraco curto (pulo), com
 ## cones e a barreira já conhecidos. Clímax: buraco seguido de banco,
 ## com aterrissagem e tempo de troca garantidos.
 const FASE_4: Dictionary = {
