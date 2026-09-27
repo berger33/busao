@@ -737,10 +737,11 @@ static func _build_arvores(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
     while z < comprimento:
         var x := x_dir if lado > 0.0 else x_esq
         var base := Vector3(x, 0.15, -z)
-        # Seleciona entre ipê amarelo florido, árvore urbana e palmeira
-        var arvore_nome: String = "ipe_amarelo" if (int(z * 7) % 3 == 0) else ("arvore" if (int(z * 7) % 3 == 1) else "palmeira")
-        if cfg.has("glb"):
-            arvore_nome = str(cfg["glb"])
+        # A espécie é identidade de cenário e vem do perfil (props.arvore.glb):
+        # ipê amarelo na "Rua do Ipê", palmeira na orla/avenida, comum no resto.
+        # Sem override explícito a árvore é a COMUM — fase genérica não sorteia
+        # ipê/palmeira (contrato das suítes de arte: W4, L4-D, L5-D, L7-D).
+        var arvore_nome: String = str(cfg["glb"]) if cfg.has("glb") else "arvore"
         var arvore_glb := _scene_glb(arvore_nome)
         if arvore_glb == null:
             arvore_glb = _scene_glb("arvore")

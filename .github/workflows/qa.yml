@@ -91,7 +91,7 @@ jobs:
               # que pode estar bloqueado em alguns ambientes): expõe o rabo do log
               # de cada suíte que falhou como um ::error:: recuperável via
               # /repos/OWNER/REPO/check-runs/ID/annotations.
-              { echo "---- checks FAIL/FALHOU de $nome ----"; grep -nE "FAIL |FALHOU|ERRO|[Ee]rror|diverge|esperado|falta" "/tmp/suite-logs/$nome.log" | grep -viE "leaked|PagedAllocator|RID allocation|resources still|instance_notify|ObjectDB" | head -40; echo "---- últimas 15 linhas ----"; tail -15 "/tmp/suite-logs/$nome.log"; } > /tmp/suite-logs/$nome.diag
+              { echo "---- checks FAIL/FALHOU + diagnósticos de $nome ----"; grep -nE "^FAIL |FALHOU|^  |diverge|esperado" "/tmp/suite-logs/$nome.log" | grep -viE "leaked|PagedAllocator|RID allocation|resources still|instance_notify|ObjectDB|at: " | head -60; } > /tmp/suite-logs/$nome.diag
               enc=$(python3 -c 'import sys; print(open("/tmp/suite-logs/'"$nome"'.diag").read().replace("%","%25").replace("\r","%0D").replace("\n","%0A"))')
               echo "::error title=SUITE FAIL ${nome} (exit ${code})::${enc}"
             fi
