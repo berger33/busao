@@ -1,17 +1,11 @@
 #!/usr/bin/env python3
-"""Regenera somente as texturas de rua/calçada com PBR mais realista.
+"""Gera o pacote visual estilizado do ambiente.
 
-Uso:
-  python3 tools/generate_street_textures.py
-
-Requer Pillow + NumPy. O gerador é determinístico, tileable e escreve:
-- assets/textures/asfalto_realista + normal + roughness
-- assets/textures/calcada_realista + normal + roughness
-- assets/textures/pbr/asfalto_* / calcada_laje_* / calcada_mosaico_*
-
-A ideia é trocar o visual procedural "nuvem cinza" por material de rua usado:
-agregado fino, marcas de pneu, remendos sutis, óleo, sujeira de sarjeta,
-juntas com AO e pedras com variação real.
+A versão anterior tentava simular sujeira/ruído fotográfico e, em jogo, isso
+virava pontilhado preto e aspecto pixelado nos prédios e no chão. Este gerador
+mantém PBR/normal/ORM, mas troca o detalhe por formas limpas, cores quentes e
+variação suave: o cenário fica coeso com a personagem/árvores e mais agradável
+em mobile.
 """
 from __future__ import annotations
 
@@ -30,6 +24,10 @@ if SIZE not in (1024, 2048, 4096):
     SIZE = 1024
 MASTER_SEED = 20260927
 
+
+# ---------------------------------------------------------------------------
+# Helpers: ruído suave/tileable, normais e escrita
+# ---------------------------------------------------------------------------
 
 def value_noise(freq: int, rng: np.random.Generator, size: int = SIZE) -> np.ndarray:
     freq = max(1, min(freq, size))
@@ -52,7 +50,7 @@ def value_noise(freq: int, rng: np.random.Generator, size: int = SIZE) -> np.nda
     return a * (1.0 - sy) + b * sy
 
 
-def fbm(freq: int, octaves: int, rng: np.random.Generator, gain: float = 0.5, size: int = SIZE) -> np.ndarray:
+def fbm(freq: int, octaves: int, rng: np.random.Generator, gain: float = 0.52, size: int = SIZE) -> np.ndarray:
     total = np.zeros((size, size), dtype=np.float64)
     amp = 1.0
     acc = 0.0
@@ -70,15 +68,15 @@ def fbm(freq: int, octaves: int, rng: np.random.Generator, gain: float = 0.5, si
 
 
 def height_to_normal(height: np.ndarray, strength: float) -> np.ndarray:
-    # OpenGL normal map (Y+); strength compensada pela resolução.
+    # OpenGL normal map (Y+). Strength baixo: estilo limpo, sem ruído agressivo.
     norm_strength = strength * (1024.0 / float(height.shape[0]))
     dx = np.roll(height, -1, axis=1) - np.roll(height, 1, axis=1)
     dy = np.roll(height, -1, axis=0) - np.roll(height, 1, axis=0)
     nx = -dx * norm_strength * 64.0
     ny = -dy * norm_strength * 64.0
     nz = np.ones_like(height)
-    l = np.sqrt(nx * nx + ny * ny + nz * nz)
-    rgb = np.stack([nx / l * 0.5 + 0.5, ny / l * 0.5 + 0.5, nz / l * 0.5 + 0.5], axis=-1)
+    length = np.sqrt(nx * nx + ny * ny + nz * nz)
+    rgb = np.stack([nx / length * 0.5 + 0.5, ny / length * 0.5 + 0.5, nz / length * 0.5 + 0.5], axis=-1)
     return np.clip(rgb * 255.0, 0, 255).astype(np.uint8)
 
 
@@ -93,212 +91,309 @@ def save_rgb(arr: np.ndarray, path: Path) -> None:
 
 def save_height(height: np.ndarray, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    img = Image.fromarray(np.clip(height * 65535.0, 0, 65535).astype(np.uint16), "I;16")
+    img = Image.fromarray(np.clip(height * 65535.0, 0, 65535).astype(np.uint16))
     img.save(path, optimize=True)
     print(f"  {path.relative_to(ROOT)} {img.size[0]}x{img.size[1]} 16-bit")
 
 
-def random_walk_cracks(rng: np.random.Generator, count: int, steps: int, size: int = SIZE) -> np.ndarray:
-    cracks = np.zeros((size, size), dtype=np.float64)
-    for _ in range(count):
-        x = float(rng.integers(0, size))
-        y = float(rng.integers(0, size))
-        angle = float(rng.random() * math.tau)
-        for step in range(steps):
-            angle += float((rng.random() - 0.5) * 0.44)
-            speed = 1.15 + 0.8 * float(rng.random())
-            x = (x + math.cos(angle) * speed) % size
-            y = (y + math.sin(angle) * speed) % size
-            xi, yi = int(x) % size, int(y) % size
-            value = 1.0 - 0.45 * float(step) / float(max(steps, 1))
-            cracks[yi, xi] = max(cracks[yi, xi], value)
-            cracks[yi, (xi + 1) % size] = max(cracks[yi, (xi + 1) % size], value * 0.38)
-            cracks[(yi + 1) % size, xi] = max(cracks[(yi + 1) % size, xi], value * 0.28)
-            if rng.random() < 0.018:
-                branch = angle + (rng.random() - 0.5) * 1.2
-                bx, by = x, y
-                for _branch_step in range(18):
-                    bx = (bx + math.cos(branch) * 1.1) % size
-                    by = (by + math.sin(branch) * 1.1) % size
-                    bxi, byi = int(bx) % size, int(by) % size
-                    cracks[byi, bxi] = max(cracks[byi, bxi], value * 0.35)
-    for _ in range(2):
-        cracks = np.maximum(cracks, np.roll(cracks, 1, 0) * 0.35)
-        cracks = np.maximum(cracks, np.roll(cracks, -1, 1) * 0.25)
-    return np.clip(cracks, 0.0, 1.0)
+def orm_map(ao: np.ndarray, rough: np.ndarray, metallic: np.ndarray | float = 0.0) -> np.ndarray:
+    if not isinstance(metallic, np.ndarray):
+        metallic = np.full_like(ao, float(metallic))
+    return np.stack([np.clip(ao, 0, 1), np.clip(rough, 0, 1), np.clip(metallic, 0, 1)], axis=-1)
 
 
-def asphalt_maps(seed_offset: int = 0) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    rng = np.random.default_rng(MASTER_SEED + 100 + seed_offset)
+def soft_rect_mask(x: np.ndarray, y: np.ndarray, x0: float, x1: float, y0: float, y1: float, edge: float = 2.0) -> np.ndarray:
+    # Retângulo com borda levemente anti-aliased para textura estilizada.
+    inside_x = np.minimum(x - x0, x1 - x)
+    inside_y = np.minimum(y - y0, y1 - y)
+    d = np.minimum(inside_x, inside_y)
+    return np.clip((d + edge) / max(edge, 0.001), 0.0, 1.0)
+
+
+# ---------------------------------------------------------------------------
+# Materiais estilizados principais
+# ---------------------------------------------------------------------------
+
+def gen_asphalt() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    rng = np.random.default_rng(MASTER_SEED + 10)
     y, x = np.mgrid[0:SIZE, 0:SIZE]
     xf = x / float(SIZE)
-
-    macro = fbm(5, 4, rng, 0.54)
-    mid = fbm(34, 4, rng, 0.50)
-    aggregate = fbm(190, 3, rng, 0.52)
-    grit = fbm(520, 2, rng, 0.45)
-    tar_flow = fbm(11, 3, rng, 0.58)
-
-    # Dois rastros de pneu longitudinais: visíveis, mas não pintados demais.
-    lane_track = np.exp(-((xf - 0.34) ** 2) / 0.0022) + np.exp(-((xf - 0.68) ** 2) / 0.0024)
-    lane_track = np.clip(lane_track, 0.0, 1.0) * (0.55 + 0.45 * fbm(9, 2, rng))
-
-    # Remendos e áreas oleosas suavizadas; contraste baixo para fugir do "mapa de nuvens".
-    repair_noise = fbm(7, 3, rng, 0.55)
-    repair = repair_noise > 0.72
-    oil = (fbm(13, 2, rng, 0.5) > 0.77) & (lane_track > 0.18)
-    cracks = random_walk_cracks(rng, 7, 118)
-
-    v = 0.235 + 0.060 * macro + 0.052 * mid + 0.050 * aggregate + 0.025 * grit
-    v = v - 0.035 * lane_track - 0.030 * np.clip(tar_flow - 0.58, 0.0, 1.0)
-    v = np.where(repair, v * 0.86 + 0.025, v)
-    v = np.where(oil, v * 0.70, v)
-    v = np.where(cracks > 0.03, v * (1.0 - 0.46 * cracks), v)
-
-    # Pedrinhas: bege/cinza, sem pontos brancos estourados.
-    pebble_mask = rng.random((SIZE, SIZE)) > 0.9952
-    pebble_tone = rng.random((SIZE, SIZE))
-    pebble_rgb = np.stack([
-        0.42 + 0.20 * pebble_tone,
-        0.40 + 0.18 * pebble_tone,
-        0.36 + 0.14 * pebble_tone,
-    ], axis=-1)
-
-    albedo = np.stack([v * 0.94, v * 0.97, v], axis=-1)
-    albedo = np.where(pebble_mask[..., None], pebble_rgb, albedo)
-    albedo = np.clip(albedo, 0.035, 0.58)
-
-    height = 0.43 + 0.23 * aggregate + 0.14 * grit + 0.13 * mid
-    height = np.where(repair, height * 0.58 + 0.17, height)
-    height = height - cracks * 0.24 - lane_track * 0.035
-    height = np.where(pebble_mask, height + 0.18, height)
-    height = np.clip(height, 0.0, 1.0)
-
-    ao = 0.97 - 0.12 * np.clip(0.55 - mid, 0.0, 1.0) - 0.28 * cracks
-    ao = np.where(oil, ao * 0.86, ao)
-    ao = np.clip(ao + (aggregate - 0.5) * 0.035, 0.42, 1.0)
-
-    rough = 0.86 + 0.08 * grit + 0.05 * aggregate
-    rough = rough - 0.17 * lane_track - 0.22 * oil.astype(np.float64) - 0.10 * repair.astype(np.float64)
-    rough = np.clip(rough, 0.46, 0.98)
-    metallic = np.zeros((SIZE, SIZE), dtype=np.float64)
-    orm = np.stack([ao, rough, metallic], axis=-1)
-    return albedo, height, orm, rough
+    macro = fbm(5, 4, rng)
+    mid = fbm(18, 3, rng)
+    fine = fbm(56, 2, rng)
+    # Base azul-grafite suave: sem pontos pretos/brancos e sem granulação fina.
+    v = 0.265 + 0.032 * macro + 0.018 * mid + 0.006 * fine
+    lane_track = np.exp(-((xf - 0.34) ** 2) / 0.0032) + np.exp(-((xf - 0.67) ** 2) / 0.0034)
+    lane_track = np.clip(lane_track, 0, 1) * (0.55 + 0.45 * fbm(9, 2, rng))
+    v -= lane_track * 0.014
+    # Remendos grandes e quase no mesmo tom: dão forma sem parecer sujeira.
+    patch = fbm(7, 3, rng) > 0.84
+    v = np.where(patch, v * 0.965 + 0.006, v)
+    cracks = np.zeros((SIZE, SIZE), dtype=np.float64)
+    albedo = np.stack([v * 0.94, v * 0.97, v * 1.03], axis=-1)
+    height = 0.50 + 0.055 * fine + 0.045 * mid - 0.040 * lane_track
+    height = np.where(patch, height * 0.92 + 0.035, height)
+    rough = 0.86 + 0.035 * fine - 0.045 * lane_track - 0.025 * patch.astype(np.float64)
+    return np.clip(albedo, 0, 1), np.clip(height, 0, 1), np.clip(rough, 0.55, 0.96)
 
 
-def slab_maps(seed_offset: int = 0) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    rng = np.random.default_rng(MASTER_SEED + 200 + seed_offset)
+def gen_large_slabs() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    rng = np.random.default_rng(MASTER_SEED + 20)
     y, x = np.mgrid[0:SIZE, 0:SIZE]
-    slab_w, slab_h, mortar = 246, 184, 5
+    slab_w, slab_h, grout_w = 246, 184, 5
     row = y // slab_h
     off = (row % 2) * (slab_w // 2)
     col = (x + off) // slab_w
-    bid = row * 83 + col
-    tile_rng = np.random.default_rng(MASTER_SEED + 211)
-    tint = tile_rng.random(8192)[bid % 8192]
-    grain = fbm(128, 2, rng)
-    pores = fbm(360, 2, rng)
-    dirt = fbm(12, 3, rng)
-    grout = ((x + off) % slab_w < mortar) | (y % slab_h < mortar)
-    edge = ((x + off) % slab_w < mortar + 7) | (y % slab_h < mortar + 7)
-
+    tile_id = row * 83 + col
+    tint_rng = np.random.default_rng(MASTER_SEED + 21)
+    tint = tint_rng.random(8192)[tile_id % 8192]
+    grain = fbm(42, 3, rng)
+    smooth = fbm(9, 2, rng)
+    grout = ((x + off) % slab_w < grout_w) | (y % slab_h < grout_w)
+    edge = ((x + off) % slab_w < grout_w + 9) | (y % slab_h < grout_w + 9)
     base = np.stack([
-        0.61 + 0.10 * tint,
-        0.59 + 0.095 * tint,
-        0.54 + 0.075 * tint,
+        0.63 + 0.08 * tint,
+        0.59 + 0.07 * tint,
+        0.50 + 0.055 * tint,
     ], axis=-1)
-    albedo = base * (0.90 + 0.15 * grain + 0.08 * (dirt - 0.5))[..., None]
-    albedo = np.where(grout[..., None], albedo * 0.46, albedo)
-    albedo = np.where((edge & ~grout)[..., None], albedo * 0.86, albedo)
-
-    gum = rng.random((SIZE, SIZE)) > 0.9992
-    for _ in range(3):
-        gum = gum | (np.roll(gum, 1, 0) & (rng.random((SIZE, SIZE)) > 0.45)) | (np.roll(gum, -1, 1) & (rng.random((SIZE, SIZE)) > 0.45))
-    albedo = np.where(gum[..., None], albedo * 0.55 + np.array([0.05, 0.05, 0.045]), albedo)
-
-    height = np.where(grout, 0.25, 0.57 + 0.12 * grain + 0.09 * pores + 0.05 * tint)
-    height = np.where(edge & ~grout, height - 0.07, height)
-    height = np.where(gum, height - 0.08, height)
-    ao = np.where(grout, 0.58, 0.98 - 0.09 * edge.astype(np.float64) - 0.07 * np.clip(dirt - 0.62, 0, 1))
-    rough = np.where(grout, 0.94, 0.82 + 0.10 * (1.0 - pores) - 0.05 * fbm(8, 2, rng))
-    metallic = np.zeros((SIZE, SIZE), dtype=np.float64)
-    orm = np.stack([np.clip(ao, 0.35, 1.0), np.clip(rough, 0.58, 1.0), metallic], axis=-1)
-    return np.clip(albedo, 0, 1), np.clip(height, 0, 1), orm, rough
+    albedo = base * (0.95 + 0.07 * (grain - 0.5) + 0.04 * (smooth - 0.5))[..., None]
+    albedo = np.where(grout[..., None], np.array([0.38, 0.36, 0.31])[None, None, :], albedo)
+    albedo = np.where((edge & ~grout)[..., None], albedo * 0.93, albedo)
+    # Poucas marcas suaves, sem pontinhos pretos.
+    stain = fbm(6, 2, rng) > 0.82
+    albedo = np.where((stain & ~grout)[..., None], albedo * 0.92, albedo)
+    height = np.where(grout, 0.30, 0.56 + 0.08 * grain + 0.04 * tint)
+    height = np.where(edge & ~grout, height - 0.045, height)
+    rough = np.where(grout, 0.92, 0.78 + 0.07 * (1.0 - grain))
+    return np.clip(albedo, 0, 1), np.clip(height, 0, 1), np.clip(rough, 0.58, 1.0)
 
 
-def mosaic_maps(seed_offset: int = 0, wave: bool = False) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    rng = np.random.default_rng(MASTER_SEED + 300 + seed_offset)
+def gen_mosaic(wave: bool = False) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    rng = np.random.default_rng(MASTER_SEED + (31 if wave else 30))
     y, x = np.mgrid[0:SIZE, 0:SIZE]
-    stone = 28
-    n = SIZE // stone + 2
+    stone, grout_w = 64, 4
     cell_y = y // stone
     cell_x = x // stone
-    cell = cell_y * n + cell_x
-    tile_rng = np.random.default_rng(MASTER_SEED + 311)
-    tint = tile_rng.random(n * n + n)[cell % (n * n)]
-    grain = fbm(160, 2, rng)
-    dirt = fbm(10, 3, rng)
-    grout = ((x % stone < 2) | (y % stone < 2))
-
+    cell = cell_y * (SIZE // stone + 1) + cell_x
+    tint_rng = np.random.default_rng(MASTER_SEED + 32)
+    tint = tint_rng.random(4096)[cell % 4096]
+    grain = fbm(18, 2, rng)
+    grout = ((x % stone < grout_w) | (y % stone < grout_w))
     if wave:
-        wave_center = 0.52 + 0.22 * np.sin(2.0 * math.pi * (x / float(SIZE)) + 0.8)
-        dark = np.abs(y / float(SIZE) - wave_center) < 0.060
+        center = 0.52 + 0.22 * np.sin(2.0 * math.pi * (x / float(SIZE)) + 0.8)
+        accent = np.clip(1.0 - np.abs(y / float(SIZE) - center) / 0.075, 0.0, 1.0)
     else:
-        # A faixa lateral nao deve virar um tabuleiro preto/branco. Mantem
-        # algumas pedras mais escuras, mas com baixa incidencia e contraste.
-        dark = tint < 0.055
-
-    light_base = 0.58 + 0.10 * tint + 0.05 * (grain - 0.5)
-    dark_base = 0.31 + 0.06 * tint + 0.035 * (grain - 0.5)
-    base = np.where(dark, dark_base, light_base)
-    albedo = np.stack([base * 1.03, base * 1.00, base * 0.94], axis=-1)
-    albedo = albedo * (0.92 + 0.14 * dirt)[..., None]
-    albedo = np.where(grout[..., None], albedo * 0.50, albedo)
-
-    wear = fbm(7, 2, rng)
-    albedo = np.where((~grout)[..., None], albedo * (0.96 + 0.08 * (wear[..., None] - 0.5)), albedo)
-    height = np.where(grout, 0.23, 0.56 + 0.15 * grain + 0.05 * tint)
-    ao = np.where(grout, 0.62, 0.97 - 0.08 * np.clip(dirt - 0.64, 0, 1))
-    rough = np.where(grout, 0.95, 0.79 + 0.10 * (1.0 - grain) - 0.06 * wear)
-    metallic = np.zeros((SIZE, SIZE), dtype=np.float64)
-    orm = np.stack([np.clip(ao, 0.33, 1.0), np.clip(rough, 0.58, 1.0), metallic], axis=-1)
-    return np.clip(albedo, 0, 1), np.clip(height, 0, 1), orm, rough
+        # Nada de pedras pretas aleatórias: só variação sutil por ladrilho.
+        accent = np.zeros((SIZE, SIZE), dtype=np.float64)
+    light = 0.60 + 0.045 * tint + 0.018 * (grain - 0.5)
+    accent_v = 0.49 + 0.030 * tint + 0.012 * (grain - 0.5)
+    base = light * (1.0 - accent) + accent_v * accent
+    albedo = np.stack([base * 1.035, base, base * 0.925], axis=-1)
+    albedo = np.where(grout[..., None], np.array([0.47, 0.45, 0.40])[None, None, :], albedo)
+    height = np.where(grout, 0.40, 0.54 + 0.045 * grain + 0.018 * tint)
+    rough = np.where(grout, 0.88, 0.80 + 0.045 * (1.0 - grain))
+    return np.clip(albedo, 0, 1), np.clip(height, 0, 1), np.clip(rough, 0.58, 1.0)
 
 
-def write_asphalt() -> None:
-    albedo, height, orm, rough = asphalt_maps(0)
-    save_rgb(albedo * 255.0, OUT / "asfalto_realista.png")
-    save_rgb(height_to_normal(height, 1.75), OUT / "asfalto_normal.png")
-    save_rgb(rough * 255.0, OUT / "asfalto_roughness.png")
-    save_rgb(albedo * 255.0, OUT_PBR / "asfalto_albedo.png")
-    save_rgb(height_to_normal(height, 1.75), OUT_PBR / "asfalto_normal.png")
-    save_rgb(orm * 255.0, OUT_PBR / "asfalto_orm.png")
-    save_height(height, OUT_PBR / "asfalto_height.png")
+def gen_stucco() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    rng = np.random.default_rng(MASTER_SEED + 40)
+    mott = fbm(10, 3, rng)
+    broad = fbm(4, 2, rng)
+    v = 0.70 + 0.028 * (mott - 0.5) + 0.045 * (broad - 0.5)
+    albedo = np.stack([v * 1.08, v * 1.02, v * 0.90], axis=-1)
+    # Escorridos muito suaves, sem speckles.
+    y, x = np.mgrid[0:SIZE, 0:SIZE]
+    streak_seed = fbm(12, 2, rng)
+    streak = (streak_seed > 0.84) * np.clip(y / SIZE, 0, 1) * 0.018
+    albedo = albedo * (1.0 - streak[..., None])
+    height = 0.50 + 0.030 * mott + 0.025 * broad
+    rough = 0.84 + 0.035 * (1.0 - mott)
+    return np.clip(albedo, 0, 1), np.clip(height, 0, 1), np.clip(rough, 0.68, 0.96)
 
 
-def write_sidewalk() -> None:
-    slab_albedo, slab_height, slab_orm, slab_rough = slab_maps(0)
-    mos_albedo, mos_height, mos_orm, mos_rough = mosaic_maps(0, False)
-    wave_albedo, wave_height, _wave_orm, wave_rough = mosaic_maps(7, True)
+def gen_brick(subtle: bool = False) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    rng = np.random.default_rng(MASTER_SEED + (51 if subtle else 50))
+    y, x = np.mgrid[0:SIZE, 0:SIZE]
+    bw, bh, mortar = (128, 42, 6) if subtle else (96, 38, 5)
+    row = y // bh
+    off = (row % 2) * (bw // 2)
+    brick_col = (x + off) // bw
+    bid = row * 101 + brick_col
+    tint_rng = np.random.default_rng(MASTER_SEED + 52)
+    tint = tint_rng.random(8192)[bid % 8192]
+    grain = fbm(18, 2, rng)
+    mortar_mask = ((x + off) % bw < mortar) | (y % bh < mortar)
+    if subtle:
+        base = np.stack([0.61 + 0.08 * tint, 0.45 + 0.06 * tint, 0.34 + 0.05 * tint], axis=-1)
+        mortar_col = np.array([0.51, 0.45, 0.38])
+    else:
+        base = np.stack([0.58 + 0.12 * tint, 0.34 + 0.07 * tint, 0.25 + 0.05 * tint], axis=-1)
+        mortar_col = np.array([0.50, 0.44, 0.37])
+    albedo = base * (0.97 + 0.030 * (grain - 0.5))[..., None]
+    albedo = np.where(mortar_mask[..., None], mortar_col[None, None, :], albedo)
+    height = np.where(mortar_mask, 0.42, 0.55 + 0.035 * grain + 0.020 * tint)
+    rough = np.where(mortar_mask, 0.88, 0.81 + 0.045 * (1.0 - grain))
+    return np.clip(albedo, 0, 1), np.clip(height, 0, 1), np.clip(rough, 0.62, 0.96)
 
-    save_rgb(wave_albedo * 255.0, OUT / "calcada_realista.png")
-    save_rgb(height_to_normal(wave_height, 1.85), OUT / "calcada_normal.png")
-    save_rgb(wave_rough * 255.0, OUT / "calcada_roughness.png")
 
-    save_rgb(slab_albedo * 255.0, OUT_PBR / "calcada_laje_albedo.png")
-    save_rgb(height_to_normal(slab_height, 1.65), OUT_PBR / "calcada_laje_normal.png")
-    save_rgb(slab_orm * 255.0, OUT_PBR / "calcada_laje_orm.png")
-    save_height(slab_height, OUT_PBR / "calcada_laje_height.png")
+def gen_concrete() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    rng = np.random.default_rng(MASTER_SEED + 60)
+    mott = fbm(10, 3, rng)
+    fine = fbm(24, 2, rng)
+    base = 0.56 + 0.040 * (mott - 0.5) + 0.010 * (fine - 0.5)
+    albedo = np.stack([base * 1.04, base * 1.02, base * 0.96], axis=-1)
+    height = 0.50 + 0.030 * mott + 0.018 * fine
+    rough = 0.82 + 0.040 * (1.0 - fine)
+    return np.clip(albedo, 0, 1), np.clip(height, 0, 1), np.clip(rough, 0.62, 0.96)
 
-    save_rgb(mos_albedo * 255.0, OUT_PBR / "calcada_mosaico_albedo.png")
-    save_rgb(height_to_normal(mos_height, 1.95), OUT_PBR / "calcada_mosaico_normal.png")
-    save_rgb(mos_orm * 255.0, OUT_PBR / "calcada_mosaico_orm.png")
-    save_height(mos_height, OUT_PBR / "calcada_mosaico_height.png")
+
+def gen_roof() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    rng = np.random.default_rng(MASTER_SEED + 70)
+    y, x = np.mgrid[0:SIZE, 0:SIZE]
+    stripe = ((x // 96) % 2) * 0.025
+    mott = fbm(10, 3, rng)
+    v = 0.36 + stripe + 0.04 * (mott - 0.5)
+    albedo = np.stack([v * 1.06, v * 1.03, v * 0.96], axis=-1)
+    height = 0.50 + stripe + 0.05 * mott
+    rough = 0.80 + 0.06 * (1.0 - mott)
+    return np.clip(albedo, 0, 1), np.clip(height, 0, 1), np.clip(rough, 0.62, 0.94)
+
+
+def gen_metal(zinc: bool = False) -> tuple[np.ndarray, np.ndarray, np.ndarray, float]:
+    rng = np.random.default_rng(MASTER_SEED + (81 if zinc else 80))
+    brushed = fbm(12, 2, rng)
+    broad = fbm(5, 2, rng)
+    v = (0.58 if zinc else 0.50) + 0.028 * (brushed - 0.5) + 0.030 * (broad - 0.5)
+    if zinc:
+        albedo = np.stack([v * 1.03, v * 1.04, v * 1.05], axis=-1)
+        metallic = 0.55
+    else:
+        albedo = np.stack([v * 1.02, v * 1.00, v * 0.96], axis=-1)
+        metallic = 0.35
+    height = 0.50 + 0.020 * brushed
+    rough = (0.50 if zinc else 0.60) + 0.035 * (1.0 - brushed)
+    return np.clip(albedo, 0, 1), np.clip(height, 0, 1), np.clip(rough, 0.36, 0.76), metallic
+
+
+def gen_wood() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    rng = np.random.default_rng(MASTER_SEED + 90)
+    y, x = np.mgrid[0:SIZE, 0:SIZE]
+    veins = 0.5 + 0.5 * np.sin((x / SIZE) * math.tau * 7.0 + fbm(5, 2, rng) * 1.5)
+    fine = fbm(18, 2, rng)
+    v = 0.42 + 0.11 * veins + 0.018 * (fine - 0.5)
+    albedo = np.stack([v * 1.10, v * 0.74, v * 0.42], axis=-1)
+    height = 0.50 + 0.060 * veins + 0.020 * fine
+    rough = 0.72 + 0.045 * (1.0 - fine)
+    return np.clip(albedo, 0, 1), np.clip(height, 0, 1), np.clip(rough, 0.54, 0.90)
+
+
+def gen_dirt() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    rng = np.random.default_rng(MASTER_SEED + 100)
+    mott = fbm(10, 3, rng)
+    fine = fbm(24, 2, rng)
+    base = 0.37 + 0.060 * mott + 0.012 * (fine - 0.5)
+    albedo = np.stack([base * 1.30, base * 0.80, base * 0.48], axis=-1)
+    height = 0.47 + 0.070 * mott + 0.025 * fine
+    rough = 0.91 + 0.030 * (1.0 - fine)
+    return np.clip(albedo, 0, 1), np.clip(height, 0, 1), np.clip(rough, 0.72, 1.0)
+
+
+def facade_with_windows(kind: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    # Textura fallback do game_3d antigo: limpa, estilizada, sem sujeira pontilhada.
+    if kind == "brick":
+        wall, height, rough = gen_brick(subtle=True)
+    else:
+        wall, height, rough = gen_stucco()
+    y, x = np.mgrid[0:SIZE, 0:SIZE]
+    rows, cols = 4, 4
+    cell_w, cell_h = SIZE / cols, SIZE / rows
+    for r in range(rows):
+        for c in range(cols):
+            cx = (c + 0.5) * cell_w
+            cy = (r + 0.40) * cell_h
+            ww, wh = cell_w * 0.52, cell_h * 0.50
+            frame = soft_rect_mask(x, y, cx - ww / 2 - 7, cx + ww / 2 + 7, cy - wh / 2 - 7, cy + wh / 2 + 7, 2.0)
+            glass = soft_rect_mask(x, y, cx - ww / 2, cx + ww / 2, cy - wh / 2, cy + wh / 2, 2.0)
+            frame_mask = frame > 0.5
+            glass_mask = glass > 0.5
+            wall = np.where(frame_mask[..., None], np.array([0.86, 0.84, 0.78])[None, None, :], wall)
+            rel = np.clip((y - (cy - wh / 2)) / wh, 0, 1)
+            glass_col = np.stack([0.24 - 0.10 * rel, 0.36 - 0.17 * rel, 0.46 - 0.24 * rel], axis=-1)
+            sheen = np.abs((x - (cx - ww * 0.25)) - (y - (cy - wh * 0.35))) < 16
+            glass_col = np.where(sheen[..., None], glass_col + np.array([0.10, 0.12, 0.12]), glass_col)
+            wall = np.where(glass_mask[..., None], np.clip(glass_col, 0, 1), wall)
+            sill = (np.abs(x - cx) < ww * 0.58) & (y > cy + wh / 2 + 8) & (y < cy + wh / 2 + 22)
+            wall = np.where(sill[..., None], np.array([0.68, 0.64, 0.56])[None, None, :], wall)
+            height = np.where(glass_mask, 0.30, height)
+            height = np.where(frame_mask, 0.62, height)
+            height = np.where(sill, 0.67, height)
+            rough = np.where(glass_mask, 0.18, rough)
+    return np.clip(wall, 0, 1), np.clip(height, 0, 1), np.clip(rough, 0.12, 0.96)
+
+
+# ---------------------------------------------------------------------------
+# Escrita por material
+# ---------------------------------------------------------------------------
+
+def write_root_triplet(name: str, albedo: np.ndarray, height: np.ndarray, rough: np.ndarray, normal_strength: float = 0.55) -> None:
+    save_rgb(albedo * 255.0, OUT / f"{name}.png")
+    save_rgb(height_to_normal(height, normal_strength), OUT / f"{name}_normal.png")
+    save_rgb(rough * 255.0, OUT / f"{name}_roughness.png")
+
+
+def write_pbr(prefix: str, albedo: np.ndarray, height: np.ndarray, rough: np.ndarray,
+        normal_strength: float = 0.55, metallic: float = 0.0) -> None:
+    save_rgb(albedo * 255.0, OUT_PBR / f"{prefix}_albedo.png")
+    save_rgb(height_to_normal(height, normal_strength), OUT_PBR / f"{prefix}_normal.png")
+    save_rgb(orm_map(np.clip(0.96 - (0.55 - height) * 0.10, 0.78, 1.0), rough, metallic) * 255.0,
+            OUT_PBR / f"{prefix}_orm.png")
+    save_height(height, OUT_PBR / f"{prefix}_height.png")
 
 
 def main() -> None:
-    write_asphalt()
-    write_sidewalk()
+    asphalt, asphalt_h, asphalt_r = gen_asphalt()
+    slabs, slabs_h, slabs_r = gen_large_slabs()
+    mosaic, mosaic_h, mosaic_r = gen_mosaic(False)
+    mosaic_wave, mosaic_wave_h, mosaic_wave_r = gen_mosaic(True)
+    stucco, stucco_h, stucco_r = gen_stucco()
+    brick, brick_h, brick_r = gen_brick(False)
+    brick_soft, brick_soft_h, brick_soft_r = gen_brick(True)
+    concrete, concrete_h, concrete_r = gen_concrete()
+    roof, roof_h, roof_r = gen_roof()
+    metal, metal_h, metal_r, metal_m = gen_metal(False)
+    zinc, zinc_h, zinc_r, zinc_m = gen_metal(True)
+    wood, wood_h, wood_r = gen_wood()
+    dirt, dirt_h, dirt_r = gen_dirt()
+    facade_plaster, facade_plaster_h, facade_plaster_r = facade_with_windows("plaster")
+    facade_brick, facade_brick_h, facade_brick_r = facade_with_windows("brick")
+
+    # Texturas runtime usadas por game_3d.gd. Asfalto/calçada têm nomes
+    # legados sem o sufixo _realista nos mapas auxiliares.
+    save_rgb(asphalt * 255.0, OUT / "asfalto_realista.png")
+    save_rgb(height_to_normal(asphalt_h, 0.25), OUT / "asfalto_normal.png")
+    save_rgb(asphalt_r * 255.0, OUT / "asfalto_roughness.png")
+    save_rgb(mosaic_wave * 255.0, OUT / "calcada_realista.png")
+    save_rgb(height_to_normal(mosaic_wave_h, 0.22), OUT / "calcada_normal.png")
+    save_rgb(mosaic_wave_r * 255.0, OUT / "calcada_roughness.png")
+    write_root_triplet("concreto_realista", concrete, concrete_h, concrete_r, 0.22)
+    write_root_triplet("fachada_reboco", facade_plaster, facade_plaster_h, facade_plaster_r, 0.20)
+    write_root_triplet("fachada_tijolo", facade_brick, facade_brick_h, facade_brick_r, 0.22)
+    write_root_triplet("parede_tijolo_realista", brick_soft, brick_soft_h, brick_soft_r, 0.22)
+    write_root_triplet("madeira_realista", wood, wood_h, wood_r, 0.24)
+    write_root_triplet("metal_pintado_realista", metal, metal_h, metal_r, 0.16)
+    write_root_triplet("terra_realista", dirt, dirt_h, dirt_r, 0.20)
+
+    # PBR do BuildingKit.
+    write_pbr("asfalto", asphalt, asphalt_h, asphalt_r, 0.25, 0.0)
+    write_pbr("calcada_laje", slabs, slabs_h, slabs_r, 0.24, 0.0)
+    write_pbr("calcada_mosaico", mosaic, mosaic_h, mosaic_r, 0.22, 0.0)
+    write_pbr("reboco", stucco, stucco_h, stucco_r, 0.20, 0.0)
+    write_pbr("tijolo", brick, brick_h, brick_r, 0.22, 0.0)
+    write_pbr("laje_cobertura", roof, roof_h, roof_r, 0.18, 0.0)
+    write_pbr("metal_pintado", metal, metal_h, metal_r, 0.16, metal_m)
+    write_pbr("metal_zincado", zinc, zinc_h, zinc_r, 0.14, zinc_m)
+    write_pbr("madeira", wood, wood_h, wood_r, 0.22, 0.0)
+    write_pbr("terra_vermelha", dirt, dirt_h, dirt_r, 0.20, 0.0)
 
 
 if __name__ == "__main__":

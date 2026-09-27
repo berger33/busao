@@ -4341,9 +4341,9 @@ func _material(color: Color, metallic: float, roughness: float, surface: String 
     if normal != null:
         material.normal_enabled = true
         material.normal_texture = normal
-        material.normal_scale = 0.32 if surface == "asphalt" else 0.42
+        material.normal_scale = 0.18 if surface == "asphalt" else 0.22
         if surface.begins_with("facade_") or surface == "brick_wall":
-            material.normal_scale = 0.85
+            material.normal_scale = 0.22
         elif surface == "vehicle_paint":
             material.normal_scale = 0.25
         elif surface == "chrome":
@@ -4351,19 +4351,19 @@ func _material(color: Color, metallic: float, roughness: float, surface: String 
         elif surface in ["leaves", "fabric"]:
             material.normal_scale = 0.6
         elif surface in ["wood", "concrete", "stucco"]:
-            material.normal_scale = 0.55
+            material.normal_scale = 0.24
         elif surface in ["metal", "dirt"]:
-            material.normal_scale = 0.45
+            material.normal_scale = 0.20
         elif surface == "rubber":
             material.normal_scale = 0.3
         elif surface == "skin":
             material.normal_scale = 0.2
         elif surface == "sidewalk":
-            material.normal_scale = 0.82
+            material.normal_scale = 0.25
         elif surface == "cobble":
-            material.normal_scale = 0.92
+            material.normal_scale = 0.28
         elif surface == "asphalt":
-            material.normal_scale = 0.72
+            material.normal_scale = 0.18
     var rough_map: Texture2D = _roughness_for_surface(surface)
     if rough_map != null:
         material.roughness_texture = rough_map
