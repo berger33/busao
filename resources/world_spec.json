@@ -345,6 +345,43 @@
       "metalico": 0.0
     }
   },
+  "rua_viva": {
+    "_nota": "Densidade e estilo da camada viva da rua: coroamento dos predios, decalques do asfalto e encardido. Sao os PADROES do mundo; cada capitulo afina o seu em scripts/level_data.gd, no bloco 'rua_viva' do CENARIO_*, pelo mesmo deep-merge que ja vale para props/predios. Passos em metros: quanto MENOR o passo, mais denso.",
+    "coroamento": {
+      "platibanda": true,
+      "ar_condicionado": true,
+      "caixa_dagua_min_andares": 3,
+      "escada_incendio": true,
+      "escada_min_andares": 4,
+      "escada_a_cada_lotes": 2
+    },
+    "decalques": {
+      "setas": true,
+      "seta_passo_m": 16.0,
+      "seta_comprimento_m": 1.3,
+      "tampa_passo_m": 14.0,
+      "remendo_passo_m": 15.0
+    },
+    "encardido": {
+      "_nota": "albedo do material MULTIPLY: menor = mais sujo, 1.0 = invisivel.",
+      "albedo": 0.42,
+      "sarjeta": true,
+      "parede": true,
+      "poste": true
+    },
+    "fachada": {
+      "_nota": "adereços da fachada da loja e da janela; letreiro usa cor por instancia no mesmo multimesh.",
+      "toldo": true,
+      "letreiro": true,
+      "grade_janela": true,
+      "grade_ate_andar": 1
+    },
+    "rua": {
+      "_nota": "adereços do nivel da rua batchados por quarteirao.",
+      "jardineira": true,
+      "jardineira_passo_m": 22.0
+    }
+  },
   "orcamento": {
     "malhas_max_por_quarteirao": 64,
     "multimesh_limite": 8,

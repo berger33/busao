@@ -342,6 +342,248 @@ def check_resources():
     else:
         ok("todos res:// existem (via ResourceLoader check)")
 
+# --- Fase 7 — contrato da "rua viva" por cenário (ETAPA 17) -----------------
+# Governa a camada viva da rua (coroamento, decalques de asfalto, encardido):
+# os padrões ficam em resources/world_spec.json e cada capítulo afina o seu em
+# scripts/level_data.gd (RUA_VIVA_*), fundido pelo BuildingKit. O portão aqui
+# é estrutural: chave desconhecida ou valor fora de faixa não passa.
+RUA_VIVA_CONTRATO = {
+    "coroamento": {
+        "platibanda": (bool, None),
+        "ar_condicionado": (bool, None),
+        "caixa_dagua_min_andares": (int, (1, 99)),
+        "escada_incendio": (bool, None),
+        "escada_min_andares": (int, (1, 99)),
+        "escada_a_cada_lotes": (int, (1, 8)),
+    },
+    "decalques": {
+        "setas": (bool, None),
+        "seta_passo_m": (float, (4.0, 60.0)),
+        "seta_comprimento_m": (float, (0.4, 4.0)),
+        "tampa_passo_m": (float, (4.0, 60.0)),
+        "remendo_passo_m": (float, (4.0, 60.0)),
+    },
+    "encardido": {
+        "albedo": (float, (0.05, 1.0)),
+        "sarjeta": (bool, None),
+        "parede": (bool, None),
+        "poste": (bool, None),
+    },
+    "fachada": {
+        "toldo": (bool, None),
+        "letreiro": (bool, None),
+        "grade_janela": (bool, None),
+        "grade_ate_andar": (int, (0, 4)),
+    },
+    "rua": {
+        "jardineira": (bool, None),
+        "jardineira_passo_m": (float, (4.0, 60.0)),
+    },
+}
+
+def _rua_viva_valida(origem, bloco, chave, valor):
+    """Confere uma chave do contrato; devolve mensagem de erro ou None."""
+    if bloco not in RUA_VIVA_CONTRATO:
+        return f"{origem}: bloco rua_viva desconhecido '{bloco}'"
+    if chave.startswith("_"):
+        return None
+    if chave not in RUA_VIVA_CONTRATO[bloco]:
+        return f"{origem}: chave desconhecida rua_viva.{bloco}.{chave}"
+    tipo, faixa = RUA_VIVA_CONTRATO[bloco][chave]
+    if tipo is bool and not isinstance(valor, bool):
+        return f"{origem}: rua_viva.{bloco}.{chave} devia ser bool, veio {valor!r}"
+    if tipo is not bool and isinstance(valor, bool):
+        return f"{origem}: rua_viva.{bloco}.{chave} devia ser número, veio {valor!r}"
+    if tipo is int and not isinstance(valor, int):
+        return f"{origem}: rua_viva.{bloco}.{chave} devia ser int, veio {valor!r}"
+    if tipo is float and not isinstance(valor, (int, float)):
+        return f"{origem}: rua_viva.{bloco}.{chave} devia ser float, veio {valor!r}"
+    if faixa is not None and not (faixa[0] <= float(valor) <= faixa[1]):
+        return f"{origem}: rua_viva.{bloco}.{chave}={valor} fora da faixa {faixa}"
+    return None
+
+def check_rua_viva():
+    print("\n== Fase 7 — Rua viva por cenário (contrato ETAPA 17) ==")
+    spec_path = ROOT / "resources" / "world_spec.json"
+    spec = json.loads(spec_path.read_text(encoding="utf-8"))
+    base = spec.get("rua_viva")
+    if not isinstance(base, dict):
+        fail("world_spec.json sem o bloco 'rua_viva' (padrões do mundo)")
+        return
+    erros = []
+    for bloco, chaves in RUA_VIVA_CONTRATO.items():
+        if bloco not in base:
+            erros.append(f"world_spec.rua_viva sem o bloco '{bloco}'")
+            continue
+        faltando = sorted(set(chaves) - set(base[bloco]))
+        if faltando:
+            erros.append(f"world_spec.rua_viva.{bloco} sem padrão para {faltando}")
+        for chave, valor in base[bloco].items():
+            e = _rua_viva_valida("world_spec", bloco, chave, valor)
+            if e:
+                erros.append(e)
+    if erros:
+        for e in erros[:20]:
+            fail(e)
+    else:
+        ok(f"world_spec.rua_viva com os {len(RUA_VIVA_CONTRATO)} blocos e {sum(len(v) for v in RUA_VIVA_CONTRATO.values())} padrões válidos")
+
+    # Perfis por capítulo em level_data.gd: só chaves do contrato, na faixa.
+    ld = (ROOT / "scripts" / "level_data.gd").read_text(encoding="utf-8")
+    perfis = re.findall(r"^const (RUA_VIVA_[A-Z_]+): Dictionary = \{(.*?)^\}", ld, re.S | re.M)
+    # perfis escritos direto dentro de um CENARIO_* (bloco "rua_viva": { ... })
+    for m in re.finditer(r'"rua_viva":\s*\{', ld):
+        i = m.end() - 1
+        nivel = 0
+        for j in range(i, len(ld)):
+            if ld[j] == "{":
+                nivel += 1
+            elif ld[j] == "}":
+                nivel -= 1
+                if nivel == 0:
+                    break
+        anterior = ld.rfind("const CENARIO_", 0, m.start())
+        nome = re.match(r"const (\w+)", ld[anterior:]).group(1) if anterior >= 0 else "?"
+        perfis.append((nome + " (inline)", ld[i + 1:j]))
+    if not perfis:
+        fail("level_data.gd sem nenhum perfil RUA_VIVA_* (variação por cenário sumiu)")
+        return
+    erros = []
+    for nome, corpo in perfis:
+        for bloco, miolo in re.findall(r'"(\w+)":\s*\{(.*?)\}', corpo, re.S):
+            for chave, bruto in re.findall(r'"(\w+)":\s*([^,\n]+)', miolo):
+                bruto = bruto.strip()
+                if bruto in ("true", "false"):
+                    valor = bruto == "true"
+                elif re.fullmatch(r"-?\d+\.\d+", bruto):
+                    valor = float(bruto)
+                elif re.fullmatch(r"-?\d+", bruto):
+                    valor = int(bruto)
+                else:
+                    erros.append(f"{nome}: rua_viva.{bloco}.{chave} com valor não literal '{bruto}'")
+                    continue
+                e = _rua_viva_valida(nome, bloco, chave, valor)
+                if e:
+                    erros.append(e)
+    if erros:
+        for e in erros[:20]:
+            fail(e)
+    else:
+        ok(f"level_data.gd: {len(perfis)} perfis rua_viva por capítulo, todas as chaves no contrato")
+
+    # Cada perfil declarado precisa estar ligado a pelo menos um CENARIO_*.
+    orfaos = [n for n, _ in perfis
+              if n.startswith("RUA_VIVA_") and not re.search(r'"rua_viva":\s*%s\b' % n, ld)]
+    if orfaos:
+        fail(f"perfis rua_viva sem cenário usando: {orfaos}")
+    else:
+        ok("todo perfil rua_viva está ligado a um CENARIO_*")
+
+    # O kit precisa ler os três blocos (senão o override vira letra morta).
+    bk = (ROOT / "scripts" / "building_kit.gd").read_text(encoding="utf-8")
+    lidos = set(re.findall(r'rua_viva\(spec,\s*"(\w+)"\)', bk))
+    faltando = sorted(set(RUA_VIVA_CONTRATO) - lidos)
+    if faltando:
+        fail(f"building_kit.gd não lê os blocos rua_viva {faltando}")
+    else:
+        ok(f"building_kit.gd consome os {len(RUA_VIVA_CONTRATO)} blocos via rua_viva(spec, ...)")
+
+def check_personagem():
+    """Fase 8 — personagem: sem contorno preto e com a textura do GLB.
+
+    O casco de silhueta (malha inflada com CULL_FRONT e albedo quase preto)
+    desenhava um filete escuro em volta do corpo e, nas partes finas, passava
+    na frente da malha e escondia o atlas do GLB. Este portão impede que ele
+    volte e confere que o asset do herói realmente traz textura por material.
+    """
+    print("\n== Fase 8 — Personagem (contorno e textura) ==")
+    rc_bruto = (ROOT / "scripts" / "runner_character.gd").read_text(encoding="utf-8")
+    # só o código conta: a explicação de por que o contorno saiu cita os nomes
+    rc = "\n".join(l for l in rc_bruto.splitlines() if not l.lstrip().startswith("#"))
+    proibidos = ["_attach_silhouette_shell", "_grow_outline_mesh", "_silhouette_material",
+                 "CULL_FRONT"]
+    achados = [t for t in proibidos if t in rc]
+    if achados:
+        fail(f"contorno preto de volta em runner_character.gd: {achados}")
+    else:
+        ok("runner_character.gd sem casco de silhueta (nenhum CULL_FRONT)")
+    if "_usar_materiais_do_glb" in rc_bruto and "vertex_color_use_as_albedo = true" in rc_bruto:
+        ok("herói religa vertex_color_use_as_albedo nos materiais do GLB")
+    else:
+        fail("runner_character.gd não liga vertex_color_use_as_albedo: herói sai branco")
+
+    glb = ROOT / "assets" / "characters" / "personagens" / "personagem_v2.glb"
+    if not glb.exists():
+        fail(f"asset do herói ausente: {glb}")
+        return
+    dados = glb.read_bytes()
+    if dados[:4] != b"glTF":
+        fail("personagem_v2.glb não é um GLB binário")
+        return
+    tamanho = struct.unpack("<I", dados[12:16])[0]
+    cena = json.loads(dados[20:20 + tamanho])
+    inicio_bin = 20 + tamanho
+    tam_bin = struct.unpack("<I", dados[inicio_bin:inicio_bin + 4])[0]
+    binario = dados[inicio_bin + 8:inicio_bin + 8 + tam_bin]
+
+    materiais = cena.get("materials", [])
+    sem_textura = [m.get("name", "?") for m in materiais
+                   if "baseColorTexture" not in m.get("pbrMetallicRoughness", {})]
+    if not materiais:
+        fail("personagem_v2.glb sem materiais")
+    elif sem_textura:
+        fail(f"materiais do herói sem baseColorTexture: {sem_textura}")
+    else:
+        ok(f"personagem_v2.glb: {len(materiais)} materiais com textura")
+
+    # A cor do herói mora em COLOR_0, não na textura: o PNG embutido é só grão
+    # quase branco. Se um primitivo perder COLOR_0 (ou vier branco), a
+    # personagem volta a aparecer sem cor mesmo com a textura presente — por
+    # isso o portão lê o atributo em vez de confiar no baseColorTexture.
+    tipos = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4}
+    formatos = {5121: ("B", 1, 255.0), 5123: ("H", 2, 65535.0), 5126: ("f", 4, 1.0)}
+
+    def _media_cor(indice_acessor):
+        a = cena["accessors"][indice_acessor]
+        bv = cena["bufferViews"][a["bufferView"]]
+        if a["componentType"] not in formatos:
+            return None
+        fmt, largura, divisor = formatos[a["componentType"]]
+        n = tipos.get(a["type"], 0)
+        if n < 3:
+            return None
+        base = bv.get("byteOffset", 0) + a.get("byteOffset", 0)
+        total = 0.0
+        amostras = 0
+        passo = max(1, a["count"] // 256)
+        for i in range(0, a["count"], passo):
+            v = struct.unpack_from("<" + fmt * n, binario, base + i * largura * n)
+            total += sum(v[:3]) / (3.0 * divisor)
+            amostras += 1
+        return total / max(1, amostras)
+
+    faltando = []
+    brancos = []
+    medidas = []
+    for malha in cena.get("meshes", []):
+        for prim in malha.get("primitives", []):
+            nome = malha.get("name", "?")
+            if "COLOR_0" not in prim.get("attributes", {}):
+                faltando.append(nome)
+                continue
+            media = _media_cor(prim["attributes"]["COLOR_0"])
+            if media is None:
+                continue
+            medidas.append(f"{nome}={media:.2f}")
+            if media > 0.85:
+                brancos.append(f"{nome} ({media:.2f})")
+    if faltando:
+        fail(f"primitivos do herói sem COLOR_0 (cor da personagem): {faltando}")
+    elif brancos:
+        fail(f"COLOR_0 quase branco no herói: {brancos}")
+    else:
+        ok("COLOR_0 com cor real em todos os primitivos: " + ", ".join(medidas))
+
 def run_validations():
     print("\n== Fase 5b — Validators ==")
     for cmd in [["python3","tools/validate_project.py"],["python3","tools/audit_balance.py"],["python3","tools/audit_runner_rig.py"]]:
@@ -366,6 +608,8 @@ if __name__=="__main__":
     check_gameplay()
     check_resources()
     check_procedural()
+    check_rua_viva()
+    check_personagem()
     run_validations()
     print("\n==================================================")
     print(f"OK {len(oks)} | WARN {len(warns)} | FAIL {len(fails)}")

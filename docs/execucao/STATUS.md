@@ -22,6 +22,36 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
 
 ## Diário
 
+### 2026-09-27 (tarde — fiação removida e personagem sem contorno preto)
+
+- **Fiação aérea removida** a pedido: `_build_fiacao`, as chaves `fiacao*` do `rua_viva.rua` e as asserções da suíte saíram. Os **postes voltaram ao sorteio original** por quarteirão (o ritmo global só existia para a fiação fechar na emenda); `_ritmo_global` continua servindo setas e jardineiras.
+- **Contorno preto da personagem removido**: `_attach_silhouette_shell` colava em cada malha um casco inflado 2,8 cm ao longo da normal, com `CULL_FRONT` e albedo `0.02/0.018/0.03`. Era ele o filete escuro em volta do corpo — e, nas partes finas (tranças, mãos, bordas de roupa), o casco passava na frente da malha e escondia o atlas do GLB. A legibilidade contra a rua fica com o rig de luz que já existe (fill quente + rim frio).
+- **Materiais do GLB**: o herói passa por `_usar_materiais_do_glb`, que zera `material_override` e todos os `surface_override_material` deixados por pipeline antigo antes de animar.
+- Novo portão `qa_full` **Fase 8**: falha se `CULL_FRONT`/`_attach_silhouette_shell`/`_grow_outline_mesh` voltarem ao `runner_character.gd`.
+- **Ressalva (corrigida no item seguinte)**: esta leva ainda deixou a personagem **branca no aparelho**, e o portão passou verde porque só conferia a *existência* de `baseColorTexture` no GLB.
+
+### 2026-09-27 (noite — personagem branca: a cor estava em COLOR_0)
+
+- **Sintoma**: personagem toda branca, sem textura, depois da remoção do contorno.
+- **Causa**: o gerador do Blender (`criar_personagem_corre_pro_ponto.py`, linha ~966) monta cada material como `textura de detalhe x Cor de Vértice -> Base Color`. No glTF isso vira um `baseColorTexture` PNG 512x512 **quase branco** (médias RGB 247/237/236 — é só grão) mais a cor de verdade em **`COLOR_0`**: pele `a87353`, camiseta `622b99`, short `20202b`, trança `201815`. O importador glTF do Godot cria o `StandardMaterial3D` **sem `vertex_color_use_as_albedo`**, o multiplicador some e sobra o grão branco.
+- **Correção**: `_usar_materiais_do_glb` agora, por superfície que tenha `ARRAY_FORMAT_COLOR`, **duplica** o material do GLB (para não mutar o recurso importado compartilhado), liga `vertex_color_use_as_albedo = true`, mantém `vertex_color_is_srgb = false` (o `COLOR_0` do glTF é linear — lê 0,40/0,18/0,10 na pele, que é a `a87353` convertida) e aplica como `surface_override_material`. Log no aparelho: `HERO MATERIAIS superficies=3 vertex_color=3`.
+- **Asset**: o GLB do `corre_pro_ponto_personagem_v2.zip` é **byte-idêntico** (md5 `1723d422…`) ao que já está em `assets/characters/personagens/`. Não havia textura nova a importar — o defeito era de material no Godot, não do pacote.
+- **Portão reforçado**: a Fase 8 deixou de confiar em `baseColorTexture` e passou a ler o `COLOR_0` de cada primitivo direto do binário do GLB, falhando se algum sumir ou vier quase branco (média > 0,85), e a exigir `vertex_color_use_as_albedo` no script. Medido: `Runner_Pele=0.21`, `Runner_Roupa_Tenis=0.15`, `Runner_Trancas=0.01`. Teste de mutação feito: trocar o flag para `false` derruba o portão. Total: **141 OK, 0 WARN, 0 FAIL**.
+
+
+### 2026-09-27 (Rua viva por cenário — contrato `rua_viva` + 4 elementos novos de rua)
+
+- A camada viva da rua (coroamento dos prédios, decalques de asfalto e encardido), que o PR #17 entregou igual em todas as 50 fases, virou contrato por capítulo: bloco `rua_viva` com 3 sub-blocos e 15 chaves.
+- Padrões do mundo em `resources/world_spec.json`; perfis por capítulo em `scripts/level_data.gd` (`RUA_VIVA_CENTRO`, `_PARQUE`, `_CHUVA`, `_FEIRA`, `_CENTRO_MOV`, `_TERMINAL`), fundidos pelo mesmo deep-merge que já valia para `props`/`predios` — nada de número solto no código.
+- Identidades: CENTRO/LARGO com caixa d'água já no 2º pavimento, escada de incêndio em todo lote alto e encardido 0,34; PARQUE/ORLA sem escada, sem caixa d'água, sem ar-condicionado, encardido 0,66 e poste limpo; AVENIDA e TERMINAL com setas grandes a cada 10 m; FEIRA com encardido 0,32 e remendos a cada 10 m; BAIRRO segue o padrão (é a régua).
+- Correção de fundo: o ritmo das setas passou a ser contado em z global em vez de reiniciar a cada quarteirão — com blocos de 28 m, passos de 16 m e 24 m davam a mesma seta única. Tampas e remendos passaram a `round(comprimento / passo)`; o padrão de tampa virou 14 m para preservar a densidade atual.
+- Validação: `tools/qa_etapa17_rua_viva.gd` (17ª suíte headless, RV-A–RV-H) e nova Fase 7 do `tools/qa_full.py` (137 OK, 0 WARN, 0 FAIL) checando chave desconhecida, faixa de valor, perfil órfão e consumo dos 3 blocos pelo kit.
+- Segunda leva (mesmo contrato, blocos `fachada` e `rua`): **fiação aérea** entre postes (3 cabos x 3 trechos por vão, com flecha, num multimesh só), **letreiros de loja** em 3 grupos de cor (3 multimesh para a rua inteira, em vez de uma chamada de desenho por loja), **grades de janela** nos pavimentos baixos e **jardineiras** de concreto na calçada. Tier: fiação/letreiro/grade em tier <= 2, jardineira em tier <= 1.
+- Para a fiação fechar na emenda dos quarteirões, os **postes passaram a ritmo global** (antes cada bloco sorteava o primeiro poste e jogava jitter de 0,95-1,10 no passo, o que tornava impossível ligar cabo de um quarteirão ao outro). `_ritmo_global` virou o helper único de setas, postes e jardineiras, com intervalo semiaberto para não duplicar nem furar na emenda.
+- Identidades novas: PARQUE/ORLA sem fiação, sem letreiro e sem grade, com jardineiras a cada 10 m; CENTRO com grade até o 2º pavimento e jardineiras a cada 14 m; FEIRA sem jardineira (a calçada é das barracas); AVENIDA/CENTRO_MOV a cada 26 m; TERMINAL a cada 18 m.
+- A primeira versão do letreiro usava cor por instância (`MultiMesh.use_colors`); o CI mostrou as 21 instâncias lendo `0/0/0` e uma sonda dentro da suíte confirmou que o driver headless não guarda esse buffer. Como não dá para checar no device daqui, trocamos por 3 grupos de cor — determinístico em qualquer driver, sem risco de letreiro preto, ao custo de 2 chamadas de desenho.
+- Pendente de device: QA visual dos números (força do encardido, escala de caixa d'água/ar-condicionado, tamanho das setas, altura/flecha da fiação, tamanho dos letreiros) — não há binário do Godot no sandbox.
+
 ### 2026-09-26 (Herói 10/10 — Fase 3 rosto completo concluída)
 
 - `build_heroi_julia.py` consolidou a seção 4d: lábios/narinas, esclera/íris/pupila/córnea separadas, normal radial da íris, pálpebras superiores/inferiores, sobrancelhas, cílios, franja e rabo de cavalo em exatamente 5 mechas.

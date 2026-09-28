@@ -350,6 +350,29 @@ static func _xform(pos: Vector3, escala: Vector3 = Vector3.ONE, giro_y: float = 
 
 
 ## Gerador deterministico do quarteirao: mesma semente do spec, mesmo leiaute.
+## Ritmo GLOBAL em z: devolve as posições locais de um elemento que precisa
+## continuar de um quarteirão para o outro: setas de direção e jardineiras.
+## Sem isso o passo reinicia a cada 28 m e passos diferentes viram a mesma coisa.
+## O intervalo é semiaberto: entra de margem_inicio até comprimento menos
+## margem_fim, sem incluir o fim. Assim o elemento que cai exatamente na emenda
+## aparece UMA vez só, no quarteirão de baixo — nem some nem duplica.
+static func _ritmo_global(index: int, comprimento: float, passo: float,
+        margem_inicio: float = 0.0, margem_fim: float = 0.0) -> Array:
+    var saida: Array = []
+    var p := maxf(1.0, passo)
+    var z_base := float(index) * comprimento
+    var k := int(floor(z_base / p))
+    while true:
+        var z := float(k) * p - z_base
+        k += 1
+        if z >= comprimento - margem_fim:
+            break
+        if z < margem_inicio:
+            continue
+        saida.append(z)
+    return saida
+
+
 static func _rng(spec: Dictionary, indice: int) -> RandomNumberGenerator:
     var rng := RandomNumberGenerator.new()
     rng.seed = int(spec.get("seed", 1)) * 7919 + indice * 104729
@@ -370,14 +393,80 @@ static func _mat_cor(chave: String, cor: Color, rugosidade: float, metalico: flo
     return m
 
 
+## ETAPA 17 — contrato da "rua viva": padrões de densidade/estilo do coroamento,
+## dos decalques de asfalto e do encardido. O cenário da fase
+## (level_data.gd -> CENARIO_*.rua_viva) entra por cima destes valores pelo mesmo
+## deep-merge de spec_with_overrides que já vale para props/predios, então cada
+## capítulo afina o mundo sem tocar em código. Passos em metros: passo MENOR =
+## mais denso.
+const RUA_VIVA_PADRAO := {
+    "coroamento": {
+        "platibanda": true,
+        "ar_condicionado": true,
+        "caixa_dagua_min_andares": 3,
+        "escada_incendio": true,
+        "escada_min_andares": 4,
+        "escada_a_cada_lotes": 2,
+    },
+    "decalques": {
+        "setas": true,
+        "seta_passo_m": 16.0,
+        "seta_comprimento_m": 1.3,
+        "tampa_passo_m": 14.0,
+        "remendo_passo_m": 15.0,
+    },
+    "encardido": {
+        "albedo": 0.42,
+        "sarjeta": true,
+        "parede": true,
+        "poste": true,
+    },
+    "fachada": {
+        "toldo": true,
+        "letreiro": true,
+        "grade_janela": true,
+        "grade_ate_andar": 1,
+    },
+    "rua": {
+        "jardineira": true,
+        "jardineira_passo_m": 22.0,
+    },
+}
+
+## Paleta dos letreiros de loja. São TRES grupos, cada um com seu multimesh:
+## a rua inteira custa 3 chamadas de desenho em vez de uma por loja, e a cor
+## não depende do buffer por instância do MultiMesh, que o driver headless não
+## guarda — o que deixaria os letreiros pretos se o device fizesse o mesmo.
+const CORES_LETREIRO := [
+    Color(0.86, 0.26, 0.20), Color(0.16, 0.42, 0.70), Color(0.94, 0.72, 0.16),
+]
+const NOMES_LETREIRO := ["LetreiroLoja", "LetreiroLojaB", "LetreiroLojaC"]
+
+
+## Bloco da rua viva já resolvido: padrão do kit + spec em disco + override do
+## cenário. Chaves desconhecidas do spec são ignoradas pelo consumidor, mas
+## ficam no dicionário para o auditor reclamar.
+static func rua_viva(spec: Dictionary, bloco: String) -> Dictionary:
+    var padrao: Dictionary = RUA_VIVA_PADRAO.get(bloco, {})
+    var cfg = spec.get("rua_viva", {}).get(bloco, {})
+    if typeof(cfg) != TYPE_DICTIONARY or cfg.is_empty():
+        return padrao.duplicate(true)
+    var resultado: Dictionary = padrao.duplicate(true)
+    for chave in cfg:
+        resultado[chave] = cfg[chave]
+    return resultado
+
+
 ## Encardido (sujeira nas juntas): material escuro em blend MULTIPLICAR, para
-## ESCURECER a superfície embaixo em vez de pintar um bloco preto. Cacheado.
-static func _mat_encardido() -> StandardMaterial3D:
-    var ck := "encardido"
+## ESCURECER a superfície embaixo em vez de pintar um bloco preto. O albedo vem
+## do cenário: menor = mais sujo, 1.0 = invisível. Cacheado por valor.
+static func _mat_encardido(albedo: float = 0.42) -> StandardMaterial3D:
+    var a := clampf(albedo, 0.05, 1.0)
+    var ck := "encardido|%.3f" % a
     if _material_cache.has(ck):
         return _material_cache[ck]
     var m := StandardMaterial3D.new()
-    m.albedo_color = Color(0.42, 0.40, 0.37, 1.0)
+    m.albedo_color = Color(a, a * 0.952, a * 0.881, 1.0)
     m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
     m.blend_mode = BaseMaterial3D.BLEND_MODE_MUL
     m.roughness = 1.0
@@ -490,9 +579,10 @@ static func _build_piso(spec: Dictionary, raiz: Node3D, comprimento: float, _vis
     _marca(guia, "guia")
     # Encardido da sarjeta: faixa escura contínua no encontro guia/asfalto, onde
     # a água de chuva escorre e a sujeira assenta (junta meio-fio/pista).
-    if _tier_atual() <= 2:
+    var grime: Dictionary = rua_viva(spec, "encardido")
+    if _tier_atual() <= 2 and bool(grime.get("sarjeta", true)):
         var sarjeta_grime := _malha(_box(Vector3(0.28, 0.006, comprimento)),
-            _mat_encardido(),
+            _mat_encardido(float(grime.get("albedo", 0.42))),
             Vector3(x_guia - guia_l * 0.5 - 0.14, 0.006, -comprimento * 0.5), raiz,
             "EncardidoSarjeta", false, 0.0)
         _marca(sarjeta_grime, "encardido", "nenhum")
@@ -596,19 +686,26 @@ static func _build_decalques_chao(spec: Dictionary, raiz: Node3D, comprimento: f
     var lane := pista * 0.25
     var y := 0.009
     var mat_branco := material(spec, "faixa_branca")
+    var cfg: Dictionary = rua_viva(spec, "decalques")
     # (o tracejado divisor central já é feito em _build_linhas -> LinhaTracejada)
-    # setas de direção (uma por faixa a cada ~16 m), apontando o fluxo (-z)
+    # setas de direção (uma por faixa a cada seta_passo_m), apontando o fluxo -z.
+    # Passo e comprimento vêm do cenário: avenida usa setas densas, parque quase
+    # nenhuma.
+    # O ritmo das setas é GLOBAL (contado em z absoluto, não reiniciado a cada
+    # quarteirão): assim o passo do cenário aparece de verdade na rua — antes,
+    # com 28 m de quarteirão, 16 m e 24 m davam a mesma seta única por bloco.
     var hastes: Array = []
     var cabecas: Array = []
-    var za := 10.0
-    while za < comprimento - 3.0:
-        for lx in [x_centro - lane, x_centro + lane]:
-            hastes.append(_xform(Vector3(lx, y, -za), Vector3(0.16, 0.01, 1.3)))
-            for sgn in [-1.0, 1.0]:
-                cabecas.append(_xform(
-                    Vector3(lx + sgn * 0.20, y, -(za + 0.5)),
-                    Vector3(0.16, 0.01, 0.55), sgn * 0.7))
-        za += 16.0
+    var seta_passo := maxf(4.0, float(cfg.get("seta_passo_m", 16.0)))
+    var seta_len := maxf(0.4, float(cfg.get("seta_comprimento_m", 1.3)))
+    if bool(cfg.get("setas", true)):
+        for za in _ritmo_global(index, comprimento, seta_passo, 1.0, 2.0):
+            for lx in [x_centro - lane, x_centro + lane]:
+                hastes.append(_xform(Vector3(lx, y, -za), Vector3(0.16, 0.01, seta_len)))
+                for sgn in [-1.0, 1.0]:
+                    cabecas.append(_xform(
+                        Vector3(lx + sgn * 0.20, y, -(za + seta_len * 0.38)),
+                        Vector3(0.16, 0.01, seta_len * 0.42), sgn * 0.7))
     if not hastes.is_empty():
         _multimesh(_box(Vector3.ONE), mat_branco, hastes, raiz, "SetaHaste", false, 0.0)
     if not cabecas.is_empty():
@@ -616,7 +713,10 @@ static func _build_decalques_chao(spec: Dictionary, raiz: Node3D, comprimento: f
     # 3 - tampas de esgoto redondas de ferro fundido na pista
     var tampas: Array = []
     var aros: Array = []
-    var n_tampas := 1 + int(comprimento / 20.0)
+    # Contagem por passo real em metros: roundi(comprimento / passo). Com o
+    # quarteirão de 28 m isso dá 1 tampa a cada tampa_passo_m de rua.
+    var tampa_passo := maxf(4.0, float(cfg.get("tampa_passo_m", 14.0)))
+    var n_tampas := maxi(1, int(round(comprimento / tampa_passo)))
     for i in range(n_tampas):
         var zt := rng2.randf_range(4.0, comprimento - 4.0)
         var xt := x_centro + rng2.randf_range(-lane, lane)
@@ -629,7 +729,8 @@ static func _build_decalques_chao(spec: Dictionary, raiz: Node3D, comprimento: f
                 tampas, raiz, "TampaEsgoto", false, 0.0)
     # 4 - remendos de asfalto irregulares (mancha mais escura e fosca)
     var remendos: Array = []
-    var n_rem := 1 + int(comprimento / 15.0)
+    var remendo_passo := maxf(4.0, float(cfg.get("remendo_passo_m", 15.0)))
+    var n_rem := maxi(1, int(round(comprimento / remendo_passo)))
     for i in range(n_rem):
         var zr := rng2.randf_range(3.0, comprimento - 3.0)
         var xr := x_centro + rng2.randf_range(-pista * 0.4, pista * 0.4)
@@ -734,6 +835,23 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
     var xf_recuo: Array = []
     var xf_grime_parede: Array = []
     var predios_escada: Array = []
+    # Contrato da rua viva: o cenário da fase manda na densidade/estilo do topo
+    # e do encardido. CENTRO empilha caixa d'água cedo, PARQUE dispensa escada.
+    var coro: Dictionary = rua_viva(spec, "coroamento")
+    var grime: Dictionary = rua_viva(spec, "encardido")
+    var usa_platibanda: bool = bool(coro.get("platibanda", true))
+    var usa_ac: bool = bool(coro.get("ar_condicionado", true))
+    var caixa_min: int = int(coro.get("caixa_dagua_min_andares", 3))
+    var fach: Dictionary = rua_viva(spec, "fachada")
+    var usa_toldo: bool = bool(fach.get("toldo", true))
+    var usa_letreiro: bool = bool(fach.get("letreiro", true)) and _tier_atual() <= 2
+    var usa_grade: bool = bool(fach.get("grade_janela", true)) and _tier_atual() <= 2
+    var grade_ate: int = int(fach.get("grade_ate_andar", 1))
+    var xf_grade: Array = []
+    var xf_letreiro: Array = [[], [], []]
+    var usa_escada: bool = bool(coro.get("escada_incendio", true))
+    var escada_min: int = maxi(1, int(coro.get("escada_min_andares", 4)))
+    var escada_passo: int = maxi(1, int(coro.get("escada_a_cada_lotes", 2)))
     for lado in [-1.0, 1.0]:
         # frente do lote: na borda externa da calcada (direita) ou no fim da
         # rua (esquerda). x_frente/x_centro sao magnitudes a partir do centro.
@@ -774,11 +892,12 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
                 var cz := -(z + largura * 0.5)
                 var topo := altura + telhado
                 # platibanda: mureta na testeira (quebra o topo chapado da caixa)
-                xf_platibanda.append(_xform(
-                    Vector3(lado * (x_frente + 0.05), topo + 0.22, cz),
-                    Vector3(0.16, 0.46, largura * 0.98)))
+                if usa_platibanda:
+                    xf_platibanda.append(_xform(
+                        Vector3(lado * (x_frente + 0.05), topo + 0.22, cz),
+                        Vector3(0.16, 0.46, largura * 0.98)))
                 # ar-condicionado saliente na fachada (1-2 conforme o prédio)
-                var n_ac := 1 + (andares % 2)
+                var n_ac := (1 + (andares % 2)) if usa_ac else 0
                 for a in range(n_ac):
                     var ay := pe * (1.25 + 0.9 * float(a))
                     if ay < altura - 0.5:
@@ -786,8 +905,8 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
                             Vector3(lado * (x_frente + 0.24), ay,
                                 cz + largura * (0.22 - 0.4 * float(a))),
                             Vector3(0.5, 0.42, 0.62)))
-                # caixa d'água nos prédios de 3+ pavimentos
-                if andares >= 3:
+                # caixa d'água a partir de caixa_dagua_min_andares pavimentos
+                if andares >= caixa_min:
                     xf_caixa.append(_xform(Vector3(
                         lado * (x_centro - lado * profundidade * 0.16),
                         topo + 0.52, cz + largura * 0.12)))
@@ -804,18 +923,33 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
                         Vector3(profundidade * 0.34, 0.9, largura * 0.3)))
                 # encardido na junta parede/calçada: banda escura rente à base
                 # da fachada (respingo de chuva + poeira acumulada no rodapé)
-                xf_grime_parede.append(_xform(
-                    Vector3(lado * (x_frente - lado * 0.03), 0.30, cz),
-                    Vector3(0.05, 0.34, largura * 0.94)))
-                # escada de incêndio nos prédios altos (alternados)
-                if andares >= 4 and lote % 2 == 0:
+                if bool(grime.get("parede", true)):
+                    xf_grime_parede.append(_xform(
+                        Vector3(lado * (x_frente - lado * 0.03), 0.30, cz),
+                        Vector3(0.05, 0.34, largura * 0.94)))
+                # escada de incêndio nos prédios altos (a cada N lotes)
+                if usa_escada and andares >= escada_min and lote % escada_passo == 0:
                     predios_escada.append({
                         "lado": lado, "xf": x_frente, "cz": cz,
                         "larg": largura, "and": andares, "pe": pe})
             if tipo != "obra":
-                _build_janelas(spec, raiz, rng, janela, lado, x_frente, z, largura, andares, pe, tipo, lote)
+                _build_janelas(spec, raiz, rng, janela, lado, x_frente, z, largura, andares, pe, tipo, lote,
+                        xf_grade if usa_grade else [], grade_ate)
             if tipo == "loja":
-                _build_loja(spec, raiz, p, lado, x_frente, z, largura, lote)
+                _build_loja(spec, raiz, p, lado, x_frente, z, largura, lote, usa_toldo)
+                if usa_letreiro:
+                    var toldo_y := float(p.get("loja", {}).get("toldo_altura_m", 2.6))
+                    # grupo de cor pela ordem do letreiro no quarteirão, somada ao
+                    # índice do quarteirão: vizinhos nunca saem da mesma cor e a
+                    # rua não repete o mesmo par de fachadas de bloco em bloco.
+                    var emitidos := 0
+                    for grupo in xf_letreiro:
+                        emitidos += (grupo as Array).size()
+                    var ic := (emitidos + int(raiz.get_meta("spec_index", 0))) \
+                            % CORES_LETREIRO.size()
+                    (xf_letreiro[ic] as Array).append(_xform(
+                        Vector3(lado * (x_frente - 0.14), toldo_y + 0.52, -(z + largura * 0.5)),
+                        Vector3(0.10, 0.62, largura * 0.72)))
             z += largura
             lote += 1
     # --- Emite o coroamento coletado (poucos draw calls por quarteirão).
@@ -832,13 +966,28 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
     if not xf_ac.is_empty():
         _multimesh(_box(Vector3.ONE), _mat_cor("ar_cond", Color(0.82, 0.82, 0.80), 0.5, 0.1),
                 xf_ac, raiz, "ArCondicionado", false)
+    # Grades de janela dos andares baixos e letreiros das lojas: um multimesh
+    # cada para o quarteirão inteiro. O letreiro leva cor POR INSTANCIA, então
+    # a rua fica variada sem custar uma chamada de desenho por loja.
+    if not xf_grade.is_empty():
+        var grade_no := _multimesh(_box(Vector3.ONE), material(spec, "estrutura_metalica"),
+                xf_grade, raiz, "GradeJanela", false, 0.0)
+        _marca(grade_no, "grade", "nenhum")
+    for ig in range(CORES_LETREIRO.size()):
+        var grupo: Array = xf_letreiro[ig]
+        if grupo.is_empty():
+            continue
+        var letreiro_no := _multimesh(_box(Vector3.ONE),
+                _mat_cor("letreiro%d" % ig, CORES_LETREIRO[ig], 0.55),
+                grupo, raiz, NOMES_LETREIRO[ig], false, 0.0)
+        _marca(letreiro_no, "letreiro", "nenhum")
     # Escada de incêndio: adereço pesado, só nos degraus de qualidade alto/médio.
     if not predios_escada.is_empty() and _tier_atual() <= 1:
         _build_escadas_incendio(spec, raiz, predios_escada)
     # Encardido: detalhe sutil, cai fora só no degrau mais leve (tier 3).
     if not xf_grime_parede.is_empty() and _tier_atual() <= 2:
-        _multimesh(_box(Vector3.ONE), _mat_encardido(), xf_grime_parede, raiz,
-                "EncardidoParede", false, 0.0)
+        _multimesh(_box(Vector3.ONE), _mat_encardido(float(grime.get("albedo", 0.42))),
+                xf_grime_parede, raiz, "EncardidoParede", false, 0.0)
 
 
 ## Escada de incêndio de ferro na fachada: montante + patamar por andar +
@@ -912,9 +1061,13 @@ static func _tipo_predio(p: Dictionary, rng: RandomNumberGenerator) -> String:
     return "tijolo"
 
 
+## As grades vao para "grades" (coletor do quarteirao, emitido em 1 multimesh
+## no _build_predios): grade de ferro nos andares ate grade_ate_andar, que e o
+## que da cara de rua brasileira aos pavimentos baixos.
 static func _build_janelas(spec: Dictionary, raiz: Node3D, rng: RandomNumberGenerator,
         janela: Dictionary, lado: float, x_frente: float, z: float, largura: float,
-        andares: int, pe: float, tipo: String, indice: int = 0) -> void:
+        andares: int, pe: float, tipo: String, indice: int = 0,
+        grades: Array = [], grade_ate: int = 0) -> void:
     var jl := float(janela.get("largura_m", 1.2))
     var ja := float(janela.get("altura_m", 1.5))
     var peitoril := float(janela.get("peitoril_m", 0.9))
@@ -927,25 +1080,35 @@ static func _build_janelas(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
         var passo := largura / float(colis + 1)
         for c in range(colis):
             var zc := z + passo * float(c + 1)
+            var yc := peitoril + ja * 0.5 + float(andar) * pe
             xforms.append(_xform(
-                Vector3(lado * (x_frente - 0.03), peitoril + ja * 0.5 + float(andar) * pe, -zc),
+                Vector3(lado * (x_frente - 0.03), yc, -zc),
                 Vector3(0.06, ja, jl)))
+            if andar < grade_ate:
+                # tres barras verticais rentes ao vidro, por fora da moldura
+                for b in range(3):
+                    grades.append(_xform(
+                        Vector3(lado * (x_frente + 0.03), yc,
+                            -(zc + jl * (float(b) * 0.3 - 0.3))),
+                        Vector3(0.035, ja * 0.96, 0.035)))
     _multimesh(_box(Vector3.ONE), material(spec, "vidro"), xforms, raiz,
             "Janelas%s%d" % [("D" if lado > 0.0 else "E"), indice], false)
 
 
 static func _build_loja(spec: Dictionary, raiz: Node3D, p: Dictionary, lado: float,
-        x_frente: float, z: float, largura: float, indice: int = 0) -> void:
+        x_frente: float, z: float, largura: float, indice: int = 0,
+        usa_toldo: bool = true) -> void:
     var loja: Dictionary = p.get("loja", {})
     var altura_toldo := float(loja.get("toldo_altura_m", 2.6))
     var prof := float(loja.get("toldo_profundidade_m", 1.1))
     var porta_l := float(loja.get("porta_largura_m", 1.6))
     var porta_a := float(loja.get("porta_altura_m", 2.4))
-    var toldo := _malha(_box(Vector3(prof, 0.14, largura * 0.85)),
-            material(spec, "linha_amarela"),
-            Vector3(lado * (x_frente - prof * 0.5), altura_toldo, -(z + largura * 0.5)), raiz,
-            "Toldo%s%d" % [("D" if lado > 0.0 else "E"), indice], false)
-    _marca(toldo, "toldo")
+    if usa_toldo:
+        var toldo := _malha(_box(Vector3(prof, 0.14, largura * 0.85)),
+                material(spec, "linha_amarela"),
+                Vector3(lado * (x_frente - prof * 0.5), altura_toldo, -(z + largura * 0.5)), raiz,
+                "Toldo%s%d" % [("D" if lado > 0.0 else "E"), indice], false)
+        _marca(toldo, "toldo")
     var porta := _malha(_box(Vector3(0.08, porta_a, porta_l)),
             material(spec, "zincado"),
             Vector3(lado * (x_frente - 0.04), porta_a * 0.5, -(z + largura * 0.5)), raiz,
@@ -1063,23 +1226,28 @@ static func _build_mobiliario(spec: Dictionary, raiz: Node3D, rng: RandomNumberG
     var passo_poste: float = float(cfg_poste.get("espacamento_m", 14.0))
     if passo_poste < 8.0:
         passo_poste = 14.0
+    var index: int = int(raiz.get_meta("spec_index", 0))
+    var x_poste := -borda_esq + 0.20
     var zp := rng.randf_range(5.0, 9.0)
     var xf_grime_poste: Array = []
     while zp < comprimento - 3.0:
         var poste_glb := _prop_glb("poste")
         if poste_glb != null:
             # Junto a guia, braco de iluminacao virado para a rua (-X)
-            poste_glb.position = Vector3(-borda_esq + 0.20, 0.15, -zp)
+            poste_glb.position = Vector3(x_poste, 0.15, -zp)
             poste_glb.rotation.y = PI
             raiz.add_child(poste_glb)
             _marca(poste_glb, "prop")
         # encardido no pé do poste (mancha achatada no chão, mesma posição)
         xf_grime_poste.append(_xform(
-            Vector3(-borda_esq + 0.20, 0.156, -zp), Vector3(0.34, 0.01, 0.34)))
+            Vector3(x_poste, 0.156, -zp), Vector3(0.34, 0.01, 0.34)))
         zp += passo_poste * rng.randf_range(0.95, 1.10)
-    if not xf_grime_poste.is_empty() and _tier_atual() <= 2:
-        _multimesh(_box(Vector3.ONE), _mat_encardido(), xf_grime_poste, raiz,
-                "EncardidoPoste", false, 0.0)
+    _build_jardineiras(spec, raiz, index, comprimento, x_faixa, visibilidade)
+    var grime_poste: Dictionary = rua_viva(spec, "encardido")
+    if not xf_grime_poste.is_empty() and _tier_atual() <= 2 \
+            and bool(grime_poste.get("poste", true)):
+        _multimesh(_box(Vector3.ONE), _mat_encardido(float(grime_poste.get("albedo", 0.42))),
+                xf_grime_poste, raiz, "EncardidoPoste", false, 0.0)
 
     if rng.randf() < float(props.get("hidrante", {}).get("probabilidade", 0.0)):
         var zz := rng.randf_range(3.0, comprimento - 3.0)
@@ -1167,6 +1335,32 @@ static func _build_prop_linear(spec: Dictionary, raiz: Node3D, rng: RandomNumber
                     true, visibilidade)
             _marca(no, "prop")
         z += passo * rng.randf_range(0.9, 1.2)
+
+## Jardineiras de concreto na calçada (caixote + terra plantada), no ritmo
+## global do capítulo. Dois multimesh para a rua inteira; adereço, entra só nos
+## degraus de qualidade alto/médio.
+static func _build_jardineiras(spec: Dictionary, raiz: Node3D, index: int,
+        comprimento: float, x_faixa: float, visibilidade: float) -> void:
+    var cfg: Dictionary = rua_viva(spec, "rua")
+    if not bool(cfg.get("jardineira", true)) or _tier_atual() > 1:
+        return
+    var passo := maxf(4.0, float(cfg.get("jardineira_passo_m", 22.0)))
+    var caixas: Array = []
+    var plantas: Array = []
+    for zj in _ritmo_global(index, comprimento, passo):
+        caixas.append(_xform(Vector3(x_faixa + 0.35, 0.15 + 0.22, -float(zj)),
+                Vector3(0.62, 0.44, 1.10)))
+        plantas.append(_xform(Vector3(x_faixa + 0.35, 0.15 + 0.50, -float(zj)),
+                Vector3(0.46, 0.34, 0.92)))
+    if caixas.is_empty():
+        return
+    var caixa_no := _multimesh(_box(Vector3.ONE), material(spec, "guia"), caixas, raiz,
+            "Jardineira", true, visibilidade)
+    _marca(caixa_no, "jardineira")
+    var planta_no := _multimesh(_box(Vector3.ONE), material(spec, "folhagem"), plantas, raiz,
+            "JardineiraPlanta", false, visibilidade)
+    _marca(planta_no, "folhagem", "nenhum")
+
 
 static func _build_folhas(spec: Dictionary, raiz: Node3D, rng: RandomNumberGenerator,
         comprimento: float, visibilidade: float) -> void:

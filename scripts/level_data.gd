@@ -76,16 +76,145 @@ const PILOT: Dictionary = {
     ],
 }
 
+## ETAPA 17 — contrato da "rua viva" por cenário.
+##
+## Cada CENARIO_* pode trazer um bloco "rua_viva" que o BuildingKit funde por
+## cima de resources/world_spec.json (mesmo deep-merge de props/predios). Ele
+## governa a camada de sujeira e adereços que antes era igual em todas as fases:
+##
+##   rua_viva.coroamento:
+##     platibanda: bool                  mureta na testeira do telhado
+##     ar_condicionado: bool             aparelhos salientes na fachada
+##     caixa_dagua_min_andares: int      pavimentos para ganhar caixa d'água
+##     escada_incendio: bool             adereço pesado, tier <= 1
+##     escada_min_andares: int           altura mínima para a escada
+##     escada_a_cada_lotes: int          1 = todo lote alto, 3 = esparso
+##   rua_viva.decalques:
+##     setas: bool                       setas de direção no asfalto
+##     seta_passo_m / seta_comprimento_m float, passo menor = mais denso
+##     tampa_passo_m / remendo_passo_m   float, passo menor = mais denso
+##   rua_viva.encardido:
+##     albedo: float                     material MULTIPLY; menor = mais sujo
+##     sarjeta / parede / poste: bool    onde a sujeira assenta
+##   rua_viva.fachada:
+##     toldo / letreiro: bool            adereços da loja
+##     grade_janela: bool                grade de ferro na janela baixa
+##     grade_ate_andar: int              0 = nenhuma, 1 = térreo, 2 = dois
+##   rua_viva.rua:
+##     jardineira: bool                  floreira de concreto na calçada
+##     jardineira_passo_m: float         passo menor = mais densa
+##
+## Quem não declara "rua_viva" herda o padrão do spec — é o caso do bairro
+## residencial, que é justamente a régua dos outros capítulos.
+
+## Centro histórico e largo: fachadas coladas e antigas — topo cheio (caixa
+## d'água já no 2º pavimento, escada de incêndio em todo lote alto), sujeira
+## marcada nas juntas e poucas setas, porque a rua é estreita.
+const RUA_VIVA_CENTRO: Dictionary = {
+    "coroamento": {
+        "caixa_dagua_min_andares": 2,
+        "escada_min_andares": 3,
+        "escada_a_cada_lotes": 1,
+    },
+    "decalques": {
+        "seta_passo_m": 22.0,
+        "tampa_passo_m": 15.0,
+        "remendo_passo_m": 11.0,
+    },
+    "encardido": {"albedo": 0.34},
+    "fachada": {"grade_ate_andar": 2},
+    "rua": {"jardineira_passo_m": 14.0},
+}
+
+## Parque e orla: casas baixas, ar limpo e maresia — sem escada de incêndio,
+## sem caixa d'água, sem ar-condicionado no coroamento; asfalto novo e
+## encardido quase imperceptível.
+const RUA_VIVA_PARQUE: Dictionary = {
+    "coroamento": {
+        "ar_condicionado": false,
+        "caixa_dagua_min_andares": 99,
+        "escada_incendio": false,
+    },
+    "decalques": {
+        "seta_passo_m": 24.0,
+        "tampa_passo_m": 30.0,
+        "remendo_passo_m": 26.0,
+    },
+    "encardido": {"albedo": 0.66, "poste": false},
+    "fachada": {"letreiro": false, "grade_janela": false},
+    "rua": {"jardineira_passo_m": 10.0},
+}
+
+## Rua molhada: a água de chuva escorre pela sarjeta e marca as juntas; o
+## asfalto ganha remendos, mas o resto segue o padrão.
+const RUA_VIVA_CHUVA: Dictionary = {
+    "decalques": {"remendo_passo_m": 13.0},
+    "encardido": {"albedo": 0.36},
+}
+
+## Feira livre: o chão apanha o dia inteiro — encardido forte, muitos remendos
+## e tampas, setas apagadas pelo movimento.
+const RUA_VIVA_FEIRA: Dictionary = {
+    "decalques": {
+        "seta_passo_m": 20.0,
+        "tampa_passo_m": 14.0,
+        "remendo_passo_m": 10.0,
+    },
+    "encardido": {"albedo": 0.32},
+    "rua": {"jardineira": false},
+}
+
+## Centro movimentado: prédios de 3 a 5 pavimentos — escadas de incêndio à
+## vista, topo denso e sinalização de avenida.
+const RUA_VIVA_CENTRO_MOV: Dictionary = {
+    "coroamento": {"escada_min_andares": 4, "escada_a_cada_lotes": 2},
+    "decalques": {
+        "seta_passo_m": 12.0,
+        "tampa_passo_m": 16.0,
+        "remendo_passo_m": 12.0,
+    },
+    "encardido": {"albedo": 0.38},
+    "fachada": {"grade_ate_andar": 1},
+    "rua": {"jardineira_passo_m": 26.0},
+}
+
+## Caminho do terminal: avenida larga de chegada — setas grandes e frequentes
+## guiando o fluxo, asfalto conservado.
+const RUA_VIVA_TERMINAL: Dictionary = {
+    "coroamento": {"escada_a_cada_lotes": 3},
+    "decalques": {
+        "seta_passo_m": 10.0,
+        "seta_comprimento_m": 1.6,
+        "tampa_passo_m": 16.0,
+        "remendo_passo_m": 14.0,
+    },
+    "encardido": {"albedo": 0.42},
+    "rua": {"jardineira_passo_m": 18.0},
+}
+
 ## ETAPA 7 — cenario compartilhado das fases do bairro: rua à esquerda +
 ## calçadas no padrão do spec, sem overrides (a fase 3 soma o ipe amarelo
-## por conta propria).
+## por conta propria). Rua viva no padrão: é a régua dos demais capítulos.
 const CENARIO_BAIRRO: Dictionary = {
 }
 
 ## ETAPA 10 — avenida do lote 16-20: rua à esquerda + calçadas (padrão do spec), com
 ## palmeiras no lugar da arvore comum (identidade do capitulo).
+## Rua viva da avenida: via de tráfego pesado — setas de direção frequentes e
+## grandes, asfalto remendado, mas prédios ainda baixos e sem escada exposta.
 const CENARIO_AVENIDA: Dictionary = {
     "props": {"arvore": {"glb": "palmeira"}},
+    "rua_viva": {
+        "decalques": {
+            "seta_passo_m": 10.0,
+            "seta_comprimento_m": 1.6,
+            "tampa_passo_m": 16.0,
+            "remendo_passo_m": 12.0,
+        },
+        "coroamento": {"escada_a_cada_lotes": 3},
+        "encardido": {"albedo": 0.44},
+        "rua": {"jardineira_passo_m": 26.0},
+    },
 }
 
 ## ETAPA 11 — centro histórico do lote 21-25: rua à esquerda + calçadas (padrão do spec),
@@ -93,6 +222,7 @@ const CENARIO_AVENIDA: Dictionary = {
 ## rua de comércio antigo (pesos do kit: loja e reboco dominam; vitrines
 ## com toldo e molduras vêm do building_kit, camada viva do cenário).
 const CENARIO_CENTRO: Dictionary = {
+    "rua_viva": RUA_VIVA_CENTRO,
     "props": {
         "arvore": {"glb": "ipe_amarelo"},
         "banco": {"espacamento_m": 10.0},
@@ -103,6 +233,7 @@ const CENARIO_CENTRO: Dictionary = {
 
 ## ETAPA 11 — largo da fase 25: o centro + a igreja ao lado do ponto.
 const CENARIO_LARGO: Dictionary = {
+    "rua_viva": RUA_VIVA_CENTRO,
     "props": {
         "arvore": {"glb": "ipe_amarelo"},
         "banco": {"espacamento_m": 10.0},
@@ -118,6 +249,7 @@ const CENARIO_LARGO: Dictionary = {
 ## a cada 56 m, pulando as que caem sobre travessias (bloco "feira", lido
 ## por _spawn_feira; visual puro, sem colisão).
 const CENARIO_FEIRA: Dictionary = {
+    "rua_viva": RUA_VIVA_FEIRA,
     "props": {
         "arvore": {"glb": "arvore", "espacamento_m": 16.0},
         "banco": {"espacamento_m": 18.0},
@@ -135,6 +267,7 @@ const CENARIO_FEIRA: Dictionary = {
 ## paleta "orla" fixa a luz aberta do capítulo (lida por
 ## _render_profile_world; sombras de contato preservadas).
 const CENARIO_PARQUE: Dictionary = {
+    "rua_viva": RUA_VIVA_PARQUE,
     "props": {
         "arvore": {"glb": "palmeira", "espacamento_m": 8.0},
         "banco": {"espacamento_m": 12.0},
@@ -163,6 +296,7 @@ const CENARIO_PARQUE: Dictionary = {
 
 ## ETAPA 13 — orla da fase 35: o parque + a guarita ao lado do ponto.
 const CENARIO_ORLA: Dictionary = {
+    "rua_viva": RUA_VIVA_PARQUE,
     "props": {
         "arvore": {"glb": "palmeira", "espacamento_m": 8.0},
         "banco": {"espacamento_m": 12.0},
@@ -200,6 +334,7 @@ const CENARIO_ORLA: Dictionary = {
 ## (transição de estado + secagem). 37–39 usam o rodízio (manhã, tarde
 ## dourada e nublado sobre a chuva).
 const CENARIO_CHUVA: Dictionary = {
+    "rua_viva": RUA_VIVA_CHUVA,
     "props": {
         "arvore": {"glb": "arvore", "espacamento_m": 12.0},
         "banco": {"espacamento_m": 14.0},
@@ -223,6 +358,7 @@ const CENARIO_CHUVA: Dictionary = {
     },
 }
 const CENARIO_CHUVA_CICLO: Dictionary = {
+    "rua_viva": RUA_VIVA_CHUVA,
     "props": {
         "arvore": {"glb": "arvore", "espacamento_m": 12.0},
         "banco": {"espacamento_m": 14.0},
@@ -232,6 +368,7 @@ const CENARIO_CHUVA_CICLO: Dictionary = {
     "clima": "chuva",
 }
 const CENARIO_SOL: Dictionary = {
+    "rua_viva": RUA_VIVA_CHUVA,
     "props": {
         "arvore": {"glb": "arvore", "espacamento_m": 12.0},
         "banco": {"espacamento_m": 14.0},
@@ -1662,6 +1799,7 @@ const FASE_35: Dictionary = {
 ## cada 140 m, pulando os que caem sobre travessias (bloco "outdoors",
 ## lido por _spawn_outdoors) — visual puro, sem colisão.
 const CENARIO_CENTRO_MOV: Dictionary = {
+    "rua_viva": RUA_VIVA_CENTRO_MOV,
     "props": {
         "arvore": {"glb": "arvore", "espacamento_m": 24.0},
         "banco": {"espacamento_m": 18.0},
@@ -1688,6 +1826,7 @@ const CENARIO_CENTRO_MOV: Dictionary = {
 ## urbana ao grande evento); as demais usam o rodízio (tarde, nublado,
 ## manhã, tarde).
 const CENARIO_TERMINAL: Dictionary = {
+    "rua_viva": RUA_VIVA_TERMINAL,
     "props": {
         "arvore": {"glb": "arvore", "espacamento_m": 24.0},
         "banco": {"espacamento_m": 18.0},
@@ -1704,6 +1843,7 @@ const CENARIO_TERMINAL: Dictionary = {
     "marco": "terminal",
 }
 const CENARIO_TERMINAL_DIA: Dictionary = {
+    "rua_viva": RUA_VIVA_TERMINAL,
     "props": {
         "arvore": {"glb": "arvore", "espacamento_m": 24.0},
         "banco": {"espacamento_m": 18.0},
