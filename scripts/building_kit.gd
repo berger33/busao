@@ -989,7 +989,12 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
                     xf_letreiro.append(_xform(
                         Vector3(lado * (x_frente - 0.14), toldo_y + 0.52, -(z + largura * 0.5)),
                         Vector3(0.10, 0.62, largura * 0.72)))
-                    cor_letreiro.append(CORES_LETREIRO[(lote + int(lado) + 1) % CORES_LETREIRO.size()])
+                    # cor pela ordem do letreiro no quarteirão (mais o índice do
+                    # quarteirão, para a rua não repetir o mesmo par de fachadas):
+                    # garante vizinhos de cores diferentes, sem depender do sorteio.
+                    var ic := (cor_letreiro.size() + int(raiz.get_meta("spec_index", 0))) \
+                            % CORES_LETREIRO.size()
+                    cor_letreiro.append(CORES_LETREIRO[ic])
             z += largura
             lote += 1
     # --- Emite o coroamento coletado (poucos draw calls por quarteirão).

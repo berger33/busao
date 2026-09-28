@@ -291,8 +291,15 @@ func _scenario_h() -> void:
             var mm: MultiMesh = (no as MultiMeshInstance3D).multimesh
             if mm != null and mm.use_colors:
                 var distintas := {}
+                var amostra: Array = []
                 for j in range(mm.instance_count):
-                    distintas[mm.get_instance_color(j)] = true
+                    var c: Color = mm.get_instance_color(j)
+                    distintas[c] = true
+                    if j < 3:
+                        amostra.append("%.2f/%.2f/%.2f" % [c.r, c.g, c.b])
+                if distintas.size() > cores:
+                    print("  quarteirão %d: %d letreiros, cores %s" % [
+                        i, mm.instance_count, ", ".join(amostra)])
                 cores = maxi(cores, distintas.size())
         chunk.queue_free()
     print("  centro letreiro=%d (cores distintas %d) grade=%d | parque letreiro=%d grade=%d" % [
