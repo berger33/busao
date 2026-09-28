@@ -13,7 +13,7 @@ extends SceneTree
 ##   RV-E. encardido: albedo por capítulo e desligamento por superfície
 ##   RV-F. orçamento: variação é estilo, não custo (teto de nós vs. bairro)
 ##   RV-G. elementos novos de rua: fiação aérea e jardineiras por capítulo
-##   RV-H. elementos novos de fachada: letreiro colorido e grade de janela
+##   RV-H. elementos novos de fachada: letreiro em 3 grupos de cor e grade
 ## Código de saída 0 = OK, 1 = falha.
 
 var _failures: Array = []
@@ -24,7 +24,8 @@ const NOS_RUA_VIVA := [
     "EscadaMontante", "EscadaPatamar", "EscadaLance",
     "EncardidoParede", "EncardidoPoste", "EncardidoSarjeta",
     "SetaHaste", "SetaCabeca", "AroEsgoto", "TampaEsgoto", "RemendoAsfalto",
-    "FiacaoCabo", "Jardineira", "JardineiraPlanta", "GradeJanela", "LetreiroLoja",
+    "FiacaoCabo", "Jardineira", "JardineiraPlanta", "GradeJanela",
+    "LetreiroLoja", "LetreiroLojaB", "LetreiroLojaC",
 ]
 
 
@@ -212,9 +213,10 @@ func _albedo_encardido(raiz: Node) -> float:
 # RV-F. Orçamento: a variação por cenário é de estilo, não de custo. Contamos
 # só os nós DA CAMADA VIVA (o resto do quarteirão varia por props, que é
 # contrato antigo): nenhum capítulo pode passar o bairro em mais que
-# TETO_NOS_EXTRA nós — a escada de incêndio vale 3 e o ático alto vale 1; o
-# resto é densidade DENTRO de multimesh, que não cria chamada de desenho nova.
-const TETO_NOS_EXTRA := 5
+# TETO_NOS_EXTRA nós — a escada de incêndio vale 3, o ático alto vale 1 e os
+# grupos de cor do letreiro valem até 2; o resto é densidade DENTRO de
+# multimesh, que não cria chamada de desenho nova.
+const TETO_NOS_EXTRA := 6
 
 
 func _scenario_f() -> void:
@@ -273,53 +275,32 @@ func _scenario_g() -> void:
             "RV-G. fiação aérea e jardineiras seguem o capítulo (PARQUE sem fio, FEIRA sem floreira)")
 
 
-# RV-H. Letreiro de loja (cor por instância) e grade de janela.
+# RV-H. Letreiro de loja (3 grupos de cor) e grade de janela.
 func _scenario_h() -> void:
-    var l_centro: int = _instancias_na_rua(LevelData.CENARIO_CENTRO, "LetreiroLoja")
+    var l_centro := 0
+    var l_parque := 0
+    for n in ["LetreiroLoja", "LetreiroLojaB", "LetreiroLojaC"]:
+        l_centro += _instancias_na_rua(LevelData.CENARIO_CENTRO, n)
+        l_parque += _instancias_na_rua(LevelData.CENARIO_PARQUE, n)
     var g_centro: int = _instancias_na_rua(LevelData.CENARIO_CENTRO, "GradeJanela")
-    var l_parque: int = _instancias_na_rua(LevelData.CENARIO_PARQUE, "LetreiroLoja")
     var g_parque: int = _instancias_na_rua(LevelData.CENARIO_PARQUE, "GradeJanela")
     # 3 barras verticais por janela gradeada
     var centro_ok: bool = l_centro > 0 and g_centro > 0 and g_centro % 3 == 0
     var parque_ok: bool = l_parque == 0 and g_parque == 0
-    # o letreiro é UM multimesh com cor por instância: varia sem custar draw call
-    # Sonda: o driver headless armazena o buffer de cor do MultiMesh? Se nem
-    # uma multimesh criada aqui devolve a cor que acabou de receber, o que
-    # falha é a leitura em headless, não o kit.
-    var sonda := MultiMesh.new()
-    sonda.transform_format = MultiMesh.TRANSFORM_3D
-    sonda.use_colors = true
-    sonda.mesh = BoxMesh.new()
-    sonda.instance_count = 2
-    sonda.set_instance_color(0, Color(0.9, 0.2, 0.1))
-    sonda.set_instance_color(1, Color(0.1, 0.4, 0.8))
-    var lida: Color = sonda.get_instance_color(0)
-    var buffer_legivel: bool = lida.r > 0.5
-    print("  sonda multimesh: use_colors=%s cor lida=%.2f/%.2f/%.2f" % [
-        str(sonda.use_colors), lida.r, lida.g, lida.b])
-    var cores := 0
+    # variedade: ao longo da rua os tres grupos de cor têm de aparecer, e cada
+    # grupo é UM multimesh (não uma chamada de desenho por loja)
+    var grupos := {}
+    var nos := 0
     for i in range(5):
         var chunk: Node3D = _chunk(LevelData.CENARIO_CENTRO, i)
-        var no: Node = _achar(chunk, "LetreiroLoja")
-        if no is MultiMeshInstance3D:
-            var mm: MultiMesh = (no as MultiMeshInstance3D).multimesh
-            if mm != null and mm.use_colors:
-                var distintas := {}
-                var amostra: Array = []
-                for j in range(mm.instance_count):
-                    var c: Color = mm.get_instance_color(j)
-                    distintas[c] = true
-                    if j < 3:
-                        amostra.append("%.2f/%.2f/%.2f" % [c.r, c.g, c.b])
-                if distintas.size() > cores:
-                    print("  quarteirão %d: %d letreiros, cores %s" % [
-                        i, mm.instance_count, ", ".join(amostra)])
-                cores = maxi(cores, distintas.size())
+        for n in ["LetreiroLoja", "LetreiroLojaB", "LetreiroLojaC"]:
+            var no: Node = _achar(chunk, n)
+            if no != null:
+                grupos[n] = true
+                nos += 1
         chunk.queue_free()
-    print("  centro letreiro=%d (cores distintas %d) grade=%d | parque letreiro=%d grade=%d" % [
-        l_centro, cores, g_centro, l_parque, g_parque])
-    # Só exigimos variedade lida de volta quando o driver expõe o buffer.
-    var variedade_ok: bool = cores > 1 if buffer_legivel else cores >= 1
+    var variedade_ok: bool = grupos.size() >= 2 and nos <= 15
+    print("  centro letreiro=%d (grupos de cor %d, nós em 5 quarteirões %d) grade=%d | parque letreiro=%d grade=%d" % [
+        l_centro, grupos.size(), nos, g_centro, l_parque, g_parque])
     _check(centro_ok and parque_ok and variedade_ok,
-            "RV-H. letreiros com cor por instância no CENTRO, grades no térreo, PARQUE sem nenhum")
-
+            "RV-H. letreiros em 3 grupos de cor no CENTRO, grades no térreo, PARQUE sem nenhum")

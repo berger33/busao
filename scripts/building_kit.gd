@@ -310,42 +310,6 @@ static func _multimesh(mesh: Mesh, mat: Material, xforms: Array, pai: Node3D, no
     return no
 
 
-## Multimesh com COR POR INSTANCIA: mesma malha, mesmo material, uma chamada de
-## desenho — usado nos letreiros de loja, onde repetir a mesma cor em toda a rua
-## entregaria o truque. Exige material com vertex_color_use_as_albedo.
-static func _multimesh_cores(mesh: Mesh, mat: Material, xforms: Array, cores: Array,
-        pai: Node3D, nome: String) -> MultiMeshInstance3D:
-    var mm := MultiMesh.new()
-    mm.transform_format = MultiMesh.TRANSFORM_3D
-    mm.use_colors = true
-    mm.mesh = mesh
-    mm.instance_count = xforms.size()
-    for i in xforms.size():
-        mm.set_instance_transform(i, xforms[i])
-        mm.set_instance_color(i, cores[i] if i < cores.size() else Color.WHITE)
-    var no := MultiMeshInstance3D.new()
-    no.name = nome
-    no.multimesh = mm
-    no.material_override = mat
-    no.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-    pai.add_child(no)
-    return no
-
-
-## Material dos letreiros: cor vem da instância do multimesh.
-static func _mat_letreiro() -> StandardMaterial3D:
-    var ck := "letreiro"
-    if _material_cache.has(ck):
-        return _material_cache[ck]
-    var m := StandardMaterial3D.new()
-    m.albedo_color = Color.WHITE
-    m.vertex_color_use_as_albedo = true
-    m.roughness = 0.55
-    m.metallic = 0.0
-    _material_cache[ck] = m
-    return m
-
-
 ## Geometria da secao transversal (layout "rua_esquerda"):
 ##   x < 0: pista de rolamento | guia | x > 0: calcada (deck de corrida +
 ##   faixa lateral de props). Todas as bordas saem do spec — nada fixo aqui.
@@ -481,12 +445,14 @@ const RUA_VIVA_PADRAO := {
     },
 }
 
-## Paleta dos letreiros de loja: cor por instância dentro do MESMO multimesh
-## (1 chamada de desenho para a rua inteira, sem repetir a mesma fachada).
+## Paleta dos letreiros de loja. São TRES grupos, cada um com seu multimesh:
+## a rua inteira custa 3 chamadas de desenho em vez de uma por loja, e a cor
+## não depende do buffer por instância do MultiMesh, que o driver headless não
+## guarda — o que deixaria os letreiros pretos se o device fizesse o mesmo.
 const CORES_LETREIRO := [
     Color(0.86, 0.26, 0.20), Color(0.16, 0.42, 0.70), Color(0.94, 0.72, 0.16),
-    Color(0.18, 0.52, 0.36), Color(0.78, 0.40, 0.14), Color(0.42, 0.28, 0.58),
 ]
+const NOMES_LETREIRO := ["LetreiroLoja", "LetreiroLojaB", "LetreiroLojaC"]
 
 
 ## Bloco da rua viva já resolvido: padrão do kit + spec em disco + override do
@@ -894,8 +860,7 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
     var usa_grade: bool = bool(fach.get("grade_janela", true)) and _tier_atual() <= 2
     var grade_ate: int = int(fach.get("grade_ate_andar", 1))
     var xf_grade: Array = []
-    var xf_letreiro: Array = []
-    var cor_letreiro: Array = []
+    var xf_letreiro: Array = [[], [], []]
     var usa_escada: bool = bool(coro.get("escada_incendio", true))
     var escada_min: int = maxi(1, int(coro.get("escada_min_andares", 4)))
     var escada_passo: int = maxi(1, int(coro.get("escada_a_cada_lotes", 2)))
@@ -986,15 +951,17 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
                 _build_loja(spec, raiz, p, lado, x_frente, z, largura, lote, usa_toldo)
                 if usa_letreiro:
                     var toldo_y := float(p.get("loja", {}).get("toldo_altura_m", 2.6))
-                    xf_letreiro.append(_xform(
+                    # grupo de cor pela ordem do letreiro no quarteirão, somada ao
+                    # índice do quarteirão: vizinhos nunca saem da mesma cor e a
+                    # rua não repete o mesmo par de fachadas de bloco em bloco.
+                    var emitidos := 0
+                    for grupo in xf_letreiro:
+                        emitidos += (grupo as Array).size()
+                    var ic := (emitidos + int(raiz.get_meta("spec_index", 0))) \
+                            % CORES_LETREIRO.size()
+                    (xf_letreiro[ic] as Array).append(_xform(
                         Vector3(lado * (x_frente - 0.14), toldo_y + 0.52, -(z + largura * 0.5)),
                         Vector3(0.10, 0.62, largura * 0.72)))
-                    # cor pela ordem do letreiro no quarteirão (mais o índice do
-                    # quarteirão, para a rua não repetir o mesmo par de fachadas):
-                    # garante vizinhos de cores diferentes, sem depender do sorteio.
-                    var ic := (cor_letreiro.size() + int(raiz.get_meta("spec_index", 0))) \
-                            % CORES_LETREIRO.size()
-                    cor_letreiro.append(CORES_LETREIRO[ic])
             z += largura
             lote += 1
     # --- Emite o coroamento coletado (poucos draw calls por quarteirão).
@@ -1018,9 +985,13 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
         var grade_no := _multimesh(_box(Vector3.ONE), material(spec, "estrutura_metalica"),
                 xf_grade, raiz, "GradeJanela", false, 0.0)
         _marca(grade_no, "grade", "nenhum")
-    if not xf_letreiro.is_empty():
-        var letreiro_no := _multimesh_cores(_box(Vector3.ONE), _mat_letreiro(),
-                xf_letreiro, cor_letreiro, raiz, "LetreiroLoja")
+    for ig in range(CORES_LETREIRO.size()):
+        var grupo: Array = xf_letreiro[ig]
+        if grupo.is_empty():
+            continue
+        var letreiro_no := _multimesh(_box(Vector3.ONE),
+                _mat_cor("letreiro%d" % ig, CORES_LETREIRO[ig], 0.55),
+                grupo, raiz, NOMES_LETREIRO[ig], false, 0.0)
         _marca(letreiro_no, "letreiro", "nenhum")
     # Escada de incêndio: adereço pesado, só nos degraus de qualidade alto/médio.
     if not predios_escada.is_empty() and _tier_atual() <= 1:
