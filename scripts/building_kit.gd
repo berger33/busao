@@ -370,14 +370,61 @@ static func _mat_cor(chave: String, cor: Color, rugosidade: float, metalico: flo
     return m
 
 
+## ETAPA 17 — contrato da "rua viva": padrões de densidade/estilo do coroamento,
+## dos decalques de asfalto e do encardido. O cenário da fase
+## (level_data.gd -> CENARIO_*.rua_viva) entra por cima destes valores pelo mesmo
+## deep-merge de spec_with_overrides que já vale para props/predios, então cada
+## capítulo afina o mundo sem tocar em código. Passos em metros: passo MENOR =
+## mais denso.
+const RUA_VIVA_PADRAO := {
+    "coroamento": {
+        "platibanda": true,
+        "ar_condicionado": true,
+        "caixa_dagua_min_andares": 3,
+        "escada_incendio": true,
+        "escada_min_andares": 4,
+        "escada_a_cada_lotes": 2,
+    },
+    "decalques": {
+        "setas": true,
+        "seta_passo_m": 16.0,
+        "seta_comprimento_m": 1.3,
+        "tampa_passo_m": 14.0,
+        "remendo_passo_m": 15.0,
+    },
+    "encardido": {
+        "albedo": 0.42,
+        "sarjeta": true,
+        "parede": true,
+        "poste": true,
+    },
+}
+
+
+## Bloco da rua viva já resolvido: padrão do kit + spec em disco + override do
+## cenário. Chaves desconhecidas do spec são ignoradas pelo consumidor, mas
+## ficam no dicionário para o auditor reclamar.
+static func rua_viva(spec: Dictionary, bloco: String) -> Dictionary:
+    var padrao: Dictionary = RUA_VIVA_PADRAO.get(bloco, {})
+    var cfg = spec.get("rua_viva", {}).get(bloco, {})
+    if typeof(cfg) != TYPE_DICTIONARY or cfg.is_empty():
+        return padrao.duplicate(true)
+    var resultado: Dictionary = padrao.duplicate(true)
+    for chave in cfg:
+        resultado[chave] = cfg[chave]
+    return resultado
+
+
 ## Encardido (sujeira nas juntas): material escuro em blend MULTIPLICAR, para
-## ESCURECER a superfície embaixo em vez de pintar um bloco preto. Cacheado.
-static func _mat_encardido() -> StandardMaterial3D:
-    var ck := "encardido"
+## ESCURECER a superfície embaixo em vez de pintar um bloco preto. O albedo vem
+## do cenário: menor = mais sujo, 1.0 = invisível. Cacheado por valor.
+static func _mat_encardido(albedo: float = 0.42) -> StandardMaterial3D:
+    var a := clampf(albedo, 0.05, 1.0)
+    var ck := "encardido|%.3f" % a
     if _material_cache.has(ck):
         return _material_cache[ck]
     var m := StandardMaterial3D.new()
-    m.albedo_color = Color(0.42, 0.40, 0.37, 1.0)
+    m.albedo_color = Color(a, a * 0.952, a * 0.881, 1.0)
     m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
     m.blend_mode = BaseMaterial3D.BLEND_MODE_MUL
     m.roughness = 1.0
@@ -490,9 +537,10 @@ static func _build_piso(spec: Dictionary, raiz: Node3D, comprimento: float, _vis
     _marca(guia, "guia")
     # Encardido da sarjeta: faixa escura contínua no encontro guia/asfalto, onde
     # a água de chuva escorre e a sujeira assenta (junta meio-fio/pista).
-    if _tier_atual() <= 2:
+    var grime: Dictionary = rua_viva(spec, "encardido")
+    if _tier_atual() <= 2 and bool(grime.get("sarjeta", true)):
         var sarjeta_grime := _malha(_box(Vector3(0.28, 0.006, comprimento)),
-            _mat_encardido(),
+            _mat_encardido(float(grime.get("albedo", 0.42))),
             Vector3(x_guia - guia_l * 0.5 - 0.14, 0.006, -comprimento * 0.5), raiz,
             "EncardidoSarjeta", false, 0.0)
         _marca(sarjeta_grime, "encardido", "nenhum")
@@ -596,19 +644,34 @@ static func _build_decalques_chao(spec: Dictionary, raiz: Node3D, comprimento: f
     var lane := pista * 0.25
     var y := 0.009
     var mat_branco := material(spec, "faixa_branca")
+    var cfg: Dictionary = rua_viva(spec, "decalques")
     # (o tracejado divisor central já é feito em _build_linhas -> LinhaTracejada)
-    # setas de direção (uma por faixa a cada ~16 m), apontando o fluxo (-z)
+    # setas de direção (uma por faixa a cada seta_passo_m), apontando o fluxo -z.
+    # Passo e comprimento vêm do cenário: avenida usa setas densas, parque quase
+    # nenhuma.
+    # O ritmo das setas é GLOBAL (contado em z absoluto, não reiniciado a cada
+    # quarteirão): assim o passo do cenário aparece de verdade na rua — antes,
+    # com 28 m de quarteirão, 16 m e 24 m davam a mesma seta única por bloco.
     var hastes: Array = []
     var cabecas: Array = []
-    var za := 10.0
-    while za < comprimento - 3.0:
-        for lx in [x_centro - lane, x_centro + lane]:
-            hastes.append(_xform(Vector3(lx, y, -za), Vector3(0.16, 0.01, 1.3)))
-            for sgn in [-1.0, 1.0]:
-                cabecas.append(_xform(
-                    Vector3(lx + sgn * 0.20, y, -(za + 0.5)),
-                    Vector3(0.16, 0.01, 0.55), sgn * 0.7))
-        za += 16.0
+    var seta_passo := maxf(4.0, float(cfg.get("seta_passo_m", 16.0)))
+    var seta_len := maxf(0.4, float(cfg.get("seta_comprimento_m", 1.3)))
+    if bool(cfg.get("setas", true)):
+        var z_base := float(index) * comprimento
+        var k := int(floor(z_base / seta_passo))
+        while true:
+            var za := float(k) * seta_passo - z_base
+            k += 1
+            if za > comprimento - 2.0:
+                break
+            if za < 1.0:
+                continue
+            for lx in [x_centro - lane, x_centro + lane]:
+                hastes.append(_xform(Vector3(lx, y, -za), Vector3(0.16, 0.01, seta_len)))
+                for sgn in [-1.0, 1.0]:
+                    cabecas.append(_xform(
+                        Vector3(lx + sgn * 0.20, y, -(za + seta_len * 0.38)),
+                        Vector3(0.16, 0.01, seta_len * 0.42), sgn * 0.7))
     if not hastes.is_empty():
         _multimesh(_box(Vector3.ONE), mat_branco, hastes, raiz, "SetaHaste", false, 0.0)
     if not cabecas.is_empty():
@@ -616,7 +679,10 @@ static func _build_decalques_chao(spec: Dictionary, raiz: Node3D, comprimento: f
     # 3 - tampas de esgoto redondas de ferro fundido na pista
     var tampas: Array = []
     var aros: Array = []
-    var n_tampas := 1 + int(comprimento / 20.0)
+    # Contagem por passo real em metros: roundi(comprimento / passo). Com o
+    # quarteirão de 28 m isso dá 1 tampa a cada tampa_passo_m de rua.
+    var tampa_passo := maxf(4.0, float(cfg.get("tampa_passo_m", 14.0)))
+    var n_tampas := maxi(1, int(round(comprimento / tampa_passo)))
     for i in range(n_tampas):
         var zt := rng2.randf_range(4.0, comprimento - 4.0)
         var xt := x_centro + rng2.randf_range(-lane, lane)
@@ -629,7 +695,8 @@ static func _build_decalques_chao(spec: Dictionary, raiz: Node3D, comprimento: f
                 tampas, raiz, "TampaEsgoto", false, 0.0)
     # 4 - remendos de asfalto irregulares (mancha mais escura e fosca)
     var remendos: Array = []
-    var n_rem := 1 + int(comprimento / 15.0)
+    var remendo_passo := maxf(4.0, float(cfg.get("remendo_passo_m", 15.0)))
+    var n_rem := maxi(1, int(round(comprimento / remendo_passo)))
     for i in range(n_rem):
         var zr := rng2.randf_range(3.0, comprimento - 3.0)
         var xr := x_centro + rng2.randf_range(-pista * 0.4, pista * 0.4)
@@ -734,6 +801,16 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
     var xf_recuo: Array = []
     var xf_grime_parede: Array = []
     var predios_escada: Array = []
+    # Contrato da rua viva: o cenário da fase manda na densidade/estilo do topo
+    # e do encardido. CENTRO empilha caixa d'água cedo, PARQUE dispensa escada.
+    var coro: Dictionary = rua_viva(spec, "coroamento")
+    var grime: Dictionary = rua_viva(spec, "encardido")
+    var usa_platibanda: bool = bool(coro.get("platibanda", true))
+    var usa_ac: bool = bool(coro.get("ar_condicionado", true))
+    var caixa_min: int = int(coro.get("caixa_dagua_min_andares", 3))
+    var usa_escada: bool = bool(coro.get("escada_incendio", true))
+    var escada_min: int = maxi(1, int(coro.get("escada_min_andares", 4)))
+    var escada_passo: int = maxi(1, int(coro.get("escada_a_cada_lotes", 2)))
     for lado in [-1.0, 1.0]:
         # frente do lote: na borda externa da calcada (direita) ou no fim da
         # rua (esquerda). x_frente/x_centro sao magnitudes a partir do centro.
@@ -774,11 +851,12 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
                 var cz := -(z + largura * 0.5)
                 var topo := altura + telhado
                 # platibanda: mureta na testeira (quebra o topo chapado da caixa)
-                xf_platibanda.append(_xform(
-                    Vector3(lado * (x_frente + 0.05), topo + 0.22, cz),
-                    Vector3(0.16, 0.46, largura * 0.98)))
+                if usa_platibanda:
+                    xf_platibanda.append(_xform(
+                        Vector3(lado * (x_frente + 0.05), topo + 0.22, cz),
+                        Vector3(0.16, 0.46, largura * 0.98)))
                 # ar-condicionado saliente na fachada (1-2 conforme o prédio)
-                var n_ac := 1 + (andares % 2)
+                var n_ac := (1 + (andares % 2)) if usa_ac else 0
                 for a in range(n_ac):
                     var ay := pe * (1.25 + 0.9 * float(a))
                     if ay < altura - 0.5:
@@ -786,8 +864,8 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
                             Vector3(lado * (x_frente + 0.24), ay,
                                 cz + largura * (0.22 - 0.4 * float(a))),
                             Vector3(0.5, 0.42, 0.62)))
-                # caixa d'água nos prédios de 3+ pavimentos
-                if andares >= 3:
+                # caixa d'água a partir de caixa_dagua_min_andares pavimentos
+                if andares >= caixa_min:
                     xf_caixa.append(_xform(Vector3(
                         lado * (x_centro - lado * profundidade * 0.16),
                         topo + 0.52, cz + largura * 0.12)))
@@ -804,11 +882,12 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
                         Vector3(profundidade * 0.34, 0.9, largura * 0.3)))
                 # encardido na junta parede/calçada: banda escura rente à base
                 # da fachada (respingo de chuva + poeira acumulada no rodapé)
-                xf_grime_parede.append(_xform(
-                    Vector3(lado * (x_frente - lado * 0.03), 0.30, cz),
-                    Vector3(0.05, 0.34, largura * 0.94)))
-                # escada de incêndio nos prédios altos (alternados)
-                if andares >= 4 and lote % 2 == 0:
+                if bool(grime.get("parede", true)):
+                    xf_grime_parede.append(_xform(
+                        Vector3(lado * (x_frente - lado * 0.03), 0.30, cz),
+                        Vector3(0.05, 0.34, largura * 0.94)))
+                # escada de incêndio nos prédios altos (a cada N lotes)
+                if usa_escada and andares >= escada_min and lote % escada_passo == 0:
                     predios_escada.append({
                         "lado": lado, "xf": x_frente, "cz": cz,
                         "larg": largura, "and": andares, "pe": pe})
@@ -837,8 +916,8 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
         _build_escadas_incendio(spec, raiz, predios_escada)
     # Encardido: detalhe sutil, cai fora só no degrau mais leve (tier 3).
     if not xf_grime_parede.is_empty() and _tier_atual() <= 2:
-        _multimesh(_box(Vector3.ONE), _mat_encardido(), xf_grime_parede, raiz,
-                "EncardidoParede", false, 0.0)
+        _multimesh(_box(Vector3.ONE), _mat_encardido(float(grime.get("albedo", 0.42))),
+                xf_grime_parede, raiz, "EncardidoParede", false, 0.0)
 
 
 ## Escada de incêndio de ferro na fachada: montante + patamar por andar +
@@ -1077,9 +1156,11 @@ static func _build_mobiliario(spec: Dictionary, raiz: Node3D, rng: RandomNumberG
         xf_grime_poste.append(_xform(
             Vector3(-borda_esq + 0.20, 0.156, -zp), Vector3(0.34, 0.01, 0.34)))
         zp += passo_poste * rng.randf_range(0.95, 1.10)
-    if not xf_grime_poste.is_empty() and _tier_atual() <= 2:
-        _multimesh(_box(Vector3.ONE), _mat_encardido(), xf_grime_poste, raiz,
-                "EncardidoPoste", false, 0.0)
+    var grime_poste: Dictionary = rua_viva(spec, "encardido")
+    if not xf_grime_poste.is_empty() and _tier_atual() <= 2 \
+            and bool(grime_poste.get("poste", true)):
+        _multimesh(_box(Vector3.ONE), _mat_encardido(float(grime_poste.get("albedo", 0.42))),
+                xf_grime_poste, raiz, "EncardidoPoste", false, 0.0)
 
     if rng.randf() < float(props.get("hidrante", {}).get("probabilidade", 0.0)):
         var zz := rng.randf_range(3.0, comprimento - 3.0)

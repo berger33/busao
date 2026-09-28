@@ -66,7 +66,7 @@ jobs:
           chmod +x /tmp/godot && /tmp/godot --version
       - name: import headless
         run: /tmp/godot --headless --path . --import
-      - name: 16 suítes de etapa
+      - name: 17 suítes de etapa
         # Roda todas as suítes (não só até a primeira falha), guarda o log de cada
         # uma e publica o resumo: o log do Actions não é legível fora do navegador,
         # então o resumo vira comentário do PR e os logs viram artefato.

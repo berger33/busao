@@ -22,6 +22,15 @@ Referências: `BLUEPRINT_CORRE_PRO_PONTO.md` (regras e decisões) e
 
 ## Diário
 
+### 2026-09-27 (Rua viva por cenário — contrato `rua_viva`)
+
+- A camada viva da rua (coroamento dos prédios, decalques de asfalto e encardido), que o PR #17 entregou igual em todas as 50 fases, virou contrato por capítulo: bloco `rua_viva` com 3 sub-blocos e 15 chaves.
+- Padrões do mundo em `resources/world_spec.json`; perfis por capítulo em `scripts/level_data.gd` (`RUA_VIVA_CENTRO`, `_PARQUE`, `_CHUVA`, `_FEIRA`, `_CENTRO_MOV`, `_TERMINAL`), fundidos pelo mesmo deep-merge que já valia para `props`/`predios` — nada de número solto no código.
+- Identidades: CENTRO/LARGO com caixa d'água já no 2º pavimento, escada de incêndio em todo lote alto e encardido 0,34; PARQUE/ORLA sem escada, sem caixa d'água, sem ar-condicionado, encardido 0,66 e poste limpo; AVENIDA e TERMINAL com setas grandes a cada 10 m; FEIRA com encardido 0,32 e remendos a cada 10 m; BAIRRO segue o padrão (é a régua).
+- Correção de fundo: o ritmo das setas passou a ser contado em z global em vez de reiniciar a cada quarteirão — com blocos de 28 m, passos de 16 m e 24 m davam a mesma seta única. Tampas e remendos passaram a `round(comprimento / passo)`; o padrão de tampa virou 14 m para preservar a densidade atual.
+- Validação: `tools/qa_etapa17_rua_viva.gd` (17ª suíte headless, RV-A–RV-F) e nova Fase 7 do `tools/qa_full.py` (137 OK, 0 WARN, 0 FAIL) checando chave desconhecida, faixa de valor, perfil órfão e consumo dos 3 blocos pelo kit.
+- Pendente de device: QA visual dos números (força do encardido, escala de caixa d'água/ar-condicionado, tamanho das setas) — não há binário do Godot no sandbox.
+
 ### 2026-09-26 (Herói 10/10 — Fase 3 rosto completo concluída)
 
 - `build_heroi_julia.py` consolidou a seção 4d: lábios/narinas, esclera/íris/pupila/córnea separadas, normal radial da íris, pálpebras superiores/inferiores, sobrancelhas, cílios, franja e rabo de cavalo em exatamente 5 mechas.
