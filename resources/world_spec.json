@@ -368,6 +368,21 @@
       "sarjeta": true,
       "parede": true,
       "poste": true
+    },
+    "fachada": {
+      "_nota": "adereços da fachada da loja e da janela; letreiro usa cor por instancia no mesmo multimesh.",
+      "toldo": true,
+      "letreiro": true,
+      "grade_janela": true,
+      "grade_ate_andar": 1
+    },
+    "rua": {
+      "_nota": "adereços do nivel da rua batchados; fiacao liga postes consecutivos no ritmo global.",
+      "fiacao": true,
+      "fiacao_cabos": 3,
+      "fiacao_flecha_m": 0.45,
+      "jardineira": true,
+      "jardineira_passo_m": 22.0
     }
   },
   "orcamento": {

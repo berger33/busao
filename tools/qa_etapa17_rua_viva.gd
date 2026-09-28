@@ -12,6 +12,8 @@ extends SceneTree
 ##         CENTRO > BAIRRO > PARQUE em remendos
 ##   RV-E. encardido: albedo por capítulo e desligamento por superfície
 ##   RV-F. orçamento: variação é estilo, não custo (teto de nós vs. bairro)
+##   RV-G. elementos novos de rua: fiação aérea e jardineiras por capítulo
+##   RV-H. elementos novos de fachada: letreiro colorido e grade de janela
 ## Código de saída 0 = OK, 1 = falha.
 
 var _failures: Array = []
@@ -22,6 +24,7 @@ const NOS_RUA_VIVA := [
     "EscadaMontante", "EscadaPatamar", "EscadaLance",
     "EncardidoParede", "EncardidoPoste", "EncardidoSarjeta",
     "SetaHaste", "SetaCabeca", "AroEsgoto", "TampaEsgoto", "RemendoAsfalto",
+    "FiacaoCabo", "Jardineira", "JardineiraPlanta", "GradeJanela", "LetreiroLoja",
 ]
 
 
@@ -34,6 +37,8 @@ func _initialize() -> void:
     _scenario_d()
     _scenario_e()
     _scenario_f()
+    _scenario_g()
+    _scenario_h()
     if _failures.is_empty():
         print("ETAPA17_QA_OK")
         quit(0)
@@ -244,3 +249,54 @@ func _nos_rua_viva(cenario: Dictionary) -> int:
             total += 1
     chunk.queue_free()
     return total
+
+
+# RV-G. Fiação aérea e jardineiras: existem, seguem o capítulo e continuam
+# batchadas (1 nó por tipo, por mais denso que seja o perfil).
+func _scenario_g() -> void:
+    var f_bairro: int = _instancias_na_rua(LevelData.CENARIO_BAIRRO, "FiacaoCabo", 1)
+    var f_parque: int = _instancias_na_rua(LevelData.CENARIO_PARQUE, "FiacaoCabo", 1)
+    # 3 cabos x 3 trechos por vão: a conta tem de fechar em múltiplo de 9
+    var fiacao_ok: bool = f_bairro > 0 and f_bairro % 9 == 0 and f_parque == 0
+    var j_parque: int = _instancias_na_rua(LevelData.CENARIO_PARQUE, "Jardineira")
+    var j_centro: int = _instancias_na_rua(LevelData.CENARIO_CENTRO, "Jardineira")
+    var j_avenida: int = _instancias_na_rua(LevelData.CENARIO_AVENIDA, "Jardineira")
+    var j_feira: int = _instancias_na_rua(LevelData.CENARIO_FEIRA, "Jardineira")
+    # parque (10 m) mais denso que centro (14 m), que é mais denso que avenida
+    # (26 m); a feira desliga a jardineira porque a calçada é das barracas
+    var jardim_ok: bool = j_parque > j_centro and j_centro > j_avenida \
+            and j_avenida > 0 and j_feira == 0
+    print("  fiação cabos bairro=%d parque=%d" % [f_bairro, f_parque])
+    print("  jardineiras 140 m parque=%d centro=%d avenida=%d feira=%d" % [
+        j_parque, j_centro, j_avenida, j_feira])
+    _check(fiacao_ok and jardim_ok,
+            "RV-G. fiação aérea e jardineiras seguem o capítulo (PARQUE sem fio, FEIRA sem floreira)")
+
+
+# RV-H. Letreiro de loja (cor por instância) e grade de janela.
+func _scenario_h() -> void:
+    var l_centro: int = _instancias_na_rua(LevelData.CENARIO_CENTRO, "LetreiroLoja")
+    var g_centro: int = _instancias_na_rua(LevelData.CENARIO_CENTRO, "GradeJanela")
+    var l_parque: int = _instancias_na_rua(LevelData.CENARIO_PARQUE, "LetreiroLoja")
+    var g_parque: int = _instancias_na_rua(LevelData.CENARIO_PARQUE, "GradeJanela")
+    # 3 barras verticais por janela gradeada
+    var centro_ok: bool = l_centro > 0 and g_centro > 0 and g_centro % 3 == 0
+    var parque_ok: bool = l_parque == 0 and g_parque == 0
+    # o letreiro é UM multimesh com cor por instância: varia sem custar draw call
+    var cores := 0
+    for i in range(5):
+        var chunk: Node3D = _chunk(LevelData.CENARIO_CENTRO, i)
+        var no: Node = _achar(chunk, "LetreiroLoja")
+        if no is MultiMeshInstance3D:
+            var mm: MultiMesh = (no as MultiMeshInstance3D).multimesh
+            if mm != null and mm.use_colors:
+                var distintas := {}
+                for j in range(mm.instance_count):
+                    distintas[mm.get_instance_color(j)] = true
+                cores = maxi(cores, distintas.size())
+        chunk.queue_free()
+    print("  centro letreiro=%d (cores distintas %d) grade=%d | parque letreiro=%d grade=%d" % [
+        l_centro, cores, g_centro, l_parque, g_parque])
+    _check(centro_ok and parque_ok and cores > 1,
+            "RV-H. letreiros com cor por instância no CENTRO, grades no térreo, PARQUE sem nenhum")
+

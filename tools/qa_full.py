@@ -369,6 +369,19 @@ RUA_VIVA_CONTRATO = {
         "parede": (bool, None),
         "poste": (bool, None),
     },
+    "fachada": {
+        "toldo": (bool, None),
+        "letreiro": (bool, None),
+        "grade_janela": (bool, None),
+        "grade_ate_andar": (int, (0, 4)),
+    },
+    "rua": {
+        "fiacao": (bool, None),
+        "fiacao_cabos": (int, (1, 6)),
+        "fiacao_flecha_m": (float, (0.05, 1.5)),
+        "jardineira": (bool, None),
+        "jardineira_passo_m": (float, (4.0, 60.0)),
+    },
 }
 
 def _rua_viva_valida(origem, bloco, chave, valor):
@@ -416,11 +429,25 @@ def check_rua_viva():
         for e in erros[:20]:
             fail(e)
     else:
-        ok(f"world_spec.rua_viva com os 3 blocos e {sum(len(v) for v in RUA_VIVA_CONTRATO.values())} padrões válidos")
+        ok(f"world_spec.rua_viva com os {len(RUA_VIVA_CONTRATO)} blocos e {sum(len(v) for v in RUA_VIVA_CONTRATO.values())} padrões válidos")
 
     # Perfis por capítulo em level_data.gd: só chaves do contrato, na faixa.
     ld = (ROOT / "scripts" / "level_data.gd").read_text(encoding="utf-8")
     perfis = re.findall(r"^const (RUA_VIVA_[A-Z_]+): Dictionary = \{(.*?)^\}", ld, re.S | re.M)
+    # perfis escritos direto dentro de um CENARIO_* (bloco "rua_viva": { ... })
+    for m in re.finditer(r'"rua_viva":\s*\{', ld):
+        i = m.end() - 1
+        nivel = 0
+        for j in range(i, len(ld)):
+            if ld[j] == "{":
+                nivel += 1
+            elif ld[j] == "}":
+                nivel -= 1
+                if nivel == 0:
+                    break
+        anterior = ld.rfind("const CENARIO_", 0, m.start())
+        nome = re.match(r"const (\w+)", ld[anterior:]).group(1) if anterior >= 0 else "?"
+        perfis.append((nome + " (inline)", ld[i + 1:j]))
     if not perfis:
         fail("level_data.gd sem nenhum perfil RUA_VIVA_* (variação por cenário sumiu)")
         return
@@ -448,7 +475,8 @@ def check_rua_viva():
         ok(f"level_data.gd: {len(perfis)} perfis rua_viva por capítulo, todas as chaves no contrato")
 
     # Cada perfil declarado precisa estar ligado a pelo menos um CENARIO_*.
-    orfaos = [n for n, _ in perfis if not re.search(r'"rua_viva":\s*%s\b' % n, ld)]
+    orfaos = [n for n, _ in perfis
+              if n.startswith("RUA_VIVA_") and not re.search(r'"rua_viva":\s*%s\b' % n, ld)]
     if orfaos:
         fail(f"perfis rua_viva sem cenário usando: {orfaos}")
     else:
@@ -461,7 +489,7 @@ def check_rua_viva():
     if faltando:
         fail(f"building_kit.gd não lê os blocos rua_viva {faltando}")
     else:
-        ok("building_kit.gd consome os 3 blocos via rua_viva(spec, ...)")
+        ok(f"building_kit.gd consome os {len(RUA_VIVA_CONTRATO)} blocos via rua_viva(spec, ...)")
 
 def run_validations():
     print("\n== Fase 5b — Validators ==")

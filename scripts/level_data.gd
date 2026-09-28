@@ -96,6 +96,16 @@ const PILOT: Dictionary = {
 ##   rua_viva.encardido:
 ##     albedo: float                     material MULTIPLY; menor = mais sujo
 ##     sarjeta / parede / poste: bool    onde a sujeira assenta
+##   rua_viva.fachada:
+##     toldo / letreiro: bool            adereços da loja
+##     grade_janela: bool                grade de ferro na janela baixa
+##     grade_ate_andar: int              0 = nenhuma, 1 = térreo, 2 = dois
+##   rua_viva.rua:
+##     fiacao: bool                      cabos aéreos entre os postes
+##     fiacao_cabos: int                 quantos cabos por vão
+##     fiacao_flecha_m: float            o quanto o cabo barriga no meio do vão
+##     jardineira: bool                  floreira de concreto na calçada
+##     jardineira_passo_m: float         passo menor = mais densa
 ##
 ## Quem não declara "rua_viva" herda o padrão do spec — é o caso do bairro
 ## residencial, que é justamente a régua dos outros capítulos.
@@ -115,6 +125,8 @@ const RUA_VIVA_CENTRO: Dictionary = {
         "remendo_passo_m": 11.0,
     },
     "encardido": {"albedo": 0.34},
+    "fachada": {"grade_ate_andar": 2},
+    "rua": {"jardineira_passo_m": 14.0},
 }
 
 ## Parque e orla: casas baixas, ar limpo e maresia — sem escada de incêndio,
@@ -132,6 +144,8 @@ const RUA_VIVA_PARQUE: Dictionary = {
         "remendo_passo_m": 26.0,
     },
     "encardido": {"albedo": 0.66, "poste": false},
+    "fachada": {"letreiro": false, "grade_janela": false},
+    "rua": {"fiacao": false, "jardineira_passo_m": 10.0},
 }
 
 ## Rua molhada: a água de chuva escorre pela sarjeta e marca as juntas; o
@@ -150,6 +164,7 @@ const RUA_VIVA_FEIRA: Dictionary = {
         "remendo_passo_m": 10.0,
     },
     "encardido": {"albedo": 0.32},
+    "rua": {"jardineira": false},
 }
 
 ## Centro movimentado: prédios de 3 a 5 pavimentos — escadas de incêndio à
@@ -162,6 +177,8 @@ const RUA_VIVA_CENTRO_MOV: Dictionary = {
         "remendo_passo_m": 12.0,
     },
     "encardido": {"albedo": 0.38},
+    "fachada": {"grade_ate_andar": 1},
+    "rua": {"jardineira_passo_m": 26.0},
 }
 
 ## Caminho do terminal: avenida larga de chegada — setas grandes e frequentes
@@ -175,6 +192,7 @@ const RUA_VIVA_TERMINAL: Dictionary = {
         "remendo_passo_m": 14.0,
     },
     "encardido": {"albedo": 0.42},
+    "rua": {"jardineira_passo_m": 18.0},
 }
 
 ## ETAPA 7 — cenario compartilhado das fases do bairro: rua à esquerda +
@@ -198,6 +216,7 @@ const CENARIO_AVENIDA: Dictionary = {
         },
         "coroamento": {"escada_a_cada_lotes": 3},
         "encardido": {"albedo": 0.44},
+        "rua": {"jardineira_passo_m": 26.0},
     },
 }
 
