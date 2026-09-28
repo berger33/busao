@@ -12,7 +12,7 @@ extends SceneTree
 ##         CENTRO > BAIRRO > PARQUE em remendos
 ##   RV-E. encardido: albedo por capítulo e desligamento por superfície
 ##   RV-F. orçamento: variação é estilo, não custo (teto de nós vs. bairro)
-##   RV-G. elementos novos de rua: fiação aérea e jardineiras por capítulo
+##   RV-G. elementos novos de rua: jardineiras por capítulo
 ##   RV-H. elementos novos de fachada: letreiro em 3 grupos de cor e grade
 ## Código de saída 0 = OK, 1 = falha.
 
@@ -24,7 +24,7 @@ const NOS_RUA_VIVA := [
     "EscadaMontante", "EscadaPatamar", "EscadaLance",
     "EncardidoParede", "EncardidoPoste", "EncardidoSarjeta",
     "SetaHaste", "SetaCabeca", "AroEsgoto", "TampaEsgoto", "RemendoAsfalto",
-    "FiacaoCabo", "Jardineira", "JardineiraPlanta", "GradeJanela",
+    "Jardineira", "JardineiraPlanta", "GradeJanela",
     "LetreiroLoja", "LetreiroLojaB", "LetreiroLojaC",
 ]
 
@@ -253,13 +253,8 @@ func _nos_rua_viva(cenario: Dictionary) -> int:
     return total
 
 
-# RV-G. Fiação aérea e jardineiras: existem, seguem o capítulo e continuam
-# batchadas (1 nó por tipo, por mais denso que seja o perfil).
+# RV-G. Jardineiras: existem, seguem o capítulo e continuam batchadas.
 func _scenario_g() -> void:
-    var f_bairro: int = _instancias_na_rua(LevelData.CENARIO_BAIRRO, "FiacaoCabo", 1)
-    var f_parque: int = _instancias_na_rua(LevelData.CENARIO_PARQUE, "FiacaoCabo", 1)
-    # 3 cabos x 3 trechos por vão: a conta tem de fechar em múltiplo de 9
-    var fiacao_ok: bool = f_bairro > 0 and f_bairro % 9 == 0 and f_parque == 0
     var j_parque: int = _instancias_na_rua(LevelData.CENARIO_PARQUE, "Jardineira")
     var j_centro: int = _instancias_na_rua(LevelData.CENARIO_CENTRO, "Jardineira")
     var j_avenida: int = _instancias_na_rua(LevelData.CENARIO_AVENIDA, "Jardineira")
@@ -268,11 +263,10 @@ func _scenario_g() -> void:
     # (26 m); a feira desliga a jardineira porque a calçada é das barracas
     var jardim_ok: bool = j_parque > j_centro and j_centro > j_avenida \
             and j_avenida > 0 and j_feira == 0
-    print("  fiação cabos bairro=%d parque=%d" % [f_bairro, f_parque])
     print("  jardineiras 140 m parque=%d centro=%d avenida=%d feira=%d" % [
         j_parque, j_centro, j_avenida, j_feira])
-    _check(fiacao_ok and jardim_ok,
-            "RV-G. fiação aérea e jardineiras seguem o capítulo (PARQUE sem fio, FEIRA sem floreira)")
+    _check(jardim_ok,
+            "RV-G. jardineiras seguem o capítulo (PARQUE denso, FEIRA sem floreira)")
 
 
 # RV-H. Letreiro de loja (3 grupos de cor) e grade de janela.

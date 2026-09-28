@@ -350,17 +350,8 @@ static func _xform(pos: Vector3, escala: Vector3 = Vector3.ONE, giro_y: float = 
 
 
 ## Gerador deterministico do quarteirao: mesma semente do spec, mesmo leiaute.
-## Transform inclinado no plano vertical (giro no eixo X local): os cabos da
-## fiação aérea descem e sobem entre postes, e caixa/barra continuam sendo a
-## mesma malha unitária do multimesh.
-static func _xform_x(pos: Vector3, escala: Vector3, giro_x: float) -> Transform3D:
-    var b := Basis.from_euler(Vector3(giro_x, 0.0, 0.0))
-    b = b.scaled(escala)
-    return Transform3D(b, pos)
-
-
 ## Ritmo GLOBAL em z: devolve as posições locais de um elemento que precisa
-## continuar de um quarteirão para o outro (postes, fiação, setas, jardineiras).
+## continuar de um quarteirão para o outro: setas de direção e jardineiras.
 ## Sem isso o passo reinicia a cada 28 m e passos diferentes viram a mesma coisa.
 ## O intervalo é semiaberto: entra de margem_inicio até comprimento menos
 ## margem_fim, sem incluir o fim. Assim o elemento que cai exatamente na emenda
@@ -437,9 +428,6 @@ const RUA_VIVA_PADRAO := {
         "grade_ate_andar": 1,
     },
     "rua": {
-        "fiacao": true,
-        "fiacao_cabos": 3,
-        "fiacao_flecha_m": 0.45,
         "jardineira": true,
         "jardineira_passo_m": 22.0,
     },
@@ -1238,14 +1226,11 @@ static func _build_mobiliario(spec: Dictionary, raiz: Node3D, rng: RandomNumberG
     var passo_poste: float = float(cfg_poste.get("espacamento_m", 14.0))
     if passo_poste < 8.0:
         passo_poste = 14.0
-    # ETAPA 18 — postes no ritmo GLOBAL (antes cada quarteirão sorteava o
-    # primeiro poste e jogava um jitter no passo): é o que permite a fiação
-    # aérea atravessar a emenda dos quarteirões sem cotovelo.
     var index: int = int(raiz.get_meta("spec_index", 0))
     var x_poste := -borda_esq + 0.20
-    var postes_z: Array = _ritmo_global(index, comprimento, passo_poste)
+    var zp := rng.randf_range(5.0, 9.0)
     var xf_grime_poste: Array = []
-    for zp in postes_z:
+    while zp < comprimento - 3.0:
         var poste_glb := _prop_glb("poste")
         if poste_glb != null:
             # Junto a guia, braco de iluminacao virado para a rua (-X)
@@ -1256,8 +1241,7 @@ static func _build_mobiliario(spec: Dictionary, raiz: Node3D, rng: RandomNumberG
         # encardido no pé do poste (mancha achatada no chão, mesma posição)
         xf_grime_poste.append(_xform(
             Vector3(x_poste, 0.156, -zp), Vector3(0.34, 0.01, 0.34)))
-    _build_fiacao(spec, raiz, postes_z, x_poste, passo_poste,
-            float(cfg_poste.get("altura_m", 3.65)))
+        zp += passo_poste * rng.randf_range(0.95, 1.10)
     _build_jardineiras(spec, raiz, index, comprimento, x_faixa, visibilidade)
     var grime_poste: Dictionary = rua_viva(spec, "encardido")
     if not xf_grime_poste.is_empty() and _tier_atual() <= 2 \
@@ -1351,46 +1335,6 @@ static func _build_prop_linear(spec: Dictionary, raiz: Node3D, rng: RandomNumber
                     true, visibilidade)
             _marca(no, "prop")
         z += passo * rng.randf_range(0.9, 1.2)
-
-## Fiação aérea entre postes: 3 cabos por vão, cada um em 3 trechos que fazem a
-## flecha (desce, atravessa, sobe). Tudo num multimesh só — o vão sai do ritmo
-## global dos postes, então a rede continua de um quarteirão para o outro.
-## Detalhe sutil: cai fora no degrau mais leve de qualidade.
-static func _build_fiacao(spec: Dictionary, raiz: Node3D, postes_z: Array,
-        x_poste: float, vao: float, altura_poste: float) -> void:
-    var cfg: Dictionary = rua_viva(spec, "rua")
-    if not bool(cfg.get("fiacao", true)) or postes_z.is_empty() or _tier_atual() > 2:
-        return
-    var n_cabos: int = clampi(int(cfg.get("fiacao_cabos", 3)), 1, 6)
-    var flecha := maxf(0.05, float(cfg.get("fiacao_flecha_m", 0.45)))
-    var y_topo := altura_poste - 0.35
-    var trecho := vao / 3.0
-    var giro: float = atan2(flecha, trecho)
-    var comp_inclinado: float = sqrt(trecho * trecho + flecha * flecha)
-    var cabos: Array = []
-    for zp in postes_z:
-        var z0 := float(zp)
-        for c in range(n_cabos):
-            var y := y_topo - float(c) * 0.16
-            var x := x_poste - 0.10 - float(c) * 0.07
-            # desce
-            cabos.append(_xform_x(
-                Vector3(x, y - flecha * 0.5, -(z0 + trecho * 0.5)),
-                Vector3(0.03, 0.03, comp_inclinado), -giro))
-            # atravessa no ponto mais baixo
-            cabos.append(_xform_x(
-                Vector3(x, y - flecha, -(z0 + vao * 0.5)),
-                Vector3(0.03, 0.03, trecho), 0.0))
-            # sobe para o próximo poste
-            cabos.append(_xform_x(
-                Vector3(x, y - flecha * 0.5, -(z0 + trecho * 2.5)),
-                Vector3(0.03, 0.03, comp_inclinado), giro))
-    if cabos.is_empty():
-        return
-    var no := _multimesh(_box(Vector3.ONE), _mat_cor("cabo", Color(0.09, 0.09, 0.10), 0.85),
-            cabos, raiz, "FiacaoCabo", false, 0.0)
-    _marca(no, "fiacao", "nenhum")
-
 
 ## Jardineiras de concreto na calçada (caixote + terra plantada), no ritmo
 ## global do capítulo. Dois multimesh para a rua inteira; adereço, entra só nos

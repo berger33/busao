@@ -377,10 +377,7 @@
       "grade_ate_andar": 1
     },
     "rua": {
-      "_nota": "adereços do nivel da rua batchados; fiacao liga postes consecutivos no ritmo global.",
-      "fiacao": true,
-      "fiacao_cabos": 3,
-      "fiacao_flecha_m": 0.45,
+      "_nota": "adereços do nivel da rua batchados por quarteirao.",
       "jardineira": true,
       "jardineira_passo_m": 22.0
     }

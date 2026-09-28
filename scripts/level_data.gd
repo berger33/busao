@@ -101,9 +101,6 @@ const PILOT: Dictionary = {
 ##     grade_janela: bool                grade de ferro na janela baixa
 ##     grade_ate_andar: int              0 = nenhuma, 1 = térreo, 2 = dois
 ##   rua_viva.rua:
-##     fiacao: bool                      cabos aéreos entre os postes
-##     fiacao_cabos: int                 quantos cabos por vão
-##     fiacao_flecha_m: float            o quanto o cabo barriga no meio do vão
 ##     jardineira: bool                  floreira de concreto na calçada
 ##     jardineira_passo_m: float         passo menor = mais densa
 ##
@@ -145,7 +142,7 @@ const RUA_VIVA_PARQUE: Dictionary = {
     },
     "encardido": {"albedo": 0.66, "poste": false},
     "fachada": {"letreiro": false, "grade_janela": false},
-    "rua": {"fiacao": false, "jardineira_passo_m": 10.0},
+    "rua": {"jardineira_passo_m": 10.0},
 }
 
 ## Rua molhada: a água de chuva escorre pela sarjeta e marca as juntas; o

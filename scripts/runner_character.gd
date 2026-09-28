@@ -146,9 +146,6 @@ var _rig_base_energy: Dictionary = {}
 var _rig_gain := 1.0
 ## > 0 fixa o ganho e ignora o clima (varredura CAPTURA_RIG do harness).
 var rig_gain_override := -1.0
-var _outline_material: StandardMaterial3D
-var _outline_shells := 0
-var _outline_reported := false
 var current_clip := ""
 var world_mode := false
 var using_external_animation := false
@@ -262,6 +259,7 @@ func set_character(next_id: String) -> void:
         # O boneco v2 já vem com materiais/texturas próprios e animações
         # bakeadas: não recolorir (preserva o visual "como estava") nem
         # pendurar props do pipeline antigo. Liga clipes + física do cabelo.
+        _usar_materiais_do_glb()
         _setup_v2_animation()
         _setup_v2_hair()
         _configure_mesh_shadows(model_root)
@@ -289,6 +287,33 @@ func set_character(next_id: String) -> void:
         _setup_animation_library()
     _configure_mesh_shadows(model_root)
     primary_asset_loaded = true
+
+## Mantém na personagem as texturas que vieram no GLB (Pele, Roupa e Cabelo do
+## personagem_v2, com baseColorTexture própria). Qualquer material_override ou
+## surface_override deixado por um pipeline antigo tapa esse atlas e devolve a
+## boneca sem textura — aqui eles são zerados e o material do próprio GLB volta
+## a valer. O print sai uma vez e diz quantas superfícies têm textura de fato,
+## para dar para conferir no aparelho sem adivinhar.
+func _usar_materiais_do_glb() -> void:
+    if model_root == null:
+        return
+    var superficies := 0
+    var com_textura := 0
+    for node in model_root.find_children("*", "MeshInstance3D", true, false):
+        var mi := node as MeshInstance3D
+        if mi == null or mi.mesh == null:
+            continue
+        mi.material_override = null
+        for i in mi.mesh.get_surface_count():
+            mi.set_surface_override_material(i, null)
+            superficies += 1
+            var mat := mi.mesh.surface_get_material(i)
+            if mat is BaseMaterial3D and (mat as BaseMaterial3D).albedo_texture != null:
+                com_textura += 1
+    print("HERO MATERIAIS superficies=%d com_textura=%d" % [superficies, com_textura])
+    if com_textura < superficies:
+        push_warning("[hero] %d superficie(s) do GLB sem albedo_texture" % [superficies - com_textura])
+
 
 func _clear_character() -> void:
     if is_instance_valid(model_pivot):
@@ -1392,83 +1417,22 @@ func _configure_mesh_shadows(node: Node) -> void:
 func _apply_runner_light_layer() -> void:
     for node in find_children("*", "MeshInstance3D", true, false):
         var mi := node as MeshInstance3D
-        if mi == null or mi.name == "RunnerShadow" or str(mi.name).begins_with("SilhouetteShell"):
+        if mi == null or mi.name == "RunnerShadow":
             continue
         mi.layers = RUNNER_VISIBILITY_LAYER
-        _attach_silhouette_shell(mi)
-    if _outline_shells > 0 and not _outline_reported:
-        _outline_reported = true
-        print("SILHOUETTE cascos=", _outline_shells)
+        _remover_casco_silhueta(mi)
 
 
-## Filete escuro ao redor do corpo. A meta de contraste (≥ 3:1 contra a rua)
-## não fecha só com luz: na calçada clara o torso já está perto do branco e
-## clarear mais estoura a exposição. O contorno é que recorta a silhueta.
-func _attach_silhouette_shell(source: MeshInstance3D) -> void:
-    if source.mesh == null or source.get_parent() == null:
-        return
-    if source.get_node_or_null("SilhouetteShell") != null:
-        return
-    var grown := _grow_outline_mesh(source.mesh)
-    if grown == null:
-        return
-    var shell := MeshInstance3D.new()
-    shell.name = "SilhouetteShell"
-    shell.mesh = grown
-    shell.skin = source.skin
-    shell.transform = Transform3D.IDENTITY
-    shell.material_override = _silhouette_material()
-    shell.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-    shell.layers = RUNNER_VISIBILITY_LAYER
-    source.add_child(shell)
-    if skeleton != null:
-        shell.skeleton = shell.get_path_to(skeleton)
-    _outline_shells += 1
-
-
-## Empurra os vértices ao longo da normal. O shader de grow não seguia o
-## skinning no Compatibility e o casco ficava invisível, colado na malha.
-func _grow_outline_mesh(source: Mesh) -> ArrayMesh:
-    if not source is ArrayMesh:
-        return null
-    var input := source as ArrayMesh
-    var output := ArrayMesh.new()
-    var grew := false
-    for surface_index in input.get_surface_count():
-        var arrays: Array = input.surface_get_arrays(surface_index)
-        # Superfície sem normal (cartão, decalque) vem como null. Atribuir
-        # direto a PackedVector3Array aborta a função e o restante do corpo
-        # fica sem filete.
-        var vertices_var: Variant = arrays[Mesh.ARRAY_VERTEX]
-        var normals_var: Variant = arrays[Mesh.ARRAY_NORMAL]
-        if vertices_var == null or normals_var == null:
-            continue
-        var vertices: PackedVector3Array = vertices_var
-        var normals: PackedVector3Array = normals_var
-        if vertices.size() != normals.size() or vertices.size() == 0:
-            continue
-        for index in vertices.size():
-            vertices[index] = vertices[index] + normals[index] * 0.028
-        arrays[Mesh.ARRAY_VERTEX] = vertices
-        for custom_slot in [Mesh.ARRAY_CUSTOM0, Mesh.ARRAY_CUSTOM1, Mesh.ARRAY_CUSTOM2, Mesh.ARRAY_CUSTOM3]:
-            arrays[custom_slot] = null
-        output.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-        grew = true
-    if not grew:
-        return null
-    return output
-
-
-func _silhouette_material() -> StandardMaterial3D:
-    if _outline_material != null:
-        return _outline_material
-    var mat := StandardMaterial3D.new()
-    mat.albedo_color = Color(0.02, 0.018, 0.03)
-    mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-    mat.cull_mode = BaseMaterial3D.CULL_FRONT
-    mat.disable_receive_shadows = true
-    _outline_material = mat
-    return _outline_material
+## O contorno preto saiu (pedido de arte): um casco inflado 2,8 cm com
+## CULL_FRONT desenhava um filete escuro em volta do corpo e, nas partes finas
+## (tranças, mãos, bordas de roupa), passava na frente da malha e escondia a
+## textura do GLB. A legibilidade contra a rua fica por conta do rig de luz
+## (fill quente + rim frio), que já existe. Esta limpeza remove cascos que
+## tenham sobrado de uma cena carregada antes da mudança.
+func _remover_casco_silhueta(mesh: MeshInstance3D) -> void:
+    var casco := mesh.get_node_or_null("SilhouetteShell")
+    if casco != null:
+        casco.queue_free()
 
 
 ## Legibilidade de protagonista (padrão de runner mobile): a personagem nunca

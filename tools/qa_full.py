@@ -376,9 +376,6 @@ RUA_VIVA_CONTRATO = {
         "grade_ate_andar": (int, (0, 4)),
     },
     "rua": {
-        "fiacao": (bool, None),
-        "fiacao_cabos": (int, (1, 6)),
-        "fiacao_flecha_m": (float, (0.05, 1.5)),
         "jardineira": (bool, None),
         "jardineira_passo_m": (float, (4.0, 60.0)),
     },
@@ -491,6 +488,51 @@ def check_rua_viva():
     else:
         ok(f"building_kit.gd consome os {len(RUA_VIVA_CONTRATO)} blocos via rua_viva(spec, ...)")
 
+def check_personagem():
+    """Fase 8 — personagem: sem contorno preto e com a textura do GLB.
+
+    O casco de silhueta (malha inflada com CULL_FRONT e albedo quase preto)
+    desenhava um filete escuro em volta do corpo e, nas partes finas, passava
+    na frente da malha e escondia o atlas do GLB. Este portão impede que ele
+    volte e confere que o asset do herói realmente traz textura por material.
+    """
+    print("\n== Fase 8 — Personagem (contorno e textura) ==")
+    rc_bruto = (ROOT / "scripts" / "runner_character.gd").read_text(encoding="utf-8")
+    # só o código conta: a explicação de por que o contorno saiu cita os nomes
+    rc = "\n".join(l for l in rc_bruto.splitlines() if not l.lstrip().startswith("#"))
+    proibidos = ["_attach_silhouette_shell", "_grow_outline_mesh", "_silhouette_material",
+                 "CULL_FRONT"]
+    achados = [t for t in proibidos if t in rc]
+    if achados:
+        fail(f"contorno preto de volta em runner_character.gd: {achados}")
+    else:
+        ok("runner_character.gd sem casco de silhueta (nenhum CULL_FRONT)")
+    if "_usar_materiais_do_glb" in rc_bruto and "set_surface_override_material(i, null)" in rc_bruto:
+        ok("herói usa os materiais do próprio GLB (overrides zerados)")
+    else:
+        fail("runner_character.gd não garante os materiais do GLB no herói")
+
+    glb = ROOT / "assets" / "characters" / "personagens" / "personagem_v2.glb"
+    if not glb.exists():
+        fail(f"asset do herói ausente: {glb}")
+        return
+    dados = glb.read_bytes()
+    if dados[:4] != b"glTF":
+        fail("personagem_v2.glb não é um GLB binário")
+        return
+    tamanho = struct.unpack("<I", dados[12:16])[0]
+    cena = json.loads(dados[20:20 + tamanho])
+    materiais = cena.get("materials", [])
+    sem_textura = [m.get("name", "?") for m in materiais
+                   if "baseColorTexture" not in m.get("pbrMetallicRoughness", {})]
+    imagens = len(cena.get("images", []))
+    if not materiais:
+        fail("personagem_v2.glb sem materiais")
+    elif sem_textura:
+        fail(f"materiais do herói sem baseColorTexture: {sem_textura}")
+    else:
+        ok(f"personagem_v2.glb: {len(materiais)} materiais com textura, {imagens} imagens embutidas")
+
 def run_validations():
     print("\n== Fase 5b — Validators ==")
     for cmd in [["python3","tools/validate_project.py"],["python3","tools/audit_balance.py"],["python3","tools/audit_runner_rig.py"]]:
@@ -516,6 +558,7 @@ if __name__=="__main__":
     check_resources()
     check_procedural()
     check_rua_viva()
+    check_personagem()
     run_validations()
     print("\n==================================================")
     print(f"OK {len(oks)} | WARN {len(warns)} | FAIL {len(fails)}")
