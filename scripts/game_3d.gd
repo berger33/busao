@@ -3092,11 +3092,11 @@ func _build_decor_car(pos: Vector3, _color: Color) -> void:
     var tire := _material(Color("#202c3c"), 0.15, 0.38, "rubber")
     var chrome := _material(Color("#aebdc0"), 0.72, 0.24, "chrome")
     var glass := _material(Color("#71bcc7"), 0.0, 0.25, "glass")
-    var lamp := _material(Color("#fff4c9"), 0.0, 0.18, "glass")
+    var lamp := _material(Color("#fff4c9"), 0.0, 0.18, "lamp")
     lamp.emission_enabled = true
     lamp.emission = Color("#fff1b0")
     lamp.emission_energy_multiplier = 1.4
-    var tail := _material(Color("#cc3942"), 0.0, 0.28, "glass")
+    var tail := _material(Color("#cc3942"), 0.0, 0.28, "lamp")
     _build_brazilian_car(parent, int(abs(pos.z)) % 3, tire, chrome, glass, lamp, tail)
 
 func _build_utility_wire(start: Vector3, finish: Vector3) -> void:
@@ -3146,7 +3146,7 @@ func _build_lamp(pos: Vector3, accent: Color) -> void:
         decor_root.add_child(poste_glb)
         return
     _cylinder(decor_root, 0.035, 0.035, 3.2, pos + Vector3(0.0, 1.6, 0.0), _material(Color("#3c4654"), 0.35, 0.4, "metal"), "LampPole")
-    var lamp_material := _material(accent.lightened(0.20), 0.0, 0.22, "glass")
+    var lamp_material := _material(accent.lightened(0.20), 0.0, 0.22, "lamp")
     lamp_material.emission_enabled = true
     lamp_material.emission = accent.lightened(0.20)
     lamp_material.emission_energy_multiplier = 1.5
@@ -3242,7 +3242,7 @@ func _build_bus_mesh(parent: Node3D) -> void:
     var red := _material(Color("#ed634c"), 0.0, 0.62, "paint")
     var tire := _material(Color("#202b3a"), 0.05, 0.55, "rubber")
     var chrome := _material(Color("#c3c8bf"), 0.72, 0.24, "chrome")
-    var lamp := _material(Color("#fff2ba"), 0.0, 0.18, "glass")
+    var lamp := _material(Color("#fff2ba"), 0.0, 0.18, "lamp")
     lamp.emission_enabled = true
     lamp.emission = Color("#ffe9a0")
     lamp.emission_energy_multiplier = 1.6
@@ -3614,11 +3614,11 @@ func _build_road_obstacle(parent: Node3D, kind: String) -> void:
     var dark := _material(Color("#202c3c"), 0.15, 0.38, "rubber")
     var chrome := _material(Color("#aebdc0"), 0.72, 0.24, "chrome")
     var glass := _material(Color("#71bcc7"), 0.0, 0.25, "glass")
-    var white_light := _material(Color("#fff4c9"), 0.0, 0.18, "glass")
+    var white_light := _material(Color("#fff4c9"), 0.0, 0.18, "lamp")
     white_light.emission_enabled = true
     white_light.emission = Color("#fff1b0")
     white_light.emission_energy_multiplier = 1.6
-    var tail_light := _material(Color("#cc3942"), 0.0, 0.28, "glass")
+    var tail_light := _material(Color("#cc3942"), 0.0, 0.28, "lamp")
     tail_light.emission_enabled = true
     tail_light.emission = Color("#7d1820")
     tail_light.emission_energy_multiplier = 0.35
@@ -3915,7 +3915,7 @@ func _build_sidewalk_obstacle(parent: Node3D, kind: String) -> void:
                     var twheel := _cylinder(parent, 0.48, 0.48, 0.3, Vector3(tx, 0.48, tz), truck_tire, "TruckWheel")
                     twheel.rotation.z = PI / 2.0
             for hx in [-0.7, 0.7]:
-                _box(parent, Vector3(0.5, 0.3, 0.08), Vector3(hx, 0.7, 0.0), _material(Color("#fff2b0"), 0.0, 0.2, "glass"), "TruckHeadlight")
+                _box(parent, Vector3(0.5, 0.3, 0.08), Vector3(hx, 0.7, 0.0), _material(Color("#fff2b0"), 0.0, 0.2, "lamp"), "TruckHeadlight")
         "bus_cross":
             # ETAPA 10 — onibus cruzando a area sinalizada (fase 18): mesma
             # regra do caminhao; origem no nariz.
@@ -3976,7 +3976,7 @@ func _build_sidewalk_obstacle(parent: Node3D, kind: String) -> void:
             _box(parent, Vector3(0.36, 0.12, 0.5), Vector3(0.0, 0.88, 0.3), _material(Color("#182331"), 0.0, 0.6, "rubber"), "MotoSeat")
             _box(parent, Vector3(0.4, 0.48, 0.24), Vector3(0.0, 1.28, 0.3), _material(Color("#2d3a55"), 0.0, 0.8, "fabric"), "MotoRider")
             _sphere(parent, 0.16, Vector3(0.0, 1.68, 0.3), _material(Color("#e8edf2"), 0.0, 0.4, "paint"), "MotoHelmet")
-            _box(parent, Vector3(0.2, 0.16, 0.06), Vector3(0.0, 0.78, -0.72), _material(Color("#fff2b0"), 0.0, 0.2, "glass"), "MotoHeadlight")
+            _box(parent, Vector3(0.2, 0.16, 0.06), Vector3(0.0, 0.78, -0.72), _material(Color("#fff2b0"), 0.0, 0.2, "lamp"), "MotoHeadlight")
         "trash":
             # ETAPA 8 — lixeira de rua (fase 6): volume solido, desvio lateral.
             var lixeira_glb := _optional_prop("lixeira.glb")
@@ -4254,6 +4254,14 @@ func _material(color: Color, metallic: float, roughness: float, surface: String 
         material.clearcoat_enabled = true
         material.clearcoat = 0.85
         material.clearcoat_roughness = 0.08
+    elif surface == "lamp":
+        # Farol, lanterna e luminaria: vidro que ACENDE, nao vidraca. Sem a
+        # textura de janela (vidro_realista deixava a lampada opaca e tingida)
+        # e com emissao para ler como luz. Opaco de proposito: barato no
+        # gl_compatibility (Moto G84), sem transparencia nem refracao.
+        material.emission_enabled = true
+        material.emission = base_color
+        material.emission_energy_multiplier = 1.5
     elif surface == "vehicle_paint":
         material.clearcoat_enabled = true
         material.clearcoat = 0.65
@@ -4346,6 +4354,9 @@ func _texture_for_surface(surface: String) -> Texture2D:
             return null
         "glass":
             return TEXTURE_GLASS
+        "lamp":
+            # Sem textura: a lampada e cor chapada + emissao (ver _material).
+            return null
         "fabric":
             return TEXTURE_FABRIC_REAL
         "denim":

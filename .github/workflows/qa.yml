@@ -87,12 +87,27 @@ jobs:
               echo "FAIL $nome (exit $code)" | tee -a "$resumo"
               echo "---- últimas 25 linhas de $nome ----"
               tail -25 "/tmp/suite-logs/$nome.log"
+              # Anotação legível pela API (os logs/artefatos ficam em blob storage,
+              # que pode estar bloqueado em alguns ambientes): expõe o rabo do log
+              # de cada suíte que falhou como um ::error:: recuperável via
+              # /repos/OWNER/REPO/check-runs/ID/annotations.
+              { echo "---- checks FAIL/FALHOU + diagnósticos de $nome ----"; grep -nE "^FAIL |FALHOU|^  |diverge|esperado" "/tmp/suite-logs/$nome.log" | grep -viE "leaked|PagedAllocator|RID allocation|resources still|instance_notify|ObjectDB|at: " | head -60; } > /tmp/suite-logs/$nome.diag
+              enc=$(python3 -c 'import sys; print(open("/tmp/suite-logs/'"$nome"'.diag").read().replace("%","%25").replace("\r","%0D").replace("\n","%0A"))')
+              echo "::error title=SUITE FAIL ${nome} (exit ${code})::${enc}"
             fi
           done
           echo
           echo "==== RESUMO ===="
           cat "$resumo"
           echo "suítes com falha: $falhas"
+          # Resumo PASS/FAIL também como anotação, para leitura via API. Em
+          # verde vira ::notice:: (não suja o run); só é ::error:: quando falha.
+          enc_resumo=$(python3 -c 'import sys; print(open("'"$resumo"'").read().replace("%","%25").replace("\r","%0D").replace("\n","%0A"))')
+          if [ "$falhas" -gt 0 ]; then
+            echo "::error title=RESUMO SUITES (falhas=${falhas})::${enc_resumo}"
+          else
+            echo "::notice title=RESUMO SUITES (todas passaram)::${enc_resumo}"
+          fi
           if [ -n "${{ github.event.pull_request.number }}" ]; then
             {
               echo "### QA headless — suítes de etapa (Godot ${GODOT_VERSION:-?})"
