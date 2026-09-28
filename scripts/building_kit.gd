@@ -370,6 +370,23 @@ static func _mat_cor(chave: String, cor: Color, rugosidade: float, metalico: flo
     return m
 
 
+## Encardido (sujeira nas juntas): material escuro em blend MULTIPLICAR, para
+## ESCURECER a superfície embaixo em vez de pintar um bloco preto. Cacheado.
+static func _mat_encardido() -> StandardMaterial3D:
+    var ck := "encardido"
+    if _material_cache.has(ck):
+        return _material_cache[ck]
+    var m := StandardMaterial3D.new()
+    m.albedo_color = Color(0.42, 0.40, 0.37, 1.0)
+    m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    m.blend_mode = BaseMaterial3D.BLEND_MODE_MUL
+    m.roughness = 1.0
+    m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    m.cull_mode = BaseMaterial3D.CULL_DISABLED
+    _material_cache[ck] = m
+    return m
+
+
 ## Degrau de qualidade atual (0 = melhor, 3 = mais leve), lido do autoload
 ## RenderQuality de forma defensiva: adereços pesados (escada de incêndio,
 ## grime) só entram nos degraus altos. Sem o autoload (ou headless), assume 0.
@@ -471,6 +488,14 @@ static func _build_piso(spec: Dictionary, raiz: Node3D, comprimento: float, _vis
         Vector3(x_guia, guia_h - 0.20, -comprimento * 0.5), raiz,
         "Guia", true, 0.0)
     _marca(guia, "guia")
+    # Encardido da sarjeta: faixa escura contínua no encontro guia/asfalto, onde
+    # a água de chuva escorre e a sujeira assenta (junta meio-fio/pista).
+    if _tier_atual() <= 2:
+        var sarjeta_grime := _malha(_box(Vector3(0.28, 0.006, comprimento)),
+            _mat_encardido(),
+            Vector3(x_guia - guia_l * 0.5 - 0.14, 0.006, -comprimento * 0.5), raiz,
+            "EncardidoSarjeta", false, 0.0)
+        _marca(sarjeta_grime, "encardido", "nenhum")
     # Grelhas de sarjeta / bueiro de ferro fundido junto ao meio-fio
     var n_bueiros := int(comprimento / 14.0)
     for b in range(n_bueiros):
@@ -707,6 +732,7 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
     var xf_caixa: Array = []
     var xf_casa: Array = []
     var xf_recuo: Array = []
+    var xf_grime_parede: Array = []
     var predios_escada: Array = []
     for lado in [-1.0, 1.0]:
         # frente do lote: na borda externa da calcada (direita) ou no fim da
@@ -776,6 +802,11 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
                         Vector3(lado * (x_centro + lado * profundidade * 0.12),
                             topo + 0.45, cz - largura * 0.12),
                         Vector3(profundidade * 0.34, 0.9, largura * 0.3)))
+                # encardido na junta parede/calçada: banda escura rente à base
+                # da fachada (respingo de chuva + poeira acumulada no rodapé)
+                xf_grime_parede.append(_xform(
+                    Vector3(lado * (x_frente - lado * 0.03), 0.30, cz),
+                    Vector3(0.05, 0.34, largura * 0.94)))
                 # escada de incêndio nos prédios altos (alternados)
                 if andares >= 4 and lote % 2 == 0:
                     predios_escada.append({
@@ -804,6 +835,10 @@ static func _build_predios(spec: Dictionary, raiz: Node3D, rng: RandomNumberGene
     # Escada de incêndio: adereço pesado, só nos degraus de qualidade alto/médio.
     if not predios_escada.is_empty() and _tier_atual() <= 1:
         _build_escadas_incendio(spec, raiz, predios_escada)
+    # Encardido: detalhe sutil, cai fora só no degrau mais leve (tier 3).
+    if not xf_grime_parede.is_empty() and _tier_atual() <= 2:
+        _multimesh(_box(Vector3.ONE), _mat_encardido(), xf_grime_parede, raiz,
+                "EncardidoParede", false, 0.0)
 
 
 ## Escada de incêndio de ferro na fachada: montante + patamar por andar +
@@ -1029,6 +1064,7 @@ static func _build_mobiliario(spec: Dictionary, raiz: Node3D, rng: RandomNumberG
     if passo_poste < 8.0:
         passo_poste = 14.0
     var zp := rng.randf_range(5.0, 9.0)
+    var xf_grime_poste: Array = []
     while zp < comprimento - 3.0:
         var poste_glb := _prop_glb("poste")
         if poste_glb != null:
@@ -1037,7 +1073,13 @@ static func _build_mobiliario(spec: Dictionary, raiz: Node3D, rng: RandomNumberG
             poste_glb.rotation.y = PI
             raiz.add_child(poste_glb)
             _marca(poste_glb, "prop")
+        # encardido no pé do poste (mancha achatada no chão, mesma posição)
+        xf_grime_poste.append(_xform(
+            Vector3(-borda_esq + 0.20, 0.156, -zp), Vector3(0.34, 0.01, 0.34)))
         zp += passo_poste * rng.randf_range(0.95, 1.10)
+    if not xf_grime_poste.is_empty() and _tier_atual() <= 2:
+        _multimesh(_box(Vector3.ONE), _mat_encardido(), xf_grime_poste, raiz,
+                "EncardidoPoste", false, 0.0)
 
     if rng.randf() < float(props.get("hidrante", {}).get("probabilidade", 0.0)):
         var zz := rng.randf_range(3.0, comprimento - 3.0)
