@@ -251,6 +251,7 @@ func set_character(next_id: String) -> void:
         # Blender, enquanto o pipeline de animação avançada é preparado.
         # O root do jogo ainda fornece corrida, inclinação, salto e bob.
         _cache_mesh_only_parts(model_root)
+        _usar_materiais_do_glb()
         _configure_mesh_shadows(model_root)
         primary_asset_loaded = true
         return
@@ -288,31 +289,50 @@ func set_character(next_id: String) -> void:
     _configure_mesh_shadows(model_root)
     primary_asset_loaded = true
 
-## Mantém na personagem as texturas que vieram no GLB (Pele, Roupa e Cabelo do
-## personagem_v2, com baseColorTexture própria). Qualquer material_override ou
-## surface_override deixado por um pipeline antigo tapa esse atlas e devolve a
-## boneca sem textura — aqui eles são zerados e o material do próprio GLB volta
-## a valer. O print sai uma vez e diz quantas superfícies têm textura de fato,
-## para dar para conferir no aparelho sem adivinhar.
+## A cor da personagem NÃO está na textura: o gerador do Blender monta o
+## material como "textura de detalhe x Cor de Vértice -> Base Color", então o
+## GLB traz um PNG quase branco (grão, média RGB ~0,95) como baseColorTexture e
+## a cor de verdade em COLOR_0 — pele a87353, camiseta 622b99, short 20202b,
+## trança 201815. O importador glTF do Godot cria o StandardMaterial3D sem
+## `vertex_color_use_as_albedo`, o multiplicador some e a personagem aparece
+## toda branca. Aqui religamos isso por superfície, mantendo o resto do
+## material como veio do arquivo.
+##
+## As cores de vértice do glTF são lineares (COLOR_0 lê 0,40/0,18/0,10 para a
+## pele, que é justamente a a87353 convertida), por isso `vertex_color_is_srgb`
+## fica desligado.
 func _usar_materiais_do_glb() -> void:
     if model_root == null:
         return
     var superficies := 0
-    var com_textura := 0
+    var com_cor := 0
     for node in model_root.find_children("*", "MeshInstance3D", true, false):
         var mi := node as MeshInstance3D
         if mi == null or mi.mesh == null:
             continue
+        # nada de override herdado de pipeline antigo tapando o material do GLB
         mi.material_override = null
-        for i in mi.mesh.get_surface_count():
-            mi.set_surface_override_material(i, null)
+        var malha := mi.mesh
+        for i in malha.get_surface_count():
             superficies += 1
-            var mat := mi.mesh.surface_get_material(i)
-            if mat is BaseMaterial3D and (mat as BaseMaterial3D).albedo_texture != null:
-                com_textura += 1
-    print("HERO MATERIAIS superficies=%d com_textura=%d" % [superficies, com_textura])
-    if com_textura < superficies:
-        push_warning("[hero] %d superficie(s) do GLB sem albedo_texture" % [superficies - com_textura])
+            mi.set_surface_override_material(i, null)
+            var base := malha.surface_get_material(i)
+            if not base is BaseMaterial3D:
+                continue
+            var tem_cor_de_vertice := false
+            if malha is ArrayMesh:
+                var formato := (malha as ArrayMesh).surface_get_format(i)
+                tem_cor_de_vertice = (formato & Mesh.ARRAY_FORMAT_COLOR) != 0
+            if not tem_cor_de_vertice:
+                continue
+            var mat := (base as BaseMaterial3D).duplicate() as BaseMaterial3D
+            mat.vertex_color_use_as_albedo = true
+            mat.vertex_color_is_srgb = false
+            mi.set_surface_override_material(i, mat)
+            com_cor += 1
+    print("HERO MATERIAIS superficies=%d vertex_color=%d" % [superficies, com_cor])
+    if com_cor == 0 and superficies > 0:
+        push_warning("[hero] nenhuma superficie com COLOR_0: a personagem vai sair branca")
 
 
 func _clear_character() -> void:

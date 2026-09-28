@@ -507,10 +507,10 @@ def check_personagem():
         fail(f"contorno preto de volta em runner_character.gd: {achados}")
     else:
         ok("runner_character.gd sem casco de silhueta (nenhum CULL_FRONT)")
-    if "_usar_materiais_do_glb" in rc_bruto and "set_surface_override_material(i, null)" in rc_bruto:
-        ok("herói usa os materiais do próprio GLB (overrides zerados)")
+    if "_usar_materiais_do_glb" in rc_bruto and "vertex_color_use_as_albedo = true" in rc_bruto:
+        ok("herói religa vertex_color_use_as_albedo nos materiais do GLB")
     else:
-        fail("runner_character.gd não garante os materiais do GLB no herói")
+        fail("runner_character.gd não liga vertex_color_use_as_albedo: herói sai branco")
 
     glb = ROOT / "assets" / "characters" / "personagens" / "personagem_v2.glb"
     if not glb.exists():
@@ -522,16 +522,67 @@ def check_personagem():
         return
     tamanho = struct.unpack("<I", dados[12:16])[0]
     cena = json.loads(dados[20:20 + tamanho])
+    inicio_bin = 20 + tamanho
+    tam_bin = struct.unpack("<I", dados[inicio_bin:inicio_bin + 4])[0]
+    binario = dados[inicio_bin + 8:inicio_bin + 8 + tam_bin]
+
     materiais = cena.get("materials", [])
     sem_textura = [m.get("name", "?") for m in materiais
                    if "baseColorTexture" not in m.get("pbrMetallicRoughness", {})]
-    imagens = len(cena.get("images", []))
     if not materiais:
         fail("personagem_v2.glb sem materiais")
     elif sem_textura:
         fail(f"materiais do herói sem baseColorTexture: {sem_textura}")
     else:
-        ok(f"personagem_v2.glb: {len(materiais)} materiais com textura, {imagens} imagens embutidas")
+        ok(f"personagem_v2.glb: {len(materiais)} materiais com textura")
+
+    # A cor do herói mora em COLOR_0, não na textura: o PNG embutido é só grão
+    # quase branco. Se um primitivo perder COLOR_0 (ou vier branco), a
+    # personagem volta a aparecer sem cor mesmo com a textura presente — por
+    # isso o portão lê o atributo em vez de confiar no baseColorTexture.
+    tipos = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4}
+    formatos = {5121: ("B", 1, 255.0), 5123: ("H", 2, 65535.0), 5126: ("f", 4, 1.0)}
+
+    def _media_cor(indice_acessor):
+        a = cena["accessors"][indice_acessor]
+        bv = cena["bufferViews"][a["bufferView"]]
+        if a["componentType"] not in formatos:
+            return None
+        fmt, largura, divisor = formatos[a["componentType"]]
+        n = tipos.get(a["type"], 0)
+        if n < 3:
+            return None
+        base = bv.get("byteOffset", 0) + a.get("byteOffset", 0)
+        total = 0.0
+        amostras = 0
+        passo = max(1, a["count"] // 256)
+        for i in range(0, a["count"], passo):
+            v = struct.unpack_from("<" + fmt * n, binario, base + i * largura * n)
+            total += sum(v[:3]) / (3.0 * divisor)
+            amostras += 1
+        return total / max(1, amostras)
+
+    faltando = []
+    brancos = []
+    medidas = []
+    for malha in cena.get("meshes", []):
+        for prim in malha.get("primitives", []):
+            nome = malha.get("name", "?")
+            if "COLOR_0" not in prim.get("attributes", {}):
+                faltando.append(nome)
+                continue
+            media = _media_cor(prim["attributes"]["COLOR_0"])
+            if media is None:
+                continue
+            medidas.append(f"{nome}={media:.2f}")
+            if media > 0.85:
+                brancos.append(f"{nome} ({media:.2f})")
+    if faltando:
+        fail(f"primitivos do herói sem COLOR_0 (cor da personagem): {faltando}")
+    elif brancos:
+        fail(f"COLOR_0 quase branco no herói: {brancos}")
+    else:
+        ok("COLOR_0 com cor real em todos os primitivos: " + ", ".join(medidas))
 
 def run_validations():
     print("\n== Fase 5b — Validators ==")
